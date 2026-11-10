@@ -5,9 +5,10 @@ of a temporal formula or a certified lasso countermodel. It includes procedures
 based on state elimination and on strongly connected components, and versions
 with shorter proof certificates.
 
-The current language has propositional variables, negation, implication,
-**next**, and **always**. Eventually and the other Boolean connectives are
-abbreviations. **Until is not yet implemented.**
+The current language has propositional variables, negation `¬`, implication
+`⇒`, **next** `○`, and **always** `□`. Eventually `◇` and the other Boolean
+connectives (`∧`, `∨`, `⇔`, `⊤`, `⊥`) are abbreviations. **Until is not yet
+implemented.**
 
 ## Start here
 

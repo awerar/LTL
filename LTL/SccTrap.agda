@@ -189,8 +189,8 @@ ustSeedTo P w m = conv (ustSeeded P m)
 data Trap (P : Formula) (C : List Val) : Set where
   mkTrap : ((z : Val) -> Mem z C
               -> Sigma Val (\ y -> Prod (Mem y C) (Eq (step P z y) true)))
-        -> ((z : Val) -> Mem z C -> (A : Formula) -> Mem A (boxArgs (sub P))
-              -> Eq (valOf P z (box A)) false
+        -> ((z : Val) -> Mem z C -> (A : Formula) -> Mem A (□Args (sub P))
+              -> Eq (valOf P z (□ A)) false
               -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false)))
         -> Trap P C
 
@@ -222,12 +222,12 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
     e2 = anyL_none (badEv P z) (evList P us) each
       where
         each : (g : Ev) -> Mem g (evList P us) -> Eq (badEv P z g) false
-        each (prod A W) mg = onPend (valOf P z (box A)) refl
+        each (prod A W) mg = onPend (valOf P z (□ A)) refl
           where
-            pr : Prod (Mem A (boxArgs (sub P))) (Eq W (gfpW P us A))
+            pr : Prod (Mem A (□Args (sub P))) (Eq W (gfpW P us A))
             pr = evList_of P us mg
 
-            notInW : Eq (valOf P z (box A)) false -> Eq (memB z W) false
+            notInW : Eq (valOf P z (□ A)) false -> Eq (memB z W) false
             notInW ep = onM (memB z W) refl
               where
                 onM : (b : Bool) -> Eq (memB z W) b -> Eq (memB z W) false
@@ -247,7 +247,7 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
                                                       (pathMono P C us sb pa)))
                                      ef)
 
-            onPend : (b : Bool) -> Eq (valOf P z (box A)) b
+            onPend : (b : Bool) -> Eq (valOf P z (□ A)) b
                   -> Eq (badEv P z (prod A W)) false
             onPend true  ep =
               eqSubst (\ c -> Eq (boolAnd (boolNot c) (memB z W)) false)

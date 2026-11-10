@@ -128,12 +128,12 @@ memF_tail B Bs A e eb =
           (\ e2 -> e2) (orTrue (formEq B A) (memF Bs A) e)
 
 idxF_nth : (As : List Formula) (A : Formula) -> Eq (memF As A) true
-        -> Eq (nth As (idx As A) bot) A
+        -> Eq (nth As (idx As A) ⊥) A
 idxF_nth []        A ()
 idxF_nth (B :: Bs) A e = go (formEq B A) refl
   where
     go : (b : Bool) -> Eq (formEq B A) b
-      -> Eq (nth (B :: Bs) (idxCons b (idx Bs A)) bot) A
+      -> Eq (nth (B :: Bs) (idxCons b (idx Bs A)) ⊥) A
     go true  eb = formEq_sound B A eb
     go false eb = idxF_nth Bs A (memF_tail B Bs A e eb)
 
@@ -155,10 +155,10 @@ idxF_lt (B :: Bs) A e = go (formEq B A) refl
 
 isAtomB : Formula -> Bool
 isAtomB (var n)   = true
-isAtomB (neg A)   = false
-isAtomB (imp A B) = false
-isAtomB (nxt A)   = true
-isAtomB (box A)   = true
+isAtomB (¬ A)   = false
+isAtomB (A ⇒ B) = false
+isAtomB (○ A)   = true
+isAtomB (□ A)   = true
 
 insF : Formula -> List Formula -> List Formula
 insF A Bs = filterCons (boolNot (memF Bs A)) A Bs
@@ -183,53 +183,53 @@ insF_mono A Bs X e = go (memF Bs A) refl
 atoms : List Formula -> List Formula
 atoms []              = []
 atoms (var n   :: As) = insF (var n) (atoms As)
-atoms (neg A   :: As) = atoms As
-atoms (imp A B :: As) = atoms As
-atoms (nxt A   :: As) = insF (nxt A) (atoms As)
-atoms (box A   :: As) = insF (box A) (atoms As)
+atoms (¬ A   :: As) = atoms As
+atoms (A ⇒ B :: As) = atoms As
+atoms (○ A   :: As) = insF (○ A) (atoms As)
+atoms (□ A   :: As) = insF (□ A) (atoms As)
 
 atomMem : (As : List Formula) {A : Formula} -> Mem A As -> Eq (isAtomB A) true
        -> Eq (memF (atoms As) A) true
 atomMem []              ()        e
 atomMem (var n   :: As) memHd     e = insF_self (var n) (atoms As)
 atomMem (var n   :: As) (memTl m) e = insF_mono (var n) (atoms As) _ (atomMem As m e)
-atomMem (neg B   :: As) memHd     ()
-atomMem (neg B   :: As) (memTl m) e = atomMem As m e
-atomMem (imp B C :: As) memHd     ()
-atomMem (imp B C :: As) (memTl m) e = atomMem As m e
-atomMem (nxt B   :: As) memHd     e = insF_self (nxt B) (atoms As)
-atomMem (nxt B   :: As) (memTl m) e = insF_mono (nxt B) (atoms As) _ (atomMem As m e)
-atomMem (box B   :: As) memHd     e = insF_self (box B) (atoms As)
-atomMem (box B   :: As) (memTl m) e = insF_mono (box B) (atoms As) _ (atomMem As m e)
+atomMem (¬ B   :: As) memHd     ()
+atomMem (¬ B   :: As) (memTl m) e = atomMem As m e
+atomMem (B ⇒ C :: As) memHd     ()
+atomMem (B ⇒ C :: As) (memTl m) e = atomMem As m e
+atomMem (○ B   :: As) memHd     e = insF_self (○ B) (atoms As)
+atomMem (○ B   :: As) (memTl m) e = insF_mono (○ B) (atoms As) _ (atomMem As m e)
+atomMem (□ B   :: As) memHd     e = insF_self (□ B) (atoms As)
+atomMem (□ B   :: As) (memTl m) e = insF_mono (□ B) (atoms As) _ (atomMem As m e)
 
 ------------------------------------------------------------------------
 -- The arguments of the box-subformulas.
 --
--- boxArgs collects the A for which box A occurs in the list.  It lived in
+-- □Args collects the A for which □ A occurs in the list.  It lived in
 -- LTL.Elim, which is where the eventualities are; it is here because Phase 9
 -- needs it on the OTHER branch of the import graph -- the (S2) premise of the
--- short Lemma 2.6 (LTL.CompletePC) is a conjunction of  box A -> A  over it,
+-- short Lemma 2.6 (LTL.CompletePC) is a conjunction of  □ A -> A  over it,
 -- and LTL.Complete cannot reach LTL.Elim.  It is a pure syntactic function of
--- a List Formula, so nothing but its position changes; boxArgs_mem stays in
+-- a List Formula, so nothing but its position changes; □Args_mem stays in
 -- LTL.Trace, which is the only place that needs it.
 
-boxArgs : List Formula -> List Formula
-boxArgs []              = []
-boxArgs (var n   :: As) = boxArgs As
-boxArgs (neg A   :: As) = boxArgs As
-boxArgs (imp A B :: As) = boxArgs As
-boxArgs (nxt A   :: As) = boxArgs As
-boxArgs (box A   :: As) = A :: boxArgs As
+□Args : List Formula -> List Formula
+□Args []              = []
+□Args (var n   :: As) = □Args As
+□Args (¬ A   :: As) = □Args As
+□Args (A ⇒ B :: As) = □Args As
+□Args (○ A   :: As) = □Args As
+□Args (□ A   :: As) = A :: □Args As
 
-boxArgs_of : (As : List Formula) {A : Formula}
-          -> Mem (box A) As -> Mem A (boxArgs As)
-boxArgs_of []                ()
-boxArgs_of (var n   :: As) (memTl m) = boxArgs_of As m
-boxArgs_of (neg B   :: As) (memTl m) = boxArgs_of As m
-boxArgs_of (imp B C :: As) (memTl m) = boxArgs_of As m
-boxArgs_of (nxt B   :: As) (memTl m) = boxArgs_of As m
-boxArgs_of (box B   :: As) memHd     = memHd
-boxArgs_of (box B   :: As) (memTl m) = memTl (boxArgs_of As m)
+□Args_of : (As : List Formula) {A : Formula}
+          -> Mem (□ A) As -> Mem A (□Args As)
+□Args_of []                ()
+□Args_of (var n   :: As) (memTl m) = □Args_of As m
+□Args_of (¬ B   :: As) (memTl m) = □Args_of As m
+□Args_of (B ⇒ C :: As) (memTl m) = □Args_of As m
+□Args_of (○ B   :: As) (memTl m) = □Args_of As m
+□Args_of (□ B   :: As) memHd     = memHd
+□Args_of (□ B   :: As) (memTl m) = memTl (□Args_of As m)
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation.
@@ -240,10 +240,10 @@ boxArgs_of (box B   :: As) (memTl m) = memTl (boxArgs_of As m)
 
 valFrom : List Formula -> Val -> Formula -> Bool
 valFrom Ats a (var n)   = bitAt a (idx Ats (var n))
-valFrom Ats a (neg A)   = boolNot (valFrom Ats a A)
-valFrom Ats a (imp A B) = boolImp (valFrom Ats a A) (valFrom Ats a B)
-valFrom Ats a (nxt A)   = bitAt a (idx Ats (nxt A))
-valFrom Ats a (box A)   = bitAt a (idx Ats (box A))
+valFrom Ats a (¬ A)   = boolNot (valFrom Ats a A)
+valFrom Ats a (A ⇒ B) = boolImp (valFrom Ats a A) (valFrom Ats a B)
+valFrom Ats a (○ A)   = bitAt a (idx Ats (○ A))
+valFrom Ats a (□ A)   = bitAt a (idx Ats (□ A))
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation agrees with any compositional reading.
@@ -259,27 +259,27 @@ atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
         -> Eq (memF Ats X) true
         -> Eq (bitAt (map f Ats) (idx Ats X)) (f X)
 atomLook f Ats X mX =
-  eqTrans (nth_map f Ats (idx Ats X) (idxF_lt Ats X mX) bot false)
+  eqTrans (nth_map f Ats (idx Ats X) (idxF_lt Ats X mX) ⊥ false)
           (eqCong f (idxF_nth Ats X mX))
 
 skelEval : (f : Formula -> Bool) (Ats : List Formula) (P : Formula)
         -> ((X : Formula) -> Mem X (sub P) -> Eq (isAtomB X) true
               -> Eq (memF Ats X) true)
-        -> ((X : Formula) -> Mem (neg X) (sub P)
-              -> Eq (f (neg X)) (boolNot (f X)))
-        -> ((X Y : Formula) -> Mem (imp X Y) (sub P)
-              -> Eq (f (imp X Y)) (boolImp (f X) (f Y)))
+        -> ((X : Formula) -> Mem (¬ X) (sub P)
+              -> Eq (f (¬ X)) (boolNot (f X)))
+        -> ((X Y : Formula) -> Mem (X ⇒ Y) (sub P)
+              -> Eq (f (X ⇒ Y)) (boolImp (f X) (f Y)))
         -> (A : Formula) -> Mem A (sub P)
         -> Eq (valFrom Ats (map f Ats) A) (f A)
 skelEval f Ats P at fn fi (var n)   m = atomLook f Ats (var n) (at (var n) m refl)
-skelEval f Ats P at fn fi (nxt A)   m = atomLook f Ats (nxt A) (at (nxt A) m refl)
-skelEval f Ats P at fn fi (box A)   m = atomLook f Ats (box A) (at (box A) m refl)
-skelEval f Ats P at fn fi (neg A)   m =
-  eqTrans (eqCong boolNot (skelEval f Ats P at fn fi A (sub_neg P m)))
+skelEval f Ats P at fn fi (○ A)   m = atomLook f Ats (○ A) (at (○ A) m refl)
+skelEval f Ats P at fn fi (□ A)   m = atomLook f Ats (□ A) (at (□ A) m refl)
+skelEval f Ats P at fn fi (¬ A)   m =
+  eqTrans (eqCong boolNot (skelEval f Ats P at fn fi A (sub_¬ P m)))
           (eqSym (fn A m))
-skelEval f Ats P at fn fi (imp A B) m =
-  eqTrans (eqCong2 boolImp (skelEval f Ats P at fn fi A (sub_impL P m))
-                           (skelEval f Ats P at fn fi B (sub_impR P m)))
+skelEval f Ats P at fn fi (A ⇒ B) m =
+  eqTrans (eqCong2 boolImp (skelEval f Ats P at fn fi A (sub_⇒L P m))
+                           (skelEval f Ats P at fn fi B (sub_⇒R P m)))
           (eqSym (fi A B m))
 
 ------------------------------------------------------------------------
@@ -295,10 +295,10 @@ isTaut A = allB (\ a -> valFrom (atomsOf A) a A)
 -- and its soundness: any compositional reading of a skeleton tautology is true
 
 tautSound : (f : Formula -> Bool) (A : Formula)
-         -> ((X : Formula) -> Mem (neg X) (sub A)
-               -> Eq (f (neg X)) (boolNot (f X)))
-         -> ((X Y : Formula) -> Mem (imp X Y) (sub A)
-               -> Eq (f (imp X Y)) (boolImp (f X) (f Y)))
+         -> ((X : Formula) -> Mem (¬ X) (sub A)
+               -> Eq (f (¬ X)) (boolNot (f X)))
+         -> ((X Y : Formula) -> Mem (X ⇒ Y) (sub A)
+               -> Eq (f (X ⇒ Y)) (boolImp (f X) (f Y)))
          -> Eq (isTaut A) true -> Eq (f A) true
 tautSound f A fn fi e =
   eqTrans (eqSym (skelEval f (atomsOf A) A

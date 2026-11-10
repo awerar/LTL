@@ -16,12 +16,12 @@
 --    three fields, so trailWalk and walkTrail are two-clause inductions and not
 --    constructions.  Nothing else is needed of the graph layer's paths.
 --
--- 2. The fairness predicates are fixed.  For the eventuality  box A ,
+-- 2. The fairness predicates are fixed.  For the eventuality  □ A ,
 --
---        evPred P A z  =  valOf P z (box A)  or  not (valOf P z A)
+--        evPred P A z  =  valOf P z (□ A)  or  not (valOf P z A)
 --
---    "box A is not pending at z, or A already fails at z", and evPreds P is one
---    of these for each A in  boxArgs (sub P) .  A cycle meeting evPred P A
+--    "□ A is not pending at z, or A already fails at z", and evPreds P is one
+--    of these for each A in  □Args (sub P) .  A cycle meeting evPred P A
 --    either visits a state where the eventuality is not pending -- and then
 --    persistence walks that back and it is pending nowhere on the cycle -- or
 --    visits a state where A fails, which is fulfilment.  So RELEVANCE, which
@@ -32,12 +32,12 @@
 --
 -- 3. The cycle-fulfilment field of mkLasso is matched to those witnesses.  This
 --    is the only real proof in the file and it is closeLasso's argument run
---    TWICE rather than once.  Given  box A  pending at a state s of the cycle:
+--    TWICE rather than once.  Given  □ A  pending at a state s of the cycle:
 --
 --      walkPersist from s round to the base point r  --  either A is fulfilled
---        on the way, and we are done, or box A is still pending at r;
+--        on the way, and we are done, or □ A is still pending at r;
 --      persistTo from r out to the witness z  --  either A is fulfilled on the
---        way, and we are done, or box A is still pending at z, and then
+--        way, and we are done, or □ A is still pending at z, and then
 --        evPred's first disjunct is false at z, so its second is true, so A
 --        fails at z, which is fulfilment at a state the cycle visits.
 --
@@ -119,69 +119,69 @@ walkLast P us wk nn = trailLast us (step P) (walkTrail P us wk) nn
 ------------------------------------------------------------------------
 -- The fairness predicates.
 --
--- One per eventuality of  boxArgs (sub P) .  Its FALSITY at z is exactly the
--- pair of hypotheses the refutation branch consumes -- box A pending at z, and
+-- One per eventuality of  □Args (sub P) .  Its FALSITY at z is exactly the
+-- pair of hypotheses the refutation branch consumes -- □ A pending at z, and
 -- A holding at z -- which is why the same list of predicates will serve G39;
 -- here only its truth at a witness is used, which is the disjunction read the
 -- other way.
 
 evPred : Formula -> Formula -> Val -> Bool
-evPred P A z = boolOr (valOf P z (box A)) (boolNot (valOf P z A))
+evPred P A z = boolOr (valOf P z (□ A)) (boolNot (valOf P z A))
 
 evPreds : Formula -> List (Val -> Bool)
-evPreds P = map (evPred P) (boxArgs (sub P))
+evPreds P = map (evPred P) (□Args (sub P))
 
-evPredsMem : (P : Formula) {A : Formula} -> Mem A (boxArgs (sub P))
+evPredsMem : (P : Formula) {A : Formula} -> Mem A (□Args (sub P))
           -> Mem (evPred P A) (evPreds P)
 evPredsMem P m = memMap (evPred P) m
 
 evPredsInv : (P : Formula) {g : Val -> Bool} -> Mem g (evPreds P)
           -> Sigma Formula
-                   (\ A -> Prod (Mem A (boxArgs (sub P))) (Eq g (evPred P A)))
-evPredsInv P m = map_mem_inv (evPred P) (boxArgs (sub P)) m
+                   (\ A -> Prod (Mem A (□Args (sub P))) (Eq g (evPred P A)))
+evPredsInv P m = map_mem_inv (evPred P) (□Args (sub P)) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
 -- pending there, so the first disjunct is out and the second says A fails.
 
 evWitness : (P : Formula) (A : Formula) (z : Val)
-         -> Eq (evPred P A z) true -> Eq (valOf P z (box A)) false
+         -> Eq (evPred P A z) true -> Eq (valOf P z (□ A)) false
          -> Eq (valOf P z A) false
 evWitness P A z ez pd =
   sumElim (\ e1 -> emptyElim (tfAbs (eqTrans (eqSym e1) pd)))
           (\ e2 -> notTrue (valOf P z A) e2)
-          (orTrue (valOf P z (box A)) (boolNot (valOf P z A)) ez)
+          (orTrue (valOf P z (□ A)) (boolNot (valOf P z A)) ez)
 
 -- and building one, from either disjunct.
 
 evNotPending : (P : Formula) (A : Formula) (z : Val)
-            -> Eq (valOf P z (box A)) true -> Eq (evPred P A z) true
-evNotPending P A z e = orL (valOf P z (box A)) (boolNot (valOf P z A)) e
+            -> Eq (valOf P z (□ A)) true -> Eq (evPred P A z) true
+evNotPending P A z e = orL (valOf P z (□ A)) (boolNot (valOf P z A)) e
 
 evFails : (P : Formula) (A : Formula) (z : Val)
        -> Eq (valOf P z A) false -> Eq (evPred P A z) true
 evFails P A z e =
-  orR (valOf P z (box A)) (boolNot (valOf P z A)) (eqCong boolNot e)
+  orR (valOf P z (□ A)) (boolNot (valOf P z A)) (eqCong boolNot e)
 
 ------------------------------------------------------------------------
 -- Persistence to a state VISITED, not to the endpoint.
 --
--- walkPersist (LTL/Walk.agda:127) says: along a walk with box A pending at the
--- start, either A is fulfilled at a state visited or box A is still pending at
+-- walkPersist (LTL/Walk.agda:127) says: along a walk with □ A pending at the
+-- start, either A is fulfilled at a state visited or □ A is still pending at
 -- the END.  Here the second alternative is wanted at an arbitrary visited
 -- state.  The induction is walkPersist's own -- the step is persist, i.e. (T3)
 -- -- with the target carried along and the walk cut short when it is reached.
 
-persistTo : (P : Formula) (us : List Val) (A : Formula) -> Mem (box A) (sub P)
+persistTo : (P : Formula) (us : List Val) (A : Formula) -> Mem (□ A) (sub P)
          -> {v : Val} {ws : List Val} {x : Val} -> Walk P us v ws x
-         -> Eq (valOf P v (box A)) false
+         -> Eq (valOf P v (□ A)) false
          -> {z : Val} -> Mem z ws
-         -> Sum (Fulfil P A v ws) (Eq (valOf P z (box A)) false)
+         -> Sum (Fulfil P A v ws) (Eq (valOf P z (□ A)) false)
 persistTo P us A mb wnil e ()
 persistTo P us A mb (wcons {v} {w} {ws} {x} mw st wk) e {z} mz =
   onA (valOf P v A) refl z mz
   where
     onA : (b : Bool) -> Eq (valOf P v A) b -> (y : Val) -> Mem y (w :: ws)
-       -> Sum (Fulfil P A v (w :: ws)) (Eq (valOf P y (box A)) false)
+       -> Sum (Fulfil P A v (w :: ws)) (Eq (valOf P y (□ A)) false)
     onA false ea y my        = inl (ful v memHd ea)
     onA true  ea y memHd     = inr (persist P v w A mb st e ea)
     onA true  ea y (memTl k) =
@@ -212,16 +212,16 @@ sccLasso P vs sb v0 (fairLoop r st cy ts tc nn wit) =
     wcy = trailWalk P (Uinf P) (trailMono vs (Uinf P) (step P) sb tc)
 
     cyc : (s : Val) -> Mem s (r :: cy)
-       -> (A : Formula) -> Mem A (boxArgs (sub P))
-       -> Eq (valOf P s (box A)) false -> Fulfil P A r cy
+       -> (A : Formula) -> Mem A (□Args (sub P))
+       -> Eq (valOf P s (□ A)) false -> Fulfil P A r cy
     cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
       where
-        mbx : Mem (box A) (sub P)
-        mbx = boxArgs_mem (sub P) mA
+        mbx : Mem (□ A) (sub P)
+        mbx = □Args_mem (sub P) mA
 
         -- Still pending at the base point: go out to the witness the graph
         -- layer chose for evPred P A.
-        atR : Eq (valOf P r (box A)) false -> Fulfil P A r cy
+        atR : Eq (valOf P r (□ A)) false -> Fulfil P A r cy
         atR pr = onW (wit (evPred P A) (evPredsMem P mA))
           where
             onW : Sigma Val (\ z -> Prod (Mem z cy) (Eq (evPred P A z) true))
@@ -265,11 +265,11 @@ lassoFair P v0 (mkLasso b mb ps wp qs wq nn cyc) =
     mbq : Mem b qs
     mbq = walkLast P (Uinf P) wq nn
 
-    forA : (A : Formula) -> Mem A (boxArgs (sub P))
+    forA : (A : Formula) -> Mem A (□Args (sub P))
         -> Sigma Val (\ z -> Prod (Mem z qs) (Eq (evPred P A z) true))
-    forA A mA = onPend (valOf P b (box A)) refl
+    forA A mA = onPend (valOf P b (□ A)) refl
       where
-        onPend : (c : Bool) -> Eq (valOf P b (box A)) c
+        onPend : (c : Bool) -> Eq (valOf P b (□ A)) c
               -> Sigma Val (\ z -> Prod (Mem z qs) (Eq (evPred P A z) true))
         onPend true  ep = sig b (prod mbq (evNotPending P A b ep))
         onPend false ep = onFul (cyc b memHd A mA ep)
@@ -287,7 +287,7 @@ lassoFair P v0 (mkLasso b mb ps wp qs wq nn cyc) =
     each g mg = onInv (evPredsInv P mg)
       where
         onInv : Sigma Formula
-                      (\ A -> Prod (Mem A (boxArgs (sub P))) (Eq g (evPred P A)))
+                      (\ A -> Prod (Mem A (□Args (sub P))) (Eq g (evPred P A)))
              -> Sigma Val (\ z -> Prod (Mem z qs) (Eq (g z) true))
         onInv (sig A (prod mA eg)) =
           eqSubst (\ h -> Sigma Val (\ z -> Prod (Mem z qs) (Eq (h z) true)))
@@ -339,7 +339,7 @@ sccState P v0 e i = stateAt P v0 (sccRunOf P v0 m) i
 ------------------------------------------------------------------------
 -- The lassos, computed, beside the ones LTL.Lasso records.
 --
--- For  dia p  the stem is the same and the cycle is the base point twice where
+-- For  ◇ p  the stem is the same and the cycle is the base point twice where
 -- lassoSearch has it once.  That is not an accident of this example: mkCirc
 -- always starts from the bare loop found by loopAt and prepends one LEG per
 -- fairness predicate, each leg being the loop again followed by the trip out to
@@ -349,24 +349,24 @@ sccState P v0 e i = stateAt P v0 (sccRunOf P v0 m) i
 -- witnesses in its own order and does not produce the shortest fair cycle --
 -- which is the observation checkpoint C8 is to make, not a defect.
 
-sccDiaP : Eq (sccAt diaP sA refl) (prod (sB :: sC :: []) (sC :: sC :: []))
-sccDiaP = refl
+scc◇P : Eq (sccAt ◇P sA refl) (prod (sB :: sC :: []) (sC :: sC :: []))
+scc◇P = refl
 
-lassoDiaP : Eq (lassoAt diaP sA refl) (prod (sB :: sC :: []) (sC :: []))
-lassoDiaP = refl
+lasso◇P : Eq (lassoAt ◇P sA refl) (prod (sB :: sC :: []) (sC :: []))
+lasso◇P = refl
 
 -- and the same doubling in the degenerate case, where the state set is one
 -- state looping to itself.
 
-sccBoxP : Eq (sccAt boxP sBox refl) (prod [] (sBox :: sBox :: []))
-sccBoxP = refl
+scc□P : Eq (sccAt □P s□ refl) (prod [] (s□ :: s□ :: []))
+scc□P = refl
 
-lassoBoxP : Eq (lassoAt boxP sBox refl) (prod [] (sBox :: []))
-lassoBoxP = refl
+lasso□P : Eq (lassoAt □P s□ refl) (prod [] (s□ :: []))
+lasso□P = refl
 
 -- The run, unwound, to show that runOf accepts the result unchanged: the stem
--- of dia p walked out, then the cycle forever.
+-- of ◇ p walked out, then the cycle forever.
 
-sccDiaP_run : Eq (map (sccState diaP sA refl) (0 :: 1 :: 2 :: 3 :: 4 :: 5 :: []))
+scc◇P_run : Eq (map (sccState ◇P sA refl) (0 :: 1 :: 2 :: 3 :: 4 :: 5 :: []))
                  (sA :: sB :: sC :: sC :: sC :: sC :: [])
-sccDiaP_run = refl
+scc◇P_run = refl

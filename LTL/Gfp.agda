@@ -40,7 +40,7 @@ open import LTL.Closure public
 ------------------------------------------------------------------------
 -- The greatest closed set of states at which A still holds.
 --
--- holdsAt P A w says that the eventuality  box A  is NOT fulfilled at w, in the
+-- holdsAt P A w says that the eventuality  □ A  is NOT fulfilled at w, in the
 -- terminology of m4.tex section 3: fulfilment is  A not in w .
 
 holdsAt : Formula -> Formula -> Val -> Bool
@@ -91,7 +91,7 @@ closedOfAll : (P : Formula) (us W : List Val)
            -> ClosedIn P us W
 closedOfAll P us W f w w' mw mw' st =
   memB_sound w' W
-    (impTrueB (step P w w') (memB w' W)
+    (⇒TrueB (step P w w') (memB w' W)
               (allB_at (\ z -> boolImp (step P w z) (memB z W)) us mw' (f mw))
               st)
 
@@ -185,7 +185,7 @@ shrinkFindGreatest P us W sb (cBar h) (found x0 m q) X inW cl w x =
         inner : {w' : Val} -> Mem w' us
              -> Eq (boolImp (step P z w') (memB w' W)) true
         inner {w'} mw' =
-          impIntroB (step P z w') (memB w' W)
+          ⇒IntroB (step P z w') (memB w' W)
                     (\ st -> memB_complete w' W (inW w' (cl z w' xz mw' st)))
 
 gfpGreatest : (P : Formula) (us : List Val) (A : Formula) (X : Val -> Set)

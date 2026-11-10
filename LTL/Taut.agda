@@ -5,7 +5,7 @@
 -- (PC) asks that a formula be a tautology of its own skeleton: isTaut A runs
 -- valFrom over the truth table of atomsOf A (LTL.Skel).  The two formulas
 -- Phase 9 wants to feed it are built by the list constructions of LTL.Val --
--- lit, conj, disj, chi and beta -- so what is needed is how valFrom reads
+-- lit, ⋀, ⋁, chi and beta -- so what is needed is how valFrom reads
 -- those, and that is all this module is.  No derivation appears in it.
 --
 -- Two things to keep in mind while reading, both of them warnings.
@@ -20,7 +20,7 @@
 -- NOT mkV.  LTL.Closure does the same construction with Ats := atoms (sub P) --
 -- mkV, atomBits, valFromEq, mkV_id -- and those are the wrong lemmas here: the
 -- atom list of a (PC) formula is a different, larger list, if only because
--- conj [] is top and so contributes var 0.  They would appear to typecheck and
+-- ⋀ [] is ⊤ and so contributes var 0.  They would appear to typecheck and
 -- then fail on an idx.  valOfMk below is the bridge that is actually wanted,
 -- and it is one instance of atomLook.
 --
@@ -33,7 +33,7 @@
 -- imp BY DEFINITION and because valOfMk makes the bit at a position depend on
 -- the formula there rather than on the position.  That is the whole content of
 -- the short Lemma 2.6, and the (S2) proviso is exactly the premise -- the E P
--- of section 7 -- that LTL.CompletePC discharges with |boxArgs| instances of
+-- of section 7 -- that LTL.CompletePC discharges with |□Args| instances of
 -- (T), one modus ponens each.
 
 module LTL.Taut where
@@ -43,7 +43,7 @@ open import LTL.State public
 ------------------------------------------------------------------------
 -- Booleans.
 --
--- LTL.Sets has impIntroB and filter_true, but LTL.Sets is on the other branch
+-- LTL.Sets has ⇒IntroB and filter_true, but LTL.Sets is on the other branch
 -- of the import graph -- above Step, where this module is below Proj -- so they
 -- are unreachable from here and from LTL.Complete.  The three that are needed
 -- are repeated under new names rather than moved, since moving them would drag
@@ -90,11 +90,11 @@ memF_mem (B :: Bs) {A} (memTl m) =
   orR (formEq B A) (memF Bs A) (memF_mem Bs m)
 
 ------------------------------------------------------------------------
--- The skeleton reads dis and con as one expects.
+-- The skeleton reads ∨ and ∧ as one expects.
 --
--- dis C D is imp (neg C) D and con C D is neg (imp C (neg D)), so these two are
+-- C ∨ D is ¬ C ⇒ D and C ∧ D is ¬ (C ⇒ ¬ D), so these two are
 -- boolean identities and not inductions; they are stated at the shapes the list
--- constructions produce, so that disjTrue and conjTrue below are two lines
+-- constructions produce, so that ⋁True and ⋀True below are two lines
 -- each.
 
 boolDisL : (x y : Bool) -> Eq x true -> Eq (boolImp (boolNot x) y) true
@@ -108,37 +108,37 @@ boolConI true  false e1 ()
 boolConI false y     () e2
 
 ------------------------------------------------------------------------
--- disj and conj under the skeleton.
+-- ⋁ and ⋀ under the skeleton.
 --
--- disj is true as soon as one disjunct is and conj as soon as all conjuncts
--- are.  The empty cases are the convention of Lemma 1.1: disj [] is bot, which
--- never has to be true, and conj [] is top, which is  var 0 -> var 0  and so
+-- ⋁ is true as soon as one disjunct is and ⋀ as soon as all conjuncts
+-- are.  The empty cases are the convention of Lemma 1.1: ⋁ [] is ⊥, which
+-- never has to be true, and ⋀ [] is ⊤, which is  var 0 ⇒ var 0  and so
 -- true by boolSelf whatever the atom list makes of var 0.
 
-disjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
+⋁True : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
         -> Mem C Cs -> Eq (valFrom Ats a C) true
-        -> Eq (valFrom Ats a (disj Cs)) true
-disjTrue Ats a []        ()        e
-disjTrue Ats a (D :: Cs) memHd     e =
-  boolDisL (valFrom Ats a D) (valFrom Ats a (disj Cs)) e
-disjTrue Ats a (D :: Cs) (memTl m) e =
-  boolImpR (boolNot (valFrom Ats a D)) (valFrom Ats a (disj Cs))
-           (disjTrue Ats a Cs m e)
+        -> Eq (valFrom Ats a (⋁ Cs)) true
+⋁True Ats a []        ()        e
+⋁True Ats a (D :: Cs) memHd     e =
+  boolDisL (valFrom Ats a D) (valFrom Ats a (⋁ Cs)) e
+⋁True Ats a (D :: Cs) (memTl m) e =
+  boolImpR (boolNot (valFrom Ats a D)) (valFrom Ats a (⋁ Cs))
+           (⋁True Ats a Cs m e)
 
-conjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula)
+⋀True : (Ats : List Formula) (a : Val) (Cs : List Formula)
         -> ({C : Formula} -> Mem C Cs -> Eq (valFrom Ats a C) true)
-        -> Eq (valFrom Ats a (conj Cs)) true
-conjTrue Ats a []        h = boolSelf (valFrom Ats a (var zero))
-conjTrue Ats a (D :: Cs) h =
-  boolConI (valFrom Ats a D) (valFrom Ats a (conj Cs))
-           (h memHd) (conjTrue Ats a Cs (\ m -> h (memTl m)))
+        -> Eq (valFrom Ats a (⋀ Cs)) true
+⋀True Ats a []        h = boolSelf (valFrom Ats a (var zero))
+⋀True Ats a (D :: Cs) h =
+  boolConI (valFrom Ats a D) (valFrom Ats a (⋀ Cs))
+           (h memHd) (⋀True Ats a Cs (\ m -> h (memTl m)))
 
 ------------------------------------------------------------------------
 -- The characteristic formula of the row the assignment itself gives.
 --
 -- Read the atoms by a, read every formula of As by the skeleton, and collect
 -- the answers: the literals of the resulting chi are true one by one, since
--- lit A true is A and lit A false is neg A and valFrom is boolNot at neg.  So
+-- lit A true is A and lit A false is ¬ A and valFrom is boolNot at neg.  So
 -- chi of that row is true -- which is the witness disjunct for both of the
 -- tautologies of LTL.CompletePC.
 
@@ -159,9 +159,9 @@ litListTrue Ats a (A :: As) memHd     = litTrue Ats a A
 litListTrue Ats a (A :: As) (memTl m) = litListTrue Ats a As m
 
 chiRowTrue : (Ats : List Formula) (a : Val) (As : List Formula)
-          -> Eq (valFrom Ats a (conj (litList As (map (valFrom Ats a) As)))) true
+          -> Eq (valFrom Ats a (⋀ (litList As (map (valFrom Ats a) As)))) true
 chiRowTrue Ats a As =
-  conjTrue Ats a (litList As (map (valFrom Ats a) As))
+  ⋀True Ats a (litList As (map (valFrom Ats a) As))
            (\ m -> litListTrue Ats a As m)
 
 ------------------------------------------------------------------------
@@ -192,41 +192,41 @@ valOfMk P Ats a A m =
 -- here against the vector's own valOf.
 --
 -- (S2) is the one clause that is not free, and it is not free because it is not
--- true of an arbitrary row: box A and A are two independent atoms of the
--- skeleton.  So it is assumed, as BoxOk, and the caller pays for it.
+-- true of an arbitrary row: □ A and A are two independent atoms of the
+-- skeleton.  So it is assumed, as □Ok, and the caller pays for it.
 
 s2Fml : Formula -> Formula
-s2Fml A = imp (box A) A
+s2Fml A = □ A ⇒ A
 
-BoxOk : List Formula -> Val -> Formula -> Set
-BoxOk Ats a P = (B : Formula) -> Mem (box B) (sub P)
-             -> Eq (boolImp (valFrom Ats a (box B)) (valFrom Ats a B)) true
+□Ok : List Formula -> Val -> Formula -> Set
+□Ok Ats a P = (B : Formula) -> Mem (□ B) (sub P)
+             -> Eq (boolImp (valFrom Ats a (□ B)) (valFrom Ats a B)) true
 
 okAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (A : Formula)
-        -> Mem A (sub P) -> BoxOk Ats a P
+        -> Mem A (sub P) -> □Ok Ats a P
         -> Eq (okAt P (skelVec Ats a P) A) true
 okAtSkel Ats a P (var n)   m bo = refl
-okAtSkel Ats a P (nxt B)   m bo = refl
-okAtSkel Ats a P (neg B)   m bo =
-  boolEqOf (valOf P (skelVec Ats a P) (neg B))
+okAtSkel Ats a P (○ B)   m bo = refl
+okAtSkel Ats a P (¬ B)   m bo =
+  boolEqOf (valOf P (skelVec Ats a P) (¬ B))
            (boolNot (valOf P (skelVec Ats a P) B))
-           (eqTrans (valOfMk P Ats a (neg B) m)
+           (eqTrans (valOfMk P Ats a (¬ B) m)
                     (eqCong boolNot
-                            (eqSym (valOfMk P Ats a B (sub_neg P m)))))
-okAtSkel Ats a P (imp B C) m bo =
-  boolEqOf (valOf P (skelVec Ats a P) (imp B C))
+                            (eqSym (valOfMk P Ats a B (sub_¬ P m)))))
+okAtSkel Ats a P (B ⇒ C) m bo =
+  boolEqOf (valOf P (skelVec Ats a P) (B ⇒ C))
            (boolImp (valOf P (skelVec Ats a P) B) (valOf P (skelVec Ats a P) C))
-           (eqTrans (valOfMk P Ats a (imp B C) m)
+           (eqTrans (valOfMk P Ats a (B ⇒ C) m)
                     (eqCong2 boolImp
-                             (eqSym (valOfMk P Ats a B (sub_impL P m)))
-                             (eqSym (valOfMk P Ats a C (sub_impR P m)))))
-okAtSkel Ats a P (box B)   m bo =
-  eqTrans (eqCong2 boolImp (valOfMk P Ats a (box B) m)
-                           (valOfMk P Ats a B (sub_box P m)))
+                             (eqSym (valOfMk P Ats a B (sub_⇒L P m)))
+                             (eqSym (valOfMk P Ats a C (sub_⇒R P m)))))
+okAtSkel Ats a P (□ B)   m bo =
+  eqTrans (eqCong2 boolImp (valOfMk P Ats a (□ B) m)
+                           (valOfMk P Ats a B (sub_□ P m)))
           (bo B m)
 
 allOkSkel : (Ats : List Formula) (a : Val) (P : Formula) (As : List Formula)
-         -> ({A : Formula} -> Mem A As -> Mem A (sub P)) -> BoxOk Ats a P
+         -> ({A : Formula} -> Mem A As -> Mem A (sub P)) -> □Ok Ats a P
          -> Eq (allOk P (skelVec Ats a P) As) true
 allOkSkel Ats a P []        sb bo = refl
 allOkSkel Ats a P (A :: As) sb bo =
@@ -253,10 +253,10 @@ cohAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (i : Nat)
          -> Eq (cohAt P (skelVec Ats a P) i) true
 cohAtSkel Ats a P i l =
   boolEqOf (bitAt (skelVec Ats a P) i)
-           (valOf P (skelVec Ats a P) (nth (sub P) i bot))
-           (eqTrans (nth_map (valFrom Ats a) (sub P) i l bot false)
-                    (eqSym (valOfMk P Ats a (nth (sub P) i bot)
-                                    (nth_mem (sub P) i l bot))))
+           (valOf P (skelVec Ats a P) (nth (sub P) i ⊥))
+           (eqTrans (nth_map (valFrom Ats a) (sub P) i l ⊥ false)
+                    (eqSym (valOfMk P Ats a (nth (sub P) i ⊥)
+                                    (nth_mem (sub P) i l ⊥))))
 
 allCohSkel : (Ats : List Formula) (a : Val) (P : Formula) (n : Nat)
           -> ((i : Nat) -> Lt i n -> Lt i (length (sub P)))
@@ -267,7 +267,7 @@ allCohSkel Ats a P (suc n) h =
            (cohAtSkel Ats a P n (h n (ltSucSelf n)))
            (allCohSkel Ats a P n (\ i l -> h i (ltUp l)))
 
-isStateSkel : (Ats : List Formula) (a : Val) (P : Formula) -> BoxOk Ats a P
+isStateSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
            -> Eq (isState P (skelVec Ats a P)) true
 isStateSkel Ats a P bo =
   andIntro (allOk P (skelVec Ats a P) (sub P))
@@ -275,7 +275,7 @@ isStateSkel Ats a P bo =
            (allOkSkel Ats a P (sub P) (\ m -> m) bo)
            (allCohSkel Ats a P (length (sub P)) (\ i l -> l))
 
-memStSkel : (Ats : List Formula) (a : Val) (P : Formula) -> BoxOk Ats a P
+memStSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
          -> Mem (skelVec Ats a P) (St P)
 memStSkel Ats a P bo =
   filterIn (isState P) (allVecs (length (sub P)))
@@ -290,10 +290,10 @@ memStSkel Ats a P bo =
 -- true, by chiRowTrue at As := sub P.  That is Lemma 2.6 as a boolean fact,
 -- and LTL.CompletePC turns it into a one-node derivation.
 
-betaSkel : (Ats : List Formula) (a : Val) (P : Formula) -> BoxOk Ats a P
+betaSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
         -> Eq (valFrom Ats a (beta P (St P))) true
 betaSkel Ats a P bo =
-  disjTrue Ats a (map (chi P) (St P))
+  ⋁True Ats a (map (chi P) (St P))
            (memMap (chi P) (memStSkel Ats a P bo))
            (chiRowTrue Ats a (sub P))
 
@@ -301,36 +301,36 @@ betaSkel Ats a P bo =
 -- The (S2) instances, discharged one at a time.
 --
 -- (S2) is assumed above, so it has to appear as a premise of the formula the
--- pc node proves.  section 7 makes it a CONJUNCTION over boxArgs (sub P); an
+-- pc node proves.  section 7 makes it a CONJUNCTION over □Args (sub P); an
 -- implication chain is better, and measurably so.  A conjunction has to be
--- built by (L2), and conjIntro goes through conPair, which goes through
--- negIntroU and dne: 239 constructors to conjoin a single instance of (T)
+-- built by (L2), and ⋀Intro goes through ∧Pair, which goes through
+-- ¬IntroU and dne: 239 constructors to conjoin a single instance of (T)
 -- against the 47 the instance itself costs.  An iterated implication is
 -- discharged by one modus ponens per premise, so the certificate is
 --
---     |boxArgs (sub P)| * (1 + |boxElim|) + 1
+--     |□Args (sub P)| * (1 + |□Elim|) + 1
 --
 -- exactly, with no propositional glue at all.  That is the linear-in-the-
--- eventualities figure the phase is after, and it is why conj does not appear
+-- eventualities figure the phase is after, and it is why ⋀ does not appear
 -- here even though the note's (L2) would have supplied it.
 --
--- impChain is the boolean half, and it says the only thing an implication
+-- ⇒Chain is the boolean half, and it says the only thing an implication
 -- chain ever says: reading it as true is the same as assuming its premises.
--- boxChain is that at As := map s2Fml (boxArgs (sub P)), where the premises are
--- (S2); the caller turns a box-subformula into a member with boxArgs_of.
+-- □Chain is that at As := map s2Fml (□Args (sub P)), where the premises are
+-- (S2); the caller turns a box-subformula into a member with □Args_of.
 
-impList : List Formula -> Formula -> Formula
-impList []        C = C
-impList (A :: As) C = imp A (impList As C)
+⇒List : List Formula -> Formula -> Formula
+⇒List []        C = C
+⇒List (A :: As) C = A ⇒ (⇒List As C)
 
-impChain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
+⇒Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
         -> ((({A : Formula} -> Mem A As -> Eq (valFrom Ats a A) true)
               -> Eq (valFrom Ats a C) true))
-        -> Eq (valFrom Ats a (impList As C)) true
-impChain Ats a []        C h = h (\ ())
-impChain Ats a (A :: As) C h =
-  boolImpI (valFrom Ats a A) (valFrom Ats a (impList As C))
-           (\ eA -> impChain Ats a As C (\ g -> h (more eA g)))
+        -> Eq (valFrom Ats a (⇒List As C)) true
+⇒Chain Ats a []        C h = h (\ ())
+⇒Chain Ats a (A :: As) C h =
+  boolImpI (valFrom Ats a A) (valFrom Ats a (⇒List As C))
+           (\ eA -> ⇒Chain Ats a As C (\ g -> h (more eA g)))
   where
     more : Eq (valFrom Ats a A) true
         -> ({X : Formula} -> Mem X As -> Eq (valFrom Ats a X) true)
@@ -340,49 +340,49 @@ impChain Ats a (A :: As) C h =
 
 S2At : List Formula -> Val -> List Formula -> Set
 S2At Ats a As = (B : Formula) -> Mem B As
-             -> Eq (boolImp (valFrom Ats a (box B)) (valFrom Ats a B)) true
+             -> Eq (boolImp (valFrom Ats a (□ B)) (valFrom Ats a B)) true
 
-boxChain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
+□Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
         -> (S2At Ats a As -> Eq (valFrom Ats a C) true)
-        -> Eq (valFrom Ats a (impList (map s2Fml As) C)) true
-boxChain Ats a As C h =
-  impChain Ats a (map s2Fml As) C (\ g -> h (\ B mB -> g (memMap s2Fml mB)))
+        -> Eq (valFrom Ats a (⇒List (map s2Fml As) C)) true
+□Chain Ats a As C h =
+  ⇒Chain Ats a (map s2Fml As) C (\ g -> h (\ B mB -> g (memMap s2Fml mB)))
 
 ------------------------------------------------------------------------
 -- (L5), as a boolean.
 --
 -- This is the same move again, one level down, and it is where the certificate
--- actually is.  disjElim (LTL.PropList) proves  (C1 or ... or Cn) -> C  from
--- the n implications Ci -> C, and it is the note's own (L5): dis A B is
--- neg A -> B, so the elimination has to contrapose and double-negate at every
+-- actually is.  ⋁Elim (LTL.PropList) proves  (C1 ∨ ... ∨ Cn) ⇒ C  from
+-- the n implications Ci -> C, and it is the note's own (L5): A ∨ B is
+-- ¬ A ⇒ B, so the elimination has to contrapose and double-negate at every
 -- cons, which measures 426 constructors PER DISJUNCT.  For the certificate that
--- is the dominant cost -- 1280 of the 1529 for box p -> p -- and it grows with
+-- is the dominant cost -- 1280 of the 1529 for □ p ⇒ p -- and it grows with
 -- the number of states.
 --
 -- But the implication it proves is a tautology of its own skeleton, exactly as
 -- Lemma 2.6's is, so it can be one pc node with the n branches discharged by
 -- modus ponens.  What follows is its truth: given the premises and a true
 -- disjunction, walk the disjunction until a true disjunct is found and use the
--- premise there.  The empty case is (L0) -- disj [] is bot, which cannot be
+-- premise there.  The empty case is (L0) -- ⋁ [] is ⊥, which cannot be
 -- true, and boolSelf is what says so.
 
 boolMP : (x y : Bool) -> Eq (boolImp x y) true -> Eq x true -> Eq y true
 boolMP true  y e ex = e
 boolMP false y e ()
 
-impTo : Formula -> Formula -> Formula
-impTo C D = imp D C
+⇒To : Formula -> Formula -> Formula
+⇒To C D = D ⇒ C
 
-disjElimTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) (C : Formula)
+⋁ElimTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) (C : Formula)
             -> ({D : Formula} -> Mem D Cs
-                  -> Eq (valFrom Ats a (impTo C D)) true)
-            -> Eq (valFrom Ats a (imp (disj Cs) C)) true
-disjElimTrue Ats a Cs C h =
-  boolImpI (valFrom Ats a (disj Cs)) (valFrom Ats a C) (go Cs h)
+                  -> Eq (valFrom Ats a (⇒To C D)) true)
+            -> Eq (valFrom Ats a (⋁ Cs ⇒ C)) true
+⋁ElimTrue Ats a Cs C h =
+  boolImpI (valFrom Ats a (⋁ Cs)) (valFrom Ats a C) (go Cs h)
   where
     go : (Ds : List Formula)
-      -> ({D : Formula} -> Mem D Ds -> Eq (valFrom Ats a (impTo C D)) true)
-      -> Eq (valFrom Ats a (disj Ds)) true -> Eq (valFrom Ats a C) true
+      -> ({D : Formula} -> Mem D Ds -> Eq (valFrom Ats a (⇒To C D)) true)
+      -> Eq (valFrom Ats a (⋁ Ds)) true -> Eq (valFrom Ats a C) true
     go []        k e =
       emptyElim (tfAbs (eqTrans (eqSym e)
                                 (eqCong boolNot
@@ -393,7 +393,7 @@ disjElimTrue Ats a Cs C h =
         onD true  eb = boolMP (valFrom Ats a D) (valFrom Ats a C) (k memHd) eb
         onD false eb =
           go Ds (\ m -> k (memTl m))
-             (boolMP (boolNot (valFrom Ats a D)) (valFrom Ats a (disj Ds)) e
+             (boolMP (boolNot (valFrom Ats a D)) (valFrom Ats a (⋁ Ds)) e
                      (eqCong boolNot eb))
 
 ------------------------------------------------------------------------
@@ -401,14 +401,14 @@ disjElimTrue Ats a Cs C h =
 --
 -- The last term of the certificate that is neither constant nor linear-with-
 -- constant-one is the 67 constructors per state -- the two easy cases of
--- provableEach, which project  neg neg Q  out of chi_w by (L2), 39, then
+-- provableEach, which project  ¬ ¬ Q  out of chi_w by (L2), 39, then
 -- cancel the double negation, 23, then (L1), 5.
 --
--- But  chi_w -> Q  is a TAUTOLOGY OF ITS OWN SKELETON whenever w does not
--- contain neg Q, and for the same reason the derivation works: chi_w is a
--- conjunction one of whose conjuncts is  lit (neg Q) (valOf (neg Q) w (neg Q))
+-- But  chi_w ⇒ Q  is a TAUTOLOGY OF ITS OWN SKELETON whenever w does not
+-- contain ¬ Q, and for the same reason the derivation works: chi_w is a
+-- conjunction one of whose conjuncts is  lit (¬ Q) (valOf (¬ Q) w (¬ Q))
 -- -- and the hypothesis says that bit is false, so the conjunct is
--- neg (neg Q).  A conjunction implies its conjuncts, and valFrom is boolNot at
+-- ¬ ¬ Q.  A conjunction implies its conjuncts, and valFrom is boolNot at
 -- neg by definition, so a row making chi_w true makes  not not Q  true and
 -- hence Q.  Nothing about Q's own structure is used; Q is read by the skeleton
 -- like anything else.
@@ -417,7 +417,7 @@ disjElimTrue Ats a Cs C h =
 -- had not been made: a propositional step DECIDED rather than derived.
 
 ------------------------------------------------------------------------
--- con, read out rather than built up.  boolConI above is the introduction; a
+-- ∧, read out rather than built up.  boolConI above is the introduction; a
 -- projection needs the two eliminations.
 
 boolConE1 : (x y : Bool) -> Eq (boolNot (boolImp x (boolNot y))) true
@@ -435,17 +435,17 @@ boolNotNot : (x : Bool) -> Eq (boolNot (boolNot x)) true -> Eq x true
 boolNotNot true  e = refl
 boolNotNot false ()
 
--- the converse of conjTrue: a true conjunction has true conjuncts
+-- the converse of ⋀True: a true conjunction has true conjuncts
 
-conjProjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
-            -> Mem C Cs -> Eq (valFrom Ats a (conj Cs)) true
+⋀ProjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
+            -> Mem C Cs -> Eq (valFrom Ats a (⋀ Cs)) true
             -> Eq (valFrom Ats a C) true
-conjProjTrue Ats a []        ()        e
-conjProjTrue Ats a (D :: Cs) memHd     e =
-  boolConE1 (valFrom Ats a D) (valFrom Ats a (conj Cs)) e
-conjProjTrue Ats a (D :: Cs) (memTl m) e =
-  conjProjTrue Ats a Cs m
-               (boolConE2 (valFrom Ats a D) (valFrom Ats a (conj Cs)) e)
+⋀ProjTrue Ats a []        ()        e
+⋀ProjTrue Ats a (D :: Cs) memHd     e =
+  boolConE1 (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e
+⋀ProjTrue Ats a (D :: Cs) (memTl m) e =
+  ⋀ProjTrue Ats a Cs m
+               (boolConE2 (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e)
 
 ------------------------------------------------------------------------
 -- The literal of P itself inside chi P w.
@@ -457,12 +457,12 @@ conjProjTrue Ats a (D :: Cs) (memTl m) e =
 
 idxSelf : (P : Formula) -> Eq (idx (sub P) P) (index (sub_self P))
 idxSelf (var n)   = eqCong (\ b -> idxCons b (idx [] (var n))) (formEq_refl (var n))
-idxSelf (neg A)   = eqCong (\ b -> idxCons b (idx (sub A) (neg A))) (formEq_refl (neg A))
-idxSelf (imp A B) =
-  eqCong (\ b -> idxCons b (idx (append (sub A) (sub B)) (imp A B)))
-         (formEq_refl (imp A B))
-idxSelf (nxt A)   = eqCong (\ b -> idxCons b (idx (sub A) (nxt A))) (formEq_refl (nxt A))
-idxSelf (box A)   = eqCong (\ b -> idxCons b (idx (sub A) (box A))) (formEq_refl (box A))
+idxSelf (¬ A)   = eqCong (\ b -> idxCons b (idx (sub A) (¬ A))) (formEq_refl (¬ A))
+idxSelf (A ⇒ B) =
+  eqCong (\ b -> idxCons b (idx (append (sub A) (sub B)) (A ⇒ B)))
+         (formEq_refl (A ⇒ B))
+idxSelf (○ A)   = eqCong (\ b -> idxCons b (idx (sub A) (○ A))) (formEq_refl (○ A))
+idxSelf (□ A)   = eqCong (\ b -> idxCons b (idx (sub A) (□ A))) (formEq_refl (□ A))
 
 litSelf : (P : Formula) (w : Val) -> Eq (length w) (length (sub P))
        -> Mem (lit P (valOf P w P)) (litList (sub P) w)
@@ -474,27 +474,27 @@ litSelf P w len =
 ------------------------------------------------------------------------
 -- G34.
 --
--- The state w is one of Sub (neg Q)'s valuations and it does not contain
--- neg Q; then  chi_w -> Q  is a skeleton tautology, so (PC) proves it in one
+-- The state w is one of Sub (¬ Q)'s valuations and it does not contain
+-- ¬ Q; then  chi_w ⇒ Q  is a skeleton tautology, so (PC) proves it in one
 -- node where the projection-and-double-negation proof takes 67.
 
-tautChi : (Q : Formula) (w : Val) -> Eq (length w) (length (sub (neg Q)))
-       -> Eq (valOf (neg Q) w (neg Q)) false
-       -> Eq (isTaut (imp (chi (neg Q) w) Q)) true
+tautChi : (Q : Formula) (w : Val) -> Eq (length w) (length (sub (¬ Q)))
+       -> Eq (valOf (¬ Q) w (¬ Q)) false
+       -> Eq (isTaut ((chi (¬ Q) w) ⇒ Q)) true
 tautChi Q w len ev =
   allB_intro (\ a -> valFrom Ats a F) (allVecs (length Ats)) row
   where
     R : Formula
-    R = neg Q
+    R = ¬ Q
 
     F : Formula
-    F = imp (chi R w) Q
+    F = (chi R w) ⇒ Q
 
     Ats : List Formula
     Ats = atomsOf F
 
-    -- the conjunct  lit R false , i.e.  neg (neg Q)
-    mneg : Mem (neg R) (litList (sub R) w)
+    -- the conjunct  lit R false , i.e.  ¬ ¬ Q
+    mneg : Mem (¬ R) (litList (sub R) w)
     mneg = eqSubst (\ b -> Mem (lit R b) (litList (sub R) w)) ev (litSelf R w len)
 
     row : {a : Val} -> Mem a (allVecs (length Ats))
@@ -504,16 +504,16 @@ tautChi Q w len ev =
         step : Eq (valFrom Ats a (chi R w)) true -> Eq (valFrom Ats a Q) true
         step ec =
           boolNotNot (valFrom Ats a Q)
-                     (conjProjTrue Ats a (litList (sub R) w) mneg ec)
+                     (⋀ProjTrue Ats a (litList (sub R) w) mneg ec)
 
 ------------------------------------------------------------------------
 -- G35 of PHASE10-PLAN.md: chi over atoms, boolean half.
 --
 -- chi P v is a conjunction of |Sub P| literals where |atoms (sub P)| would do:
--- (S1) determines the bit at neg A from the bit at A and the bit at imp A B
+-- (S1) determines the bit at ¬ A from the bit at A and the bit at A ⇒ B
 -- from those at A and B, so the literals at the non-atomic positions are
--- redundant.  For neg (box p -> box nxt p) that is 7 conjuncts against 4, with
--- neg bnb listed twice and p twice; for neg axK5fwd it is 22 against 8.
+-- redundant.  For ¬ (□ p ⇒ □ ○ p) that is 7 conjuncts against 4, with
+-- ¬ bnb listed twice and p twice; for ¬ axK5fwd it is 22 against 8.
 --
 -- What is needed to exploit that is one fact -- a row of the skeleton table
 -- that agrees with a state on the ATOMS agrees with it everywhere -- and it is
@@ -557,14 +557,14 @@ atomsIn []              ()
 atomsIn (var n   :: As) {X} m =
   sumElim (\ e -> eqSubst (\ Y -> Mem Y (var n :: As)) (eqSym e) memHd)
           (\ k -> memTl (atomsIn As k)) (insFIn (var n) (atoms As) m)
-atomsIn (neg B   :: As)     m = memTl (atomsIn As m)
-atomsIn (imp B C :: As)     m = memTl (atomsIn As m)
-atomsIn (nxt B   :: As) {X} m =
-  sumElim (\ e -> eqSubst (\ Y -> Mem Y (nxt B :: As)) (eqSym e) memHd)
-          (\ k -> memTl (atomsIn As k)) (insFIn (nxt B) (atoms As) m)
-atomsIn (box B   :: As) {X} m =
-  sumElim (\ e -> eqSubst (\ Y -> Mem Y (box B :: As)) (eqSym e) memHd)
-          (\ k -> memTl (atomsIn As k)) (insFIn (box B) (atoms As) m)
+atomsIn (¬ B   :: As)     m = memTl (atomsIn As m)
+atomsIn (B ⇒ C :: As)     m = memTl (atomsIn As m)
+atomsIn (○ B   :: As) {X} m =
+  sumElim (\ e -> eqSubst (\ Y -> Mem Y (○ B :: As)) (eqSym e) memHd)
+          (\ k -> memTl (atomsIn As k)) (insFIn (○ B) (atoms As) m)
+atomsIn (□ B   :: As) {X} m =
+  sumElim (\ e -> eqSubst (\ Y -> Mem Y (□ B :: As)) (eqSym e) memHd)
+          (\ k -> memTl (atomsIn As k)) (insFIn (□ B) (atoms As) m)
 
 ------------------------------------------------------------------------
 -- Literals, read in both directions.
@@ -609,15 +609,15 @@ skelAgree : (Ats : List Formula) (a : Val) (P : Formula) (v : Val)
          -> (A : Formula) -> Mem A (sub P)
          -> Eq (valFrom Ats a A) (valOf P v A)
 skelAgree Ats a P v ok at (var n)   m = at (var n) m refl
-skelAgree Ats a P v ok at (nxt A)   m = at (nxt A) m refl
-skelAgree Ats a P v ok at (box A)   m = at (box A) m refl
-skelAgree Ats a P v ok at (neg A)   m =
-  eqTrans (eqCong boolNot (skelAgree Ats a P v ok at A (sub_neg P m)))
-          (eqSym (boolEq_sound (valOf P v (neg A)) (boolNot (valOf P v A))
+skelAgree Ats a P v ok at (○ A)   m = at (○ A) m refl
+skelAgree Ats a P v ok at (□ A)   m = at (□ A) m refl
+skelAgree Ats a P v ok at (¬ A)   m =
+  eqTrans (eqCong boolNot (skelAgree Ats a P v ok at A (sub_¬ P m)))
+          (eqSym (boolEq_sound (valOf P v (¬ A)) (boolNot (valOf P v A))
                                (allOk_at P v (sub P) m ok)))
-skelAgree Ats a P v ok at (imp A B) m =
-  eqTrans (eqCong2 boolImp (skelAgree Ats a P v ok at A (sub_impL P m))
-                           (skelAgree Ats a P v ok at B (sub_impR P m)))
-          (eqSym (boolEq_sound (valOf P v (imp A B))
+skelAgree Ats a P v ok at (A ⇒ B) m =
+  eqTrans (eqCong2 boolImp (skelAgree Ats a P v ok at A (sub_⇒L P m))
+                           (skelAgree Ats a P v ok at B (sub_⇒R P m)))
+          (eqSym (boolEq_sound (valOf P v (A ⇒ B))
                                (boolImp (valOf P v A) (valOf P v B))
                                (allOk_at P v (sub P) m ok)))

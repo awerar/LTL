@@ -12,7 +12,7 @@
 --     a formula equals valOf, so positional chi and lookup-based conditions
 --     talk about the same bits;
 --   * chiProj / chiProjPos, which turn a membership proof or a position into
---     Deriv (imp (chi P v) <literal>).
+--     Deriv (chi P v ⇒ <literal>).
 
 module LTL.Proj where
 
@@ -22,8 +22,8 @@ open import LTL.State    public
 ------------------------------------------------------------------------
 -- Refutation from a formula and its negation
 
-refute : {C B : Formula} -> Deriv (imp C B) -> Deriv (imp C (neg B)) -> Deriv (neg C)
-refute f g = mp (negIntroU (liftP f) (liftP g)) derivTop
+refute : {C B : Formula} -> Deriv (C ⇒ B) -> Deriv (C ⇒ ¬ B) -> Deriv (¬ C)
+refute f g = mp (¬IntroU (liftP f) (liftP g)) deriv⊤
 
 ------------------------------------------------------------------------
 -- Under coherence, every occurrence of A carries the bit valOf P v A
@@ -34,10 +34,10 @@ cohLookup : (P : Formula) (v : Val)
          -> Eq (bitAt v (index h)) (valOf P v A)
 cohLookup P v ch {A} h =
   eqTrans (boolEq_sound (bitAt v (index h))
-                        (valOf P v (nth (sub P) (index h) bot))
+                        (valOf P v (nth (sub P) (index h) ⊥))
                         (allCoh_at P v (length (sub P)) (index h)
                                    (index_length h) ch))
-          (eqCong (valOf P v) (index_nth h bot))
+          (eqCong (valOf P v) (index_nth h ⊥))
 
 ------------------------------------------------------------------------
 -- Projection of a conjunct out of chi
@@ -45,17 +45,17 @@ cohLookup P v ch {A} h =
 chiProjRaw : (P : Formula) (v : Val)
           -> Eq (length v) (length (sub P))
           -> {A : Formula} (h : Mem A (sub P))
-          -> Deriv (imp (chi P v) (lit A (bitAt v (index h))))
+          -> Deriv ((chi P v) ⇒ (lit A (bitAt v (index h))))
 chiProjRaw P v len h =
-  conjProj (litList (sub P) v) (litList_mem (sub P) v len h)
+  ⋀Proj (litList (sub P) v) (litList_mem (sub P) v len h)
 
 chiProj : (P : Formula) (v : Val)
        -> Eq (length v) (length (sub P))
        -> Eq (allCoh P v (length (sub P))) true
        -> {A : Formula} (h : Mem A (sub P))
-       -> Deriv (imp (chi P v) (lit A (valOf P v A)))
+       -> Deriv ((chi P v) ⇒ (lit A (valOf P v A)))
 chiProj P v len ch {A} h =
-  eqSubst (\ b -> Deriv (imp (chi P v) (lit A b)))
+  eqSubst (\ b -> Deriv ((chi P v) ⇒ (lit A b)))
           (cohLookup P v ch h)
           (chiProjRaw P v len h)
 
@@ -65,7 +65,7 @@ chiProj P v len ch {A} h =
 
 litList_nth : (As : List Formula) (v : Val) (i : Nat)
            -> Lt i (length As) -> Eq (length v) (length As)
-           -> Mem (lit (nth As i bot) (bitAt v i)) (litList As v)
+           -> Mem (lit (nth As i ⊥) (bitAt v i)) (litList As v)
 litList_nth []        v        i       ()        len
 litList_nth (A :: As) []       i       lt        ()
 litList_nth (A :: As) (b :: v) zero    lt        len = memHd
@@ -75,9 +75,9 @@ litList_nth (A :: As) (b :: v) (suc i) (ltSuc l) len =
 chiProjPos : (P : Formula) (v : Val)
           -> Eq (length v) (length (sub P))
           -> (i : Nat) -> Lt i (length (sub P))
-          -> Deriv (imp (chi P v) (lit (nth (sub P) i bot) (bitAt v i)))
+          -> Deriv ((chi P v) ⇒ (lit (nth (sub P) i ⊥) (bitAt v i)))
 chiProjPos P v len i lt =
-  conjProj (litList (sub P) v) (litList_nth (sub P) v i lt len)
+  ⋀Proj (litList (sub P) v) (litList_nth (sub P) v i lt len)
 
 ------------------------------------------------------------------------
 -- The first-occurrence index is a genuine position carrying its formula.
@@ -100,18 +100,18 @@ idx_lt (B :: Bs) {X} (memTl m) = aux (formEq B X)
     aux false = ltSuc (idx_lt Bs m)
 
 idx_nth : (xs : List Formula) {X : Formula} -> Mem X xs
-       -> Eq (nth xs (idx xs X) bot) X
+       -> Eq (nth xs (idx xs X) ⊥) X
 idx_nth []        ()
 idx_nth (B :: Bs) memHd     = aux (formEq B B) (formEq_refl B)
   where
     aux : (b : Bool) -> Eq b true
-       -> Eq (nth (B :: Bs) (idxCons b (idx Bs B)) bot) B
+       -> Eq (nth (B :: Bs) (idxCons b (idx Bs B)) ⊥) B
     aux true  e  = refl
     aux false ()
 idx_nth (B :: Bs) {X} (memTl m) = aux (formEq B X) (formEq_sound B X)
   where
     aux : (b : Bool) -> (Eq b true -> Eq B X)
-       -> Eq (nth (B :: Bs) (idxCons b (idx Bs X)) bot) X
+       -> Eq (nth (B :: Bs) (idxCons b (idx Bs X)) ⊥) X
     aux true  f = f refl
     aux false f = idx_nth Bs m
 
@@ -120,8 +120,8 @@ idx_nth (B :: Bs) {X} (memTl m) = aux (formEq B X) (formEq_sound B X)
 chiProjVal : (P : Formula) (v : Val)
           -> Eq (length v) (length (sub P))
           -> {X : Formula} (m : Mem X (sub P))
-          -> Deriv (imp (chi P v) (lit X (valOf P v X)))
+          -> Deriv ((chi P v) ⇒ (lit X (valOf P v X)))
 chiProjVal P v len {X} m =
-  eqSubst (\ Y -> Deriv (imp (chi P v) (lit Y (bitAt v (idx (sub P) X)))))
+  eqSubst (\ Y -> Deriv ((chi P v) ⇒ (lit Y (bitAt v (idx (sub P) X)))))
           (idx_nth (sub P) m)
           (chiProjPos P v len (idx (sub P) X) (idx_lt (sub P) m))

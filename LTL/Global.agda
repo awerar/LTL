@@ -2,7 +2,7 @@
 
 -- LTL.Global -- G24 of FORMALISATION-PLAN.md, Lemma 5.4 of m4.tex.
 --
---   For every i and every box A in Sub(phi) with box A not in v_i, there is
+--   For every i and every □ A in Sub(phi) with □ A not in v_i, there is
 --   j >= i with A not in v_j.
 --
 -- The note's proof splits on whether v_i lies on the cycle or on the stem, and
@@ -16,7 +16,7 @@
 -- Proposition 5.3 finishes it.
 --
 -- The conclusion is stated as membership in the forward orbit, which is the
--- form G27 needs: [[box A]] is a conjunction over the orbit, so a false
+-- form G27 needs: [[□ A]] is a conjunction over the orbit, so a false
 -- conjunct is exactly what refutes it.  globalFulfilAfter recovers the note's
 -- "j >= i" reading from it.
 
@@ -38,16 +38,16 @@ cycMem mb (memTl m) = m
 globalFulfil : (P : Formula) (b c0 : Val) (c1 : List Val)
             -> Mem b (c0 :: c1)
             -> ((s : Val) -> Mem s (b :: c0 :: c1)
-                  -> (A : Formula) -> Mem A (boxArgs (sub P))
-                  -> Eq (valOf P s (box A)) false -> Fulfil P A b (c0 :: c1))
+                  -> (A : Formula) -> Mem A (□Args (sub P))
+                  -> Eq (valOf P s (□ A)) false -> Fulfil P A b (c0 :: c1))
             -> {pos : Pos} -> ValidPos P b pos
-            -> (A : Formula) -> Mem A (boxArgs (sub P))
-            -> Eq (valOf P (posState pos) (box A)) false
+            -> (A : Formula) -> Mem A (□Args (sub P))
+            -> Eq (valOf P (posState pos) (□ A)) false
             -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 pos))
                                       (Eq (valOf P (posState q) A) false))
 globalFulfil P b c0 c1 mbc cyc (vpos s rest ms wk) A mA pend =
   sumElim onStem onCycle
-          (walkPersist P (Uinf P) A (boxArgs_mem (sub P) mA) wk pend)
+          (walkPersist P (Uinf P) A (□Args_mem (sub P) mA) wk pend)
   where
     place : (q : Pos) -> Mem q (orbitOf c0 c1 (prod s rest)) -> {z : Val}
          -> Eq (posState q) z -> Eq (valOf P z A) false
@@ -69,7 +69,7 @@ globalFulfil P b c0 c1 mbc cyc (vpos s rest ms wk) A mA pend =
           place q (orbitStem c0 c1 s rest q mq) eq ez
 
     -- still pending at b: Proposition 5.3 fulfils it on the cycle
-    onCycle : Eq (valOf P b (box A)) false
+    onCycle : Eq (valOf P b (□ A)) false
            -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (prod s rest)))
                                      (Eq (valOf P (posState q) A) false))
     onCycle pb = fromFul (cyc b memHd A mA pb)
@@ -94,12 +94,12 @@ globalFulfil P b c0 c1 mbc cyc (vpos s rest ms wk) A mA pend =
 globalFulfilAfter : (P : Formula) (b c0 : Val) (c1 : List Val)
                  -> Mem b (c0 :: c1)
                  -> ((s : Val) -> Mem s (b :: c0 :: c1)
-                       -> (A : Formula) -> Mem A (boxArgs (sub P))
-                       -> Eq (valOf P s (box A)) false -> Fulfil P A b (c0 :: c1))
+                       -> (A : Formula) -> Mem A (□Args (sub P))
+                       -> Eq (valOf P s (□ A)) false -> Fulfil P A b (c0 :: c1))
                  -> (start : Pos) (i : Nat)
                  -> ValidPos P b (posIter c0 c1 i start)
-                 -> (A : Formula) -> Mem A (boxArgs (sub P))
-                 -> Eq (valOf P (posState (posIter c0 c1 i start)) (box A)) false
+                 -> (A : Formula) -> Mem A (□Args (sub P))
+                 -> Eq (valOf P (posState (posIter c0 c1 i start)) (□ A)) false
                  -> Sigma Nat (\ t ->
                       Eq (valOf P (posState (posIter c0 c1 (plus i t) start)) A) false)
 globalFulfilAfter P b c0 c1 mbc cyc start i vp A mA pend =

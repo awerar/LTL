@@ -19,37 +19,37 @@ open import LTL.Skel public
 
 data Deriv : Formula -> Set where
 
-  -- (P1)  A -> (B -> A)
+  -- (P1)  A ⇒ (B ⇒ A)
   p1 : {A B : Formula}
-    -> Deriv (imp A (imp B A))
+    -> Deriv (A ⇒ B ⇒ A)
 
-  -- (P2)  (A -> (B -> C)) -> ((A -> B) -> (A -> C))
+  -- (P2)  (A ⇒ (B ⇒ C)) ⇒ ((A ⇒ B) ⇒ (A ⇒ C))
   p2 : {A B C : Formula}
-    -> Deriv (imp (imp A (imp B C)) (imp (imp A B) (imp A C)))
+    -> Deriv ((A ⇒ B ⇒ C) ⇒ (A ⇒ B) ⇒ A ⇒ C)
 
-  -- (P3)  (neg B -> neg A) -> (A -> B)
+  -- (P3)  (¬ B ⇒ ¬ A) ⇒ (A ⇒ B)
   p3 : {A B : Formula}
-    -> Deriv (imp (imp (neg B) (neg A)) (imp A B))
+    -> Deriv ((¬ B ⇒ ¬ A) ⇒ A ⇒ B)
 
-  -- (K box)  box (A -> B) -> (box A -> box B)
-  kbox : {A B : Formula}
-      -> Deriv (imp (box (imp A B)) (imp (box A) (box B)))
+  -- (K □)  □ (A ⇒ B) ⇒ (□ A ⇒ □ B)
+  k□ : {A B : Formula}
+      -> Deriv (□ (A ⇒ B) ⇒ □ A ⇒ □ B)
 
-  -- (K nxt)  nxt (A -> B) -> (nxt A -> nxt B)
-  knxt : {A B : Formula}
-      -> Deriv (imp (nxt (imp A B)) (imp (nxt A) (nxt B)))
+  -- (K ○)  ○ (A ⇒ B) ⇒ (○ A ⇒ ○ B)
+  k○ : {A B : Formula}
+      -> Deriv (○ (A ⇒ B) ⇒ ○ A ⇒ ○ B)
 
-  -- (Exp)  box A -> (A and nxt A and nxt (box A))
+  -- (Exp)  □ A ⇒ (A ∧ ○ A ∧ ○ □ A)
   exp : {A : Formula}
-     -> Deriv (imp (box A) (con A (con (nxt A) (nxt (box A)))))
+     -> Deriv (□ A ⇒ A ∧ ○ A ∧ ○ □ A)
 
-  -- (Ind)  box (A -> nxt A) -> (A -> box A)
+  -- (Ind)  □ (A ⇒ ○ A) ⇒ (A ⇒ □ A)
   ind : {A : Formula}
-     -> Deriv (imp (box (imp A (nxt A))) (imp A (box A)))
+     -> Deriv (□ (A ⇒ ○ A) ⇒ A ⇒ □ A)
 
-  -- (Lin)  nxt (neg A) <-> neg (nxt A)
+  -- (Lin)  ○ ¬ A ⇔ ¬ ○ A
   lin : {A : Formula}
-     -> Deriv (iff (nxt (neg A)) (neg (nxt A)))
+     -> Deriv (○ ¬ A ⇔ ¬ ○ A)
 
   -- (PC)  Ben-Ari's Axiom 0, without the substitution relation.
   --
@@ -69,8 +69,8 @@ data Deriv : Formula -> Set where
 
   -- modus ponens
   mp : {A B : Formula}
-    -> Deriv (imp A B) -> Deriv A -> Deriv B
+    -> Deriv (A ⇒ B) -> Deriv A -> Deriv B
 
   -- generalisation
   gen : {A : Formula}
-     -> Deriv A -> Deriv (box A)
+     -> Deriv A -> Deriv (□ A)

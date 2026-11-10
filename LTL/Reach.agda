@@ -65,10 +65,10 @@ reach P us v = reachIter P (length us) us (v :: [])
 ------------------------------------------------------------------------
 -- Computational checks.
 --
--- For dia p the three states are s_a = 1010, s_b = 1001, s_c = 0110 (see
+-- For ◇ p the three states are s_a = 1010, s_b = 1001, s_c = 0110 (see
 -- LTL.Step).  s_a and s_b reach everything; s_c is a sink, reaching only
 -- itself.
 
-reach_diaP : Eq (map (\ v -> length (reach diaP (St diaP) v)) (St diaP))
+reach_◇P : Eq (map (\ v -> length (reach ◇P (St ◇P) v)) (St ◇P))
                 (3 :: 3 :: 1 :: [])
-reach_diaP = refl
+reach_◇P = refl

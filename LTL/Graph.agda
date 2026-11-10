@@ -22,8 +22,8 @@
 -- Where "relevant" went.  The informal statement quantifies over the fairness
 -- sets RELEVANT in a component, which is well defined only because the pending
 -- eventuality is uniform on a component (walkPersist).  Here relevance is
--- absorbed into the predicate: the caller passes, for the eventuality  box A ,
--- the predicate "box A is not pending, or A fails", so a component in which the
+-- absorbed into the predicate: the caller passes, for the eventuality  □ A ,
+-- the predicate "□ A is not pending, or A fails", so a component in which the
 -- eventuality is not pending meets it for free and a component in which it is
 -- pending meets it exactly by fulfilling it.  The graph layer therefore knows
 -- only "C meets every f in fs", and the LTL reading of fs is G38 and G39.
@@ -832,7 +832,7 @@ fairGraph vs G fs v mv =
 -- What a certificate is FOR.
 --
 -- Reading the removal order as a well-founded induction.  R is the property to
--- be established of every vertex -- for G39 it is  Deriv (neg (chi P u)) -- and
+-- be established of every vertex -- for G39 it is  Deriv (¬ (chi P u)) -- and
 -- the hypothesis carried is "R holds outside ws", which is Refuted of
 -- LTL.Extract verbatim.  The sink case is what extractR1 consumes and the block
 -- case is what extractR2 consumes; no formula has to appear for that to be

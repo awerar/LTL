@@ -34,25 +34,25 @@ open import LTL.Fix public
 data RoundB (P : Formula) (As : List Formula) (u : Val) : Set where
   mkRoundB : (ws : List Val) (x : Val)
           -> Walk P (Uinf P) u ws x -> Mem x (Uinf P)
-          -> ((A : Formula) -> Mem A As -> Eq (valOf P u (box A)) false
+          -> ((A : Formula) -> Mem A As -> Eq (valOf P u (□ A)) false
                 -> Fulfil P A u ws)
           -> RoundB P As u
 
 nilFul : (P : Formula) (u : Val) (A : Formula)
-      -> Mem A ([] {A = Formula}) -> Eq (valOf P u (box A)) false -> Fulfil P A u []
+      -> Mem A ([] {A = Formula}) -> Eq (valOf P u (□ A)) false -> Fulfil P A u []
 nilFul P u A ()
 
 roundBody : (P : Formula) (As : List Formula)
-         -> ({A : Formula} -> Mem A As -> Mem A (boxArgs (sub P)))
+         -> ({A : Formula} -> Mem A As -> Mem A (□Args (sub P)))
          -> (u : Val) -> Mem u (Uinf P) -> RoundB P As u
 roundBody P []        sbA u mu = mkRoundB [] u wnil mu (nilFul P u)
-roundBody P (A :: As) sbA u mu = onPend (valOf P u (box A)) refl
+roundBody P (A :: As) sbA u mu = onPend (valOf P u (□ A)) refl
   where
     -- ws1 takes u to x1, and deals with A if A was pending at u; the recursion
     -- then deals with As from x1.
     combine : (ws1 : List Val) (x1 : Val)
            -> Walk P (Uinf P) u ws1 x1 -> Mem x1 (Uinf P)
-           -> (Eq (valOf P u (box A)) false -> Fulfil P A u ws1)
+           -> (Eq (valOf P u (□ A)) false -> Fulfil P A u ws1)
            -> RoundB P (A :: As) u
     combine ws1 x1 wk1 mx1 hA =
       go (roundBody P As (\ m -> sbA (memTl m)) x1 mx1)
@@ -62,15 +62,15 @@ roundBody P (A :: As) sbA u mu = onPend (valOf P u (box A)) refl
           mkRoundB (append ws1 ws2) x2 (walkApp P (Uinf P) wk1 wk2) mx2 prop
           where
             prop : (B : Formula) -> Mem B (A :: As)
-                -> Eq (valOf P u (box B)) false -> Fulfil P B u (append ws1 ws2)
+                -> Eq (valOf P u (□ B)) false -> Fulfil P B u (append ws1 ws2)
             prop B memHd     pd = fulApp ws1 ws2 (hA pd)
             prop B (memTl m) pd =
               sumElim (\ f   -> fulApp ws1 ws2 f)
                       (\ pd2 -> fulApp2 ws1 ws2 (walkEnd P (Uinf P) wk1) (h2 B m pd2))
-                      (walkPersist P (Uinf P) B (boxArgs_mem (sub P) (sbA (memTl m)))
+                      (walkPersist P (Uinf P) B (□Args_mem (sub P) (sbA (memTl m)))
                                    wk1 pd)
 
-    onPend : (b : Bool) -> Eq (valOf P u (box A)) b -> RoundB P (A :: As) u
+    onPend : (b : Bool) -> Eq (valOf P u (□ A)) b -> RoundB P (A :: As) u
     -- not pending at u: the empty path, and the obligation is vacuous
     onPend true  ep =
       combine [] u wnil mu
@@ -89,14 +89,14 @@ data Round (P : Formula) (u : Val) : Set where
   mkRound : (rs : List Val) (x : Val)
          -> Walk P (Uinf P) u rs x -> Mem x (Uinf P)
          -> Eq (nullB rs) false
-         -> ((A : Formula) -> Mem A (boxArgs (sub P))
-               -> Eq (valOf P u (box A)) false -> Fulfil P A u rs)
+         -> ((A : Formula) -> Mem A (□Args (sub P))
+               -> Eq (valOf P u (□ A)) false -> Fulfil P A u rs)
          -> Round P u
 
 roundOf : (P : Formula) (u : Val) -> Mem u (Uinf P) -> Round P u
-roundOf P u mu = fromBody (roundBody P (boxArgs (sub P)) (\ m -> m) u mu)
+roundOf P u mu = fromBody (roundBody P (□Args (sub P)) (\ m -> m) u mu)
   where
-    fromBody : RoundB P (boxArgs (sub P)) u -> Round P u
+    fromBody : RoundB P (□Args (sub P)) u -> Round P u
     fromBody (mkRoundB ws x wk mx h) = fromSucc (uinfSucc P x mx)
       where
         fromSucc : Succ P x -> Round P u

@@ -9,8 +9,8 @@
 --   (R2)  for some j, the j-th eventuality is pending at v and is fulfilled at
 --         no state of Reach_{U_k}(v).
 --
--- The eventualities are indexed by the box-subformulas of P: box A is pending
--- at v when box A is not in v, and fulfilled at w when A is not in w.
+-- The eventualities are indexed by the box-subformulas of P: □ A is pending
+-- at v when □ A is not in v, and fulfilled at w when A is not in w.
 --
 -- (R2) is stated through gfpW of LTL.Gfp rather than through reach: "the j-th
 -- eventuality is fulfilled at no state of Reach_{U_k}(v)" is written "v belongs
@@ -43,7 +43,7 @@ open import LTL.Gfp public
 ------------------------------------------------------------------------
 -- The eventualities.
 --
--- boxArgs -- the A for which box A occurs in sub P -- was defined here until
+-- □Args -- the A for which □ A occurs in sub P -- was defined here until
 -- Phase 9 moved it to LTL.Skel, which is below Deriv and so reachable from
 -- LTL.Complete as well; see the comment there.
 
@@ -54,7 +54,7 @@ r1 : Formula -> List Val -> Val -> Bool
 r1 P us v = nullB (succs P us v)
 
 pending : Formula -> Val -> Formula -> Bool
-pending P v A = boolNot (valOf P v (box A))
+pending P v A = boolNot (valOf P v (□ A))
 
 ------------------------------------------------------------------------
 -- (R2), with the sets hoisted out of the state loop
@@ -63,24 +63,24 @@ Ev : Set
 Ev = Prod Formula (List Val)
 
 evList : Formula -> List Val -> List Ev
-evList P us = map (\ A -> prod A (gfpW P us A)) (boxArgs (sub P))
+evList P us = map (\ A -> prod A (gfpW P us A)) (□Args (sub P))
 
 evList_mem : (P : Formula) (us : List Val) {A : Formula}
-          -> Mem A (boxArgs (sub P)) -> Mem (prod A (gfpW P us A)) (evList P us)
+          -> Mem A (□Args (sub P)) -> Mem (prod A (gfpW P us A)) (evList P us)
 evList_mem P us m = memMap (\ A -> prod A (gfpW P us A)) m
 
 evList_of : (P : Formula) (us : List Val) {A : Formula} {W : List Val}
          -> Mem (prod A W) (evList P us)
-         -> Prod (Mem A (boxArgs (sub P))) (Eq W (gfpW P us A))
+         -> Prod (Mem A (□Args (sub P))) (Eq W (gfpW P us A))
 evList_of P us {A} {W} m =
-  fromSig (map_mem_inv (\ B -> prod B (gfpW P us B)) (boxArgs (sub P)) m)
+  fromSig (map_mem_inv (\ B -> prod B (gfpW P us B)) (□Args (sub P)) m)
   where
     fromSig : Sigma Formula
-                (\ B -> Prod (Mem B (boxArgs (sub P)))
+                (\ B -> Prod (Mem B (□Args (sub P)))
                              (Eq (prod A W) (prod B (gfpW P us B))))
-           -> Prod (Mem A (boxArgs (sub P))) (Eq W (gfpW P us A))
+           -> Prod (Mem A (□Args (sub P))) (Eq W (gfpW P us A))
     fromSig (sig B (prod mB e)) =
-      eqSubst (\ C -> Prod (Mem C (boxArgs (sub P))) (Eq W (gfpW P us C)))
+      eqSubst (\ C -> Prod (Mem C (□Args (sub P))) (Eq W (gfpW P us C)))
               (eqSym (eqCong prodFst e))
               (prod mB (eqCong prodSnd e))
 
@@ -143,7 +143,7 @@ removed P = filterL (\ v -> boolNot (memB v (Uinf P))) (Ust P)
 -- The decision, as a boolean.
 --
 -- This is the test of Theorem 6.1: is there a surviving state in which the
--- input formula holds?  Run on neg P, "no" means P is provable.
+-- input formula holds?  Run on ¬ P, "no" means P is provable.
 
 satB : Formula -> Bool
 satB P = anyL (\ v -> valOf P v P) (Uinf P)
@@ -151,32 +151,32 @@ satB P = anyL (\ v -> valOf P v P) (Uinf P)
 ------------------------------------------------------------------------
 -- Checkpoint C1.
 --
--- dia p is satisfiable: all three states survive, and one of them makes
--- dia p true.
+-- ◇ p is satisfiable: all three states survive, and one of them makes
+-- ◇ p true.
 
-Uinf_diaP : Eq (length (Uinf diaP)) 3
-Uinf_diaP = refl
+Uinf_◇P : Eq (length (Uinf ◇P)) 3
+Uinf_◇P = refl
 
-satB_diaP : Eq (satB diaP) true
-satB_diaP = refl
+satB_◇P : Eq (satB ◇P) true
+satB_◇P = refl
 
--- neg benAri is unsatisfiable, so box p -> nxt (box p) is provable.
+-- ¬ benAri is unsatisfiable, so □ p ⇒ ○ □ p is provable.
 --
 -- Of the six states, E and D are removed in the first round by (R1) alone --
--- neither has a successor -- and E is the only state containing neg benAri.
+-- neither has a successor -- and E is the only state containing ¬ benAri.
 -- Ben-Ari's own worked example therefore never reaches (R2) in this
--- formulation: (T2) makes  box p  together with  neg (nxt (box p))  contradict
+-- formulation: (T2) makes  □ p  together with  ¬ ○ □ p  contradict
 -- in a single step, where his tableau needed the loop invariant because it
--- carried  nxt (box p)  as an explicit member of the closure.
+-- carried  ○ □ p  as an explicit member of the closure.
 
-Uinf_negBenAri : Eq (length (Uinf negBenAri)) 0
-Uinf_negBenAri = refl
+Uinf_¬BenAri : Eq (length (Uinf ¬BenAri)) 0
+Uinf_¬BenAri = refl
 
-removed_negBenAri : Eq (length (removed negBenAri)) 1
-removed_negBenAri = refl
+removed_¬BenAri : Eq (length (removed ¬BenAri)) 1
+removed_¬BenAri = refl
 
-satB_negBenAri : Eq (satB negBenAri) false
-satB_negBenAri = refl
+satB_¬BenAri : Eq (satB ¬BenAri) false
+satB_¬BenAri = refl
 
 ------------------------------------------------------------------------
 -- An example that does exercise (R2), recorded but not checked here.
@@ -184,9 +184,9 @@ satB_negBenAri = refl
 -- Since benAri is settled by (R1) alone, it is not an adequate end-to-end test
 -- of the extraction theorem.  The induction axiom is:
 --
---   indAx  = imp (box (imp p (nxt p))) (imp p (box p))
+--   indAx  = □ (p ⇒ ○ p) ⇒ p ⇒ □ p
 --
--- Running the procedure on  neg indAx  gives, measured:
+-- Running the procedure on  ¬ indAx  gives, measured:
 --
 --   length (sub negInd)   = 11        (so 2048 valuations to filter)
 --   length (St negInd)    = 10

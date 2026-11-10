@@ -161,8 +161,8 @@ gfpEscape P us A =
 -- reachable
 
 uinfFulfil : (P : Formula) (v : Val) -> Mem v (Uinf P)
-          -> (A : Formula) -> Mem A (boxArgs (sub P))
-          -> Eq (valOf P v (box A)) false
+          -> (A : Formula) -> Mem A (□Args (sub P))
+          -> Eq (valOf P v (□ A)) false
           -> Escape P (Uinf P) A v
 uinfFulfil P v m A mA pend =
   gfpEscape P (Uinf P) A v m

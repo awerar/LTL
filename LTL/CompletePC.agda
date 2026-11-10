@@ -4,7 +4,7 @@
 -- with the propositional bookkeeping discharged by (PC) instead of enumerated.
 --
 -- Nothing here replaces anything.  allComplete and stateComplete (LTL.Complete)
--- are untouched, and so are nonState, disjFilter and disjDrop, which is what
+-- are untouched, and so are nonState, ⋁Filter and ⋁Drop, which is what
 -- lets LTL.Proofs put the two certificates side by side: the point of the phase
 -- is a COMPARISON, and it needs both proofs in the development.
 --
@@ -17,11 +17,11 @@
 -- on A alone, with no substitution relation anywhere.
 --
 --   G31   allCompletePC As  = pc (tautAll As)            19263 -> 1
---   G32   stateCompletePC P = mpChain (boxArgs (sub P)) (pc (tautState P))
+--   G32   stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 --
--- The chain is the |boxArgs (sub P)| instances of (T), one modus ponens each,
--- so G32 is  1 + 46 |boxArgs (sub P)|  constructors exactly: 1 for p -> p,
--- 47 for box p -> p where the old proof is 296839, and 277 for the
+-- The chain is the |□Args (sub P)| instances of (T), one modus ponens each,
+-- so G32 is  1 + 46 |□Args (sub P)|  constructors exactly: 1 for p ⇒ p,
+-- 47 for □ p ⇒ p where the old proof is 296839, and 277 for the
 -- twenty-two-subformula example of section 4g, whose old proof cannot be
 -- written down at all.  That is the shape the phase was after -- linear in the
 -- number of eventualities where it was exponential in |Sub P|.
@@ -29,7 +29,7 @@
 -- TWO DEPARTURES from the proposal in section 7, both simplifications, and both
 -- measured in LTL.Proofs.
 --
--- 1.  Section 7 gives G32 as  E P -> (D P -> beta P (St P))  with D P the full
+-- 1.  Section 7 gives G32 as  E P ⇒ (D P ⇒ beta P (St P))  with D P the full
 --     disjunction, so that stateCompletePC would consume allCompletePC as well.
 --     That premise is not needed.  The tautology is proved by BUILDING the
 --     witness state out of the truth-table row -- skelVec of LTL.Taut, which is
@@ -60,7 +60,7 @@ open import LTL.Taut     public
 -- right length, by map_length -- and chiRowTrue that its chi holds.
 
 splitFml : List Formula -> Formula
-splitFml As = disj (map (chiOf As) (allVecs (length As)))
+splitFml As = ⋁ (map (chiOf As) (allVecs (length As)))
 
 tautAll : (As : List Formula) -> Eq (isTaut (splitFml As)) true
 tautAll As =
@@ -74,51 +74,51 @@ tautAll As =
     row : {a : Val} -> Mem a (allVecs (length Ats))
        -> Eq (valFrom Ats a (splitFml As)) true
     row {a} m =
-      disjTrue Ats a (map (chiOf As) (allVecs (length As)))
+      ⋁True Ats a (map (chiOf As) (allVecs (length As)))
                (memMap (chiOf As)
                        (allVecs_complete (length As) (map (valFrom Ats a) As)
                                          (map_length (valFrom Ats a) As)))
                (chiRowTrue Ats a As)
 
 allCompletePC : (As : List Formula)
-             -> Deriv (disj (map (chiOf As) (allVecs (length As))))
+             -> Deriv (⋁ (map (chiOf As) (allVecs (length As))))
 allCompletePC As = pc (tautAll As)
 
 ------------------------------------------------------------------------
 -- The (S2) premise.
 --
--- E P of section 7:  box A -> A  for every box-subformula of P, as the premises
+-- E P of section 7:  □ A ⇒ A  for every box-subformula of P, as the premises
 -- of an implication chain rather than as a conjunction -- see LTL.Taut for the
--- factor of five that costs.  Each premise is an instance of (T), boxElim of
+-- factor of five that costs.  Each premise is an instance of (T), □Elim of
 -- LTL.Temporal, itself (Exp) followed by (L3); together they are the whole of
 -- the new Lemma 2.6 beyond its single pc node.
 --
 -- It is needed because it is the one clause of Definition 2.2 that a
--- truth-table row does not satisfy for free: the skeleton reads box A and A as
--- two unrelated atoms, which is exactly why  box p -> p  is not a skeleton
--- tautology (LTL.Proofs, boxElim_not_taut).  (S1) and coherence, by contrast,
+-- truth-table row does not satisfy for free: the skeleton reads □ A and A as
+-- two unrelated atoms, which is exactly why  □ p ⇒ p  is not a skeleton
+-- tautology (LTL.Proofs, □Elim_not_taut).  (S1) and coherence, by contrast,
 -- cost nothing at all -- see LTL.Taut.
 
 s2List : Formula -> List Formula
-s2List P = map s2Fml (boxArgs (sub P))
+s2List P = map s2Fml (□Args (sub P))
 
--- and the derivation half of LTL.Taut's boxChain: one modus ponens against one
+-- and the derivation half of LTL.Taut's □Chain: one modus ponens against one
 -- instance of (T) per premise, left to right.  There is no s2Proof as a term of
 -- its own -- the instances are consumed as they are met, which is what keeps
--- the count at 1 + 46 |boxArgs| with no propositional glue.
+-- the count at 1 + 46 |□Args| with no propositional glue.
 
 mpChain : (As : List Formula) {C : Formula}
-       -> Deriv (impList (map s2Fml As) C) -> Deriv C
+       -> Deriv (⇒List (map s2Fml As) C) -> Deriv C
 mpChain []        d = d
-mpChain (A :: As) d = mpChain As (mp d boxElim)
+mpChain (A :: As) d = mpChain As (mp d □Elim)
 
 ------------------------------------------------------------------------
 -- G32: Lemma 2.6.
 --
 -- The (S2) instances imply the state disjunction, propositionally.  Fix the
 -- atom list of the implication itself and any row a of its truth table; the
--- premise says  box B -> B  holds under that reading for every box B in Sub P,
--- which is BoxOk, so skelVec is a state (LTL.Taut) and its chi is a true
+-- premise says  □ B ⇒ B  holds under that reading for every □ B in Sub P,
+-- which is □Ok, so skelVec is a state (LTL.Taut) and its chi is a true
 -- disjunct of beta P (St P).
 --
 -- Note what does NOT happen.  No valuation is enumerated, no non-state is
@@ -129,7 +129,7 @@ mpChain (A :: As) d = mpChain As (mp d boxElim)
 -- the one that makes the certificate tractable, with the two now in one file.
 
 stateFml : Formula -> Formula
-stateFml P = impList (s2List P) (beta P (St P))
+stateFml P = ⇒List (s2List P) (beta P (St P))
 
 tautState : (P : Formula) -> Eq (isTaut (stateFml P)) true
 tautState P =
@@ -143,23 +143,23 @@ tautState P =
     row : {a : Val} -> Mem a (allVecs (length Ats))
        -> Eq (valFrom Ats a (stateFml P)) true
     row {a} m =
-      boxChain Ats a (boxArgs (sub P)) (beta P (St P))
-               (\ g -> betaSkel Ats a P (\ B mb -> g B (boxArgs_of (sub P) mb)))
+      □Chain Ats a (□Args (sub P)) (beta P (St P))
+               (\ g -> betaSkel Ats a P (\ B mb -> g B (□Args_of (sub P) mb)))
 
 stateCompletePC : (P : Formula) -> Deriv (beta P (St P))
-stateCompletePC P = mpChain (boxArgs (sub P)) (pc (tautState P))
+stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 
 ------------------------------------------------------------------------
 -- (L5) the same way, which is where the rest of the certificate is.
 --
--- With Lemma 2.6 down to one node the dominant cost is disjElim: 426
--- constructors per disjunct, 1280 of the 1529 for box p -> p, growing with the
+-- With Lemma 2.6 down to one node the dominant cost is ⋁Elim: 426
+-- constructors per disjunct, 1280 of the 1529 for □ p ⇒ p, growing with the
 -- number of STATES.  It is propositional through and through -- the note proves
 -- it from (P1)-(P3) alone -- so (PC) can take it whole:
 --
---     (C1 -> C) -> ... -> (Cn -> C) -> ((C1 or ... or Cn) -> C)
+--     (C1 ⇒ C) ⇒ ... ⇒ (Cn ⇒ C) ⇒ ((C1 ∨ ... ∨ Cn) ⇒ C)
 --
--- is a tautology of its own skeleton, tautDisjElim, and the n branches are
+-- is a tautology of its own skeleton, taut⋁Elim, and the n branches are
 -- discharged by n modus ponens.  So betaElimPC is  1 + n  nodes of glue where
 -- betaElim is  17 + 426 n , and the certificate becomes linear in |St P| with a
 -- constant of one.
@@ -168,33 +168,33 @@ stateCompletePC P = mpChain (boxArgs (sub P)) (pc (tautState P))
 -- of  map (chi P)  is needed -- map_mem_inv lives in LTL.Bar, which LTL.Complete
 -- cannot reach.  Same reason as mpChain above.
 
-disjImpFml : List Formula -> Formula -> Formula
-disjImpFml Cs C = impList (map (impTo C) Cs) (imp (disj Cs) C)
+⋁⇒Fml : List Formula -> Formula -> Formula
+⋁⇒Fml Cs C = ⇒List (map (⇒To C) Cs) (⋁ Cs ⇒ C)
 
-tautDisjElim : (Cs : List Formula) (C : Formula)
-            -> Eq (isTaut (disjImpFml Cs C)) true
-tautDisjElim Cs C =
-  allB_intro (\ a -> valFrom (atomsOf (disjImpFml Cs C)) a (disjImpFml Cs C))
-             (allVecs (length (atomsOf (disjImpFml Cs C))))
+taut⋁Elim : (Cs : List Formula) (C : Formula)
+            -> Eq (isTaut (⋁⇒Fml Cs C)) true
+taut⋁Elim Cs C =
+  allB_intro (\ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
+             (allVecs (length (atomsOf (⋁⇒Fml Cs C))))
              row
   where
     Ats : List Formula
-    Ats = atomsOf (disjImpFml Cs C)
+    Ats = atomsOf (⋁⇒Fml Cs C)
 
     row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a (disjImpFml Cs C)) true
+       -> Eq (valFrom Ats a (⋁⇒Fml Cs C)) true
     row {a} m =
-      impChain Ats a (map (impTo C) Cs) (imp (disj Cs) C)
-               (\ g -> disjElimTrue Ats a Cs C (\ mD -> g (memMap (impTo C) mD)))
+      ⇒Chain Ats a (map (⇒To C) Cs) (⋁ Cs ⇒ C)
+               (\ g -> ⋁ElimTrue Ats a Cs C (\ mD -> g (memMap (⇒To C) mD)))
 
 mpVals : (P : Formula) {C : Formula} (ws : List Val) {Z : Formula}
-      -> ((w : Val) -> Mem w ws -> Deriv (imp (chi P w) C))
-      -> Deriv (impList (map (impTo C) (map (chi P) ws)) Z) -> Deriv Z
+      -> ((w : Val) -> Mem w ws -> Deriv ((chi P w) ⇒ C))
+      -> Deriv (⇒List (map (⇒To C) (map (chi P) ws)) Z) -> Deriv Z
 mpVals P []        h d = d
 mpVals P (w :: ws) h d =
   mpVals P ws (\ z m -> h z (memTl m)) (mp d (h w memHd))
 
 betaElimPC : (P : Formula) {C : Formula} (ws : List Val)
-          -> ((w : Val) -> Mem w ws -> Deriv (imp (chi P w) C))
-          -> Deriv (imp (beta P ws) C)
-betaElimPC P {C} ws h = mpVals P ws h (pc (tautDisjElim (map (chi P) ws) C))
+          -> ((w : Val) -> Mem w ws -> Deriv ((chi P w) ⇒ C))
+          -> Deriv ((beta P ws) ⇒ C)
+betaElimPC P {C} ws h = mpVals P ws h (pc (taut⋁Elim (map (chi P) ws) C))

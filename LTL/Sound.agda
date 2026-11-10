@@ -6,19 +6,19 @@
 --    every state of every lasso."                          -- m4.tex section 5
 --
 -- Ten constructors.  Six are Boolean tautologies of at most three variables,
--- written out by cases; (K nxt) and (Lin) reduce to  boolImp z z  because
+-- written out by cases; (K ○) and (Lin) reduce to  boolImp z z  because
 -- evalAt commutes with nxt definitionally, both sides of (Lin) being
 -- boolNot (evalAt A (nextPos pos)) on the nose.  That leaves four.
 --
---   (K box)  is allB pointwise: the SAME orbit on both sides, so it is
---            allB_at then impTrueB then allB_intro.
+--   (K □)  is allB pointwise: the SAME orbit on both sides, so it is
+--            allB_at then ⇒TrueB then allB_intro.
 --
 --   (Exp)    needs the orbit of pos to contain pos, its successor, and the
 --            whole orbit of its successor.  All three are orbitIter, since
 --            posIter 0, posIter 1 and posIter (suc t) all land in it.
 --
 --   (Ind)    is the only one with content, and it is the risk that section 3
---            of the plan ranked fourth.  Under  box (A -> nxt A)  and A at pos,
+--            of the plan ranked fourth.  Under  □ (A ⇒ ○ A)  and A at pos,
 --            A holds at posIter t pos by induction on t -- the hypothesis is
 --            available at posIter t pos because orbitIter puts it in the orbit
 --            -- and every member of the orbit is a posIter t pos by
@@ -65,10 +65,10 @@ tid false = refl
 ------------------------------------------------------------------------
 -- Conjunction, as (Exp) and (Lin) need it
 
-conTrue : (P : Formula) (c0 : Val) (c1 : List Val) (X Y : Formula) (pos : Pos)
+∧True : (P : Formula) (c0 : Val) (c1 : List Val) (X Y : Formula) (pos : Pos)
        -> Eq (evalAt P c0 c1 X pos) true -> Eq (evalAt P c0 c1 Y pos) true
-       -> Eq (evalAt P c0 c1 (con X Y) pos) true
-conTrue P c0 c1 X Y pos ex ey =
+       -> Eq (evalAt P c0 c1 (X ∧ Y) pos) true
+∧True P c0 c1 X Y pos ex ey =
   aux (evalAt P c0 c1 X pos) (evalAt P c0 c1 Y pos) ex ey
   where
     aux : (x y : Bool) -> Eq x true -> Eq y true
@@ -78,35 +78,35 @@ conTrue P c0 c1 X Y pos ex ey =
     aux false y     ()  ey'
 
 ------------------------------------------------------------------------
--- (K box)
+-- (K □)
 
-boxK : (P : Formula) (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
-    -> Eq (evalAt P c0 c1 (box (imp A B)) pos) true
-    -> Eq (evalAt P c0 c1 (box A) pos) true
-    -> Eq (evalAt P c0 c1 (box B) pos) true
-boxK P c0 c1 A B pos e1 e2 =
+□K : (P : Formula) (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
+    -> Eq (evalAt P c0 c1 (□ (A ⇒ B)) pos) true
+    -> Eq (evalAt P c0 c1 (□ A) pos) true
+    -> Eq (evalAt P c0 c1 (□ B) pos) true
+□K P c0 c1 A B pos e1 e2 =
   allB_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
-    (\ {q} m -> impTrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
-                         (allB_at (evalAt P c0 c1 (imp A B)) (orbitOf c0 c1 pos) m e1)
+    (\ {q} m -> ⇒TrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
+                         (allB_at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
                          (allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
 
 ------------------------------------------------------------------------
 -- (Exp)
 
 expSound : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-        -> Eq (evalAt P c0 c1 (imp (box A) (con A (con (nxt A) (nxt (box A))))) pos)
+        -> Eq (evalAt P c0 c1 (□ A ⇒ A ∧ ○ A ∧ ○ □ A) pos)
               true
 expSound P c0 c1 A pos =
-  impIntroB (evalAt P c0 c1 (box A) pos)
-            (evalAt P c0 c1 (con A (con (nxt A) (nxt (box A)))) pos) body
+  ⇒IntroB (evalAt P c0 c1 (□ A) pos)
+            (evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos) body
   where
-    body : Eq (evalAt P c0 c1 (box A) pos) true
-        -> Eq (evalAt P c0 c1 (con A (con (nxt A) (nxt (box A)))) pos) true
+    body : Eq (evalAt P c0 c1 (□ A) pos) true
+        -> Eq (evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos) true
     body eb =
-      conTrue P c0 c1 A (con (nxt A) (nxt (box A))) pos
+      ∧True P c0 c1 A (○ A ∧ ○ □ A) pos
               (allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
                        (orbitIter c0 c1 zero pos) eb)
-              (conTrue P c0 c1 (nxt A) (nxt (box A)) pos
+              (∧True P c0 c1 (○ A) (○ □ A) pos
                        (allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
                                 (orbitIter c0 c1 (suc zero) pos) eb)
                        (allB_intro (evalAt P c0 c1 A)
@@ -123,16 +123,16 @@ expSound P c0 c1 A pos =
 -- orbit consists exactly of those stages.
 
 indSound : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-        -> Eq (evalAt P c0 c1 (imp (box (imp A (nxt A))) (imp A (box A))) pos) true
+        -> Eq (evalAt P c0 c1 (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos) true
 indSound P c0 c1 A pos =
-  impIntroB (evalAt P c0 c1 (box (imp A (nxt A))) pos)
-            (boolImp (evalAt P c0 c1 A pos) (evalAt P c0 c1 (box A) pos))
-            (\ e1 -> impIntroB (evalAt P c0 c1 A pos) (evalAt P c0 c1 (box A) pos)
+  ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ ○ A)) pos)
+            (boolImp (evalAt P c0 c1 A pos) (evalAt P c0 c1 (□ A) pos))
+            (\ e1 -> ⇒IntroB (evalAt P c0 c1 A pos) (evalAt P c0 c1 (□ A) pos)
                                (body e1))
   where
-    body : Eq (evalAt P c0 c1 (box (imp A (nxt A))) pos) true
+    body : Eq (evalAt P c0 c1 (□ (A ⇒ ○ A)) pos) true
         -> Eq (evalAt P c0 c1 A pos) true
-        -> Eq (evalAt P c0 c1 (box A) pos) true
+        -> Eq (evalAt P c0 c1 (□ A) pos) true
     body e1 e2 =
       allB_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
                  (\ {q} m -> fromIter q (orbitOf_iter c0 c1 pos q m))
@@ -142,10 +142,10 @@ indSound P c0 c1 A pos =
         along (suc t) =
           eqSubst (\ r -> Eq (evalAt P c0 c1 A r) true)
                   (eqSym (posIter_suc c0 c1 t pos))
-                  (impTrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
+                  (⇒TrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
                             (evalAt P c0 c1 A
                                     (nextPos c0 c1 (posIter c0 c1 t pos)))
-                            (allB_at (evalAt P c0 c1 (imp A (nxt A)))
+                            (allB_at (evalAt P c0 c1 (A ⇒ ○ A))
                                      (orbitOf c0 c1 pos)
                                      (orbitIter c0 c1 t pos) e1)
                             (along t))
@@ -173,15 +173,15 @@ sound P b c0 c1 mc0 wc stb (p2 {A} {B} {C}) pos vp =
 sound P b c0 c1 mc0 wc stb (p3 {A} {B}) pos vp =
   tp3 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
 
-sound P b c0 c1 mc0 wc stb (kbox {A} {B}) pos vp =
-  impIntroB (evalAt P c0 c1 (box (imp A B)) pos)
-            (boolImp (evalAt P c0 c1 (box A) pos) (evalAt P c0 c1 (box B) pos))
-            (\ e1 -> impIntroB (evalAt P c0 c1 (box A) pos)
-                               (evalAt P c0 c1 (box B) pos)
-                               (\ e2 -> boxK P c0 c1 A B pos e1 e2))
+sound P b c0 c1 mc0 wc stb (k□ {A} {B}) pos vp =
+  ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ B)) pos)
+            (boolImp (evalAt P c0 c1 (□ A) pos) (evalAt P c0 c1 (□ B) pos))
+            (\ e1 -> ⇒IntroB (evalAt P c0 c1 (□ A) pos)
+                               (evalAt P c0 c1 (□ B) pos)
+                               (\ e2 -> □K P c0 c1 A B pos e1 e2))
 
 -- both sides are boolImp (evalAt A (nextPos pos)) (evalAt B (nextPos pos))
-sound P b c0 c1 mc0 wc stb (knxt {A} {B}) pos vp =
+sound P b c0 c1 mc0 wc stb (k○ {A} {B}) pos vp =
   tid (boolImp (evalAt P c0 c1 A (nextPos c0 c1 pos))
                (evalAt P c0 c1 B (nextPos c0 c1 pos)))
 
@@ -189,11 +189,11 @@ sound P b c0 c1 mc0 wc stb (exp {A}) pos vp = expSound P c0 c1 A pos
 
 sound P b c0 c1 mc0 wc stb (ind {A}) pos vp = indSound P c0 c1 A pos
 
--- nxt (neg A) and neg (nxt A) evaluate to the same Boolean, so both halves of
+-- ○ ¬ A and ¬ ○ A evaluate to the same Boolean, so both halves of
 -- the biconditional are boolImp z z
 sound P b c0 c1 mc0 wc stb (lin {A}) pos vp =
-  conTrue P c0 c1 (imp (nxt (neg A)) (neg (nxt A)))
-                  (imp (neg (nxt A)) (nxt (neg A))) pos
+  ∧True P c0 c1 (○ ¬ A ⇒ ¬ ○ A)
+                  (¬ ○ A ⇒ ○ ¬ A) pos
           (tid (boolNot (evalAt P c0 c1 A (nextPos c0 c1 pos))))
           (tid (boolNot (evalAt P c0 c1 A (nextPos c0 c1 pos))))
 
@@ -205,7 +205,7 @@ sound P b c0 c1 mc0 wc stb (pc {C} e) pos vp =
   tautSound (\ X -> evalAt P c0 c1 X pos) C (\ X m -> refl) (\ X Y m -> refl) e
 
 sound P b c0 c1 mc0 wc stb (mp {A} {B} d e) pos vp =
-  impTrueB (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+  ⇒TrueB (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
            (sound P b c0 c1 mc0 wc stb d pos vp)
            (sound P b c0 c1 mc0 wc stb e pos vp)
 

@@ -189,8 +189,8 @@ data Run (P : Formula) (v0 : Val) : Set where
        -> Eq (step P b c0) true
        -> Mem b (c0 :: c1)
        -> ((s : Val) -> Mem s (b :: c0 :: c1)
-             -> (A : Formula) -> Mem A (boxArgs (sub P))
-             -> Eq (valOf P s (box A)) false -> Fulfil P A b (c0 :: c1))
+             -> (A : Formula) -> Mem A (□Args (sub P))
+             -> Eq (valOf P s (□ A)) false -> Fulfil P A b (c0 :: c1))
        -> (rest : List Val) -> Mem v0 (Uinf P) -> Walk P (Uinf P) v0 rest b
        -> Run P v0
 

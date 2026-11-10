@@ -4,17 +4,17 @@
 --
 --   decide : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
 --
--- Run the elimination on Sub(neg Q) and ask whether some surviving state
--- contains neg Q.  That is one boolean, satB (neg Q), and it decides which
+-- Run the elimination on Sub(¬ Q) and ask whether some surviving state
+-- contains ¬ Q.  That is one boolean, satB (¬ Q), and it decides which
 -- branch applies; both branches were already complete before this module.
 --
---   satB (neg Q) = false.  Every state containing neg Q was removed, so is
+--   satB (¬ Q) = false.  Every state containing ¬ Q was removed, so is
 --     refutable by Theorem 4.1; every survivor contains Q.  State completeness
 --     closes it.  This is `provable` in LTL.Extract, and the certificate is a
 --     derivation.
 --
---   satB (neg Q) = true.  Proposition 5.3 gives a fulfilling lasso through such
---     a state, Hintikka's lemma evaluates neg Q to 1 there, hence Q to 0, and
+--   satB (¬ Q) = true.  Proposition 5.3 gives a fulfilling lasso through such
+--     a state, Hintikka's lemma evaluates ¬ Q to 1 there, hence Q to 0, and
 --     soundness says a derivation of Q would evaluate it to 1.  The certificate
 --     is the lasso, together with the function turning any derivation of Q into
 --     Empty.
@@ -33,57 +33,57 @@ open import LTL.Hintikka public
 -- What a countermodel is
 
 data LassoCountermodel (Q : Formula) : Set where
-  countermodel : (v0 : Val) (r : Run (neg Q) v0)
-              -> Mem v0 (Uinf (neg Q))
-              -> Eq (eval (neg Q) v0 r Q 0) false
+  countermodel : (v0 : Val) (r : Run (¬ Q) v0)
+              -> Mem v0 (Uinf (¬ Q))
+              -> Eq (eval (¬ Q) v0 r Q 0) false
               -> (Deriv Q -> Empty)
               -> LassoCountermodel Q
 
 ------------------------------------------------------------------------
 -- Building one.
 --
--- v0 contains neg Q and is a state, so by (S1) it does not contain Q;
+-- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
 -- Hintikka's lemma at stage 0 transfers that to the evaluation.
 
-buildCM : (Q : Formula) (v0 : Val) -> Mem v0 (Uinf (neg Q))
-       -> Eq (valOf (neg Q) v0 (neg Q)) true -> LassoCountermodel Q
+buildCM : (Q : Formula) (v0 : Val) -> Mem v0 (Uinf (¬ Q))
+       -> Eq (valOf (¬ Q) v0 (¬ Q)) true -> LassoCountermodel Q
 buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
   where
-    r : Run (neg Q) v0
-    r = runOf (neg Q) v0 m (lasso (neg Q) v0 m)
+    r : Run (¬ Q) v0
+    r = runOf (¬ Q) v0 m (lasso (¬ Q) v0 m)
 
-    -- (S1) at neg Q, the head of sub (neg Q)
-    valQ : Eq (valOf (neg Q) v0 Q) false
+    -- (S1) at ¬ Q, the head of sub (¬ Q)
+    valQ : Eq (valOf (¬ Q) v0 Q) false
     valQ =
-      notTrue (valOf (neg Q) v0 Q)
-        (eqTrans (eqSym (boolEq_sound (valOf (neg Q) v0 (neg Q))
-                                      (boolNot (valOf (neg Q) v0 Q))
-                                      (stateOk (neg Q) v0 m (sub_self (neg Q)))))
+      notTrue (valOf (¬ Q) v0 Q)
+        (eqTrans (eqSym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
+                                      (boolNot (valOf (¬ Q) v0 Q))
+                                      (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
                  ev)
 
-    evalFalse : Eq (eval (neg Q) v0 r Q 0) false
+    evalFalse : Eq (eval (¬ Q) v0 r Q 0) false
     evalFalse =
-      eqTrans (eqSym (hintStart (neg Q) v0 r Q (memTl (sub_self Q)))) valQ
+      eqTrans (eqSym (hintStart (¬ Q) v0 r Q (memTl (sub_self Q)))) valQ
 
     noDeriv : Deriv Q -> Empty
-    noDeriv d = tfAbs (eqTrans (eqSym (soundRun (neg Q) v0 r d 0)) evalFalse)
+    noDeriv d = tfAbs (eqTrans (eqSym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- Theorem 6.1
 
 decide : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
-decide Q = onSat (satB (neg Q)) refl
+decide Q = onSat (satB (¬ Q)) refl
   where
-    fromSig : Sigma Val (\ v -> Prod (Mem v (Uinf (neg Q)))
-                                     (Eq (valOf (neg Q) v (neg Q)) true))
+    fromSig : Sigma Val (\ v -> Prod (Mem v (Uinf (¬ Q)))
+                                     (Eq (valOf (¬ Q) v (¬ Q)) true))
            -> Sum (Deriv Q) (LassoCountermodel Q)
     fromSig (sig v0 (prod m ev)) = inr (buildCM Q v0 m ev)
 
-    onSat : (x : Bool) -> Eq (satB (neg Q)) x
+    onSat : (x : Bool) -> Eq (satB (¬ Q)) x
          -> Sum (Deriv Q) (LassoCountermodel Q)
     onSat false e = inl (provable Q e)
     onSat true  e =
-      fromSig (anyL_true (\ v -> valOf (neg Q) v (neg Q)) (Uinf (neg Q)) e)
+      fromSig (anyL_true (\ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Reading the answer
@@ -125,8 +125,8 @@ derivSize : {A : Formula} -> Deriv A -> Nat
 derivSize p1       = 1
 derivSize p2       = 1
 derivSize p3       = 1
-derivSize kbox     = 1
-derivSize knxt     = 1
+derivSize k□     = 1
+derivSize k○     = 1
 derivSize exp      = 1
 derivSize ind      = 1
 derivSize lin      = 1
@@ -138,8 +138,8 @@ derivMP : {A : Formula} -> Deriv A -> Nat
 derivMP p1       = 0
 derivMP p2       = 0
 derivMP p3       = 0
-derivMP kbox     = 0
-derivMP knxt     = 0
+derivMP k□     = 0
+derivMP k○     = 0
 derivMP exp      = 0
 derivMP ind      = 0
 derivMP lin      = 0
@@ -151,8 +151,8 @@ derivGen : {A : Formula} -> Deriv A -> Nat
 derivGen p1       = 0
 derivGen p2       = 0
 derivGen p3       = 0
-derivGen kbox     = 0
-derivGen knxt     = 0
+derivGen k□     = 0
+derivGen k○     = 0
 derivGen exp      = 0
 derivGen ind      = 0
 derivGen lin      = 0
@@ -168,8 +168,8 @@ derivInd : {A : Formula} -> Deriv A -> Nat
 derivInd p1       = 0
 derivInd p2       = 0
 derivInd p3       = 0
-derivInd kbox     = 0
-derivInd knxt     = 0
+derivInd k□     = 0
+derivInd k○     = 0
 derivInd exp      = 0
 derivInd ind      = 1
 derivInd lin      = 0
@@ -190,17 +190,17 @@ countOf Q = onDec (decide Q)
 -- Looking at a countermodel.
 --
 -- The bit vectors above are the states as the procedure stores them, read
--- against sub (neg Q); they say everything but say it unreadably.  What one
+-- against sub (¬ Q); they say everything but say it unreadably.  What one
 -- actually wants to see is the truth value of a chosen formula at each stage of
 -- the run, and the record already carries the run, so this is eval of LTL.Eval
 -- applied at the successive stages.
 --
 -- Note the formula being evaluated is arbitrary: evalAt is total on all of
--- Formula, not only on sub (neg Q) (see section 4d of FORMALISATION-PLAN.md),
+-- Formula, not only on sub (¬ Q) (see section 4d of FORMALISATION-PLAN.md),
 -- so one may ask about a variable, about Q itself, or about anything else.
 
 cmEval : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Bool
-cmEval Q (countermodel v0 r m ef rf) A i = eval (neg Q) v0 r A i
+cmEval Q (countermodel v0 r m ef rf) A i = eval (¬ Q) v0 r A i
 
 cmFrom : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Nat -> List Bool
 cmFrom Q c A i zero    = []
@@ -231,8 +231,8 @@ shapeOf Q = onDec (decide Q)
 -- Checkpoint C4.
 --
 -- Ben-Ari's formula is decided in the affirmative: decide returns inl, so the
--- certificate is a derivation of  box p -> nxt (box p)  in the system L.  The
--- same for  box p -> box (nxt p) , whose derivation goes through case (R2) of
+-- certificate is a derivation of  □ p ⇒ ○ □ p  in the system L.  The
+-- same for  □ p ⇒ □ ○ p , whose derivation goes through case (R2) of
 -- Theorem 4.1 -- see bnbProof in LTL.Extract.
 
 decide_benAri : Eq (isProof (decide benAri)) true
@@ -241,37 +241,37 @@ decide_benAri = refl
 decide_bnb : Eq (isProof (decide bnb)) true
 decide_bnb = refl
 
--- dia p is decided in the negative, and the certificate is a lasso.
+-- ◇ p is decided in the negative, and the certificate is a lasso.
 --
--- The procedure runs on  neg (dia p) = neg (neg (box (neg p))) , whose five
+-- The procedure runs on  ¬ ◇ p = ¬ ¬ □ ¬ p , whose five
 -- subformulas are
 --
---    neg (dia p) ,  dia p ,  box (neg p) ,  neg p ,  p
+--    ¬ ◇ p ,  ◇ p ,  □ ¬ p ,  ¬ p ,  p
 --
--- and the surviving state it starts from is  1 0 1 1 0 : dia p fails, box (neg p)
+-- and the surviving state it starts from is  1 0 1 1 0 : ◇ p fails, □ ¬ p
 -- holds, p does not.  The stem is empty -- rest and cycle coincide -- and the
 -- cycle is that state looping to itself.  So the countermodel is the obvious
 -- one, p false forever, and by the Deriv Q -> Empty field of the record,
--- dia p has no derivation in L.
+-- ◇ p has no derivation in L.
 
 cmState : Val
 cmState = true :: false :: true :: true :: false :: []
 
-decide_diaP : Eq (isProof (decide diaP)) false
-decide_diaP = refl
+decide_◇P : Eq (isProof (decide ◇P)) false
+decide_◇P = refl
 
-decide_diaP_lasso : Eq (lassoOfDecide diaP (decide diaP))
+decide_◇P_lasso : Eq (lassoOfDecide ◇P (decide ◇P))
                        (prod cmState (prod (cmState :: []) (cmState :: [])))
-decide_diaP_lasso = refl
+decide_◇P_lasso = refl
 
 ------------------------------------------------------------------------
 -- Checkpoint C5, the target of Phase 8.
 --
---   box (p or q) -> box p or box q
+--   □ (p ∨ q) ⇒ □ p ∨ □ q
 --
 -- is NOT valid, and decide says so with a lasso.  Sub of its negation has
 -- length 13, so the state space is nominally 8192 vectors; the five atoms are
--- box (p or q), p, q, box p, box q, so 32 assignments are built, 17 of them are
+-- □ (p ∨ q), p, q, □ p, □ q, so 32 assignments are built, 17 of them are
 -- states, and the closure of those containing the negation has 8 members, none
 -- of which is eliminated.  This is the measurement Phase 8 exists for: 34.6 s
 -- before G29, 1.4 s after it, and 0.9 s after G30 -- for the whole
@@ -283,7 +283,7 @@ decide_diaP_lasso = refl
 --   (1,1)  ->  (0,1)  ->  (1,0)  ->  (1,1)  ->  (1,1)  ->  ...
 --
 -- so p or q holds at every stage, while p fails at stage 1 and q at stage 2.
--- Hence box (p or q) holds and neither box p nor box q does.  The stem is
+-- Hence □ (p ∨ q) holds and neither □ p nor □ q does.  The stem is
 -- three states and the cycle is the single state at which both hold forever.
 
 cp : Formula
@@ -293,7 +293,7 @@ cq : Formula
 cq = var (suc zero)
 
 c5 : Formula
-c5 = imp (box (dis cp cq)) (dis (box cp) (box cq))
+c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
 
 -- p and q, but neither forever
 c5both : Val

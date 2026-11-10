@@ -119,20 +119,20 @@ fulApp2 ws zs mx (ful z m q) = ful z (memConsApp2 ws zs mx m) q
 ------------------------------------------------------------------------
 -- Persistence along a walk (Lemma 2.8, propagated).
 --
--- If box A is pending at v then, walking to x, either A fails somewhere along
--- the way -- the eventuality is fulfilled -- or box A is still pending at x.
--- The step is exactly `persist`: box A pending at v together with A holding at
--- v forces box A pending at the successor, which is (T3).
+-- If □ A is pending at v then, walking to x, either A fails somewhere along
+-- the way -- the eventuality is fulfilled -- or □ A is still pending at x.
+-- The step is exactly `persist`: □ A pending at v together with A holding at
+-- v forces □ A pending at the successor, which is (T3).
 
-walkPersist : (P : Formula) (us : List Val) (A : Formula) -> Mem (box A) (sub P)
+walkPersist : (P : Formula) (us : List Val) (A : Formula) -> Mem (□ A) (sub P)
            -> {v : Val} {ws : List Val} {x : Val} -> Walk P us v ws x
-           -> Eq (valOf P v (box A)) false
-           -> Sum (Fulfil P A v ws) (Eq (valOf P x (box A)) false)
+           -> Eq (valOf P v (□ A)) false
+           -> Sum (Fulfil P A v ws) (Eq (valOf P x (□ A)) false)
 walkPersist P us A mb wnil e = inr e
 walkPersist P us A mb (wcons {v} {w} {ws} {x} mw st wk) e = onA (valOf P v A) refl
   where
     onA : (b : Bool) -> Eq (valOf P v A) b
-       -> Sum (Fulfil P A v (w :: ws)) (Eq (valOf P x (box A)) false)
+       -> Sum (Fulfil P A v (w :: ws)) (Eq (valOf P x (□ A)) false)
     onA false ea = inl (ful v memHd ea)
     onA true  ea =
       sumElim (\ f -> inl (fulTl f)) inr

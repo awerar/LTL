@@ -48,8 +48,8 @@ data Seen (P : Formula) (v0 cur b : Val) : Set where
         -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
         -> (qs : List Val) -> Walk P (Uinf P) b qs cur
         -> Eq (nullB qs) false
-        -> ((A : Formula) -> Mem A (boxArgs (sub P))
-              -> Eq (valOf P b (box A)) false -> Fulfil P A b qs)
+        -> ((A : Formula) -> Mem A (□Args (sub P))
+              -> Eq (valOf P b (□ A)) false -> Fulfil P A b qs)
         -> Seen P v0 cur b
 
 seenExt : (P : Formula) (v0 cur nx b : Val) (rs : List Val)
@@ -68,8 +68,8 @@ data Lasso (P : Formula) (v0 : Val) : Set where
          -> (qs : List Val) -> Walk P (Uinf P) b qs b
          -> Eq (nullB qs) false
          -> ((s : Val) -> Mem s (b :: qs)
-               -> (A : Formula) -> Mem A (boxArgs (sub P))
-               -> Eq (valOf P s (box A)) false -> Fulfil P A b qs)
+               -> (A : Formula) -> Mem A (□Args (sub P))
+               -> Eq (valOf P s (□ A)) false -> Fulfil P A b qs)
          -> Lasso P v0
 
 -- Closing the loop.  This is where the cycle-fulfilment property is proved.
@@ -79,14 +79,14 @@ closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
   mkLasso cur mb ps wp qs wq nn cyc
   where
     cyc : (s : Val) -> Mem s (cur :: qs)
-       -> (A : Formula) -> Mem A (boxArgs (sub P))
-       -> Eq (valOf P s (box A)) false -> Fulfil P A cur qs
+       -> (A : Formula) -> Mem A (□Args (sub P))
+       -> Eq (valOf P s (□ A)) false -> Fulfil P A cur qs
     cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wq ms)
       where
         fromSub : SubWalk P (Uinf P) s cur cur qs -> Fulfil P A cur qs
         fromSub (subWalk zs wz f) =
           sumElim mapFul (\ pd2 -> h A mA pd2)
-                  (walkPersist P (Uinf P) A (boxArgs_mem (sub P) mA) wz pd)
+                  (walkPersist P (Uinf P) A (□Args_mem (sub P) mA) wz pd)
           where
             mapFul : Fulfil P A s zs -> Fulfil P A cur qs
             mapFul (ful z m q) = ful z (f m) q
@@ -190,19 +190,19 @@ lassoAt P v e = prod (lassoStem P v (lasso P v m)) (lassoCycle P v (lasso P v m)
 ------------------------------------------------------------------------
 -- The lasso, computed.
 --
--- For dia p the four positions of sub (dia p) are
+-- For ◇ p the four positions of sub (◇ p) are
 --
---    neg (box (neg p)) ,  box (neg p) ,  neg p ,  p
+--    ¬ □ ¬ p ,  □ ¬ p ,  ¬ p ,  p
 --
 -- and Uinf has the three states of Example 1 of lecture15.pdf, the first of
--- which is  1 0 1 0 : dia p holds, p does not.  Starting there, the stem is
+-- which is  1 0 1 0 : ◇ p holds, p does not.  Starting there, the stem is
 -- empty -- the first boundary revisited is the start itself -- and the cycle is
 --
 --    1 0 1 0  ->  1 0 0 1  ->  1 0 1 0
 --
--- of length two.  Its second state has p, so the eventuality that dia p leaves
+-- of length two.  Its second state has p, so the eventuality that ◇ p leaves
 -- pending is fulfilled on the cycle, which is what Proposition 5.3 promises and
--- what the type of cyc above records.  This is the countermodel to dia p: p
+-- what the type of cyc above records.  This is the countermodel to ◇ p: p
 -- fails now and holds next, forever alternating.
 
 sA : Val
@@ -212,23 +212,23 @@ sB = true :: false :: false :: true :: []
 sC : Val
 sC = false :: true :: true :: false :: []
 
-diaP_lasso : Eq (lassoAt diaP sA refl) (prod (sB :: sC :: []) (sC :: []))
-diaP_lasso = refl
+◇P_lasso : Eq (lassoAt ◇P sA refl) (prod (sB :: sC :: []) (sC :: []))
+◇P_lasso = refl
 
 
--- A degenerate but instructive second case.  For  box p  the demand-driven
--- state set has a single member: box p forces p by (S2) and carries itself
--- along every step by (T2), so the closure of the states containing box p is
+-- A degenerate but instructive second case.  For  □ p  the demand-driven
+-- state set has a single member: □ p forces p by (S2) and carries itself
+-- along every step by (T2), so the closure of the states containing □ p is
 -- the one state  1 1  looping to itself.  Nothing is pending there, every round
 -- is the one forced step, and the cycle has length one.  That the cycle is
 -- nonempty is not automatic; it is what the extra step appended by roundOf
 -- buys, and Eq (nullB qs) false in mkLasso records it.
 
-boxP : Formula
-boxP = box (var zero)
+□P : Formula
+□P = □ (var zero)
 
-sBox : Val
-sBox = true :: true :: []
+s□ : Val
+s□ = true :: true :: []
 
-boxP_lasso : Eq (lassoAt boxP sBox refl) (prod [] (sBox :: []))
-boxP_lasso = refl
+□P_lasso : Eq (lassoAt □P s□ refl) (prod [] (s□ :: []))
+□P_lasso = refl

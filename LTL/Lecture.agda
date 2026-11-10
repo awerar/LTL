@@ -4,7 +4,7 @@
 --
 -- The appendix of lecture15.pdf (pages 139-141) analyses
 --
---     F a and F b  ->  F (a and b)
+--     F a ∧ F b  ⇒  F (a ∧ b)
 --
 -- by hand: it lists Sub, the locally consistent states with F(a and b) = 0,
 -- their outgoing edges, and a countermodel path.  The formula is not valid, so
@@ -46,13 +46,13 @@
 --
 -- The last three lines are the point, and they are the fairness predicate of
 -- LTL.SccLasso applied to the two ends of the run.  For the eventuality
--- F b -- which in the box-only syntax is  neg (box (neg b)) , so the argument
--- of the box is  neg b  --
+-- F b -- which in the box-only syntax is  ¬ □ ¬ b , so the argument
+-- of the box is  ¬ b  --
 --
---     evPred R (neg b) s7 = false          s7 is outside F_Fb : the lecture's
+--     evPred R (¬ b) s7 = false          s7 is outside F_Fb : the lecture's
 --                                          loop cannot be fair
---     evPred R (neg b) s0 = true           the loop decide returns can be
---     evPred R (neg a) s7 = true           and s7 is inside F_Fa, exactly as
+--     evPred R (¬ b) s0 = true           the loop decide returns can be
+--     evPred R (¬ a) s7 = true           and s7 is inside F_Fa, exactly as
 --                                          the lecture says (a holds there)
 --
 -- so the objection is not a matter of reading: it is a checked equation about
@@ -72,10 +72,10 @@ pb : Formula
 pb = var (suc zero)
 
 fab : Formula
-fab = imp (con (dia pa) (dia pb)) (dia (con pa pb))
+fab = ◇ pa ∧ ◇ pb ⇒ ◇ (pa ∧ pb)
 
 R : Formula
-R = neg fab
+R = ¬ fab
 
 ------------------------------------------------------------------------
 -- The state space.
@@ -86,7 +86,7 @@ R = neg fab
 
 lec_sizes : Eq (length (sub R) :: length (atoms (sub R)) :: length (cands R)
              :: length (StC R) :: length (Ust R) :: length (Uinf R)
-             :: length (boxArgs (sub R)) :: [])
+             :: length (□Args (sub R)) :: [])
                (21 :: 5 :: 32 :: 17 :: 8 :: 8 :: 3 :: [])
 lec_sizes = refl
 
@@ -100,7 +100,7 @@ bitV false n = 0
 num : Val -> Nat
 num v = plus (bitV (valOf R v pa) 8)
         (plus (bitV (valOf R v pb) 4)
-        (plus (bitV (valOf R v (dia pa)) 2) (bitV (valOf R v (dia pb)) 1)))
+        (plus (bitV (valOf R v (◇ pa)) 2) (bitV (valOf R v (◇ pb)) 1)))
 
 -- s0 = 0, s1 = 1, s2 = 2, s3 = 3, s4 = 5, s5 = 7, s6 = 10, s7 = 11: the same
 -- eight, in the order the closure happens to produce them.
@@ -114,9 +114,9 @@ lec_states = refl
 
 lec_profile : Eq (length (filterL (\ v -> valOf R v pa) (Ust R))
                :: length (filterL (\ v -> valOf R v pb) (Ust R))
-               :: length (filterL (\ v -> valOf R v (dia pa)) (Ust R))
-               :: length (filterL (\ v -> valOf R v (dia pb)) (Ust R))
-               :: length (filterL (\ v -> valOf R v (dia (con pa pb))) (Ust R))
+               :: length (filterL (\ v -> valOf R v (◇ pa)) (Ust R))
+               :: length (filterL (\ v -> valOf R v (◇ pb)) (Ust R))
+               :: length (filterL (\ v -> valOf R v (◇ (pa ∧ pb))) (Ust R))
                :: []) (2 :: 2 :: 5 :: 5 :: 0 :: [])
 lec_profile = refl
 
@@ -179,6 +179,6 @@ s0 = nth (prodSnd (prodSnd lo)) zero []
 -- s0 is inside it, so the loop decide returns can be;
 -- and s7 IS inside F_Fa, exactly as the lecture says, since a holds there.
 
-lec_fair : Eq (evPred R (neg pb) s7 :: evPred R (neg pb) s0
-            :: evPred R (neg pa) s7 :: []) (false :: true :: true :: [])
+lec_fair : Eq (evPred R (¬ pb) s7 :: evPred R (¬ pb) s0
+            :: evPred R (¬ pa) s7 :: []) (false :: true :: true :: [])
 lec_fair = refl

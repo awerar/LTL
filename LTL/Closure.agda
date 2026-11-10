@@ -24,13 +24,13 @@
 -- the step lemma offers ALL state-successors of u, and each has to be either
 -- already refuted or still inside the set being eliminated.  ustSeed is what
 -- the provable branch needs: a state outside U cannot contain P, so by (S1) it
--- contains neg P and chi_w yields the conclusion with no elimination at all.
+-- contains ¬ P and chi_w yields the conclusion with no elimination at all.
 -- ustSt keeps every member of U a state.
 --
 -- U is built in two steps.
 --
 -- 1. The candidates.  A state is not an arbitrary vector: (S1) determines the
---    bit at  neg A  and at  imp A B  from the bits at A and at B, and coherence
+--    bit at  ¬ A  and at  A ⇒ B  from the bits at A and at B, and coherence
 --    makes the bit depend on the formula rather than on the position.  So a
 --    state is determined by its bits at the ATOMS of Sub P -- the var, nxt and
 --    box entries -- and mkV builds the whole vector from such an assignment.
@@ -92,9 +92,9 @@ valFromEq : (P : Formula) (v : Val) -> Eq (allOk P v (sub P)) true
 valFromEq P v ok =
   skelEval (valOf P v) (atoms (sub P)) P
            (\ X mX aX -> atomMem (sub P) mX aX)
-           (\ X mX -> boolEq_sound (valOf P v (neg X)) (boolNot (valOf P v X))
+           (\ X mX -> boolEq_sound (valOf P v (¬ X)) (boolNot (valOf P v X))
                                    (allOk_at P v (sub P) mX ok))
-           (\ X Y mX -> boolEq_sound (valOf P v (imp X Y))
+           (\ X Y mX -> boolEq_sound (valOf P v (X ⇒ Y))
                                      (boolImp (valOf P v X) (valOf P v Y))
                                      (allOk_at P v (sub P) mX ok))
 
@@ -114,22 +114,22 @@ mkV_id P v st len = valExt (mkV P (atomBits P v)) v lenEq pointwise
 
     pointwise : (i : Nat) -> Lt i (length (mkV P (atomBits P v)))
              -> Eq (bitAt (mkV P (atomBits P v)) i) (bitAt v i)
-    pointwise i l = eqTrans (eqTrans atI (valFromEq P v ok (nth (sub P) i bot) mI))
+    pointwise i l = eqTrans (eqTrans atI (valFromEq P v ok (nth (sub P) i ⊥) mI))
                             (eqSym cohI)
       where
         lI : Lt i (length (sub P))
         lI = eqSubst (\ k -> Lt i k)
                      (map_length (valFrom (atoms (sub P)) (atomBits P v)) (sub P)) l
 
-        mI : Mem (nth (sub P) i bot) (sub P)
-        mI = nth_mem (sub P) i lI bot
+        mI : Mem (nth (sub P) i ⊥) (sub P)
+        mI = nth_mem (sub P) i lI ⊥
 
         atI : Eq (bitAt (mkV P (atomBits P v)) i)
-                 (valFrom (atoms (sub P)) (atomBits P v) (nth (sub P) i bot))
-        atI = nth_map (valFrom (atoms (sub P)) (atomBits P v)) (sub P) i lI bot false
+                 (valFrom (atoms (sub P)) (atomBits P v) (nth (sub P) i ⊥))
+        atI = nth_map (valFrom (atoms (sub P)) (atomBits P v)) (sub P) i lI ⊥ false
 
-        cohI : Eq (bitAt v i) (valOf P v (nth (sub P) i bot))
-        cohI = boolEq_sound (bitAt v i) (valOf P v (nth (sub P) i bot))
+        cohI : Eq (bitAt v i) (valOf P v (nth (sub P) i ⊥))
+        cohI = boolEq_sound (bitAt v i) (valOf P v (nth (sub P) i ⊥))
                             (allCoh_at P v (length (sub P)) i lI coh)
 
 ------------------------------------------------------------------------

@@ -6,13 +6,13 @@
 --
 -- Two steps.  First the disjunction over ALL valuations, by structural
 -- induction along sub P: each step splits on the next formula with splitD
--- (L6).  Then the non-states are dropped by disjDrop, using nonState (G16).
+-- (L6).  Then the non-states are dropped by ⋁Drop, using nonState (G16).
 --
 -- The work is in lining up the shapes: allVecs (suc n) is built by consing
 -- true and false onto allVecs n and appending, while splitOn conjoins A and
--- neg A onto a list of formulas and appends.  stepEq says these agree once
--- chi is applied, and it holds because  conj (litList (A :: As) (b :: w))
--- reduces to  con (lit A b) (conj (litList As w)).
+-- ¬ A onto a list of formulas and appends.  stepEq says these agree once
+-- chi is applied, and it holds because  ⋀ (litList (A :: As) (b :: w))
+-- reduces to  (lit A b) ∧ ⋀ (litList As w).
 
 module LTL.Complete where
 
@@ -22,7 +22,7 @@ open import LTL.NonState public
 -- chi against an arbitrary list of formulas
 
 chiOf : List Formula -> Val -> Formula
-chiOf As v = conj (litList As v)
+chiOf As v = ⋀ (litList As v)
 
 ------------------------------------------------------------------------
 -- Lining up allVecs with splitOn
@@ -33,15 +33,15 @@ appCong refl refl = refl
 
 lemTrue : (A : Formula) (As : List Formula) (V : List Val)
        -> Eq (map (chiOf (A :: As)) (map (\ w -> true :: w) V))
-             (map (con A) (map (chiOf As) V))
+             (map (A ∧_) (map (chiOf As) V))
 lemTrue A As V = eqTrans (map_map (chiOf (A :: As)) (\ w -> true :: w) V)
-                         (eqSym (map_map (con A) (chiOf As) V))
+                         (eqSym (map_map (A ∧_) (chiOf As) V))
 
 lemFalse : (A : Formula) (As : List Formula) (V : List Val)
         -> Eq (map (chiOf (A :: As)) (map (\ w -> false :: w) V))
-              (map (con (neg A)) (map (chiOf As) V))
+              (map (¬ A ∧_) (map (chiOf As) V))
 lemFalse A As V = eqTrans (map_map (chiOf (A :: As)) (\ w -> false :: w) V)
-                          (eqSym (map_map (con (neg A)) (chiOf As) V))
+                          (eqSym (map_map (¬ A ∧_) (chiOf As) V))
 
 stepEq : (A : Formula) (As : List Formula)
       -> Eq (map (chiOf (A :: As)) (allVecs (suc (length As))))
@@ -57,10 +57,10 @@ stepEq A As =
 -- The disjunction over all valuations
 
 allComplete : (As : List Formula)
-           -> Deriv (disj (map (chiOf As) (allVecs (length As))))
-allComplete []        = mp (disjIntro (top :: []) memHd) derivTop
+           -> Deriv (⋁ (map (chiOf As) (allVecs (length As))))
+allComplete []        = mp (⋁Intro (⊤ :: []) memHd) deriv⊤
 allComplete (A :: As) =
-  eqSubst (\ L -> Deriv (disj L)) (eqSym (stepEq A As))
+  eqSubst (\ L -> Deriv (⋁ L)) (eqSym (stepEq A As))
           (splitD (map (chiOf As) (allVecs (length As))) (allComplete As))
 
 ------------------------------------------------------------------------
@@ -96,33 +96,32 @@ map_filterCons : (P : Formula) (b : Bool) (v : Val) (L : List Val)
 map_filterCons P true  v L = refl
 map_filterCons P false v L = refl
 
-disjFilter : (P : Formula) (vs : List Val)
+⋁Filter : (P : Formula) (vs : List Val)
           -> AllLen (length (sub P)) vs
-          -> Deriv (imp (disj (map (chi P) vs))
-                        (disj (map (chi P) (filterL (isState P) vs))))
-disjFilter P []        alNil          = impRefl
-disjFilter P (v :: vs) (alCons len al) =
-  eqSubst (\ L -> Deriv (imp (disj (chi P v :: map (chi P) vs)) (disj L)))
+          -> Deriv (⋁ (map (chi P) vs)
+                    ⇒ ⋁ (map (chi P) (filterL (isState P) vs)))
+⋁Filter P []        alNil          = ⇒Refl
+⋁Filter P (v :: vs) (alCons len al) =
+  eqSubst (\ L -> Deriv (⋁ (chi P v :: map (chi P) vs) ⇒ ⋁ L))
           (eqSym (map_filterCons P (isState P v) v (filterL (isState P) vs)))
           (onState (isState P v) refl)
   where
-    ih : Deriv (imp (disj (map (chi P) vs))
-                    (disj (map (chi P) (filterL (isState P) vs))))
-    ih = disjFilter P vs al
+    ih : Deriv (⋁ (map (chi P) vs) ⇒ ⋁ (map (chi P) (filterL (isState P) vs)))
+    ih = ⋁Filter P vs al
 
     onState : (b : Bool) -> Eq (isState P v) b
-           -> Deriv (imp (disj (chi P v :: map (chi P) vs))
-                         (disj (filterCons b (chi P v)
-                                 (map (chi P) (filterL (isState P) vs)))))
-    onState true  e = disMonoR ih
+           -> Deriv (⋁ (chi P v :: map (chi P) vs)
+                     ⇒ ⋁ (filterCons b (chi P v)
+                             (map (chi P) (filterL (isState P) vs))))
+    onState true  e = ∨MonoR ih
     onState false e =
-      impTrans (disjDrop (map (chi P) vs) (nonState P v len e)) ih
+      ⇒Trans (⋁Drop (map (chi P) vs) (nonState P v len e)) ih
 
 ------------------------------------------------------------------------
 -- Lemma 2.6
 
 stateComplete : (P : Formula) -> Deriv (beta P (St P))
 stateComplete P =
-  mp (disjFilter P (allVecs (length (sub P)))
+  mp (⋁Filter P (allVecs (length (sub P)))
                  (allVecs_allLen (length (sub P))))
      (allComplete (sub P))

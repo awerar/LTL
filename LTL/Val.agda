@@ -7,7 +7,7 @@
 -- state is only a genuine function on the SET Sub(phi) once the duplicate
 -- coherence clause of G5 is imposed (see FORMALISATION-PLAN.md section 0).
 --
--- The empty disjunction is bot and the empty conjunction is top, which is the
+-- The empty disjunction is ⊥ and the empty conjunction is ⊤, which is the
 -- convention fixed after Lemma 1.1 of the note; (L0) and (L5) then agree at
 -- n = 0.
 
@@ -23,15 +23,17 @@ open import LTL.Deriv public
 
 lit : Formula -> Bool -> Formula
 lit A true  = A
-lit A false = neg A
+lit A false = ¬ A
 
-conj : List Formula -> Formula
-conj []        = top
-conj (A :: As) = con A (conj As)
+infix 30 ⋀_ ⋁_
 
-disj : List Formula -> Formula
-disj []        = bot
-disj (A :: As) = dis A (disj As)
+⋀_ : List Formula -> Formula
+⋀ []        = ⊤
+⋀ (A :: As) = A ∧ ⋀ As
+
+⋁_ : List Formula -> Formula
+⋁ []        = ⊥
+⋁ (A :: As) = A ∨ ⋁ As
 
 ------------------------------------------------------------------------
 -- The characteristic formula
@@ -42,10 +44,10 @@ litList (A :: As) []         = []
 litList (A :: As) (b :: bs)  = lit A b :: litList As bs
 
 chi : Formula -> Val -> Formula
-chi P v = conj (litList (sub P) v)
+chi P v = ⋀ (litList (sub P) v)
 
 beta : Formula -> List Val -> Formula
-beta P vs = disj (map (chi P) vs)
+beta P vs = ⋁ (map (chi P) vs)
 
 ------------------------------------------------------------------------
 -- The projection lemma.
@@ -77,8 +79,8 @@ allVecs_three = refl
 allVecs_benAri : Eq (length (allVecs (length (sub benAri)))) 64
 allVecs_benAri = refl
 
--- Positions 1 and 4 of sub benAri are the same formula (box p), so a valuation
--- disagreeing there yields a chi containing both box p and neg (box p).  This
+-- Positions 1 and 4 of sub benAri are the same formula (□ p), so a valuation
+-- disagreeing there yields a chi containing both □ p and ¬ □ p.  This
 -- is exactly what the coherence clause of G5 will exclude.
 
 badVal : Val

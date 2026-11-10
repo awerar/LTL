@@ -3,7 +3,7 @@
 -- LTL.State -- G5 of FORMALISATION-PLAN.md.
 --
 -- Definition 2.2 of m4.tex: a valuation is a state when it respects the
--- connectives (S1) and satisfies  box A in v  implies  A in v  (S2).
+-- connectives (S1) and satisfies  □ A in v  implies  A in v  (S2).
 --
 -- To these the formalisation adds a third clause, coherence on duplicates.
 -- It has no counterpart in the note because there a state IS a function on the
@@ -35,11 +35,11 @@ valOf P v A = bitAt v (idx (sub P) A)
 
 okAt : Formula -> Val -> Formula -> Bool
 okAt P v (var n)   = true
-okAt P v (neg A)   = boolEq (valOf P v (neg A)) (boolNot (valOf P v A))
-okAt P v (imp A B) = boolEq (valOf P v (imp A B))
+okAt P v (¬ A)   = boolEq (valOf P v (¬ A)) (boolNot (valOf P v A))
+okAt P v (A ⇒ B) = boolEq (valOf P v (A ⇒ B))
                             (boolImp (valOf P v A) (valOf P v B))
-okAt P v (nxt A)   = true
-okAt P v (box A)   = boolImp (valOf P v (box A)) (valOf P v A)
+okAt P v (○ A)   = true
+okAt P v (□ A)   = boolImp (valOf P v (□ A)) (valOf P v A)
 
 allOk : Formula -> Val -> List Formula -> Bool
 allOk P v []        = true
@@ -53,7 +53,7 @@ allOk P v (A :: As) = boolAnd (okAt P v A) (allOk P v As)
 -- that first occurrence.
 
 cohAt : Formula -> Val -> Nat -> Bool
-cohAt P v i = boolEq (bitAt v i) (valOf P v (nth (sub P) i bot))
+cohAt P v i = boolEq (bitAt v i) (valOf P v (nth (sub P) i ⊥))
 
 allCoh : Formula -> Val -> Nat -> Bool
 allCoh P v zero    = true
@@ -128,31 +128,31 @@ allCoh_false P v (suc n) e =
 ------------------------------------------------------------------------
 -- Computational checks.
 --
--- dia p is  neg (box (neg p)) , so sub is
---   [ neg (box (neg p)) , box (neg p) , neg p , p ]
+-- ◇ p is  ¬ □ ¬ p , so sub is
+--   [ ¬ □ ¬ p , □ ¬ p , ¬ p , p ]
 -- with no duplicates.  The constraints are v0 = not v1, v1 implies v2,
 -- v2 = not v3, leaving three states -- the same three as Example 1 of
 -- lecture15.pdf, where Sub(Fp) = {Fp, p} and the excluded combination is
 -- Fp false with p true.
 
-diaP : Formula
-diaP = dia (var zero)
+◇P : Formula
+◇P = ◇ (var zero)
 
-St_diaP : Eq (length (St diaP)) 3
-St_diaP = refl
+St_◇P : Eq (length (St ◇P)) 3
+St_◇P = refl
 
 -- The negation of Ben-Ari's formula, the input the decision procedure is
--- actually run on.  Here sub has length 7 with box p and p each duplicated,
+-- actually run on.  Here sub has length 7 with □ p and p each duplicated,
 -- so 128 valuations are filtered to 6 states.
 
-negBenAri : Formula
-negBenAri = neg benAri
+¬BenAri : Formula
+¬BenAri = ¬ benAri
 
-St_negBenAri : Eq (length (allVecs (length (sub negBenAri)))) 128
-St_negBenAri = refl
+St_¬BenAri : Eq (length (allVecs (length (sub ¬BenAri)))) 128
+St_¬BenAri = refl
 
-St_negBenAri_count : Eq (length (St negBenAri)) 6
-St_negBenAri_count = refl
+St_¬BenAri_count : Eq (length (St ¬BenAri)) 6
+St_¬BenAri_count = refl
 
 -- The duplicate-incoherent valuation of LTL.Val is rejected, as intended.
 

@@ -3,11 +3,11 @@
 -- LTL.PropList -- G11 and G12 of FORMALISATION-PLAN.md.
 --
 -- (L2) and (L5) of Lemma 1.1 of m4.tex: the only two schemes indexed by a
--- list.  conj and disj are from LTL.Val, with conj [] = top and disj [] = bot,
+-- list.  ⋀ and ⋁ are from LTL.Val, with ⋀ [] = ⊤ and ⋁ [] = ⊥,
 -- the convention fixed after Lemma 1.1 -- so the two clauses of (L5) at n = 0
 -- are exactly the two clauses of (L0).
 --
--- disjElim is the workhorse of Phase 4: dropping refuted disjuncts, and taking
+-- ⋁Elim is the workhorse of Phase 4: dropping refuted disjuncts, and taking
 -- the disjunction over W in Theorem 4.1, are both instances of it.
 
 module LTL.PropList where
@@ -18,50 +18,50 @@ open import LTL.Val  public
 ------------------------------------------------------------------------
 -- Negation introduction, lifted under an antecedent.
 --
--- From  P -> (C -> B)  and  P -> (C -> neg B)  conclude  P -> neg C.  Every
+-- From  P ⇒ (C ⇒ B)  and  P ⇒ (C ⇒ ¬ B)  conclude  P ⇒ ¬ C.  Every
 -- refutation below factors through this.
 
 mpU2 : {P Q A B : Formula}
-    -> Deriv (imp P (imp Q (imp A B))) -> Deriv (imp P (imp Q A))
-    -> Deriv (imp P (imp Q B))
+    -> Deriv (P ⇒ Q ⇒ A ⇒ B) -> Deriv (P ⇒ Q ⇒ A)
+    -> Deriv (P ⇒ Q ⇒ B)
 mpU2 f g = mpU (mpU (liftP p2) f) g
 
-negIntroU : {P C B : Formula}
-         -> Deriv (imp P (imp C B)) -> Deriv (imp P (imp C (neg B)))
-         -> Deriv (imp P (neg C))
-negIntroU {P} {C} {B} f g =
-  mpU (mpU (liftP (p3 {top} {neg C}))
-           (mpU2 (mpU2 (liftP (liftP (exf {B} {neg top})))
-                       (impTransU (liftP dne) f))
-                 (impTransU (liftP dne) g)))
-      (liftP derivTop)
+¬IntroU : {P C B : Formula}
+         -> Deriv (P ⇒ C ⇒ B) -> Deriv (P ⇒ C ⇒ ¬ B)
+         -> Deriv (P ⇒ ¬ C)
+¬IntroU {P} {C} {B} f g =
+  mpU (mpU (liftP (p3 {⊤} {¬ C}))
+           (mpU2 (mpU2 (liftP (liftP (exf {B} {¬ ⊤})))
+                       (⇒TransU (liftP dne) f))
+                 (⇒TransU (liftP dne) g)))
+      (liftP deriv⊤)
 
 ------------------------------------------------------------------------
--- Binary conjunction.  con A B is neg (imp A (neg B)).
+-- Binary conjunction.  A ∧ B is ¬ (A ⇒ ¬ B).
 
-conFst : {A B : Formula} -> Deriv (imp (con A B) A)
-conFst {A} {B} = mp p3 (impTrans (negElim {A} {neg B}) dni)
+∧Fst : {A B : Formula} -> Deriv (A ∧ B ⇒ A)
+∧Fst {A} {B} = mp p3 (⇒Trans (¬Elim {A} {¬ B}) dni)
 
-conSnd : {A B : Formula} -> Deriv (imp (con A B) B)
-conSnd {A} {B} = mp p3 (impTrans (p1 {neg B} {A}) dni)
+∧Snd : {A B : Formula} -> Deriv (A ∧ B ⇒ B)
+∧Snd {A} {B} = mp p3 (⇒Trans (p1 {¬ B} {A}) dni)
 
-conPair : {C A B : Formula}
-       -> Deriv (imp C A) -> Deriv (imp C B) -> Deriv (imp C (con A B))
-conPair f g = mp p3 (negIntroU (liftP g) (impTransU (liftP f) dne))
+∧Pair : {C A B : Formula}
+       -> Deriv (C ⇒ A) -> Deriv (C ⇒ B) -> Deriv (C ⇒ A ∧ B)
+∧Pair f g = mp p3 (¬IntroU (liftP g) (⇒TransU (liftP f) dne))
 
--- Case analysis under an antecedent: from P -> (X -> Z) and P -> (neg X -> Z)
--- conclude P -> Z.  This is the cons case of disjElim isolated, and it is what
+-- Case analysis under an antecedent: from P ⇒ (X ⇒ Z) and P ⇒ (¬ X ⇒ Z)
+-- conclude P ⇒ Z.  This is the cons case of ⋁Elim isolated, and it is what
 -- the (D4) disjunction lemmas of Phase 3 need.
 
 caseU : {P X Z : Formula}
-     -> Deriv (imp P (imp X Z)) -> Deriv (imp P (imp (neg X) Z))
-     -> Deriv (imp P Z)
-caseU {P} {X} {Z} f g = impTrans (negIntroU h1 h2) dne
+     -> Deriv (P ⇒ X ⇒ Z) -> Deriv (P ⇒ ¬ X ⇒ Z)
+     -> Deriv (P ⇒ Z)
+caseU {P} {X} {Z} f g = ⇒Trans (¬IntroU h1 h2) dne
   where
-    h1 : Deriv (imp P (imp (neg Z) X))
-    h1 = impTransU (mpU (liftP (contra {neg X} {Z})) g) (liftP dne)
+    h1 : Deriv (P ⇒ ¬ Z ⇒ X)
+    h1 = ⇒TransU (mpU (liftP (contra {¬ X} {Z})) g) (liftP dne)
 
-    h2 : Deriv (imp P (imp (neg Z) (neg X)))
+    h2 : Deriv (P ⇒ ¬ Z ⇒ ¬ X)
     h2 = mpU (liftP (contra {X} {Z})) f
 
 ------------------------------------------------------------------------
@@ -70,23 +70,23 @@ caseU {P} {X} {Z} f g = impTrans (negIntroU h1 h2) dne
 data AllD (C : Formula) : List Formula -> Set where
   adNil  : AllD C []
   adCons : {A : Formula} {As : List Formula}
-        -> Deriv (imp C A) -> AllD C As -> AllD C (A :: As)
+        -> Deriv (C ⇒ A) -> AllD C As -> AllD C (A :: As)
 
 allD_map : {C : Formula} (As : List Formula)
-        -> ({A : Formula} -> Mem A As -> Deriv (imp C A)) -> AllD C As
+        -> ({A : Formula} -> Mem A As -> Deriv (C ⇒ A)) -> AllD C As
 allD_map []        f = adNil
 allD_map (A :: As) f = adCons (f memHd) (allD_map As (\ m -> f (memTl m)))
 
-conjProj : {A : Formula} (As : List Formula)
-        -> Mem A As -> Deriv (imp (conj As) A)
-conjProj []        ()
-conjProj (B :: Bs) memHd     = conFst
-conjProj (B :: Bs) (memTl h) = impTrans conSnd (conjProj Bs h)
+⋀Proj : {A : Formula} (As : List Formula)
+        -> Mem A As -> Deriv (⋀ As ⇒ A)
+⋀Proj []        ()
+⋀Proj (B :: Bs) memHd     = ∧Fst
+⋀Proj (B :: Bs) (memTl h) = ⇒Trans ∧Snd (⋀Proj Bs h)
 
-conjIntro : {C : Formula} (As : List Formula)
-         -> AllD C As -> Deriv (imp C (conj As))
-conjIntro []        adNil         = liftP derivTop
-conjIntro (A :: As) (adCons d ds) = conPair d (conjIntro As ds)
+⋀Intro : {C : Formula} (As : List Formula)
+         -> AllD C As -> Deriv (C ⇒ ⋀ As)
+⋀Intro []        adNil         = liftP deriv⊤
+⋀Intro (A :: As) (adCons d ds) = ∧Pair d (⋀Intro As ds)
 
 ------------------------------------------------------------------------
 -- G12 : (L5)
@@ -94,113 +94,113 @@ conjIntro (A :: As) (adCons d ds) = conPair d (conjIntro As ds)
 data AllI (C : Formula) : List Formula -> Set where
   aiNil  : AllI C []
   aiCons : {A : Formula} {As : List Formula}
-        -> Deriv (imp A C) -> AllI C As -> AllI C (A :: As)
+        -> Deriv (A ⇒ C) -> AllI C As -> AllI C (A :: As)
 
 allI_map : {C : Formula} (As : List Formula)
-        -> ({A : Formula} -> Mem A As -> Deriv (imp A C)) -> AllI C As
+        -> ({A : Formula} -> Mem A As -> Deriv (A ⇒ C)) -> AllI C As
 allI_map []        f = aiNil
 allI_map (A :: As) f = aiCons (f memHd) (allI_map As (\ m -> f (memTl m)))
 
-disjIntro : {A : Formula} (As : List Formula)
-         -> Mem A As -> Deriv (imp A (disj As))
-disjIntro []        ()
-disjIntro (B :: Bs) memHd     = exf
-disjIntro (B :: Bs) (memTl h) = impTrans (disjIntro Bs h) p1
+⋁Intro : {A : Formula} (As : List Formula)
+         -> Mem A As -> Deriv (A ⇒ ⋁ As)
+⋁Intro []        ()
+⋁Intro (B :: Bs) memHd     = exf
+⋁Intro (B :: Bs) (memTl h) = ⇒Trans (⋁Intro Bs h) p1
 
 -- The cons case is the classical one: under the antecedent
--- P = neg A -> disj As, contraposing the two hypotheses gives
--- neg C -> A and neg C -> neg A, hence neg (neg C), hence C.
+-- P = ¬ A ⇒ ⋁ As, contraposing the two hypotheses gives
+-- ¬ C ⇒ A and ¬ C ⇒ ¬ A, hence ¬ ¬ C, hence C.
 
-disjElim : {C : Formula} (As : List Formula)
-        -> AllI C As -> Deriv (imp (disj As) C)
-disjElim []        aiNil         = exFalso
-disjElim {C} (A :: As) (aiCons d ds) = impTrans (negIntroU h1 h2) dne
+⋁Elim : {C : Formula} (As : List Formula)
+        -> AllI C As -> Deriv (⋁ As ⇒ C)
+⋁Elim []        aiNil         = exFalso
+⋁Elim {C} (A :: As) (aiCons d ds) = ⇒Trans (¬IntroU h1 h2) dne
   where
     P : Formula
-    P = imp (neg A) (disj As)
+    P = ¬ A ⇒ ⋁ As
 
-    hIH : Deriv (imp (disj As) C)
-    hIH = disjElim As ds
+    hIH : Deriv (⋁ As ⇒ C)
+    hIH = ⋁Elim As ds
 
-    hNA : Deriv (imp P (imp (neg A) C))
-    hNA = impTransU identP (liftP hIH)
+    hNA : Deriv (P ⇒ ¬ A ⇒ C)
+    hNA = ⇒TransU identP (liftP hIH)
 
-    h1 : Deriv (imp P (imp (neg C) A))
-    h1 = impTransU (mpU (liftP (contra {neg A} {C})) hNA) (liftP dne)
+    h1 : Deriv (P ⇒ ¬ C ⇒ A)
+    h1 = ⇒TransU (mpU (liftP (contra {¬ A} {C})) hNA) (liftP dne)
 
-    h2 : Deriv (imp P (imp (neg C) (neg A)))
+    h2 : Deriv (P ⇒ ¬ C ⇒ ¬ A)
     h2 = mpU (liftP (contra {A} {C})) (liftP d)
 
 ------------------------------------------------------------------------
--- Monotonicity of disj.
+-- Monotonicity of ⋁.
 --
 -- This is what "dropping the refuted disjuncts" comes to in Lemma 2.6 and
 -- Lemma 2.7, and what step (ii) of Theorem 4.1 needs to pass from
 -- beta (succs w) to B.
 
-disjMono : (As Bs : List Formula)
+⋁Mono : (As Bs : List Formula)
         -> ({A : Formula} -> Mem A As -> Mem A Bs)
-        -> Deriv (imp (disj As) (disj Bs))
-disjMono As Bs sb = disjElim As (allI_map As (\ m -> disjIntro Bs (sb m)))
+        -> Deriv (⋁ As ⇒ ⋁ Bs)
+⋁Mono As Bs sb = ⋁Elim As (allI_map As (\ m -> ⋁Intro Bs (sb m)))
 
-conjMono : (As Bs : List Formula)
+⋀Mono : (As Bs : List Formula)
         -> ({A : Formula} -> Mem A Bs -> Mem A As)
-        -> Deriv (imp (conj As) (conj Bs))
-conjMono As Bs sb = conjIntro Bs (allD_map Bs (\ m -> conjProj As (sb m)))
+        -> Deriv (⋀ As ⇒ ⋀ Bs)
+⋀Mono As Bs sb = ⋀Intro Bs (allD_map Bs (\ m -> ⋀Proj As (sb m)))
 
 -- Dropping a single refuted disjunct.  Lemma 2.6 discharges the non-states
 -- this way, and Lemma 2.7 the successors w with v not-> w.
 
-disjDrop : {A : Formula} (As : List Formula)
-        -> Deriv (neg A) -> Deriv (imp (disj (A :: As)) (disj As))
-disjDrop {A} As d =
-  disjElim (A :: As)
-           (aiCons (mp negElim d) (allI_map As (\ m -> disjIntro As m)))
+⋁Drop : {A : Formula} (As : List Formula)
+        -> Deriv (¬ A) -> Deriv (⋁ (A :: As) ⇒ ⋁ As)
+⋁Drop {A} As d =
+  ⋁Elim (A :: As)
+           (aiCons (mp ¬Elim d) (allI_map As (\ m -> ⋁Intro As m)))
 
 ------------------------------------------------------------------------
 -- G13 : (L6)
 --
--- If  |- disj Cs  then  |- disj (splitOn A Cs) , where splitOn A Cs conjoins
--- each disjunct with A and, separately, with neg A.  This is the step of the
+-- If  |- ⋁ Cs  then  |- ⋁ (splitOn A Cs) , where splitOn A Cs conjoins
+-- each disjunct with A and, separately, with ¬ A.  This is the step of the
 -- structural induction along Sub P in Lemma 2.6.
 
 splitOn : Formula -> List Formula -> List Formula
-splitOn A Cs = append (map (con A) Cs) (map (con (neg A)) Cs)
+splitOn A Cs = append (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
 
--- From  neg (U and C)  and C, conclude  neg U.  Both halves of splitD use it,
--- once at U := A and once at U := neg A.
+-- From  ¬ (U ∧ C)  and C, conclude  ¬ U.  Both halves of splitD use it,
+-- once at U := A and once at U := ¬ A.
 
-conNegL : {U C : Formula} -> Deriv (imp (neg (con U C)) (imp C (neg U)))
-conNegL {U} {C} = impTransU (liftP dni) (mpU (liftP (contra {U} {neg C})) dne)
+∧¬L : {U C : Formula} -> Deriv (¬ (U ∧ C) ⇒ C ⇒ ¬ U)
+∧¬L {U} {C} = ⇒TransU (liftP dni) (mpU (liftP (contra {U} {¬ C})) dne)
 
 splitD : {A : Formula} (Cs : List Formula)
-      -> Deriv (disj Cs) -> Deriv (disj (splitOn A Cs))
-splitD {A} Cs d = mp (disjElim Cs (allI_map Cs each)) d
+      -> Deriv (⋁ Cs) -> Deriv (⋁ (splitOn A Cs))
+splitD {A} Cs d = mp (⋁Elim Cs (allI_map Cs each)) d
   where
     Z : Formula
-    Z = disj (splitOn A Cs)
+    Z = ⋁ (splitOn A Cs)
 
-    each : {C : Formula} -> Mem C Cs -> Deriv (imp C Z)
-    each {C} m = impTrans (negIntroU h1 h2) dne
+    each : {C : Formula} -> Mem C Cs -> Deriv (C ⇒ Z)
+    each {C} m = ⇒Trans (¬IntroU h1 h2) dne
       where
-        j1 : Deriv (imp (con A C) Z)
-        j1 = disjIntro (splitOn A Cs)
-               (memAppL (map (con A) Cs) (map (con (neg A)) Cs)
-                        (memMap (con A) m))
+        j1 : Deriv (A ∧ C ⇒ Z)
+        j1 = ⋁Intro (splitOn A Cs)
+               (memAppL (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
+                        (memMap (A ∧_) m))
 
-        j2 : Deriv (imp (con (neg A) C) Z)
-        j2 = disjIntro (splitOn A Cs)
-               (memAppR (map (con A) Cs) (map (con (neg A)) Cs)
-                        (memMap (con (neg A)) m))
+        j2 : Deriv (¬ A ∧ C ⇒ Z)
+        j2 = ⋁Intro (splitOn A Cs)
+               (memAppR (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
+                        (memMap (¬ A ∧_) m))
 
-        -- neg Z gives neg (neg A and C), which with C gives neg (neg A),
+        -- ¬ Z gives ¬ (¬ A ∧ C), which with C gives ¬ ¬ A,
         -- hence A.
-        h1 : Deriv (imp C (imp (neg Z) A))
-        h1 = impTransU (impTransU (liftP (mp contra j2))
-                                  (impSwap (conNegL {neg A} {C})))
+        h1 : Deriv (C ⇒ ¬ Z ⇒ A)
+        h1 = ⇒TransU (⇒TransU (liftP (mp contra j2))
+                                  (⇒Swap (∧¬L {¬ A} {C})))
                        (liftP dne)
 
-        -- neg Z gives neg (A and C), which with C gives neg A.
-        h2 : Deriv (imp C (imp (neg Z) (neg A)))
-        h2 = impTransU (liftP (mp contra j1))
-                       (impSwap (conNegL {A} {C}))
+        -- ¬ Z gives ¬ (A ∧ C), which with C gives ¬ A.
+        h2 : Deriv (C ⇒ ¬ Z ⇒ ¬ A)
+        h2 = ⇒TransU (liftP (mp contra j1))
+                       (⇒Swap (∧¬L {A} {C}))

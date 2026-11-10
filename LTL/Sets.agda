@@ -58,13 +58,13 @@ notFalse : (b : Bool) -> Eq (boolNot b) false -> Eq b true
 notFalse true  e = refl
 notFalse false ()
 
-impTrueB : (a b : Bool) -> Eq (boolImp a b) true -> Eq a true -> Eq b true
-impTrueB true  b e q  = e
-impTrueB false b e ()
+⇒TrueB : (a b : Bool) -> Eq (boolImp a b) true -> Eq a true -> Eq b true
+⇒TrueB true  b e q  = e
+⇒TrueB false b e ()
 
-impIntroB : (a b : Bool) -> (Eq a true -> Eq b true) -> Eq (boolImp a b) true
-impIntroB true  b f = f refl
-impIntroB false b f = refl
+⇒IntroB : (a b : Bool) -> (Eq a true -> Eq b true) -> Eq (boolImp a b) true
+⇒IntroB true  b f = f refl
+⇒IntroB false b f = refl
 
 ------------------------------------------------------------------------
 -- Searching a list for a member that fails a boolean test.

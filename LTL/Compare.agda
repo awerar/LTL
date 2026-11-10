@@ -22,7 +22,7 @@
 --    All forty-seven agree.  Twenty-two are proofs and twenty-five are
 --    countermodels, exactly as the figure and LTL.Examples record.
 --
--- 2. THE LASSO ON THE C5 FORMULA,  box (p or q) -> box p or box q .  The two
+-- 2. THE LASSO ON THE C5 FORMULA,  □ (p ∨ q) ⇒ □ p ∨ □ q .  The two
 --    procedures return DIFFERENT countermodels, which is what the plan
 --    anticipated and called the interesting observation:
 --
@@ -36,7 +36,7 @@
 --    the single state at which p and q hold forever.  decideSCC starts where
 --    ustSeedTo finds a seed reaching the terminal component and takes mkCirc's
 --    cycle, which is one leg per eventuality prepended to the bare loop -- and
---    sub (neg c5) has three eventualities, so the cycle is four times round.
+--    sub (¬ c5) has three eventualities, so the cycle is four times round.
 --    Both are countermodels and each carries its own  Deriv c5 -> Empty ; that
 --    they differ is a fact about the two constructions and not a discrepancy.
 --

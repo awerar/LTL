@@ -47,158 +47,152 @@ qv = var (suc zero)
 -- The statements, in the figure's order
 
 axT : Formula
-axT = imp (box pv) pv
+axT = □ pv ⇒ pv
 
 pb2 : Formula
-pb2 = imp pv (box pv)
+pb2 = pv ⇒ □ pv
 
 axG : Formula
-axG = imp (dia (box pv)) (box (dia pv))
+axG = ◇ □ pv ⇒ □ ◇ pv
 
 axM : Formula
-axM = imp (box (dia pv)) (dia (box pv))
+axM = □ ◇ pv ⇒ ◇ □ pv
 
 axM2 : Formula
-axM2 = dia (box (imp pv (box pv)))
+axM2 = ◇ □ (pv ⇒ □ pv)
 
 axM3 : Formula
-axM3 = imp (con (box (dia pv)) (box (dia qv))) (dia (con pv qv))
+axM3 = □ ◇ pv ∧ □ ◇ qv ⇒ ◇ (pv ∧ qv)
 
 pb5 : Formula
-pb5 = imp pv (dia pv)
+pb5 = pv ⇒ ◇ pv
 
 lin1 : Formula
-lin1 = imp (con (dia pv) (dia qv))
-           (dis (dia (con pv (dia qv))) (dia (con qv (dia pv))))
+lin1 = ◇ pv ∧ ◇ qv ⇒ ◇ (pv ∧ ◇ qv) ∨ ◇ (qv ∧ ◇ pv)
 
 -- Dummett's axiom and its four variants
 dumL : Formula
-dumL = box (imp (box (imp pv (box pv))) pv)
+dumL = □ (□ (pv ⇒ □ pv) ⇒ pv)
 
 dumLb : Formula
-dumLb = box (imp (box (imp pv (box pv))) (box pv))
+dumLb = □ (□ (pv ⇒ □ pv) ⇒ □ pv)
 
 dumR : Formula
-dumR = dia (box pv)
+dumR = ◇ □ pv
 
 axDum : Formula
-axDum = imp dumL (imp dumR pv)
+axDum = dumL ⇒ dumR ⇒ pv
 
 axDum1 : Formula
-axDum1 = imp dumL (imp dumR (box pv))
+axDum1 = dumL ⇒ dumR ⇒ □ pv
 
 axDum2 : Formula
-axDum2 = imp dumLb (imp dumR pv)
+axDum2 = dumLb ⇒ dumR ⇒ pv
 
 axDum3 : Formula
-axDum3 = imp dumLb (imp dumR (box pv))
+axDum3 = dumLb ⇒ dumR ⇒ □ pv
 
 axDum4 : Formula
-axDum4 = imp dumL (imp dumR (dis pv (box pv)))
+axDum4 = dumL ⇒ dumR ⇒ pv ∨ □ pv
 
 axD : Formula
-axD = imp (box pv) (dia pv)
+axD = □ pv ⇒ ◇ pv
 
 ax4 : Formula
-ax4 = imp (box pv) (box (box pv))
+ax4 = □ pv ⇒ □ □ pv
 
 ax4M : Formula
-ax4M = imp (con (box pv) (dia qv)) (dia (con (box pv) qv))
+ax4M = □ pv ∧ ◇ qv ⇒ ◇ (□ pv ∧ qv)
 
 ax5 : Formula
-ax5 = imp (dia pv) (box (dia pv))
+ax5 = ◇ pv ⇒ □ ◇ pv
 
 ax5M : Formula
-ax5M = imp (con (dia pv) (dia qv)) (dia (con (dia pv) qv))
+ax5M = ◇ pv ∧ ◇ qv ⇒ ◇ (◇ pv ∧ qv)
 
 axB : Formula
-axB = imp pv (box (dia pv))
+axB = pv ⇒ □ ◇ pv
 
 axBM : Formula
-axBM = imp (con pv (dia qv)) (dia (con (dia pv) qv))
+axBM = pv ∧ ◇ qv ⇒ ◇ (◇ pv ∧ qv)
 
 axG0 : Formula
-axG0 = imp (dia (con pv (box qv))) (box (dis pv (dia qv)))
+axG0 = ◇ (pv ∧ □ qv) ⇒ □ (pv ∨ ◇ qv)
 
 axH : Formula
-axH = imp (con (box (dis pv qv))
-               (con (box (dis (box pv) qv)) (box (dis pv (box qv)))))
-          (dis (box pv) (box qv))
+axH = □ (pv ∨ qv) ∧ □ (□ pv ∨ qv) ∧ □ (pv ∨ □ qv) ⇒ □ pv ∨ □ qv
 
 axHplus : Formula
-axHplus = imp (con (box (dis (box pv) qv)) (box (dis pv (box qv))))
-              (dis (box pv) (box qv))
+axHplus = □ (□ pv ∨ qv) ∧ □ (pv ∨ □ qv) ⇒ □ pv ∨ □ qv
 
 axL : Formula
-axL = dis (box (imp (con pv (box pv)) qv)) (box (imp (con qv (box qv)) pv))
+axL = □ (pv ∧ □ pv ⇒ qv) ∨ □ (qv ∧ □ qv ⇒ pv)
 
 axLplus : Formula
-axLplus = dis (box (imp (box pv) qv)) (box (imp (box qv) pv))
+axLplus = □ (□ pv ⇒ qv) ∨ □ (□ qv ⇒ pv)
 
 axLplusplus : Formula
-axLplusplus = dis (box (imp (box pv) (box qv))) (box (imp (box qv) (box pv)))
+axLplusplus = □ (□ pv ⇒ □ qv) ∨ □ (□ qv ⇒ □ pv)
 
 axPt : Formula
-axPt = imp (box (dis pv (dia pv))) (dia (con pv (box pv)))
+axPt = □ (pv ∨ ◇ pv) ⇒ ◇ (pv ∧ □ pv)
 
 axW : Formula
-axW = imp (box (imp (box pv) pv)) (box pv)
+axW = □ (□ pv ⇒ pv) ⇒ □ pv
 
 axZ : Formula
-axZ = imp (box (imp (box pv) pv)) (imp (dia (box pv)) (box pv))
+axZ = □ (□ pv ⇒ pv) ⇒ ◇ □ pv ⇒ □ pv
 
 axGrz : Formula
-axGrz = imp dumL pv
+axGrz = dumL ⇒ pv
 
 axGrz1 : Formula
-axGrz1 = imp dumL (box pv)
+axGrz1 = dumL ⇒ □ pv
 
 axGrz2 : Formula
-axGrz2 = imp dumLb pv
+axGrz2 = dumLb ⇒ pv
 
 axGrz3 : Formula
-axGrz3 = imp dumLb (box pv)
+axGrz3 = dumLb ⇒ □ pv
 
 axGrz4 : Formula
-axGrz4 = imp dumL (dis pv (box pv))
+axGrz4 = dumL ⇒ pv ∨ □ pv
 
 axGrz5 : Formula
-axGrz5 = imp (con (box (imp (box (imp pv (box qv))) (box qv)))
-                  (box (imp (box (imp (neg pv) (box qv))) (box qv))))
-             (box qv)
+axGrz5 = □ (□ (pv ⇒ □ qv) ⇒ □ qv) ∧ □ (□ (¬ pv ⇒ □ qv) ⇒ □ qv) ⇒ □ qv
 
 axF : Formula
-axF = dis (imp (dia (box pv)) qv) (box (imp (box qv) pv))
+axF = (◇ □ pv ⇒ qv) ∨ □ (□ qv ⇒ pv)
 
 axHs : Formula
-axHs = imp pv (box (imp (dia pv) pv))
+axHs = pv ⇒ □ (◇ pv ⇒ pv)
 
 axP : Formula
-axP = imp (dia (box (dia pv))) (imp pv (box pv))
+axP = ◇ □ ◇ pv ⇒ pv ⇒ □ pv
 
 axR : Formula
-axR = imp (dia (box pv)) (imp pv (box pv))
+axR = ◇ □ pv ⇒ pv ⇒ □ pv
 
 axX : Formula
-axX = imp (box (box pv)) (box pv)
+axX = □ □ pv ⇒ □ pv
 
 axZem : Formula
-axZem = imp (box (dia (box pv))) (imp pv (box pv))
+axZem = □ ◇ □ pv ⇒ pv ⇒ □ pv
 
 axK1 : Formula
-axK1 = imp (dia pv) (box pv)
+axK1 = ◇ pv ⇒ □ pv
 
 axK2 : Formula
-axK2 = imp (box (dis pv qv)) (dis (box pv) (box qv))
+axK2 = □ (pv ∨ qv) ⇒ □ pv ∨ □ qv
 
 axK3 : Formula
-axK3 = iff (dia (box (dia pv))) (box (dia pv))
+axK3 = ◇ □ ◇ pv ⇔ □ ◇ pv
 
 axK4 : Formula
-axK4 = iff (box (dia (box pv))) (dia (box pv))
+axK4 = □ ◇ □ pv ⇔ ◇ □ pv
 
 axK5 : Formula
-axK5 = iff (box (dia (dis pv qv))) (dis (box (dia pv)) (box (dia qv)))
+axK5 = □ ◇ (pv ∨ qv) ⇔ □ ◇ pv ∨ □ ◇ qv
 
 ------------------------------------------------------------------------
 -- The results
@@ -346,7 +340,7 @@ check_K5 = refl
 --
 -- decide returns the lasso as a record; cmStart, cmRest and cmCycle give the
 -- states as the procedure stores them, but a bit vector read against
--- sub (neg Q) is not something one wants to look at.  traceOf evaluates a
+-- sub (¬ Q) is not something one wants to look at.  traceOf evaluates a
 -- chosen formula at the successive stages of the run instead, and shapeOf says
 -- where the run starts repeating: with shapeOf Q = prod r c the run is
 --
@@ -360,16 +354,16 @@ check_K5 = refl
 -- record are the same fact seen from the two ends.
 
 ------------------------------------------------------------------------
--- pb2 = p -> box p.
+-- pb2 = p ⇒ □ p.
 --
 -- shapeOf pb2 = prod 3 1: three states then a fixed point, so the run is
 --
 --    p       1  0  1  1  1  1  1  1  ...
---    box p   0  0  1  1
+--    □ p   0  0  1  1
 --    pb2     0  1  1  1
 --
--- p holds now and fails at the next stage, which refutes box p now; from
--- stage 2 on p holds forever, so box p holds and pb2 holds at every stage but
+-- p holds now and fails at the next stage, which refutes □ p now; from
+-- stage 2 on p holds forever, so □ p holds and pb2 holds at every stage but
 -- the first.  That single false at stage 0 is the countermodel.
 
 pb2_shape : Eq (shapeOf pb2) (prod 3 1)
@@ -379,25 +373,25 @@ pb2_p : Eq (traceOf pb2 pv 8)
            (true :: false :: true :: true :: true :: true :: true :: true :: [])
 pb2_p = refl
 
-pb2_box : Eq (traceOf pb2 (box pv) 4) (false :: false :: true :: true :: [])
-pb2_box = refl
+pb2_□ : Eq (traceOf pb2 (□ pv) 4) (false :: false :: true :: true :: [])
+pb2_□ = refl
 
 pb2_input : Eq (traceOf pb2 pb2 4) (false :: true :: true :: true :: [])
 pb2_input = refl
 
 ------------------------------------------------------------------------
--- axM2 = dia (box (p -> box p)).
+-- axM2 = ◇ □ (p ⇒ □ p).
 --
 -- shapeOf axM2 = prod 2 2: the cycle has two states and the stem is empty, so
 -- the run is periodic from stage 1 with period 2 --
 --
 --    p            1  0  1  0  1  0  1  0  ...
---    p -> box p   0  1  0  1  0  1  0  1
+--    p ⇒ □ p      0  1  0  1  0  1  0  1
 --    axM2         0  0  0  0
 --
--- p alternates forever, so box p is false at every stage, so p -> box p fails
+-- p alternates forever, so □ p is false at every stage, so p ⇒ □ p fails
 -- at exactly the stages where p holds -- infinitely often.  Hence
--- box (p -> box p) holds nowhere and its diamond is false at every stage: the
+-- □ (p ⇒ □ p) holds nowhere and its diamond is false at every stage: the
 -- alternating run refutes axM2 not just at stage 0 but everywhere, which is
 -- what an eventuality being unfulfillable on a cycle looks like.
 
@@ -408,7 +402,7 @@ axM2_p : Eq (traceOf axM2 pv 8)
             (true :: false :: true :: false :: true :: false :: true :: false :: [])
 axM2_p = refl
 
-axM2_step : Eq (traceOf axM2 (imp pv (box pv)) 8)
+axM2_step : Eq (traceOf axM2 (pv ⇒ □ pv) 8)
                (false :: true :: false :: true :: false :: true :: false :: true :: [])
 axM2_step = refl
 
@@ -418,7 +412,7 @@ axM2_input = refl
 ------------------------------------------------------------------------
 -- The half of K5 that carries the content.
 --
---   box dia (p or q)  ->  box dia p  or  box dia q
+--   □ ◇ (p ∨ q)  ⇒  □ ◇ p  ∨  □ ◇ q
 --
 -- The figure lists K5 as the equivalence; this is its left-to-right half, and
 -- it is the only half that is not immediate.  Semantically it is the statement
@@ -430,8 +424,8 @@ axM2_input = refl
 -- Measured.  Sub of the negation has length 22, so the naive state space is
 -- 2^22 = 4194304 vectors.  The atoms are p, q and the six box-subformulas
 --
---    box (neg (p or q)) , box dia (p or q) , box (neg p) , box dia p ,
---    box (neg q) , box dia q
+--    □ ¬ (p ∨ q) , □ ◇ (p ∨ q) , □ ¬ p , □ ◇ p ,
+--    □ ¬ q , □ ◇ q
 --
 -- so 2^8 = 256 assignments are built, 59 of them are states, and the closure of
 -- the ones containing the negation has 9 members.  The elimination then runs
@@ -450,29 +444,29 @@ axM2_input = refl
 -- that makes the example reachable at all.
 
 axK5fwd : Formula
-axK5fwd = imp (box (dia (dis pv qv))) (dis (box (dia pv)) (box (dia qv)))
+axK5fwd = □ ◇ (pv ∨ qv) ⇒ □ ◇ pv ∨ □ ◇ qv
 
-K5fwd_sub : Eq (length (sub (neg axK5fwd))) 22
+K5fwd_sub : Eq (length (sub (¬ axK5fwd))) 22
 K5fwd_sub = refl
 
-K5fwd_atoms : Eq (length (atoms (sub (neg axK5fwd)))) 8
+K5fwd_atoms : Eq (length (atoms (sub (¬ axK5fwd)))) 8
 K5fwd_atoms = refl
 
-K5fwd_cands : Eq (length (cands (neg axK5fwd))) 256
+K5fwd_cands : Eq (length (cands (¬ axK5fwd))) 256
 K5fwd_cands = refl
 
-K5fwd_states : Eq (length (StC (neg axK5fwd))) 59
+K5fwd_states : Eq (length (StC (¬ axK5fwd))) 59
 K5fwd_states = refl
 
-K5fwd_closure : Eq (length (Ust (neg axK5fwd))) 9
+K5fwd_closure : Eq (length (Ust (¬ axK5fwd))) 9
 K5fwd_closure = refl
 
 -- the first round removes one state, and by (R2)
 
-K5fwd_round1 : Eq (reasons (neg axK5fwd) (Ust (neg axK5fwd))) (false :: [])
+K5fwd_round1 : Eq (reasons (¬ axK5fwd) (Ust (¬ axK5fwd))) (false :: [])
 K5fwd_round1 = refl
 
-K5fwd_uinf : Eq (length (Uinf (neg axK5fwd))) 0
+K5fwd_uinf : Eq (length (Uinf (¬ axK5fwd))) 0
 K5fwd_uinf = refl
 
 check_K5fwd : Eq (isProof (decide axK5fwd)) true

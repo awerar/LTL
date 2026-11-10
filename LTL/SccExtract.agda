@@ -8,7 +8,7 @@
 -- certAll, chi and (Ind).  The result is
 --
 --     provableSCC : (Q : Formula)
---                -> Cert (step (neg Q)) (evPreds (neg Q)) (Ust (neg Q))
+--                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
 --                -> Deriv Q
 --
 -- a second proof of the refutation branch of Theorem 6.1, with no elimination,
@@ -44,7 +44,7 @@
 --    under G-successors inside ws, and a fairness predicate f that C misses
 --    everywhere.  With  f = evPred P A ,  Eq (evPred P A y) false  splits into
 --
---        Eq (valOf P y (box A)) false     box A pending at y
+--        Eq (valOf P y (□ A)) false     □ A pending at y
 --        Eq (valOf P y A) true            and unfulfilled at y
 --
 --    -- the two hypotheses (R2) needs, now at EVERY state of C rather than at
@@ -70,7 +70,7 @@
 --    Ust-membership.  So certAll is used exactly as it stands, and R carries
 --    the Ust-membership as a hypothesis:
 --
---        UstRef P z = Mem z (Ust P) -> Deriv (neg (chi P z))
+--        UstRef P z = Mem z (Ust P) -> Deriv (¬ (chi P z))
 --
 --    which is Refuted with the quantifier over ws stripped -- the ONE thing
 --    certAll's conclusion has that Refuted's does not.
@@ -101,7 +101,7 @@ open import LTL.Extract  public
 -- carries.
 
 UstRef : Formula -> Val -> Set
-UstRef P z = Mem z (Ust P) -> Deriv (neg (chi P z))
+UstRef P z = Mem z (Ust P) -> Deriv (¬ (chi P z))
 
 refutedOf : (P : Formula) (ws : List Val)
          -> ((z : Val) -> Eq (memB z ws) false -> UstRef P z) -> Refuted P ws
@@ -115,62 +115,62 @@ refutedOf P ws ih u mu e = ih u e mu
 -- cCl, and with the closure stated in the form the proof actually uses: the
 -- successor offered by the step lemma is already known to be a state, and the
 -- only question is whether it is still inside ws.  The body is otherwise the
--- note's argument unchanged: (i) B -> A by (L2) and (L5), (ii) B -> nxt B by
+-- note's argument unchanged: (i) B ⇒ A by (L2) and (L5), (ii) B ⇒ ○ B by
 -- the step lemma, dropping the successors outside ws by the induction
--- hypothesis and keeping the rest by closure, (iii) B -> box A by (Ind).
+-- hypothesis and keeping the rest by closure, (iii) B ⇒ □ A by (Ind).
 
 extractBlock : (P : Formula) (ws C : List Val) (u : Val)
             -> Mem u (Ust P) -> Refuted P ws
-            -> (A : Formula) -> Mem (box A) (sub P)
+            -> (A : Formula) -> Mem (□ A) (sub P)
             -> ((z : Val) -> Mem z C -> Mem z (Ust P))
             -> ((z y : Val) -> Mem z C -> Mem y (St P) -> Eq (memB y ws) true
                   -> Eq (step P z y) true -> Mem y C)
             -> ((z : Val) -> Mem z C -> Eq (valOf P z A) true)
-            -> Eq (valOf P u (box A)) false -> Mem u C
-            -> Deriv (neg (chi P u))
-extractBlock P ws C u mu ih A mbox cUst cCl cHold pend mc = refute chiBox chiNegBox
+            -> Eq (valOf P u (□ A)) false -> Mem u C
+            -> Deriv (¬ (chi P u))
+extractBlock P ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
   where
     lenC : (w : Val) -> Mem w C -> Eq (length w) (length (sub P))
     lenC w m = stLen P (ustSt P (cUst w m))
 
     -- (i)
-    bA : Deriv (imp (beta P C) A)
+    bA : Deriv ((beta P C) ⇒ A)
     bA = betaElim P C eachA
       where
-        eachA : (w : Val) -> Mem w C -> Deriv (imp (chi P w) A)
-        eachA w m = eqSubst (\ b -> Deriv (imp (chi P w) (lit A b))) (cHold w m)
-                            (chiProjVal P w (lenC w m) (sub_box P mbox))
+        eachA : (w : Val) -> Mem w C -> Deriv ((chi P w) ⇒ A)
+        eachA w m = eqSubst (\ b -> Deriv ((chi P w) ⇒ (lit A b))) (cHold w m)
+                            (chiProjVal P w (lenC w m) (sub_□ P mbox))
 
     -- (ii)
     toC : (w : Val) -> Mem w C
-       -> Deriv (imp (beta P (succs P (St P) w)) (beta P C))
+       -> Deriv ((beta P (succs P (St P) w)) ⇒ (beta P C))
     toC w m = betaElim P (succs P (St P) w) eachS
       where
         eachS : (w' : Val) -> Mem w' (succs P (St P) w)
-             -> Deriv (imp (chi P w') (beta P C))
+             -> Deriv ((chi P w') ⇒ (beta P C))
         eachS w' m' = go (memB w' ws) refl
           where
             pr : Prod (Mem w' (St P)) (Eq (step P w w') true)
             pr = succsMem P (St P) w m'
 
             go : (b : Bool) -> Eq (memB w' ws) b
-              -> Deriv (imp (chi P w') (beta P C))
+              -> Deriv ((chi P w') ⇒ (beta P C))
             go false eb =
-              mp negElim (ih w' (ustClosed P (cUst w m) (prodFst pr) (prodSnd pr)) eb)
+              mp ¬Elim (ih w' (ustClosed P (cUst w m) (prodFst pr) (prodSnd pr)) eb)
             go true  eb = betaIntro P C (cCl w w' m (prodFst pr) eb (prodSnd pr))
 
-    bNext : Deriv (imp (beta P C) (nxt (beta P C)))
+    bNext : Deriv ((beta P C) ⇒ ○ (beta P C))
     bNext = betaElim P C eachN
       where
-        eachN : (w : Val) -> Mem w C -> Deriv (imp (chi P w) (nxt (beta P C)))
-        eachN w m = impTrans (stepLemma P w (lenC w m)) (nxtMono (toC w m))
+        eachN : (w : Val) -> Mem w C -> Deriv ((chi P w) ⇒ ○ (beta P C))
+        eachN w m = ⇒Trans (stepLemma P w (lenC w m)) (○Mono (toC w m))
 
     -- (iii)
-    chiBox : Deriv (imp (chi P u) (box A))
-    chiBox = impTrans (betaIntro P C mc) (impTrans (indRule bNext) (boxMono bA))
+    chi□ : Deriv ((chi P u) ⇒ □ A)
+    chi□ = ⇒Trans (betaIntro P C mc) (⇒Trans (indRule bNext) (□Mono bA))
 
-    chiNegBox : Deriv (imp (chi P u) (neg (box A)))
-    chiNegBox = eqSubst (\ b -> Deriv (imp (chi P u) (lit (box A) b))) pend
+    chi¬□ : Deriv ((chi P u) ⇒ ¬ □ A)
+    chi¬□ = eqSubst (\ b -> Deriv ((chi P u) ⇒ (lit (□ A) b))) pend
                         (chiProjVal P u (stLen P (ustSt P mu)) mbox)
 
 ------------------------------------------------------------------------
@@ -197,10 +197,10 @@ blockStep : (P : Formula) (ws C : List Val) (f : Val -> Bool) -> Mem f (evPreds 
 blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
   where
     onA : Sigma Formula
-                (\ A -> Prod (Mem A (boxArgs (sub P))) (Eq f (evPred P A)))
-       -> Deriv (neg (chi P z))
+                (\ A -> Prod (Mem A (□Args (sub P))) (Eq f (evPred P A)))
+       -> Deriv (¬ (chi P z))
     onA (sig A (prod mA ef)) =
-      extractBlock P ws D z mzU (refutedOf P ws ih) A (boxArgs_mem (sub P) mA)
+      extractBlock P ws D z mzU (refutedOf P ws ih) A (□Args_mem (sub P) mA)
                    dUst dCl dHold pend mzD
       where
         missA : (y : Val) -> Mem y C -> Eq (evPred P A y) false
@@ -231,11 +231,11 @@ blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
         dHold : (y : Val) -> Mem y D -> Eq (valOf P y A) true
         dHold y my =
           notFalse (valOf P y A)
-                   (orFalseR (valOf P y (box A)) (boolNot (valOf P y A))
+                   (orFalseR (valOf P y (□ A)) (boolNot (valOf P y A))
                              (missA y (dC y my)))
 
-        pend : Eq (valOf P z (box A)) false
-        pend = orFalseL (valOf P z (box A)) (boolNot (valOf P z A)) (missA z mz)
+        pend : Eq (valOf P z (□ A)) false
+        pend = orFalseL (valOf P z (□ A)) (boolNot (valOf P z A)) (missA z mz)
 
         mzD : Mem z D
         mzD = into z mz mzU
@@ -245,7 +245,7 @@ blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
 
 certRefuted : (P : Formula) {ws : List Val}
            -> Cert (step P) (evPreds P) ws -> Refuted P ws
-           -> (z : Val) -> Mem z (Ust P) -> Deriv (neg (chi P z))
+           -> (z : Val) -> Mem z (Ust P) -> Deriv (¬ (chi P z))
 certRefuted P {ws} c ih =
   certAll (step P) (evPreds P) (UstRef P) (sinkStep P) (blockStep P) c
           (\ z e mu -> ih z mu e)
@@ -253,7 +253,7 @@ certRefuted P {ws} c ih =
 -- Over Ust P itself the seed is vacuous: nothing is outside.
 
 ustCertRefuted : (P : Formula) -> Cert (step P) (evPreds P) (Ust P)
-              -> (z : Val) -> Mem z (Ust P) -> Deriv (neg (chi P z))
+              -> (z : Val) -> Mem z (Ust P) -> Deriv (¬ (chi P z))
 ustCertRefuted P c = certRefuted P c (ustRefuted P)
 
 ------------------------------------------------------------------------
@@ -280,32 +280,32 @@ sccGraph P = graphGo (step P) (evPreds P) (Ust P) (memInE (Ust P)) (listBar (Ust
 -- the absence of satB.
 
 provableEachSCC : (Q : Formula)
-               -> Cert (step (neg Q)) (evPreds (neg Q)) (Ust (neg Q))
-               -> (w : Val) -> Mem w (St (neg Q)) -> Deriv (imp (chi (neg Q) w) Q)
+               -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
+               -> (w : Val) -> Mem w (St (¬ Q)) -> Deriv ((chi (¬ Q) w) ⇒ Q)
 provableEachSCC Q c w m = outer (memB w (Ust R)) refl
   where
     R : Formula
-    R = neg Q
+    R = ¬ Q
 
-    fromR : Eq (valOf R w R) false -> Deriv (imp (chi R w) Q)
+    fromR : Eq (valOf R w R) false -> Deriv ((chi R w) ⇒ Q)
     fromR ev =
-      impTrans (eqSubst (\ d -> Deriv (imp (chi R w) (lit R d))) ev
+      ⇒Trans (eqSubst (\ d -> Deriv ((chi R w) ⇒ (lit R d))) ev
                         (chiProjVal R w (stLen R m) (sub_self R)))
                dne
 
-    outer : (b : Bool) -> Eq (memB w (Ust R)) b -> Deriv (imp (chi R w) Q)
+    outer : (b : Bool) -> Eq (memB w (Ust R)) b -> Deriv ((chi R w) ⇒ Q)
     outer false ec = fromR (notIn (valOf R w R) refl)
       where
         notIn : (d : Bool) -> Eq (valOf R w R) d -> Eq (valOf R w R) false
         notIn false ed = ed
         notIn true  ed =
           emptyElim (memB_false w (Ust R) ec (ustSeed R m ed))
-    outer true  ec = mp negElim (ustCertRefuted R c w (memB_sound w (Ust R) ec))
+    outer true  ec = mp ¬Elim (ustCertRefuted R c w (memB_sound w (Ust R) ec))
 
 provableSCC : (Q : Formula)
-           -> Cert (step (neg Q)) (evPreds (neg Q)) (Ust (neg Q)) -> Deriv Q
+           -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q)) -> Deriv Q
 provableSCC Q c =
-  mp (betaElim (neg Q) (St (neg Q)) (provableEachSCC Q c)) (stateComplete (neg Q))
+  mp (betaElim (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateComplete (¬ Q))
 
 ------------------------------------------------------------------------
 -- The two branches, side by side.
@@ -315,8 +315,8 @@ provableSCC Q c =
 -- of Theorem 6.1 obtained without the elimination.
 
 sccProof : (Q : Formula)
-        -> Sum (FairIn (Ust (neg Q)) (step (neg Q)) (evPreds (neg Q))) (Deriv Q)
-sccProof Q = sumElim inl (\ c -> inr (provableSCC Q c)) (sccGraph (neg Q))
+        -> Sum (FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q))) (Deriv Q)
+sccProof Q = sumElim inl (\ c -> inr (provableSCC Q c)) (sccGraph (¬ Q))
 
 -- Reading a derivation out, on the strength of the computed boolean: gotLoop
 -- says which branch was taken, and refl in the checks below says the search was
@@ -331,12 +331,12 @@ proofFrom (inr d) e = d
 -- 1 for cSink, 0 for cNil.
 
 sccShape : (Q : Formula) -> List Nat
-sccShape Q = sumElim (\ fi -> []) certShape (sccGraph (neg Q))
+sccShape Q = sumElim (\ fi -> []) certShape (sccGraph (¬ Q))
 
 ------------------------------------------------------------------------
 -- Checkpoints.
 --
--- Ben-Ari's formula and  box p -> box (nxt p) , the two examples LTL.Extract
+-- Ben-Ari's formula and  □ p ⇒ □ ○ p , the two examples LTL.Extract
 -- ends with, decided again by the SCC route.  These are the real test: both
 -- derivations are produced, so the graph search, certAll, extractR1 and
 -- extractBlock all run, and the answers agree with benAriProof and bnbProof.
@@ -357,7 +357,7 @@ bnbProofSCC = proofFrom (sccProof bnb) refl
 -- formula Ust has one state, it is a sink, and the certificate is  cSink, cNil
 -- -- only extractR1 runs, which is what LTL.Extract records of benAriProof.
 --
--- For  box p -> box (nxt p)  Ust has two states and the certificate is
+-- For  □ p ⇒ □ ○ p  Ust has two states and the certificate is
 -- cSink, cBlock, cNil : one state has no successor inside the set and leaves
 -- first, and only then is what remains a component whose eventuality is
 -- unfulfillable, refuted by extractBlock in a single use of (Ind).  That is the
@@ -374,7 +374,7 @@ shape_bnb : Eq (sccShape bnb) (1 :: 2 :: 0 :: [])
 shape_bnb = refl
 
 -- and the positive side, to show the search is not simply always certifying:
--- dia p is satisfiable, so its state set has a fair component.
+-- ◇ p is satisfiable, so its state set has a fair component.
 
-scc_diaP : Eq (gotLoop (sccGraph diaP)) true
-scc_diaP = refl
+scc_◇P : Eq (gotLoop (sccGraph ◇P)) true
+scc_◇P = refl

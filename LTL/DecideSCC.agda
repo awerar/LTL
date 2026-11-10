@@ -7,11 +7,11 @@
 -- the same type as decide (LTL.Decide, Theorem 6.1), decided by a different
 -- question.  decide asks a BOOLEAN of the elimination,
 --
---     satB (neg Q)  --  does some surviving state contain neg Q?
+--     satB (¬ Q)  --  does some surviving state contain ¬ Q?
 --
 -- and decideSCC asks which way the graph search went,
 --
---     sccGraph (neg Q)  --  is there a fair component in Ust (neg Q)?
+--     sccGraph (¬ Q)  --  is there a fair component in Ust (¬ Q)?
 --
 -- Neither branch is obtained by refuting the other, exactly as in decide: the
 -- certificate branch returns a derivation built by G39 and never mentions a
@@ -30,7 +30,7 @@
 -- The route from a fair component to a countermodel, in four steps.
 --
 --   1. ustSeedTo -- the component's representative r is reached by a trail from
---      a state s with  neg Q  in it.  Stem and cycle together are a FairLoop
+--      a state s with  ¬ Q  in it.  Stem and cycle together are a FairLoop
 --      from s (LTL.Graph), still inside Ust P.
 --   2. The loop is restricted to the list of vertices it actually uses,
 --      C = s :: stem ++ cycle .  This is where the Trap is built: every vertex
@@ -74,10 +74,10 @@ reachPath P C (reachesBy zs t) = trailPath P C t
 -- is the path -- or it is still pending at the far end, where the caller's
 -- hypothesis (for us, evWitness at the graph layer's witness) says it fails.
 
-trapFail : (P : Formula) (C : List Val) (A : Formula) -> Mem (box A) (sub P)
+trapFail : (P : Formula) (C : List Val) (A : Formula) -> Mem (□ A) (sub P)
         -> (z w : Val) -> Reaches C (step P) z w
-        -> Eq (valOf P z (box A)) false
-        -> (Eq (valOf P w (box A)) false -> Eq (valOf P w A) false)
+        -> Eq (valOf P z (□ A)) false
+        -> (Eq (valOf P w (□ A)) false -> Eq (valOf P w A) false)
         -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
 trapFail P C A mbx z w (reachesBy as t) pd atW =
   sumElim onFul (\ pw -> sig w (prod (trailPath P C t) (atW pw)))
@@ -157,15 +157,15 @@ fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
               (memAppCase st cy m)
 
     -- (R2) fails on C: walk to the witness and read evPred there.
-    fulC : (z : Val) -> Mem z C -> (A : Formula) -> Mem A (boxArgs (sub P))
-        -> Eq (valOf P z (box A)) false
+    fulC : (z : Val) -> Mem z C -> (A : Formula) -> Mem A (□Args (sub P))
+        -> Eq (valOf P z (□ A)) false
         -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
     fulC z mz A mA pd = onW (wit (evPred P A) (evPredsMem P mA))
       where
         onW : Sigma Val (\ w -> Prod (Mem w cy) (Eq (evPred P A w) true))
            -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
         onW (sig w (prod mw ew)) =
-          trapFail P C A (boxArgs_mem (sub P) mA) z w (reachW z mz w mw) pd
+          trapFail P C A (□Args_mem (sub P) mA) z w (reachW z mz w mw) pd
                    (evWitness P A w ew)
 
 -- and then the trap survives the elimination, so G38 applies.
@@ -185,38 +185,38 @@ scRun P v0 (scLasso C mv0 inU tr flC) =
 -- buildCM with the run supplied.
 --
 -- Verbatim from LTL.Decide's buildCM except that the run is a parameter rather
--- than  runOf ... (lasso ...) .  Everything else -- (S1) at neg Q, Hintikka's
+-- than  runOf ... (lasso ...) .  Everything else -- (S1) at ¬ Q, Hintikka's
 -- lemma at stage 0, soundness -- is the same three lines, and buildCM itself is
 -- untouched: C8 needs both procedures in the development at once.
 
-buildCMFrom : (Q : Formula) (v0 : Val) -> Mem v0 (Uinf (neg Q))
-           -> Run (neg Q) v0 -> Eq (valOf (neg Q) v0 (neg Q)) true
+buildCMFrom : (Q : Formula) (v0 : Val) -> Mem v0 (Uinf (¬ Q))
+           -> Run (¬ Q) v0 -> Eq (valOf (¬ Q) v0 (¬ Q)) true
            -> LassoCountermodel Q
 buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
   where
-    valQ : Eq (valOf (neg Q) v0 Q) false
+    valQ : Eq (valOf (¬ Q) v0 Q) false
     valQ =
-      notTrue (valOf (neg Q) v0 Q)
-        (eqTrans (eqSym (boolEq_sound (valOf (neg Q) v0 (neg Q))
-                                      (boolNot (valOf (neg Q) v0 Q))
-                                      (stateOk (neg Q) v0 m (sub_self (neg Q)))))
+      notTrue (valOf (¬ Q) v0 Q)
+        (eqTrans (eqSym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
+                                      (boolNot (valOf (¬ Q) v0 Q))
+                                      (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
                  ev)
 
-    evalFalse : Eq (eval (neg Q) v0 r Q 0) false
+    evalFalse : Eq (eval (¬ Q) v0 r Q 0) false
     evalFalse =
-      eqTrans (eqSym (hintStart (neg Q) v0 r Q (memTl (sub_self Q)))) valQ
+      eqTrans (eqSym (hintStart (¬ Q) v0 r Q (memTl (sub_self Q)))) valQ
 
     noDeriv : Deriv Q -> Empty
-    noDeriv d = tfAbs (eqTrans (eqSym (soundRun (neg Q) v0 r d 0)) evalFalse)
+    noDeriv d = tfAbs (eqTrans (eqSym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- Theorem 6.1, by the SCC route.
 
 decideSCC : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
-decideSCC Q = sumElim onFair (\ c -> inl (provableSCC Q c)) (sccGraph (neg Q))
+decideSCC Q = sumElim onFair (\ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
   where
     R : Formula
-    R = neg Q
+    R = ¬ Q
 
     fromRun : (s : Val) -> Eq (valOf R s R) true
            -> Prod (Mem s (Uinf R)) (Run R s)
@@ -252,5 +252,5 @@ decideSCC_benAri = refl
 decideSCC_bnb : Eq (isProof (decideSCC bnb)) true
 decideSCC_bnb = refl
 
-decideSCC_diaP : Eq (isProof (decideSCC diaP)) false
-decideSCC_diaP = refl
+decideSCC_◇P : Eq (isProof (decideSCC ◇P)) false
+decideSCC_◇P = refl
