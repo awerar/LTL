@@ -30,6 +30,12 @@ module LTL.Proofs where
 open import LTL.Examples public
 open import LTL.ShortPC  public
 
+-- The trees below are for checking shapes by refl.  To READ a proof, use
+-- LTL.Pretty (opened here): prove Q renders decidePC Q as a numbered Hilbert
+-- proof, proveTree n Q as an indented tree.  Show the result with
+-- C-u C-u C-c C-n in Emacs, or run tools/show-proof from a terminal.
+open import LTL.Pretty   public
+
 ------------------------------------------------------------------------
 -- The ten constructors, named
 

@@ -1,19 +1,21 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Base  (verbatim copy of BRA3.Base, module renamed) -- basic ASCII prelude (Nat, Bool, Eq).
+-- LTL.Base  (copy of BRA3.Base, module renamed) -- basic ASCII prelude (Nat, Bool, Eq).
 --
--- Self-contained; no dependency on BRA2.
+-- Self-contained; no dependency on BRA2.  The one change from BRA3.Base: Nat is
+-- Agda's own Agda.Builtin.Nat rather than a local copy bound with the NATURAL
+-- pragma.  The two are the same datatype with the same constructor names, but
+-- a NATURAL binding can be made only once in a development, and
+-- Agda.Builtin.String (needed by LTL.Pretty, the proof printer) makes it
+-- through Agda.Builtin.Nat.  This is Agda's builtin library, not the standard
+-- library, and the module is --safe.
 
 module LTL.Base where
 
 ------------------------------------------------------------------------
 -- Natural numbers
 
-data Nat : Set where
-  zero : Nat
-  suc  : Nat -> Nat
-
-{-# BUILTIN NATURAL Nat #-}
+open import Agda.Builtin.Nat public using (Nat; zero; suc)
 
 ------------------------------------------------------------------------
 -- Bool

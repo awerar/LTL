@@ -8,7 +8,8 @@ derivation or a certified finite lasso countermodel.
 
 - Agda 2.8.0, **no standard library**. Every file starts with
   `{-# OPTIONS --safe --without-K --exact-split #-}`. Keep it that way: no
-  postulates, holes, or termination pragmas.
+  postulates, holes, or termination pragmas. Agda's own `Agda.Builtin.*`
+  modules are fine (`Base` re-exports `Agda.Builtin.Nat`).
 - Typecheck from the repository root, e.g. `agda -i . LTL/DecideSCC.agda`
   (see README for the full list). `Examples`, `Compare`, `Lecture`, `Proofs`
   are benchmarks and are slow; the core proof modules should stay fast.
@@ -61,6 +62,11 @@ derivation or a certified finite lasso countermodel.
    Goubault-Larrecq Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`); `Compare`
    (decide vs decideSCC on 47 formulas); `Proofs` (prints and measures
    certificates).
+10. **Readable output** — `Pretty` (`prove`, `proveTree`, `proveLines`:
+   decidePC results as numbered Hilbert proofs, trees, or lasso countermodels,
+   rendered to `Agda.Builtin.String`; this is why `Base` takes `Nat` from
+   `Agda.Builtin.Nat`). `tools/show-proof` runs it from the terminal via
+   `agda --interaction-json`. Rendering is slow for large certificates.
 
 ## Public API
 

@@ -49,6 +49,47 @@ of derivability and finite lasso countermodels. Its relationship to semantic
 validity on arbitrary infinite words requires careful specification of the
 semantics and constructive assumptions; the proposal discusses this distinction.
 
+## Viewing proofs
+
+[LTL/Pretty.agda](LTL/Pretty.agda) prints the result of `decidePC` in a
+readable form. For a valid formula you get a numbered Hilbert proof, where
+each line is an axiom or follows from earlier lines by MP or Gen. For an
+invalid one you get the lasso countermodel: the variables true at each time
+point, and where the loop starts. `∧`, `⇔` and `◇` are printed as
+abbreviations; `∨`, `⊤` and `⊥` are not, so `¬ A ⇒ B` and `p ⇒ p` read as
+written.
+
+From a terminal (needs Python 3):
+
+```sh
+tools/show-proof '□ pv ⇒ pv'            # numbered proof
+tools/show-proof --tree 6 '□ pv ⇒ pv'   # proof tree, to depth 6
+tools/show-proof 'pv ⇒ □ pv'            # countermodel
+tools/show-proof --raw '◇ pv'           # formula without abbreviations
+tools/show-proof --expr 'renderDeriv (dne {pv})'   # any String expression
+```
+
+The formula is Agda syntax, evaluated with `LTL.Pretty` and `LTL.Examples`
+open, so `pv`, `qv`, `axT`, … can be used. Set `AGDA` to choose the Agda
+binary.
+
+In an editor, load `LTL/Pretty.agda` or `LTL/Proofs.agda`, then:
+
+- Emacs: `C-u C-u C-c C-n prove (□ pv ⇒ pv)` prints the text with real line
+  breaks. Plain `C-c C-n` shows a quoted string with `\n` escapes.
+- Editors that talk to Agda over `--interaction-json` (for example the VS Code
+  extensions) always show a quoted string. `C-c C-n proveLines (□ pv ⇒ pv)`
+  gives one quoted string per line.
+
+Other functions: `proveTree n Q`, `renderDeriv d` and `renderTree n d` for any
+derivation `d`, `showFormula` and `showFormulaRaw`.
+
+Limitations: rendering is computed by Agda's normaliser, so it is only
+practical for small certificates. `p ⇒ p`, `□ p ⇒ p` and the countermodel
+examples take about a second. Some formulas, such as `□ pv ⇒ ○ pv`, did not
+finish within 90 seconds. `decide`'s own certificates (`proveWith decide Q`)
+are far too large to render; see `LTL/Proofs.agda`.
+
 ## Mathematical entry points
 
 `Formula`, `Deriv`: syntax and deductive rules.

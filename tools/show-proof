@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Print a derivation or countermodel for an LTL formula, readably.
+
+    tools/show-proof '□ pv ⇒ pv'              numbered proof from decidePC
+    tools/show-proof --tree 6 '□ pv ⇒ pv'     the proof tree, to depth 6
+    tools/show-proof --expr 'renderDeriv (dne {pv})'   any String expression
+
+FORMULA is Agda syntax and is evaluated in a module that opens LTL.Pretty
+and LTL.Examples, so pv, qv, axT, ... and the derived rules are in scope.
+The rendering is done by LTL.Pretty; this script only runs
+`agda --interaction-json`, asks it to normalise the expression, and prints the
+resulting string without quotes and escapes.  Set AGDA to choose the binary.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+SCRATCH = """{-# OPTIONS --safe --without-K --exact-split #-}
+module ShowProofScratch where
+open import LTL.Pretty
+open import LTL.Examples
+"""
+
+
+def hs_string(s):
+    """Quote s as a Haskell string literal (the IOTCM argument syntax)."""
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+_ESC = re.compile(r'\\(\d+|[ntr\\"\'&abfv])')
+_SIMPLE = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'",
+           "&": "", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
+
+
+def unquote(lit):
+    """Decode an Agda string literal as printed by Agda (Haskell escapes)."""
+    lit = lit.strip()
+    if len(lit) < 2 or lit[0] != '"' or lit[-1] != '"':
+        return lit                       # not a literal: show it as it is
+    body = lit[1:-1]
+    return _ESC.sub(lambda m: chr(int(m.group(1))) if m.group(1).isdigit()
+                    else _SIMPLE[m.group(1)], body)
+
+
+def run(expr):
+    agda = os.environ.get("AGDA", "agda")
+    with tempfile.TemporaryDirectory(prefix="show-proof-") as tmp:
+        src = os.path.join(tmp, "ShowProofScratch.agda")
+        with open(src, "w", encoding="utf-8") as f:
+            f.write(SCRATCH)
+        load = ('IOTCM {f} NonInteractive Indirect (Cmd_load {f} [{a},{b},{c},{d}])'
+                .format(f=hs_string(src), a=hs_string("-i"), b=hs_string(tmp),
+                        c=hs_string("-i"), d=hs_string(REPO)))
+        comp = ('IOTCM {f} NonInteractive Indirect '
+                '(Cmd_compute_toplevel DefaultCompute {e})'
+                .format(f=hs_string(src), e=hs_string("show (" + expr + ")")))
+        proc = subprocess.run([agda, "--interaction-json"], cwd=REPO,
+                              input=load + "\n" + comp + "\n",
+                              capture_output=True, text=True, encoding="utf-8")
+    for line in proc.stdout.splitlines():
+        line = line.removeprefix("JSON> ").strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue
+        if msg.get("kind") != "DisplayInfo":
+            continue
+        info = msg.get("info", {})
+        if info.get("kind") == "NormalForm":
+            return unquote(info.get("expr", "")), 0
+        if info.get("kind") == "Error":
+            err = info.get("error", info)
+            return str(err.get("message", err)), 1
+        if info.get("kind") == "AllGoalsWarnings" and info.get("errors"):
+            return "\n".join(str(e.get("message", e)) for e in info["errors"]), 1
+    return ("no answer from Agda\n" + proc.stderr + proc.stdout[-2000:]), 1
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Readable LTL proofs and countermodels (via LTL.Pretty).")
+    ap.add_argument("formula", nargs="?", help="an Agda Formula, e.g. '□ pv ⇒ pv'")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--tree", metavar="DEPTH", type=int,
+                      help="print the proof tree to this depth instead")
+    mode.add_argument("--raw", action="store_true",
+                      help="print the formula itself without abbreviations")
+    ap.add_argument("--expr", help="evaluate this String expression instead")
+    args = ap.parse_args()
+
+    if args.expr is not None:
+        expr = args.expr
+    elif args.formula is None:
+        ap.error("give a formula or --expr")
+    elif args.tree is not None:
+        expr = "proveTree {} ({})".format(args.tree, args.formula)
+    elif args.raw:
+        expr = "showFormulaRaw ({})".format(args.formula)
+    else:
+        expr = "prove ({})".format(args.formula)
+
+    out, code = run(expr)
+    sys.stdout.write(out if out.endswith("\n") else out + "\n")
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main()
