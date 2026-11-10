@@ -1,12 +1,26 @@
 #!/usr/bin/env python3
-"""Print a derivation or countermodel for an LTL formula, readably.
+r"""Print a derivation or countermodel for an LTL formula, readably.
 
-    tools/show-proof '□ pv ⇒ pv'              numbered proof from decidePC
-    tools/show-proof --tree 6 '□ pv ⇒ pv'     the proof tree, to depth 6
+    tools/show-proof 'G p -> p'               numbered proof from decidePC
+    tools/show-proof '□ pv ⇒ pv'              the same, in Agda syntax
+    tools/show-proof --tree 6 'G p -> p'      the proof tree, to depth 6
     tools/show-proof --expr 'renderDeriv (dne {pv})'   any String expression
 
-FORMULA is Agda syntax and is evaluated in a module that opens LTL.Pretty
-and LTL.Examples, so pv, qv, axT, ... and the derived rules are in scope.
+FORMULA may be written in ASCII or in the Agda syntax of LTL.Formula; the two
+can be mixed.  ASCII words and operators are translated as follows:
+
+    ~  !  not          ¬          ->  =>             ⇒
+    X  next            ○          <->  <=>           ⇔
+    G  []  always      □          &  /\  and         ∧
+    F  <>  eventually  ◇          |  \/  or          ∨
+    true  false        ⊤  ⊥
+
+and the variables p q r s t and x0, x1, ... become var 0 .. var 4 and
+var N, the names LTL.Pretty prints them with.  Precedence is Agda's: the
+prefix operators bind tightest, then ∧, ∨, ⇒ (right associative), ⇔.
+Any other name is passed to Agda unchanged.  The formula is evaluated in a
+module that opens LTL.Pretty and LTL.Examples, so pv, qv, axT, ... can be
+used as well.
 The rendering is done by LTL.Pretty; this script only runs
 `agda --interaction-json`, asks it to normalise the expression, and prints the
 resulting string without quotes and escapes.  Set AGDA to choose the binary.
@@ -27,6 +41,45 @@ module ShowProofScratch where
 open import LTL.Pretty
 open import LTL.Examples
 """
+
+
+_ASCII_OPS = {
+    "~": "¬", "!": "¬", "not": "¬",
+    "->": "⇒", "=>": "⇒", "<->": "⇔", "<=>": "⇔",
+    "&": "∧", "/\\": "∧", "and": "∧", "|": "∨", "\\/": "∨", "or": "∨",
+    "X": "○", "next": "○", "G": "□", "[]": "□", "always": "□",
+    "F": "◇", "<>": "◇", "eventually": "◇",
+    "true": "⊤", "false": "⊥",
+}
+_VARS = {"p": 0, "q": 1, "r": 2, "s": 3, "t": 4}
+_ASCII_TOKEN = re.compile(
+    r"<->|<=>|->|=>|/\\|\\/|\[\]|<>|[~!&|]|[A-Za-z_][A-Za-z0-9_']*|\d+|\S")
+
+
+def _ascii_word(tok):
+    if tok in _ASCII_OPS:
+        return _ASCII_OPS[tok]
+    if tok in _VARS:
+        return "(var {})".format(_VARS[tok])
+    m = re.fullmatch(r"x(\d+)", tok)
+    if m:
+        return "(var {})".format(int(m.group(1)))
+    return tok
+
+
+def translate(formula):
+    """ASCII LTL syntax to the Agda syntax of LTL.Formula.
+
+    The input is split at whitespace and parentheses.  A chunk that is pure
+    ASCII is tokenised and translated; any other chunk (Agda's own Unicode
+    syntax, or a name like ◇P) is passed through as it is."""
+    out = []
+    for chunk in re.findall(r"[()]|[^\s()]+", formula):
+        if chunk in "()" or not chunk.isascii():
+            out.append(chunk)
+        else:
+            out.extend(_ascii_word(t) for t in _ASCII_TOKEN.findall(chunk))
+    return " ".join(out)
 
 
 def hs_string(s):
@@ -87,8 +140,11 @@ def run(expr):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Readable LTL proofs and countermodels (via LTL.Pretty).")
-    ap.add_argument("formula", nargs="?", help="an Agda Formula, e.g. '□ pv ⇒ pv'")
+        description="Readable LTL proofs and countermodels (via LTL.Pretty).",
+        epilog=__doc__.split("\n\n", 1)[1],
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("formula", nargs="?",
+                    help="the formula, in ASCII ('G p -> p') or Agda syntax ('□ pv ⇒ pv')")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--tree", metavar="DEPTH", type=int,
                       help="print the proof tree to this depth instead")
@@ -101,14 +157,21 @@ def main():
         expr = args.expr
     elif args.formula is None:
         ap.error("give a formula or --expr")
-    elif args.tree is not None:
-        expr = "proveTree {} ({})".format(args.tree, args.formula)
-    elif args.raw:
-        expr = "showFormulaRaw ({})".format(args.formula)
     else:
-        expr = "prove ({})".format(args.formula)
+        formula = translate(args.formula)
+        if args.tree is not None:
+            expr = "proveTree {} ({})".format(args.tree, formula)
+        elif args.raw:
+            expr = "showFormulaRaw ({})".format(formula)
+        else:
+            expr = "prove ({})".format(formula)
 
     out, code = run(expr)
+    if code != 0 and args.expr is None:
+        out = out.rstrip("\n") + "\n\n(sent to Agda: " + expr + ")"
+        if "Not in scope" in out:
+            out += ("\n(variables are p q r s t or x0, x1, ...; "
+                    "operators: see tools/show-proof --help)")
     sys.stdout.write(out if out.endswith("\n") else out + "\n")
     sys.exit(code)
 

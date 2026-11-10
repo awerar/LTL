@@ -62,16 +62,35 @@ written.
 From a terminal (needs Python 3):
 
 ```sh
-tools/show-proof '□ pv ⇒ pv'            # numbered proof
-tools/show-proof --tree 6 '□ pv ⇒ pv'   # proof tree, to depth 6
-tools/show-proof 'pv ⇒ □ pv'            # countermodel
-tools/show-proof --raw '◇ pv'           # formula without abbreviations
+tools/show-proof 'G p -> p'                 # numbered proof
+tools/show-proof '□ pv ⇒ pv'                # the same, in Agda syntax
+tools/show-proof --tree 6 'G p -> p'        # proof tree, to depth 6
+tools/show-proof 'F p & F q -> F (p & q)'   # countermodel
+tools/show-proof --raw 'F p'                # formula without abbreviations
 tools/show-proof --expr 'renderDeriv (dne {pv})'   # any String expression
 ```
 
-The formula is Agda syntax, evaluated with `LTL.Pretty` and `LTL.Examples`
-open, so `pv`, `qv`, `axT`, … can be used. Set `AGDA` to choose the Agda
-binary.
+The formula can be written in ASCII or in Agda syntax, or a mix of both. The
+ASCII forms are:
+
+| ASCII | Means |
+|---|---|
+| `~`, `!`, `not` | `¬` |
+| `X`, `next` | `○` |
+| `G`, `[]`, `always` | `□` |
+| `F`, `<>`, `eventually` | `◇` |
+| `&`, `/\`, `and` | `∧` |
+| `\|`, `\/`, `or` | `∨` |
+| `->`, `=>` | `⇒` |
+| `<->`, `<=>` | `⇔` |
+| `true`, `false` | `⊤`, `⊥` |
+
+The variables `p q r s t` and `x0`, `x1`, … are `var 0` to `var 4` and `var N`,
+which are also the names used in the output. Precedence is Agda's: prefix
+operators bind tightest, then `∧`, `∨`, `⇒` (right associative), `⇔`. The
+formula is evaluated with `LTL.Pretty` and `LTL.Examples` open, so `pv`, `qv`,
+`axT`, … can also be used. `tools/show-proof --help` lists all of this. Set
+`AGDA` to choose the Agda binary.
 
 In an editor, load `LTL/Pretty.agda` or `LTL/Proofs.agda`, then:
 
