@@ -17,7 +17,7 @@
 -- then given up.
 --
 -- Until Phase 8 those states were an explicit pool, with |U_inf| as fuel and a
--- Le measure saying the pool shortens; at fuel zero the pool was empty, so the
+-- ≤ measure saying the pool shortens; at fuel zero the pool was empty, so the
 -- fresh case could not arise.  G29 replaces all of that by a Bar: the states
 -- still available ARE the Bar's predicate E, giving one up is exactly the sub-
 -- Bar  cBar  hands over, and the search terminates because Bar is well founded.
@@ -44,32 +44,32 @@ open import LTL.Round public
 -- A boundary already passed, with both halves of the eventual lasso
 
 data Seen (P : Formula) (v0 cur b : Val) : Set where
-  mkSeen : Mem b (Uinf P)
+  mkSeen : b ∈ Uinf P
         -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
         -> (qs : List Val) -> Walk P (Uinf P) b qs cur
-        -> Eq (nullB qs) false
-        -> ((A : Formula) -> Mem A (□Args (sub P))
-              -> Eq (valOf P b (□ A)) false -> Fulfil P A b qs)
+        -> nullB qs ≡ false
+        -> ((A : Formula) -> A ∈ □Args (sub P)
+              -> valOf P b (□ A) ≡ false -> Fulfil P A b qs)
         -> Seen P v0 cur b
 
 seenExt : (P : Formula) (v0 cur nx b : Val) (rs : List Val)
        -> Walk P (Uinf P) cur rs nx -> Seen P v0 cur b -> Seen P v0 nx b
 seenExt P v0 cur nx b rs wr (mkSeen mb ps wp qs wq nn h) =
-  mkSeen mb ps wp (append qs rs) (walkApp P (Uinf P) wq wr)
+  mkSeen mb ps wp (qs ++ rs) (walkApp P (Uinf P) wq wr)
          (nullB_appL qs rs nn)
-         (\ A mA pd -> fulApp qs rs (h A mA pd))
+         (λ A mA pd -> fulApp qs rs (h A mA pd))
 
 ------------------------------------------------------------------------
 -- The lasso
 
 data Lasso (P : Formula) (v0 : Val) : Set where
-  mkLasso : (b : Val) -> Mem b (Uinf P)
+  mkLasso : (b : Val) -> b ∈ Uinf P
          -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
          -> (qs : List Val) -> Walk P (Uinf P) b qs b
-         -> Eq (nullB qs) false
-         -> ((s : Val) -> Mem s (b :: qs)
-               -> (A : Formula) -> Mem A (□Args (sub P))
-               -> Eq (valOf P s (□ A)) false -> Fulfil P A b qs)
+         -> nullB qs ≡ false
+         -> ((s : Val) -> s ∈ b ∷ qs
+               -> (A : Formula) -> A ∈ □Args (sub P)
+               -> valOf P s (□ A) ≡ false -> Fulfil P A b qs)
          -> Lasso P v0
 
 -- Closing the loop.  This is where the cycle-fulfilment property is proved.
@@ -78,14 +78,14 @@ closeLasso : (P : Formula) (v0 cur : Val) -> Seen P v0 cur cur -> Lasso P v0
 closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
   mkLasso cur mb ps wp qs wq nn cyc
   where
-    cyc : (s : Val) -> Mem s (cur :: qs)
-       -> (A : Formula) -> Mem A (□Args (sub P))
-       -> Eq (valOf P s (□ A)) false -> Fulfil P A cur qs
+    cyc : (s : Val) -> s ∈ cur ∷ qs
+       -> (A : Formula) -> A ∈ □Args (sub P)
+       -> valOf P s (□ A) ≡ false -> Fulfil P A cur qs
     cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wq ms)
       where
         fromSub : SubWalk P (Uinf P) s cur cur qs -> Fulfil P A cur qs
         fromSub (subWalk zs wz f) =
-          sumElim mapFul (\ pd2 -> h A mA pd2)
+          sumElim mapFul (λ pd2 -> h A mA pd2)
                   (walkPersist P (Uinf P) A (□Args_mem (sub P) mA) wz pd)
           where
             mapFul : Fulfil P A s zs -> Fulfil P A cur qs
@@ -100,41 +100,41 @@ closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
 -- Bar's predicate.  That last one is Avail below, and it is the pigeonhole.
 
 Avail : (Val -> Bool) -> Formula -> List Val -> Set
-Avail E P bs = (z : Val) -> Mem z (Uinf P) -> Eq (memB z bs) false -> Eq (E z) true
+Avail E P bs = (z : Val) -> z ∈ Uinf P -> memB z bs ≡ false -> E z ≡ true
 
--- Giving cur up: a state of U_inf outside cur :: bs is outside bs, hence
+-- Giving cur up: a state of U_inf outside cur ∷ bs is outside bs, hence
 -- satisfies E, and is distinct from cur, hence survives the intersection with
 -- neqB cur.
 
 availCons : (P : Formula) {E : Val -> Bool} (bs : List Val) -> Avail E P bs
-         -> (cur : Val) -> Avail (\ y -> boolAnd (E y) (neqB cur y)) P (cur :: bs)
+         -> (cur : Val) -> Avail (λ y -> E y ∧ᵇ neqB cur y) P (cur ∷ bs)
 availCons P {E} bs av cur z mz e =
   andIntro (E z) (neqB cur z)
            (av z mz (orFalseR (valEq z cur) (anyL (valEq z) bs) e))
-           (eqCong boolNot (onEq (valEq cur z) refl))
+           (cong ¬ᵇ_ (onEq (valEq cur z) refl))
   where
-    onEq : (c : Bool) -> Eq (valEq cur z) c -> Eq (valEq cur z) false
+    onEq : (c : Bool) -> valEq cur z ≡ c -> valEq cur z ≡ false
     onEq false ec = ec
     onEq true  ec =
-      emptyElim (tfAbs (eqTrans (eqSym (eqSubst (\ u -> Eq (valEq u cur) true)
-                                                (valEq_sound cur z ec)
-                                                (valEq_refl cur)))
-                                (orFalseL (valEq z cur) (anyL (valEq z) bs) e)))
+      emptyElim (tfAbs (trans (sym (subst (λ u -> valEq u cur ≡ true)
+                                          (valEq_sound cur z ec)
+                                          (valEq_refl cur)))
+                              (orFalseL (valEq z cur) (anyL (valEq z) bs) e)))
 
 lassoSearch : (P : Formula) (v0 : Val) {E : Val -> Bool} -> IFin E
-           -> (cur : Val) -> Mem cur (Uinf P)
+           -> (cur : Val) -> cur ∈ Uinf P
            -> (ps : List Val) -> Walk P (Uinf P) v0 ps cur
            -> (bs : List Val)
-           -> ((b : Val) -> Mem b bs -> Seen P v0 cur b)
+           -> ((b : Val) -> b ∈ bs -> Seen P v0 cur b)
            -> Avail E P bs
            -> Lasso P v0
 lassoOn : (P : Formula) (v0 : Val) {E : Val -> Bool} -> IFin E
-       -> (cur : Val) -> Mem cur (Uinf P)
+       -> (cur : Val) -> cur ∈ Uinf P
        -> (ps : List Val) -> Walk P (Uinf P) v0 ps cur
        -> (bs : List Val)
-       -> ((b : Val) -> Mem b bs -> Seen P v0 cur b)
+       -> ((b : Val) -> b ∈ bs -> Seen P v0 cur b)
        -> Avail E P bs
-       -> (c : Bool) -> Eq (memB cur bs) c
+       -> (c : Bool) -> memB cur bs ≡ c
        -> Lasso P v0
 
 lassoSearch P v0 bar cur mcur ps wps bs seenf av =
@@ -148,22 +148,22 @@ lassoOn P v0 (cBar h) cur mcur ps wps bs seenf av false ec =
     fromRound : Round P cur -> Lasso P v0
     fromRound (mkRound rs nx wr mnx nn hf) =
       lassoSearch P v0 (h cur (av cur mcur ec))
-                  nx mnx (append ps rs) (walkApp P (Uinf P) wps wr)
-                  (cur :: bs) seenf' (availCons P bs av cur)
+                  nx mnx (ps ++ rs) (walkApp P (Uinf P) wps wr)
+                  (cur ∷ bs) seenf' (availCons P bs av cur)
       where
-        seenf' : (b : Val) -> Mem b (cur :: bs) -> Seen P v0 nx b
-        seenf' b memHd     = mkSeen mcur ps wps rs wr nn hf
-        seenf' b (memTl m) = seenExt P v0 cur nx b rs wr (seenf b m)
+        seenf' : (b : Val) -> b ∈ cur ∷ bs -> Seen P v0 nx b
+        seenf' b here      = mkSeen mcur ps wps rs wr nn hf
+        seenf' b (there m) = seenExt P v0 cur nx b rs wr (seenf b m)
 
 ------------------------------------------------------------------------
 -- Proposition 5.3
 
-lasso : (P : Formula) (v0 : Val) -> Mem v0 (Uinf P) -> Lasso P v0
+lasso : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
 lasso P v0 m =
   lassoSearch P v0 (listBar (Uinf P)) v0 m [] wnil [] noSeen
-              (\ z mz e -> memB_complete z (Uinf P) mz)
+              (λ z mz e -> memB_complete z (Uinf P) mz)
   where
-    noSeen : (b : Val) -> Mem b ([] {A = Val}) -> Seen P v0 v0 b
+    noSeen : (b : Val) -> b ∈ [] {A = Val} -> Seen P v0 v0 b
     noSeen b ()
 
 ------------------------------------------------------------------------
@@ -180,11 +180,11 @@ lassoCycle P v0 (mkLasso b mb ps wp qs wq nn cyc) = qs
 -- from atom assignments and closed up from a seed (G30): the order is not the
 -- order of allVecs, and the interesting state need not be the first one.
 
-lassoAt : (P : Formula) (v : Val) -> Eq (memB v (Uinf P)) true
-       -> Prod (List Val) (List Val)
-lassoAt P v e = prod (lassoStem P v (lasso P v m)) (lassoCycle P v (lasso P v m))
+lassoAt : (P : Formula) (v : Val) -> memB v (Uinf P) ≡ true
+       -> List Val × List Val
+lassoAt P v e = lassoStem P v (lasso P v m) , lassoCycle P v (lasso P v m)
   where
-    m : Mem v (Uinf P)
+    m : v ∈ Uinf P
     m = memB_sound v (Uinf P) e
 
 ------------------------------------------------------------------------
@@ -206,13 +206,13 @@ lassoAt P v e = prod (lassoStem P v (lasso P v m)) (lassoCycle P v (lasso P v m)
 -- fails now and holds next, forever alternating.
 
 sA : Val
-sA = true :: false :: true :: false :: []
+sA = true ∷ false ∷ true ∷ false ∷ []
 sB : Val
-sB = true :: false :: false :: true :: []
+sB = true ∷ false ∷ false ∷ true ∷ []
 sC : Val
-sC = false :: true :: true :: false :: []
+sC = false ∷ true ∷ true ∷ false ∷ []
 
-◇P_lasso : Eq (lassoAt ◇P sA refl) (prod (sB :: sC :: []) (sC :: []))
+◇P_lasso : lassoAt ◇P sA refl ≡ (sB ∷ sC ∷ [] , sC ∷ [])
 ◇P_lasso = refl
 
 
@@ -222,13 +222,13 @@ sC = false :: true :: true :: false :: []
 -- the one state  1 1  looping to itself.  Nothing is pending there, every round
 -- is the one forced step, and the cycle has length one.  That the cycle is
 -- nonempty is not automatic; it is what the extra step appended by roundOf
--- buys, and Eq (nullB qs) false in mkLasso records it.
+-- buys, and nullB qs ≡ false in mkLasso records it.
 
 □P : Formula
 □P = □ (var zero)
 
 s□ : Val
-s□ = true :: true :: []
+s□ = true ∷ true ∷ []
 
-□P_lasso : Eq (lassoAt □P s□ refl) (prod [] (s□ :: []))
+□P_lasso : lassoAt □P s□ refl ≡ ([] , s□ ∷ [])
 □P_lasso = refl

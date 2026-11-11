@@ -9,7 +9,7 @@
 --
 --     provableSCC : (Q : Formula)
 --                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
---                -> Deriv Q
+--                -> ⊢ Q
 --
 -- a second proof of the refutation branch of Theorem 6.1, with no elimination,
 -- no greatest fixed point and no round numbering in it: the induction is the
@@ -33,19 +33,19 @@
 --
 -- 1. THE SINK CASE IS extractR1 ON THE NOSE.  certAll's sink hypothesis is
 --
---        Eq (nullB (outs ws G x)) true
+--        nullB (outs ws G x) ≡ true
 --
---    and at  G = step P  that is  Eq (r1 P ws x) true  DEFINITIONALLY --
+--    and at  G = step P  that is  r1 P ws x ≡ true  DEFINITIONALLY --
 --    outs ws (step P) x  and  succs P ws x  are both  filterL (step P x) ws .
 --    sinkStep is one line and no coercion appears in it.
 --
 -- 2. THE BLOCK CASE IS (R2) WITH THE FIXED POINT REPLACED BY THE COMPONENT.
 --    certAll's block hypothesis hands over a set C, a proof that it is closed
 --    under G-successors inside ws, and a fairness predicate f that C misses
---    everywhere.  With  f = evPred P A ,  Eq (evPred P A y) false  splits into
+--    everywhere.  With  f = evPred P A ,  evPred P A y ≡ false  splits into
 --
---        Eq (valOf P y (□ A)) false     □ A pending at y
---        Eq (valOf P y A) true            and unfulfilled at y
+--        valOf P y (□ A) ≡ false     □ A pending at y
+--        valOf P y A ≡ true          and unfulfilled at y
 --
 --    -- the two hypotheses (R2) needs, now at EVERY state of C rather than at
 --    one state per round.  That is the improvement PHASE11-PLAN.md predicted
@@ -60,7 +60,7 @@
 --    Rather than thread a subset invariant through certAll, the block is
 --    intersected with Ust P on the spot:
 --
---        D = filterL (\ y -> memB y (Ust P)) C
+--        D = filterL (λ y -> memB y (Ust P)) C
 --
 --    and D is still successor-closed, because ustClosed says Ust P is: a
 --    successor of a member of D that is a state lands in C by C's closure and
@@ -70,7 +70,7 @@
 --    Ust-membership.  So certAll is used exactly as it stands, and R carries
 --    the Ust-membership as a hypothesis:
 --
---        UstRef P z = Mem z (Ust P) -> Deriv (¬ (chi P z))
+--        UstRef P z = z ∈ Ust P -> ⊢ ¬ (chi P z)
 --
 --    which is Refuted with the quantifier over ws stripped -- the ONE thing
 --    certAll's conclusion has that Refuted's does not.
@@ -101,10 +101,10 @@ open import LTL.Extract  public
 -- carries.
 
 UstRef : Formula -> Val -> Set
-UstRef P z = Mem z (Ust P) -> Deriv (¬ (chi P z))
+UstRef P z = z ∈ Ust P -> ⊢ ¬ (chi P z)
 
 refutedOf : (P : Formula) (ws : List Val)
-         -> ((z : Val) -> Eq (memB z ws) false -> UstRef P z) -> Refuted P ws
+         -> ((z : Val) -> memB z ws ≡ false -> UstRef P z) -> Refuted P ws
 refutedOf P ws ih u mu e = ih u e mu
 
 ------------------------------------------------------------------------
@@ -120,67 +120,67 @@ refutedOf P ws ih u mu e = ih u e mu
 -- hypothesis and keeping the rest by closure, (iii) B ⇒ □ A by (Ind).
 
 extractBlock : (P : Formula) (ws C : List Val) (u : Val)
-            -> Mem u (Ust P) -> Refuted P ws
-            -> (A : Formula) -> Mem (□ A) (sub P)
-            -> ((z : Val) -> Mem z C -> Mem z (Ust P))
-            -> ((z y : Val) -> Mem z C -> Mem y (St P) -> Eq (memB y ws) true
-                  -> Eq (step P z y) true -> Mem y C)
-            -> ((z : Val) -> Mem z C -> Eq (valOf P z A) true)
-            -> Eq (valOf P u (□ A)) false -> Mem u C
-            -> Deriv (¬ (chi P u))
+            -> u ∈ Ust P -> Refuted P ws
+            -> (A : Formula) -> □ A ∈ sub P
+            -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
+            -> ((z y : Val) -> z ∈ C -> y ∈ St P -> memB y ws ≡ true
+                  -> step P z y ≡ true -> y ∈ C)
+            -> ((z : Val) -> z ∈ C -> valOf P z A ≡ true)
+            -> valOf P u (□ A) ≡ false -> u ∈ C
+            -> ⊢ ¬ (chi P u)
 extractBlock P ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
   where
-    lenC : (w : Val) -> Mem w C -> Eq (length w) (length (sub P))
+    lenC : (w : Val) -> w ∈ C -> length w ≡ length (sub P)
     lenC w m = stLen P (ustSt P (cUst w m))
 
     -- (i)
-    bA : Deriv ((beta P C) ⇒ A)
+    bA : ⊢ (beta P C) ⇒ A
     bA = betaElim P C eachA
       where
-        eachA : (w : Val) -> Mem w C -> Deriv ((chi P w) ⇒ A)
-        eachA w m = eqSubst (\ b -> Deriv ((chi P w) ⇒ (lit A b))) (cHold w m)
-                            (chiProjVal P w (lenC w m) (sub_□ P mbox))
+        eachA : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ A
+        eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b)) (cHold w m)
+                          (chiProjVal P w (lenC w m) (sub_□ P mbox))
 
     -- (ii)
-    toC : (w : Val) -> Mem w C
-       -> Deriv ((beta P (succs P (St P) w)) ⇒ (beta P C))
+    toC : (w : Val) -> w ∈ C
+       -> ⊢ (beta P (succs P (St P) w)) ⇒ (beta P C)
     toC w m = betaElim P (succs P (St P) w) eachS
       where
-        eachS : (w' : Val) -> Mem w' (succs P (St P) w)
-             -> Deriv ((chi P w') ⇒ (beta P C))
+        eachS : (w' : Val) -> w' ∈ succs P (St P) w
+             -> ⊢ (chi P w') ⇒ (beta P C)
         eachS w' m' = go (memB w' ws) refl
           where
-            pr : Prod (Mem w' (St P)) (Eq (step P w w') true)
+            pr : w' ∈ St P × step P w w' ≡ true
             pr = succsMem P (St P) w m'
 
-            go : (b : Bool) -> Eq (memB w' ws) b
-              -> Deriv ((chi P w') ⇒ (beta P C))
+            go : (b : Bool) -> memB w' ws ≡ b
+              -> ⊢ (chi P w') ⇒ (beta P C)
             go false eb =
-              mp ¬Elim (ih w' (ustClosed P (cUst w m) (prodFst pr) (prodSnd pr)) eb)
-            go true  eb = betaIntro P C (cCl w w' m (prodFst pr) eb (prodSnd pr))
+              mp ¬Elim (ih w' (ustClosed P (cUst w m) (fst pr) (snd pr)) eb)
+            go true  eb = betaIntro P C (cCl w w' m (fst pr) eb (snd pr))
 
-    bNext : Deriv ((beta P C) ⇒ ○ (beta P C))
+    bNext : ⊢ (beta P C) ⇒ ○ (beta P C)
     bNext = betaElim P C eachN
       where
-        eachN : (w : Val) -> Mem w C -> Deriv ((chi P w) ⇒ ○ (beta P C))
+        eachN : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ ○ (beta P C)
         eachN w m = ⇒Trans (stepLemma P w (lenC w m)) (○Mono (toC w m))
 
     -- (iii)
-    chi□ : Deriv ((chi P u) ⇒ □ A)
+    chi□ : ⊢ (chi P u) ⇒ □ A
     chi□ = ⇒Trans (betaIntro P C mc) (⇒Trans (indRule bNext) (□Mono bA))
 
-    chi¬□ : Deriv ((chi P u) ⇒ ¬ □ A)
-    chi¬□ = eqSubst (\ b -> Deriv ((chi P u) ⇒ (lit (□ A) b))) pend
+    chi¬□ : ⊢ (chi P u) ⇒ ¬ □ A
+    chi¬□ = subst (λ b -> ⊢ (chi P u) ⇒ (lit (□ A) b)) pend
                         (chiProjVal P u (stLen P (ustSt P mu)) mbox)
 
 ------------------------------------------------------------------------
 -- certAll's two hypotheses.
 
--- The sink.  Eq (nullB (outs ws (step P) x)) true  IS  Eq (r1 P ws x) true .
+-- The sink.  nullB (outs ws (step P) x) ≡ true  IS  r1 P ws x ≡ true .
 
-sinkStep : (P : Formula) (ws : List Val) (x : Val) -> Mem x ws
-        -> Eq (nullB (outs ws (step P) x)) true
-        -> ((z : Val) -> Eq (memB z ws) false -> UstRef P z)
+sinkStep : (P : Formula) (ws : List Val) (x : Val) -> x ∈ ws
+        -> nullB (outs ws (step P) x) ≡ true
+        -> ((z : Val) -> memB z ws ≡ false -> UstRef P z)
         -> UstRef P x
 sinkStep P ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf P ws ih) e1
 
@@ -188,56 +188,55 @@ sinkStep P ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf P ws ih) e1
 -- evPredsInv, its falsity on C is split into the two hypotheses of (R2), and
 -- the component is intersected with Ust P.
 
-blockStep : (P : Formula) (ws C : List Val) (f : Val -> Bool) -> Mem f (evPreds P)
-         -> ((z : Val) -> Mem z C -> Mem z ws)
-         -> ((z y : Val) -> Mem z C -> Mem y ws -> Eq (step P z y) true -> Mem y C)
-         -> ((z : Val) -> Mem z C -> Eq (f z) false)
-         -> ((z : Val) -> Eq (memB z ws) false -> UstRef P z)
-         -> (z : Val) -> Mem z C -> UstRef P z
+blockStep : (P : Formula) (ws C : List Val) (f : Val -> Bool) -> f ∈ evPreds P
+         -> ((z : Val) -> z ∈ C -> z ∈ ws)
+         -> ((z y : Val) -> z ∈ C -> y ∈ ws -> step P z y ≡ true -> y ∈ C)
+         -> ((z : Val) -> z ∈ C -> f z ≡ false)
+         -> ((z : Val) -> memB z ws ≡ false -> UstRef P z)
+         -> (z : Val) -> z ∈ C -> UstRef P z
 blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
   where
-    onA : Sigma Formula
-                (\ A -> Prod (Mem A (□Args (sub P))) (Eq f (evPred P A)))
-       -> Deriv (¬ (chi P z))
-    onA (sig A (prod mA ef)) =
+    onA : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × f ≡ evPred P A)
+       -> ⊢ ¬ (chi P z)
+    onA (A , mA , ef) =
       extractBlock P ws D z mzU (refutedOf P ws ih) A (□Args_mem (sub P) mA)
                    dUst dCl dHold pend mzD
       where
-        missA : (y : Val) -> Mem y C -> Eq (evPred P A y) false
-        missA y my = eqSubst (\ h -> Eq (h y) false) ef (mis y my)
+        missA : (y : Val) -> y ∈ C -> evPred P A y ≡ false
+        missA y my = subst (λ h -> h y ≡ false) ef (mis y my)
 
         -- the component, cut down to the states chi is stated for
         D : List Val
-        D = filterL (\ y -> memB y (Ust P)) C
+        D = filterL (λ y -> memB y (Ust P)) C
 
-        dC : (y : Val) -> Mem y D -> Mem y C
-        dC y m = filter_sub (\ t -> memB t (Ust P)) C m
+        dC : (y : Val) -> y ∈ D -> y ∈ C
+        dC y m = filter_sub (λ t -> memB t (Ust P)) C m
 
-        dUst : (y : Val) -> Mem y D -> Mem y (Ust P)
-        dUst y m = memB_sound y (Ust P) (filter_prop (\ t -> memB t (Ust P)) C m)
+        dUst : (y : Val) -> y ∈ D -> y ∈ Ust P
+        dUst y m = memB_sound y (Ust P) (filter_prop (λ t -> memB t (Ust P)) C m)
 
-        into : (y : Val) -> Mem y C -> Mem y (Ust P) -> Mem y D
+        into : (y : Val) -> y ∈ C -> y ∈ Ust P -> y ∈ D
         into y my mu =
-          filter_true (\ t -> memB t (Ust P)) C my (memB_complete y (Ust P) mu)
+          filter_true (λ t -> memB t (Ust P)) C my (memB_complete y (Ust P) mu)
 
         -- still closed: C's closure puts the successor in C, ustClosed puts it
         -- in Ust P, and D is the intersection
-        dCl : (y y' : Val) -> Mem y D -> Mem y' (St P) -> Eq (memB y' ws) true
-           -> Eq (step P y y') true -> Mem y' D
+        dCl : (y y' : Val) -> y ∈ D -> y' ∈ St P -> memB y' ws ≡ true
+           -> step P y y' ≡ true -> y' ∈ D
         dCl y y' my my' ew st =
           into y' (cl y y' (dC y my) (memB_sound y' ws ew) st)
                   (ustClosed P (dUst y my) my' st)
 
-        dHold : (y : Val) -> Mem y D -> Eq (valOf P y A) true
+        dHold : (y : Val) -> y ∈ D -> valOf P y A ≡ true
         dHold y my =
           notFalse (valOf P y A)
-                   (orFalseR (valOf P y (□ A)) (boolNot (valOf P y A))
+                   (orFalseR (valOf P y (□ A)) (¬ᵇ valOf P y A)
                              (missA y (dC y my)))
 
-        pend : Eq (valOf P z (□ A)) false
-        pend = orFalseL (valOf P z (□ A)) (boolNot (valOf P z A)) (missA z mz)
+        pend : valOf P z (□ A) ≡ false
+        pend = orFalseL (valOf P z (□ A)) (¬ᵇ valOf P z A) (missA z mz)
 
-        mzD : Mem z D
+        mzD : z ∈ D
         mzD = into z mz mzU
 
 ------------------------------------------------------------------------
@@ -245,15 +244,15 @@ blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
 
 certRefuted : (P : Formula) {ws : List Val}
            -> Cert (step P) (evPreds P) ws -> Refuted P ws
-           -> (z : Val) -> Mem z (Ust P) -> Deriv (¬ (chi P z))
+           -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
 certRefuted P {ws} c ih =
   certAll (step P) (evPreds P) (UstRef P) (sinkStep P) (blockStep P) c
-          (\ z e mu -> ih z mu e)
+          (λ z e mu -> ih z mu e)
 
 -- Over Ust P itself the seed is vacuous: nothing is outside.
 
 ustCertRefuted : (P : Formula) -> Cert (step P) (evPreds P) (Ust P)
-              -> (z : Val) -> Mem z (Ust P) -> Deriv (¬ (chi P z))
+              -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
 ustCertRefuted P c = certRefuted P c (ustRefuted P)
 
 ------------------------------------------------------------------------
@@ -265,8 +264,8 @@ ustCertRefuted P c = certRefuted P c (ustRefuted P)
 -- listBar, exactly as fairGraph does for reachSet.
 
 sccGraph : (P : Formula)
-        -> Sum (FairIn (Ust P) (step P) (evPreds P))
-               (Cert (step P) (evPreds P) (Ust P))
+        -> FairIn (Ust P) (step P) (evPreds P) ⊎
+           Cert (step P) (evPreds P) (Ust P)
 sccGraph P = graphGo (step P) (evPreds P) (Ust P) (memInE (Ust P)) (listBar (Ust P))
 
 ------------------------------------------------------------------------
@@ -281,29 +280,29 @@ sccGraph P = graphGo (step P) (evPreds P) (Ust P) (memInE (Ust P)) (listBar (Ust
 
 provableEachSCC : (Q : Formula)
                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
-               -> (w : Val) -> Mem w (St (¬ Q)) -> Deriv ((chi (¬ Q) w) ⇒ Q)
+               -> (w : Val) -> w ∈ St (¬ Q) -> ⊢ (chi (¬ Q) w) ⇒ Q
 provableEachSCC Q c w m = outer (memB w (Ust R)) refl
   where
     R : Formula
     R = ¬ Q
 
-    fromR : Eq (valOf R w R) false -> Deriv ((chi R w) ⇒ Q)
+    fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
     fromR ev =
-      ⇒Trans (eqSubst (\ d -> Deriv ((chi R w) ⇒ (lit R d))) ev
+      ⇒Trans (subst (λ d -> ⊢ (chi R w) ⇒ (lit R d)) ev
                         (chiProjVal R w (stLen R m) (sub_self R)))
                dne
 
-    outer : (b : Bool) -> Eq (memB w (Ust R)) b -> Deriv ((chi R w) ⇒ Q)
+    outer : (b : Bool) -> memB w (Ust R) ≡ b -> ⊢ (chi R w) ⇒ Q
     outer false ec = fromR (notIn (valOf R w R) refl)
       where
-        notIn : (d : Bool) -> Eq (valOf R w R) d -> Eq (valOf R w R) false
+        notIn : (d : Bool) -> valOf R w R ≡ d -> valOf R w R ≡ false
         notIn false ed = ed
         notIn true  ed =
           emptyElim (memB_false w (Ust R) ec (ustSeed R m ed))
     outer true  ec = mp ¬Elim (ustCertRefuted R c w (memB_sound w (Ust R) ec))
 
 provableSCC : (Q : Formula)
-           -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q)) -> Deriv Q
+           -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q)) -> ⊢ Q
 provableSCC Q c =
   mp (betaElim (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateComplete (¬ Q))
 
@@ -315,15 +314,15 @@ provableSCC Q c =
 -- of Theorem 6.1 obtained without the elimination.
 
 sccProof : (Q : Formula)
-        -> Sum (FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q))) (Deriv Q)
-sccProof Q = sumElim inl (\ c -> inr (provableSCC Q c)) (sccGraph (¬ Q))
+        -> FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q)) ⊎ ⊢ Q
+sccProof Q = sumElim inl (λ c -> inr (provableSCC Q c)) (sccGraph (¬ Q))
 
 -- Reading a derivation out, on the strength of the computed boolean: gotLoop
 -- says which branch was taken, and refl in the checks below says the search was
 -- actually run.
 
 proofFrom : {A : Set} {Q : Formula}
-         -> (s : Sum A (Deriv Q)) -> Eq (gotLoop s) false -> Deriv Q
+         -> (s : A ⊎ ⊢ Q) -> gotLoop s ≡ false -> ⊢ Q
 proofFrom (inl a) ()
 proofFrom (inr d) e = d
 
@@ -331,7 +330,7 @@ proofFrom (inr d) e = d
 -- 1 for cSink, 0 for cNil.
 
 sccShape : (Q : Formula) -> List Nat
-sccShape Q = sumElim (\ fi -> []) certShape (sccGraph (¬ Q))
+sccShape Q = sumElim (λ fi -> []) certShape (sccGraph (¬ Q))
 
 ------------------------------------------------------------------------
 -- Checkpoints.
@@ -341,16 +340,16 @@ sccShape Q = sumElim (\ fi -> []) certShape (sccGraph (¬ Q))
 -- derivations are produced, so the graph search, certAll, extractR1 and
 -- extractBlock all run, and the answers agree with benAriProof and bnbProof.
 
-scc_benAri : Eq (gotLoop (sccProof benAri)) false
+scc_benAri : gotLoop (sccProof benAri) ≡ false
 scc_benAri = refl
 
-benAriProofSCC : Deriv benAri
+benAriProofSCC : ⊢ benAri
 benAriProofSCC = proofFrom (sccProof benAri) refl
 
-scc_bnb : Eq (gotLoop (sccProof bnb)) false
+scc_bnb : gotLoop (sccProof bnb) ≡ false
 scc_bnb = refl
 
-bnbProofSCC : Deriv bnb
+bnbProofSCC : ⊢ bnb
 bnbProofSCC = proofFrom (sccProof bnb) refl
 
 -- The certificates themselves, read as their removal orders.  For Ben-Ari's
@@ -367,14 +366,14 @@ bnbProofSCC = proofFrom (sccProof bnb) refl
 -- route, and it is why bnb is the example that matters: extractBlock, the copy
 -- of (R2), is on the path from here to bnbProofSCC.
 
-shape_benAri : Eq (sccShape benAri) (1 :: 0 :: [])
+shape_benAri : sccShape benAri ≡ 1 ∷ 0 ∷ []
 shape_benAri = refl
 
-shape_bnb : Eq (sccShape bnb) (1 :: 2 :: 0 :: [])
+shape_bnb : sccShape bnb ≡ 1 ∷ 2 ∷ 0 ∷ []
 shape_bnb = refl
 
 -- and the positive side, to show the search is not simply always certifying:
 -- ◇ p is satisfiable, so its state set has a fair component.
 
-scc_◇P : Eq (gotLoop (sccGraph ◇P)) true
+scc_◇P : gotLoop (sccGraph ◇P) ≡ true
 scc_◇P = refl

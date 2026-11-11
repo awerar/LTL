@@ -2,7 +2,7 @@
 
 -- LTL.DecideSCC -- G40 of PHASE11-PLAN.md: the two branches joined.
 --
---   decideSCC : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
+--   decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 --
 -- the same type as decide (LTL.Decide, Theorem 6.1), decided by a different
 -- question.  decide asks a BOOLEAN of the elimination,
@@ -33,7 +33,7 @@
 --      a state s with  ¬ Q  in it.  Stem and cycle together are a FairLoop
 --      from s (LTL.Graph), still inside Ust P.
 --   2. The loop is restricted to the list of vertices it actually uses,
---      C = s :: stem ++ cycle .  This is where the Trap is built: every vertex
+--      C = s ∷ stem ++ cycle .  This is where the Trap is built: every vertex
 --      of C has a successor in C -- the next one along, and for the cycle's
 --      base point its own first step -- and every eventuality pending at a
 --      vertex of C fails somewhere reachable inside C, by walking to the
@@ -74,51 +74,51 @@ reachPath P C (reachesBy zs t) = trailPath P C t
 -- is the path -- or it is still pending at the far end, where the caller's
 -- hypothesis (for us, evWitness at the graph layer's witness) says it fails.
 
-trapFail : (P : Formula) (C : List Val) (A : Formula) -> Mem (□ A) (sub P)
+trapFail : (P : Formula) (C : List Val) (A : Formula) -> □ A ∈ sub P
         -> (z w : Val) -> Reaches C (step P) z w
-        -> Eq (valOf P z (□ A)) false
-        -> (Eq (valOf P w (□ A)) false -> Eq (valOf P w A) false)
-        -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
+        -> valOf P z (□ A) ≡ false
+        -> (valOf P w (□ A) ≡ false -> valOf P w A ≡ false)
+        -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
 trapFail P C A mbx z w (reachesBy as t) pd atW =
-  sumElim onFul (\ pw -> sig w (prod (trailPath P C t) (atW pw)))
+  sumElim onFul (λ pw -> w , trailPath P C t , atW pw)
           (walkPersist P C A mbx (trailWalk P C t) pd)
   where
     onFul : Fulfil P A z as
-         -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
+         -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
     onFul (ful u mu eu) = pathTo u mu eu
       where
-        pathTo : (x : Val) -> Mem x (z :: as) -> Eq (valOf P x A) false
-              -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
-        pathTo x memHd     e = sig x (prod pnil e)
-        pathTo x (memTl m) e =
-          sig x (prod (reachPath P C (trailTo C (step P) t m)) e)
+        pathTo : (x : Val) -> x ∈ z ∷ as -> valOf P x A ≡ false
+              -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
+        pathTo x here      e = x , pnil , e
+        pathTo x (there m) e =
+          x , reachPath P C (trailTo C (step P) t m) , e
 
 ------------------------------------------------------------------------
 -- A fair loop, cut down to the vertices it uses, with its Trap.
 
 data ScLasso (P : Formula) (v0 : Val) : Set where
-  scLasso : (C : List Val) -> Mem v0 C
-         -> ((z : Val) -> Mem z C -> Mem z (Ust P))
+  scLasso : (C : List Val) -> v0 ∈ C
+         -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
          -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> ScLasso P v0
 
-fairScLasso : (P : Formula) (v0 : Val) -> Mem v0 (Ust P)
+fairScLasso : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
            -> FairLoop (Ust P) (step P) (evPreds P) v0 -> ScLasso P v0
 fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
-  scLasso C memHd inC (mkTrap succC fulC) (fairLoop r st cy tsC tcC nn wit)
+  scLasso C here inC (mkTrap succC fulC) (fairLoop r st cy tsC tcC nn wit)
   where
     C : List Val
-    C = v0 :: append st cy
+    C = v0 ∷ st ++ cy
 
-    stC : (z : Val) -> Mem z st -> Mem z C
-    stC z m = memTl (memAppL st cy m)
+    stC : (z : Val) -> z ∈ st -> z ∈ C
+    stC z m = there (memAppL st cy m)
 
-    cyC : (z : Val) -> Mem z cy -> Mem z C
-    cyC z m = memTl (memAppR st cy m)
+    cyC : (z : Val) -> z ∈ cy -> z ∈ C
+    cyC z m = there (memAppR st cy m)
 
-    inC : (z : Val) -> Mem z C -> Mem z (Ust P)
-    inC z memHd     = mv0
-    inC z (memTl m) = sumElim (\ m1 -> trailIn (Ust P) (step P) ts m1)
-                              (\ m2 -> trailIn (Ust P) (step P) tc m2)
+    inC : (z : Val) -> z ∈ C -> z ∈ Ust P
+    inC z here      = mv0
+    inC z (there m) = sumElim (λ m1 -> trailIn (Ust P) (step P) ts m1)
+                              (λ m2 -> trailIn (Ust P) (step P) tc m2)
                               (memAppCase st cy m)
 
     tsC : Trail C (step P) v0 st r
@@ -133,52 +133,52 @@ fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
     hr = firstStep C (step P) tcC nn
 
     toSig : (x : Val) -> HasSucc C (step P) x
-         -> Sigma Val (\ y -> Prod (Mem y C) (Eq (step P x y) true))
-    toSig x (hasSucc y my e) = sig y (prod my e)
+         -> Σ[ y ∈ Val ] y ∈ C × step P x y ≡ true
+    toSig x (hasSucc y my e) = y , my , e
 
-    succC : (z : Val) -> Mem z C
-         -> Sigma Val (\ y -> Prod (Mem y C) (Eq (step P z y) true))
-    succC z memHd     = toSig z (headSucc C (step P) tsC hr)
-    succC z (memTl m) =
-      sumElim (\ m1 -> toSig z (trailSucc C (step P) tsC hr m1))
-              (\ m2 -> toSig z (cycSucc C (step P) r cy tcC nn m2))
+    succC : (z : Val) -> z ∈ C
+         -> Σ[ y ∈ Val ] y ∈ C × step P z y ≡ true
+    succC z here      = toSig z (headSucc C (step P) tsC hr)
+    succC z (there m) =
+      sumElim (λ m1 -> toSig z (trailSucc C (step P) tsC hr m1))
+              (λ m2 -> toSig z (cycSucc C (step P) r cy tcC nn m2))
               (memAppCase st cy m)
 
     -- every vertex reaches every vertex of the cycle, inside C
-    reachW : (z : Val) -> Mem z C -> (w : Val) -> Mem w cy
+    reachW : (z : Val) -> z ∈ C -> (w : Val) -> w ∈ cy
           -> Reaches C (step P) z w
-    reachW z memHd     w mw =
-      reachesApp C (step P) (trailFrom C (step P) tsC memHd)
+    reachW z here     w mw =
+      reachesApp C (step P) (trailFrom C (step P) tsC here)
                             (trailTo C (step P) tcC mw)
-    reachW z (memTl m) w mw =
-      sumElim (\ m1 -> reachesApp C (step P) (trailFrom C (step P) tsC (memTl m1))
+    reachW z (there m) w mw =
+      sumElim (λ m1 -> reachesApp C (step P) (trailFrom C (step P) tsC (there m1))
                                              (trailTo C (step P) tcC mw))
-              (\ m2 -> cycConn C (step P) r cy tcC z w m2 mw)
+              (λ m2 -> cycConn C (step P) r cy tcC z w m2 mw)
               (memAppCase st cy m)
 
     -- (R2) fails on C: walk to the witness and read evPred there.
-    fulC : (z : Val) -> Mem z C -> (A : Formula) -> Mem A (□Args (sub P))
-        -> Eq (valOf P z (□ A)) false
-        -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
+    fulC : (z : Val) -> z ∈ C -> (A : Formula) -> A ∈ □Args (sub P)
+        -> valOf P z (□ A) ≡ false
+        -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
     fulC z mz A mA pd = onW (wit (evPred P A) (evPredsMem P mA))
       where
-        onW : Sigma Val (\ w -> Prod (Mem w cy) (Eq (evPred P A w) true))
-           -> Sigma Val (\ y -> Prod (Path P C z y) (Eq (valOf P y A) false))
-        onW (sig w (prod mw ew)) =
+        onW : (Σ[ w ∈ Val ] w ∈ cy × evPred P A w ≡ true)
+           -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
+        onW (w , mw , ew) =
           trapFail P C A (□Args_mem (sub P) mA) z w (reachW z mz w mw) pd
                    (evWitness P A w ew)
 
 -- and then the trap survives the elimination, so G38 applies.
 
 scRun : (P : Formula) (v0 : Val) -> ScLasso P v0
-     -> Prod (Mem v0 (Uinf P)) (Run P v0)
+     -> v0 ∈ Uinf P × Run P v0
 scRun P v0 (scLasso C mv0 inU tr flC) =
-  prod mv0U (sccRun P C intoU v0 mv0U flC)
+  mv0U , sccRun P C intoU v0 mv0U flC
   where
-    intoU : (z : Val) -> Mem z C -> Mem z (Uinf P)
+    intoU : (z : Val) -> z ∈ C -> z ∈ Uinf P
     intoU = uinfTrap P C tr inU
 
-    mv0U : Mem v0 (Uinf P)
+    mv0U : v0 ∈ Uinf P
     mv0U = intoU v0 mv0
 
 ------------------------------------------------------------------------
@@ -189,49 +189,49 @@ scRun P v0 (scLasso C mv0 inU tr flC) =
 -- lemma at stage 0, soundness -- is the same three lines, and buildCM itself is
 -- untouched: C8 needs both procedures in the development at once.
 
-buildCMFrom : (Q : Formula) (v0 : Val) -> Mem v0 (Uinf (¬ Q))
-           -> Run (¬ Q) v0 -> Eq (valOf (¬ Q) v0 (¬ Q)) true
+buildCMFrom : (Q : Formula) (v0 : Val) -> v0 ∈ Uinf (¬ Q)
+           -> Run (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
            -> LassoCountermodel Q
 buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
   where
-    valQ : Eq (valOf (¬ Q) v0 Q) false
+    valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
       notTrue (valOf (¬ Q) v0 Q)
-        (eqTrans (eqSym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
-                                      (boolNot (valOf (¬ Q) v0 Q))
-                                      (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
-                 ev)
+        (trans (sym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
+                                  (¬ᵇ valOf (¬ Q) v0 Q)
+                                  (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
+               ev)
 
-    evalFalse : Eq (eval (¬ Q) v0 r Q 0) false
+    evalFalse : eval (¬ Q) v0 r Q 0 ≡ false
     evalFalse =
-      eqTrans (eqSym (hintStart (¬ Q) v0 r Q (memTl (sub_self Q)))) valQ
+      trans (sym (hintStart (¬ Q) v0 r Q (there (sub_self Q)))) valQ
 
-    noDeriv : Deriv Q -> Empty
-    noDeriv d = tfAbs (eqTrans (eqSym (soundRun (¬ Q) v0 r d 0)) evalFalse)
+    noDeriv : ⊢ Q -> Empty
+    noDeriv d = tfAbs (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- Theorem 6.1, by the SCC route.
 
-decideSCC : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
-decideSCC Q = sumElim onFair (\ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
+decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
+decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
   where
     R : Formula
     R = ¬ Q
 
-    fromRun : (s : Val) -> Eq (valOf R s R) true
-           -> Prod (Mem s (Uinf R)) (Run R s)
-           -> Sum (Deriv Q) (LassoCountermodel Q)
-    fromRun s es (prod mu rn) = inr (buildCMFrom Q s mu rn es)
+    fromRun : (s : Val) -> valOf R s R ≡ true
+           -> s ∈ Uinf R × Run R s
+           -> ⊢ Q ⊎ LassoCountermodel Q
+    fromRun s es (mu , rn) = inr (buildCMFrom Q s mu rn es)
 
     onFair : FairIn (Ust R) (step R) (evPreds R)
-          -> Sum (Deriv Q) (LassoCountermodel Q)
+          -> ⊢ Q ⊎ LassoCountermodel Q
     onFair (fairIn r mr c) = onCirc c
       where
         onCirc : Circuit (Ust R) (step R) (evPreds R) r
-              -> Sum (Deriv Q) (LassoCountermodel Q)
+              -> ⊢ Q ⊎ LassoCountermodel Q
         onCirc (circuit cy tc nn wit) = onSeed (ustSeedTo R r mr)
           where
-            onSeed : SeedTo R r -> Sum (Deriv Q) (LassoCountermodel Q)
+            onSeed : SeedTo R r -> ⊢ Q ⊎ LassoCountermodel Q
             onSeed (seedTo s st ms es ts) =
               fromRun s es
                       (scRun R s (fairScLasso R s ms
@@ -246,11 +246,11 @@ decideSCC Q = sumElim onFair (\ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
 -- forty-six statements of LTL.Examples, is checkpoint C8 and lives in
 -- LTL.Compare, so that it is clear which side of the timing rule it is on.
 
-decideSCC_benAri : Eq (isProof (decideSCC benAri)) true
+decideSCC_benAri : isProof (decideSCC benAri) ≡ true
 decideSCC_benAri = refl
 
-decideSCC_bnb : Eq (isProof (decideSCC bnb)) true
+decideSCC_bnb : isProof (decideSCC bnb) ≡ true
 decideSCC_bnb = refl
 
-decideSCC_◇P : Eq (isProof (decideSCC ◇P)) false
+decideSCC_◇P : isProof (decideSCC ◇P) ≡ false
 decideSCC_◇P = refl

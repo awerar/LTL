@@ -2,7 +2,7 @@
 
 -- LTL.Extract -- G21 of FORMALISATION-PLAN.md, Theorem 4.1 of m4.tex.
 --
---   extract : Mem v (removed P) -> Deriv (¬ (chi P v))
+--   extract : v ∈ removed P -> ⊢ ¬ (chi P v)
 --
 -- The note argues by induction on the round at which v is removed, with the
 -- induction hypothesis "every state outside U_k is refutable".  Here that
@@ -29,16 +29,16 @@ open import LTL.StepLemma public
 -- Every state has the length chi expects
 
 allLen_mem : {n : Nat} {vs : List Val} -> AllLen n vs -> {v : Val}
-          -> Mem v vs -> Eq (length v) n
+          -> v ∈ vs -> length v ≡ n
 allLen_mem alNil         ()
-allLen_mem (alCons e al) memHd     = e
-allLen_mem (alCons e al) (memTl m) = allLen_mem al m
+allLen_mem (alCons e al) here      = e
+allLen_mem (alCons e al) (there m) = allLen_mem al m
 
 stAllLen : (P : Formula) -> AllLen (length (sub P)) (St P)
 stAllLen P = allLen_filter (isState P) (allVecs_allLen (length (sub P)))
 
-stLen : (P : Formula) {v : Val} -> Mem v (St P)
-     -> Eq (length v) (length (sub P))
+stLen : (P : Formula) {v : Val} -> v ∈ St P
+     -> length v ≡ length (sub P)
 stLen P m = allLen_mem (stAllLen P) m
 
 ------------------------------------------------------------------------
@@ -50,26 +50,26 @@ stLen P m = allLen_mem (stAllLen P) m
 -- ⋁Elim [] is exFalso.
 
 allIMap : {C : Formula} (f : Val -> Formula) (ws : List Val)
-       -> ((w : Val) -> Mem w ws -> Deriv ((f w) ⇒ C)) -> AllI C (map f ws)
-allIMap f []        h = aiNil
-allIMap f (w :: ws) h = aiCons (h w memHd) (allIMap f ws (\ z m -> h z (memTl m)))
+       -> ((w : Val) -> w ∈ ws -> ⊢ (f w) ⇒ C) -> AllI C (map f ws)
+allIMap f []       h = aiNil
+allIMap f (w ∷ ws) h = aiCons (h w here) (allIMap f ws (λ z m -> h z (there m)))
 
 betaElim : (P : Formula) {C : Formula} (ws : List Val)
-        -> ((w : Val) -> Mem w ws -> Deriv ((chi P w) ⇒ C))
-        -> Deriv ((beta P ws) ⇒ C)
+        -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
+        -> ⊢ (beta P ws) ⇒ C
 betaElim P ws h = ⋁Elim (map (chi P) ws) (allIMap (chi P) ws h)
 
 betaIntro : (P : Formula) (ws : List Val) {w : Val}
-         -> Mem w ws -> Deriv ((chi P w) ⇒ (beta P ws))
+         -> w ∈ ws -> ⊢ (chi P w) ⇒ (beta P ws)
 betaIntro P ws m = ⋁Intro (map (chi P) ws) (memMap (chi P) m)
 
 ¬Beta : (P : Formula) (ws : List Val)
-       -> ((w : Val) -> Mem w ws -> Deriv (¬ (chi P w)))
-       -> Deriv (¬ (beta P ws))
+       -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
+       -> ⊢ ¬ (beta P ws)
 ¬Beta P ws h =
   refute {beta P ws} {⊤}
          (liftP deriv⊤)
-         (betaElim P ws (\ w m -> mp ¬Elim (h w m)))
+         (betaElim P ws (λ w m -> mp ¬Elim (h w m)))
 
 ------------------------------------------------------------------------
 -- The induction hypothesis of the theorem
@@ -83,10 +83,10 @@ betaIntro P ws m = ⋁Intro (map (chi P) ws) (memMap (chi P) m)
 
 Refuted : Formula -> List Val -> Set
 Refuted P us =
-  (u : Val) -> Mem u (Ust P) -> Eq (memB u us) false -> Deriv (¬ (chi P u))
+  (u : Val) -> u ∈ Ust P -> memB u us ≡ false -> ⊢ ¬ (chi P u)
 
 SubSt : Formula -> List Val -> Set
-SubSt P us = (x : Val) -> Mem x us -> Mem x (Ust P)
+SubSt P us = (x : Val) -> x ∈ us -> x ∈ Ust P
 
 ------------------------------------------------------------------------
 -- Case (R1).
@@ -97,25 +97,25 @@ SubSt P us = (x : Val) -> Mem x us -> Mem x (Ust P)
 -- (D1) puts the refutation under nxt, and (Lin) brings the negation out.
 
 extractR1 : (P : Formula) (us : List Val) (u : Val)
-         -> Mem u (Ust P) -> Refuted P us -> Eq (r1 P us u) true
-         -> Deriv (¬ (chi P u))
+         -> u ∈ Ust P -> Refuted P us -> r1 P us u ≡ true
+         -> ⊢ ¬ (chi P u)
 extractR1 P us u mu ih e1 =
   refute (stepLemma P u (stLen P (ustSt P mu)))
          (liftP (mp linF (○Gen (¬Beta P (succs P (St P) u) each))))
   where
-    outside : (w : Val) -> Mem w (succs P (St P) u) -> Eq (memB w us) false
+    outside : (w : Val) -> w ∈ succs P (St P) u -> memB w us ≡ false
     outside w m = go (memB w us) refl
       where
-        go : (b : Bool) -> Eq (memB w us) b -> Eq (memB w us) false
+        go : (b : Bool) -> memB w us ≡ b -> memB w us ≡ false
         go false eb = eb
         go true  eb =
           emptyElim (nullB_mem (succs P us u) e1
                       (succsIn P us u (memB_sound w us eb)
-                               (prodSnd (succsMem P (St P) u m))))
+                               (snd (succsMem P (St P) u m))))
 
-    each : (w : Val) -> Mem w (succs P (St P) u) -> Deriv (¬ (chi P w))
-    each w m = ih w (ustClosed P mu (prodFst (succsMem P (St P) u m))
-                               (prodSnd (succsMem P (St P) u m)))
+    each : (w : Val) -> w ∈ succs P (St P) u -> ⊢ ¬ (chi P w)
+    each w m = ih w (ustClosed P mu (fst (succsMem P (St P) u m))
+                               (snd (succsMem P (St P) u m)))
                  (outside w m)
 
 ------------------------------------------------------------------------
@@ -130,61 +130,61 @@ extractR1 P us u mu ih e1 =
 -- so chi_u ⇒ ¬ □ A.
 
 extractR2 : (P : Formula) (us : List Val) (u : Val)
-         -> Mem u (Ust P) -> SubSt P us -> Refuted P us
-         -> (A : Formula) -> Mem (□ A) (sub P)
-         -> Eq (valOf P u (□ A)) false -> Mem u (gfpW P us A)
-         -> Deriv (¬ (chi P u))
+         -> u ∈ Ust P -> SubSt P us -> Refuted P us
+         -> (A : Formula) -> □ A ∈ sub P
+         -> valOf P u (□ A) ≡ false -> u ∈ gfpW P us A
+         -> ⊢ ¬ (chi P u)
 extractR2 P us u mu sb ih A mbox pend mgfp = refute chi□ chi¬□
   where
     W : List Val
     W = gfpW P us A
 
-    lenW : (w : Val) -> Mem w W -> Eq (length w) (length (sub P))
+    lenW : (w : Val) -> w ∈ W -> length w ≡ length (sub P)
     lenW w m = stLen P (ustSt P (sb w (gfpIn P us A m)))
 
     -- (i)
-    bA : Deriv ((beta P W) ⇒ A)
+    bA : ⊢ (beta P W) ⇒ A
     bA = betaElim P W eachA
       where
-        eachA : (w : Val) -> Mem w W -> Deriv ((chi P w) ⇒ A)
-        eachA w m = eqSubst (\ b -> Deriv ((chi P w) ⇒ (lit A b)))
-                            (gfpHolds P us A m)
-                            (chiProjVal P w (lenW w m) (sub_□ P mbox))
+        eachA : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ A
+        eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b))
+                          (gfpHolds P us A m)
+                          (chiProjVal P w (lenW w m) (sub_□ P mbox))
 
     -- (ii)
-    toW : (w : Val) -> Mem w W
-       -> Deriv ((beta P (succs P (St P) w)) ⇒ (beta P W))
+    toW : (w : Val) -> w ∈ W
+       -> ⊢ (beta P (succs P (St P) w)) ⇒ (beta P W)
     toW w m = betaElim P (succs P (St P) w) eachS
       where
-        eachS : (w' : Val) -> Mem w' (succs P (St P) w)
-             -> Deriv ((chi P w') ⇒ (beta P W))
+        eachS : (w' : Val) -> w' ∈ succs P (St P) w
+             -> ⊢ (chi P w') ⇒ (beta P W)
         eachS w' m' = go (memB w' us) refl
           where
-            pr : Prod (Mem w' (St P)) (Eq (step P w w') true)
+            pr : w' ∈ St P × step P w w' ≡ true
             pr = succsMem P (St P) w m'
 
-            go : (b : Bool) -> Eq (memB w' us) b
-              -> Deriv ((chi P w') ⇒ (beta P W))
+            go : (b : Bool) -> memB w' us ≡ b
+              -> ⊢ (chi P w') ⇒ (beta P W)
             go false eb =
               mp ¬Elim (ih w' (ustClosed P (sb w (gfpIn P us A m))
-                                           (prodFst pr) (prodSnd pr)) eb)
+                                           (fst pr) (snd pr)) eb)
             go true  eb = betaIntro P W (gfpClosed P us A w w' m
                                                    (memB_sound w' us eb)
-                                                   (prodSnd pr))
+                                                   (snd pr))
 
-    bNext : Deriv ((beta P W) ⇒ ○ (beta P W))
+    bNext : ⊢ (beta P W) ⇒ ○ (beta P W)
     bNext = betaElim P W eachN
       where
-        eachN : (w : Val) -> Mem w W -> Deriv ((chi P w) ⇒ ○ (beta P W))
+        eachN : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ ○ (beta P W)
         eachN w m = ⇒Trans (stepLemma P w (lenW w m)) (○Mono (toW w m))
 
     -- (iii)
-    chi□ : Deriv ((chi P u) ⇒ □ A)
+    chi□ : ⊢ (chi P u) ⇒ □ A
     chi□ = ⇒Trans (betaIntro P W mgfp)
                       (⇒Trans (indRule bNext) (□Mono bA))
 
-    chi¬□ : Deriv ((chi P u) ⇒ ¬ □ A)
-    chi¬□ = eqSubst (\ b -> Deriv ((chi P u) ⇒ (lit (□ A) b))) pend
+    chi¬□ : ⊢ (chi P u) ⇒ ¬ □ A
+    chi¬□ = subst (λ b -> ⊢ (chi P u) ⇒ (lit (□ A) b)) pend
                         (chiProjVal P u (stLen P (ustSt P mu)) mbox)
 
 ------------------------------------------------------------------------
@@ -197,19 +197,19 @@ roundRefuted P us sb ih u mu e = onMem (memB u us) refl
     gs : List Ev
     gs = evList P us
 
-    onMem : (b : Bool) -> Eq (memB u us) b -> Deriv (¬ (chi P u))
+    onMem : (b : Bool) -> memB u us ≡ b -> ⊢ ¬ (chi P u)
     onMem false eb = ih u mu eb
     onMem true  eb = byReason (dropped P us u (kf (keep P us gs u) refl))
       where
-        mus : Mem u us
+        mus : u ∈ us
         mus = memB_sound u us eb
 
-        kf : (b : Bool) -> Eq (keep P us gs u) b -> Eq (keep P us gs u) false
+        kf : (b : Bool) -> keep P us gs u ≡ b -> keep P us gs u ≡ false
         kf false ek = ek
         kf true  ek = emptyElim (memB_false u (elimRound P us) e
                                             (filter_true (keep P us gs) us mus ek))
 
-        byReason : Reason P us u -> Deriv (¬ (chi P u))
+        byReason : Reason P us u -> ⊢ ¬ (chi P u)
         byReason (byR1 e1)                = extractR1 P us u mu ih e1
         byReason (byR2 A mbox pend mgfp)  =
           extractR2 P us u mu sb ih A mbox pend mgfp
@@ -248,14 +248,14 @@ findRefuted P us sb (cBar h) (found x mx q) ss r =
 
 uinfRefuted : (P : Formula) -> Refuted P (Uinf P)
 uinfRefuted P =
-  goRefuted P (Ust P) (ustInE P) (ustBar P) (\ x m -> m) (ustRefuted P)
+  goRefuted P (Ust P) (ustInE P) (ustBar P) (λ x m -> m) (ustRefuted P)
 
-extract : (P : Formula) {v : Val} -> Mem v (removed P) -> Deriv (¬ (chi P v))
+extract : (P : Formula) {v : Val} -> v ∈ removed P -> ⊢ ¬ (chi P v)
 extract P {v} m =
   uinfRefuted P v
-              (filter_sub (\ z -> boolNot (memB z (Uinf P))) (Ust P) m)
+              (filter_sub (λ z -> ¬ᵇ memB z (Uinf P)) (Ust P) m)
               (notTrue (memB v (Uinf P))
-                       (filter_prop (\ z -> boolNot (memB z (Uinf P))) (Ust P) m))
+                       (filter_prop (λ z -> ¬ᵇ memB z (Uinf P)) (Ust P) m))
 
 ------------------------------------------------------------------------
 -- The provable branch of Theorem 6.1.
@@ -274,46 +274,46 @@ extract P {v} m =
 -- provablePC (LTL.ShortPC) changes is the OTHER half of the modus ponens, the
 -- state completeness, and nothing here.
 
-provableEach : (Q : Formula) -> Eq (satB (¬ Q)) false
-            -> (w : Val) -> Mem w (St (¬ Q))
-            -> Deriv ((chi (¬ Q) w) ⇒ Q)
+provableEach : (Q : Formula) -> satB (¬ Q) ≡ false
+            -> (w : Val) -> w ∈ St (¬ Q)
+            -> ⊢ (chi (¬ Q) w) ⇒ Q
 provableEach Q e w m = outer (memB w (Ust R)) refl
   where
     R : Formula
     R = ¬ Q
 
     -- w does not contain R, however that was found out
-    fromR : Eq (valOf R w R) false -> Deriv ((chi R w) ⇒ Q)
+    fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
     fromR ev =
-      ⇒Trans (eqSubst (\ c -> Deriv ((chi R w) ⇒ (lit R c))) ev
+      ⇒Trans (subst (λ c -> ⊢ (chi R w) ⇒ (lit R c)) ev
                         (chiProjVal R w (stLen R m) (sub_self R)))
                dne
 
     -- w never joined the search, so by ustSeed it does not contain R
-    outer : (c : Bool) -> Eq (memB w (Ust R)) c -> Deriv ((chi R w) ⇒ Q)
+    outer : (c : Bool) -> memB w (Ust R) ≡ c -> ⊢ (chi R w) ⇒ Q
     outer false ec = fromR (notIn (valOf R w R) refl)
       where
-        notIn : (d : Bool) -> Eq (valOf R w R) d -> Eq (valOf R w R) false
+        notIn : (d : Bool) -> valOf R w R ≡ d -> valOf R w R ≡ false
         notIn false ed = ed
         notIn true  ed =
           emptyElim (memB_false w (Ust R) ec (ustSeed R m ed))
     outer true  ec = go (memB w (Uinf R)) refl
       where
-        mu : Mem w (Ust R)
+        mu : w ∈ Ust R
         mu = memB_sound w (Ust R) ec
 
         -- w survived, so satB says it does not contain R either
-        go : (b : Bool) -> Eq (memB w (Uinf R)) b -> Deriv ((chi R w) ⇒ Q)
+        go : (b : Bool) -> memB w (Uinf R) ≡ b -> ⊢ (chi R w) ⇒ Q
         go true  eb =
-          fromR (anyL_false (\ z -> valOf R z R) (Uinf R) e
+          fromR (anyL_false (λ z -> valOf R z R) (Uinf R) e
                             (memB_sound w (Uinf R) eb))
         -- w was removed, so chi_w is refutable
         go false eb =
           mp ¬Elim
-             (extract R (filter_true (\ z -> boolNot (memB z (Uinf R)))
-                                     (Ust R) mu (eqCong boolNot eb)))
+             (extract R (filter_true (λ z -> ¬ᵇ memB z (Uinf R))
+                                     (Ust R) mu (cong ¬ᵇ_ eb)))
 
-provable : (Q : Formula) -> Eq (satB (¬ Q)) false -> Deriv Q
+provable : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provable Q e =
   mp (betaElim (¬ Q) (St (¬ Q)) (provableEach Q e)) (stateComplete (¬ Q))
 
@@ -325,7 +325,7 @@ provable Q e =
 -- system L.  This is the first half of C4, reached without Phase 6: the
 -- refutation branch of Theorem 6.1 is complete on its own.
 
-benAriProof : Deriv benAri
+benAriProof : ⊢ benAri
 benAriProof = provable benAri satB_¬BenAri
 
 -- The same for  □ p ⇒ □ ○ p .  This is the example that matters as a
@@ -333,5 +333,5 @@ benAriProof = provable benAri satB_¬BenAri
 -- so extractR2 -- the loop invariant, (Ind) and all -- is on the path from
 -- satB_¬Bnb to this derivation, where for benAri only extractR1 is.
 
-bnbProof : Deriv bnb
+bnbProof : ⊢ bnb
 bnbProof = provable bnb satB_¬Bnb

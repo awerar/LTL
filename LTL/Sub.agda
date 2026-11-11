@@ -17,60 +17,60 @@ open import LTL.Formula public
 -- Subformulas
 
 sub : Formula -> List Formula
-sub (var n)   = var n :: []
-sub (¬ A)   = ¬ A :: sub A
-sub (A ⇒ B) = A ⇒ B :: append (sub A) (sub B)
-sub (○ A)   = ○ A :: sub A
-sub (□ A)   = □ A :: sub A
+sub (var n)   = var n ∷ []
+sub (¬ A)   = ¬ A ∷ sub A
+sub (A ⇒ B) = A ⇒ B ∷ sub A ++ sub B
+sub (○ A)   = ○ A ∷ sub A
+sub (□ A)   = □ A ∷ sub A
 
 ------------------------------------------------------------------------
 -- sub P always begins with P
 
-sub_self : (A : Formula) -> Mem A (sub A)
-sub_self (var n)   = memHd
-sub_self (¬ A)   = memHd
-sub_self (A ⇒ B) = memHd
-sub_self (○ A)   = memHd
-sub_self (□ A)   = memHd
+sub_self : (A : Formula) -> A ∈ sub A
+sub_self (var n)   = here
+sub_self (¬ A)   = here
+sub_self (A ⇒ B) = here
+sub_self (○ A)   = here
+sub_self (□ A)   = here
 
 ------------------------------------------------------------------------
 -- Transitivity: sub is closed under passing to subformulas of its members.
 --
--- The memHd cases are all  k  itself, since there Q is P.
+-- The here cases are all  k  itself, since there Q is P.
 
-sub_mono : (P : Formula) {Q : Formula} -> Mem Q (sub P)
-        -> {X : Formula} -> Mem X (sub Q) -> Mem X (sub P)
-sub_mono (var n)   memHd      k = k
-sub_mono (var n)   (memTl ()) k
-sub_mono (¬ A)   memHd      k = k
-sub_mono (¬ A)   (memTl h)  k = memTl (sub_mono A h k)
-sub_mono (A ⇒ B) memHd      k = k
-sub_mono (A ⇒ B) (memTl h)  k =
-  memTl (sumElim (\ h1 -> memAppL (sub A) (sub B) (sub_mono A h1 k))
-                 (\ h2 -> memAppR (sub A) (sub B) (sub_mono B h2 k))
+sub_mono : (P : Formula) {Q : Formula} -> Q ∈ sub P
+        -> {X : Formula} -> X ∈ sub Q -> X ∈ sub P
+sub_mono (var n)   here       k = k
+sub_mono (var n)   (there ()) k
+sub_mono (¬ A)   here       k = k
+sub_mono (¬ A)   (there h)  k = there (sub_mono A h k)
+sub_mono (A ⇒ B) here       k = k
+sub_mono (A ⇒ B) (there h)  k =
+  there (sumElim (λ h1 -> memAppL (sub A) (sub B) (sub_mono A h1 k))
+                 (λ h2 -> memAppR (sub A) (sub B) (sub_mono B h2 k))
                  (memAppCase (sub A) (sub B) h))
-sub_mono (○ A)   memHd      k = k
-sub_mono (○ A)   (memTl h)  k = memTl (sub_mono A h k)
-sub_mono (□ A)   memHd      k = k
-sub_mono (□ A)   (memTl h)  k = memTl (sub_mono A h k)
+sub_mono (○ A)   here       k = k
+sub_mono (○ A)   (there h)  k = there (sub_mono A h k)
+sub_mono (□ A)   here       k = k
+sub_mono (□ A)   (there h)  k = there (sub_mono A h k)
 
 ------------------------------------------------------------------------
 -- The six membership lemmas
 
-sub_¬ : (P : Formula) {A : Formula} -> Mem (¬ A) (sub P) -> Mem A (sub P)
-sub_¬ P {A} h = sub_mono P h (memTl (sub_self A))
+sub_¬ : (P : Formula) {A : Formula} -> ¬ A ∈ sub P -> A ∈ sub P
+sub_¬ P {A} h = sub_mono P h (there (sub_self A))
 
-sub_⇒L : (P : Formula) {A B : Formula} -> Mem (A ⇒ B) (sub P) -> Mem A (sub P)
-sub_⇒L P {A} {B} h = sub_mono P h (memTl (memAppL (sub A) (sub B) (sub_self A)))
+sub_⇒L : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> A ∈ sub P
+sub_⇒L P {A} {B} h = sub_mono P h (there (memAppL (sub A) (sub B) (sub_self A)))
 
-sub_⇒R : (P : Formula) {A B : Formula} -> Mem (A ⇒ B) (sub P) -> Mem B (sub P)
-sub_⇒R P {A} {B} h = sub_mono P h (memTl (memAppR (sub A) (sub B) (sub_self B)))
+sub_⇒R : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> B ∈ sub P
+sub_⇒R P {A} {B} h = sub_mono P h (there (memAppR (sub A) (sub B) (sub_self B)))
 
-sub_○ : (P : Formula) {A : Formula} -> Mem (○ A) (sub P) -> Mem A (sub P)
-sub_○ P {A} h = sub_mono P h (memTl (sub_self A))
+sub_○ : (P : Formula) {A : Formula} -> ○ A ∈ sub P -> A ∈ sub P
+sub_○ P {A} h = sub_mono P h (there (sub_self A))
 
-sub_□ : (P : Formula) {A : Formula} -> Mem (□ A) (sub P) -> Mem A (sub P)
-sub_□ P {A} h = sub_mono P h (memTl (sub_self A))
+sub_□ : (P : Formula) {A : Formula} -> □ A ∈ sub P -> A ∈ sub P
+sub_□ P {A} h = sub_mono P h (there (sub_self A))
 
 ------------------------------------------------------------------------
 -- sub produces duplicates.
@@ -87,8 +87,8 @@ sub_□ P {A} h = sub_mono P h (memTl (sub_self A))
 benAri : Formula
 benAri = □ (var zero) ⇒ ○ □ (var zero)
 
-subBenAri_length : Eq (length (sub benAri)) 6
+subBenAri_length : length (sub benAri) ≡ 6
 subBenAri_length = refl
 
-subBenAri_dup : Eq (nth (sub benAri) 1 ⊥) (nth (sub benAri) 4 ⊥)
+subBenAri_dup : nth (sub benAri) 1 ⊥ ≡ nth (sub benAri) 4 ⊥
 subBenAri_dup = refl

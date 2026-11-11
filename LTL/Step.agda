@@ -26,15 +26,14 @@ stepAt : Formula -> Val -> Val -> Formula -> Bool
 stepAt P v w (var n)   = true
 stepAt P v w (¬ A)   = true
 stepAt P v w (A ⇒ B) = true
-stepAt P v w (○ B)   = boolEq (valOf P v (○ B)) (valOf P w B)
+stepAt P v w (○ B)   = valOf P v (○ B) ⇔ᵇ valOf P w B
 stepAt P v w (□ A)   =
-  boolAnd (boolImp (valOf P v (□ A)) (valOf P w (□ A)))
-          (boolImp (boolAnd (boolNot (valOf P v (□ A))) (valOf P v A))
-                   (boolNot (valOf P w (□ A))))
+  (valOf P v (□ A) ⇒ᵇ valOf P w (□ A)) ∧ᵇ
+  (¬ᵇ valOf P v (□ A) ∧ᵇ valOf P v A ⇒ᵇ ¬ᵇ valOf P w (□ A))
 
 allStep : Formula -> Val -> Val -> List Formula -> Bool
-allStep P v w []        = true
-allStep P v w (A :: As) = boolAnd (stepAt P v w A) (allStep P v w As)
+allStep P v w []       = true
+allStep P v w (A ∷ As) = stepAt P v w A ∧ᵇ allStep P v w As
 
 step : Formula -> Val -> Val -> Bool
 step P v w = allStep P v w (sub P)
@@ -49,11 +48,11 @@ succs P us v = filterL (step P v) us
 -- Reading one conjunct out of a true step
 
 allStep_at : (P : Formula) (v w : Val) (As : List Formula) {X : Formula}
-          -> Mem X As -> Eq (allStep P v w As) true -> Eq (stepAt P v w X) true
-allStep_at P v w []        ()        e
-allStep_at P v w (B :: Bs) memHd     e =
+          -> X ∈ As -> allStep P v w As ≡ true -> stepAt P v w X ≡ true
+allStep_at P v w []       ()       e
+allStep_at P v w (B ∷ Bs) here     e =
   andTrueL (stepAt P v w B) (allStep P v w Bs) e
-allStep_at P v w (B :: Bs) (memTl m) e =
+allStep_at P v w (B ∷ Bs) (there m) e =
   allStep_at P v w Bs m (andTrueR (stepAt P v w B) (allStep P v w Bs) e)
 
 ------------------------------------------------------------------------
@@ -62,20 +61,19 @@ allStep_at P v w (B :: Bs) (memTl m) e =
 -- On paper this needs a line of proof; here it is (T3), read off.
 
 persist : (P : Formula) (v w : Val) (A : Formula)
-       -> Mem (□ A) (sub P)
-       -> Eq (step P v w) true
-       -> Eq (valOf P v (□ A)) false
-       -> Eq (valOf P v A) true
-       -> Eq (valOf P w (□ A)) false
+       -> □ A ∈ sub P
+       -> step P v w ≡ true
+       -> valOf P v (□ A) ≡ false
+       -> valOf P v A ≡ true
+       -> valOf P w (□ A) ≡ false
 persist P v w A h st bx a =
   t3aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
         (allStep_at P v w (sub P) h st) bx a
   where
     -- x = □ A at v,  z = A at v,  y = □ A at w
     t3aux : (x z y : Bool)
-         -> Eq (boolAnd (boolImp x y)
-                        (boolImp (boolAnd (boolNot x) z) (boolNot y))) true
-         -> Eq x false -> Eq z true -> Eq y false
+         -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
+         -> x ≡ false -> z ≡ true -> y ≡ false
     t3aux true  z     y     e () c
     t3aux false false y     e b ()
     t3aux false true  false e b c = refl
@@ -88,18 +86,17 @@ persist P v w A h st bx a =
 -- and in Hintikka's lemma to carry  □ A  forward along the run.
 
 carry : (P : Formula) (v w : Val) (A : Formula)
-     -> Mem (□ A) (sub P)
-     -> Eq (step P v w) true
-     -> Eq (valOf P v (□ A)) true
-     -> Eq (valOf P w (□ A)) true
+     -> □ A ∈ sub P
+     -> step P v w ≡ true
+     -> valOf P v (□ A) ≡ true
+     -> valOf P w (□ A) ≡ true
 carry P v w A h st bx =
   t2aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
         (allStep_at P v w (sub P) h st) bx
   where
     t2aux : (x z y : Bool)
-         -> Eq (boolAnd (boolImp x y)
-                        (boolImp (boolAnd (boolNot x) z) (boolNot y))) true
-         -> Eq x true -> Eq y true
+         -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
+         -> x ≡ true -> y ≡ true
     t2aux true  z true  e  b = refl
     t2aux true  z false () b
     t2aux false z y     e  ()
@@ -116,8 +113,8 @@ carry P v w A h st bx =
 --
 -- Every state has at least one successor, so no state is removed by (R1).
 
-◇P_succ_counts : Eq (map (\ v -> length (succs ◇P (St ◇P) v)) (St ◇P))
-                      (2 :: 3 :: 1 :: [])
+◇P_succ_counts : map (λ v -> length (succs ◇P (St ◇P) v)) (St ◇P) ≡
+                      2 ∷ 3 ∷ 1 ∷ []
 ◇P_succ_counts = refl
 
 -- For ¬ benAri the six states are, in the order allVecs produces them
@@ -135,6 +132,6 @@ carry P v w A h st bx =
 -- E and D have NO successor, so both are removed by (R1) alone.
 
 ¬BenAri_succ_counts
-  : Eq (map (\ v -> length (succs ¬BenAri (St ¬BenAri) v)) (St ¬BenAri))
-       (0 :: 2 :: 0 :: 4 :: 2 :: 4 :: [])
+  : map (λ v -> length (succs ¬BenAri (St ¬BenAri) v)) (St ¬BenAri) ≡
+    0 ∷ 2 ∷ 0 ∷ 4 ∷ 2 ∷ 4 ∷ []
 ¬BenAri_succ_counts = refl

@@ -25,23 +25,23 @@ open import LTL.Elim public
 -- The eventualities really are box-subformulas
 
 □Args_mem : (As : List Formula) {A : Formula}
-           -> Mem A (□Args As) -> Mem (□ A) As
-□Args_mem []              ()
-□Args_mem (var n   :: As) m         = memTl (□Args_mem As m)
-□Args_mem (¬ B   :: As) m         = memTl (□Args_mem As m)
-□Args_mem (B ⇒ C :: As) m         = memTl (□Args_mem As m)
-□Args_mem (○ B   :: As) m         = memTl (□Args_mem As m)
-□Args_mem (□ B   :: As) memHd     = memHd
-□Args_mem (□ B   :: As) (memTl m) = memTl (□Args_mem As m)
+           -> A ∈ □Args As -> □ A ∈ As
+□Args_mem []             ()
+□Args_mem (var n   ∷ As) m         = there (□Args_mem As m)
+□Args_mem (¬ B   ∷ As) m         = there (□Args_mem As m)
+□Args_mem (B ⇒ C ∷ As) m         = there (□Args_mem As m)
+□Args_mem (○ B   ∷ As) m         = there (□Args_mem As m)
+□Args_mem (□ B   ∷ As) here      = here
+□Args_mem (□ B   ∷ As) (there m) = there (□Args_mem As m)
 
 ------------------------------------------------------------------------
 -- The reason a state is dropped
 
 data Reason (P : Formula) (us : List Val) (v : Val) : Set where
-  byR1 : Eq (r1 P us v) true -> Reason P us v
-  byR2 : (A : Formula) -> Mem (□ A) (sub P)
-      -> Eq (valOf P v (□ A)) false
-      -> Mem v (gfpW P us A)
+  byR1 : r1 P us v ≡ true -> Reason P us v
+  byR2 : (A : Formula) -> □ A ∈ sub P
+      -> valOf P v (□ A) ≡ false
+      -> v ∈ gfpW P us A
       -> Reason P us v
 
 -- Inverting r2 now goes through evList_of: the disjunct that fired names a
@@ -50,25 +50,25 @@ data Reason (P : Formula) (us : List Val) (v : Val) : Set where
 -- proofs.
 
 dropped : (P : Formula) (us : List Val) (v : Val)
-       -> Eq (keep P us (evList P us) v) false -> Reason P us v
+       -> keep P us (evList P us) v ≡ false -> Reason P us v
 dropped P us v e =
   sumElim byR1 fromR2
           (orTrue (r1 P us v) (r2 P (evList P us) v)
-                  (notFalse (boolOr (r1 P us v) (r2 P (evList P us) v)) e))
+                  (notFalse (r1 P us v ∨ᵇ r2 P (evList P us) v) e))
   where
-    fromPair : (g : Ev) -> Mem g (evList P us) -> Eq (badEv P v g) true
+    fromPair : (g : Ev) -> g ∈ evList P us -> badEv P v g ≡ true
             -> Reason P us v
-    fromPair (prod A W) mg q =
-      byR2 A (□Args_mem (sub P) (prodFst (evList_of P us mg)))
+    fromPair (A , W) mg q =
+      byR2 A (□Args_mem (sub P) (fst (evList_of P us mg)))
            (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (memB v W) q))
-           (eqSubst (\ Z -> Mem v Z) (prodSnd (evList_of P us mg))
-                    (memB_sound v W (andTrueR (pending P v A) (memB v W) q)))
+           (subst (λ Z -> v ∈ Z) (snd (evList_of P us mg))
+                  (memB_sound v W (andTrueR (pending P v A) (memB v W) q)))
 
-    fromSig : Sigma Ev (\ g -> Prod (Mem g (evList P us)) (Eq (badEv P v g) true))
+    fromSig : (Σ[ g ∈ Ev ] g ∈ evList P us × badEv P v g ≡ true)
            -> Reason P us v
-    fromSig (sig g (prod m q)) = fromPair g m q
+    fromSig (g , m , q) = fromPair g m q
 
-    fromR2 : Eq (r2 P (evList P us) v) true -> Reason P us v
+    fromR2 : r2 P (evList P us) v ≡ true -> Reason P us v
     fromR2 e2 = fromSig (anyL_true (badEv P v) (evList P us) e2)
 
 ------------------------------------------------------------------------
@@ -77,13 +77,13 @@ dropped P us v e =
 -- One entry per state removed in the round, paired with the boolean r1: true
 -- means the state went by (R1), false that (R1) did not fire and so (R2) did.
 
-elimTrace : Formula -> List Val -> List (Prod Val Bool)
+elimTrace : Formula -> List Val -> List (Val × Bool)
 elimTrace P us =
-  map (\ v -> prod v (r1 P us v))
-      (filterL (\ v -> boolNot (keep P us (evList P us) v)) us)
+  map (λ v -> v , r1 P us v)
+      (filterL (λ v -> ¬ᵇ keep P us (evList P us) v) us)
 
 reasons : Formula -> List Val -> List Bool
-reasons P us = map prodSnd (elimTrace P us)
+reasons P us = map snd (elimTrace P us)
 
 ------------------------------------------------------------------------
 -- Observation.
@@ -97,17 +97,17 @@ reasons P us = map prodSnd (elimTrace P us)
 -- so the closure stops there and the single round removes it by (R1).  Ben-Ari's
 -- own example therefore never exercises (R2) in this formulation.
 
-trace_¬BenAri : Eq (reasons ¬BenAri (Ust ¬BenAri)) (true :: [])
+trace_¬BenAri : reasons ¬BenAri (Ust ¬BenAri) ≡ true ∷ []
 trace_¬BenAri = refl
 
 -- and the second round removes nothing, so the procedure has converged.
 
-trace_¬BenAri2 : Eq (reasons ¬BenAri (elimRound ¬BenAri (Ust ¬BenAri))) []
+trace_¬BenAri2 : reasons ¬BenAri (elimRound ¬BenAri (Ust ¬BenAri)) ≡ []
 trace_¬BenAri2 = refl
 
 -- ◇ p loses no state at all.
 
-trace_◇P : Eq (reasons ◇P (Ust ◇P)) []
+trace_◇P : reasons ◇P (Ust ◇P) ≡ []
 trace_◇P = refl
 
 ------------------------------------------------------------------------
@@ -139,19 +139,19 @@ bnb = □ (var zero) ⇒ □ ○ (var zero)
 ¬Bnb : Formula
 ¬Bnb = ¬ bnb
 
-Ust_¬Bnb : Eq (length (Ust ¬Bnb)) 2
+Ust_¬Bnb : length (Ust ¬Bnb) ≡ 2
 Ust_¬Bnb = refl
 
-trace_¬Bnb : Eq (reasons ¬Bnb (Ust ¬Bnb)) (true :: [])
+trace_¬Bnb : reasons ¬Bnb (Ust ¬Bnb) ≡ true ∷ []
 trace_¬Bnb = refl
 
-trace_¬Bnb2 : Eq (reasons ¬Bnb (elimRound ¬Bnb (Ust ¬Bnb))) (false :: [])
+trace_¬Bnb2 : reasons ¬Bnb (elimRound ¬Bnb (Ust ¬Bnb)) ≡ false ∷ []
 trace_¬Bnb2 = refl
 
-Uinf_¬Bnb : Eq (length (Uinf ¬Bnb)) 0
+Uinf_¬Bnb : length (Uinf ¬Bnb) ≡ 0
 Uinf_¬Bnb = refl
 
-satB_¬Bnb : Eq (satB ¬Bnb) false
+satB_¬Bnb : satB ¬Bnb ≡ false
 satB_¬Bnb = refl
 
 -- and the converse, which Hintikka's lemma needs: a box-subformula names an

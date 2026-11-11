@@ -49,44 +49,44 @@ open import LTL.State public
 -- are repeated under new names rather than moved, since moving them would drag
 -- LTL.Reach under LTL.Complete.
 
-boolSelf : (b : Bool) -> Eq (boolImp b b) true
+boolSelf : (b : Bool) -> b ⇒ᵇ b ≡ true
 boolSelf true  = refl
 boolSelf false = refl
 
-boolImpI : (x y : Bool) -> (Eq x true -> Eq y true) -> Eq (boolImp x y) true
+boolImpI : (x y : Bool) -> (x ≡ true -> y ≡ true) -> x ⇒ᵇ y ≡ true
 boolImpI true  y h = h refl
 boolImpI false y h = refl
 
-boolImpR : (x y : Bool) -> Eq y true -> Eq (boolImp x y) true
+boolImpR : (x y : Bool) -> y ≡ true -> x ⇒ᵇ y ≡ true
 boolImpR true  y e = e
 boolImpR false y e = refl
 
-boolEqRefl : (b : Bool) -> Eq (boolEq b b) true
+boolEqRefl : (b : Bool) -> b ⇔ᵇ b ≡ true
 boolEqRefl true  = refl
 boolEqRefl false = refl
 
-boolEqOf : (x y : Bool) -> Eq x y -> Eq (boolEq x y) true
+boolEqOf : (x y : Bool) -> x ≡ y -> x ⇔ᵇ y ≡ true
 boolEqOf x y refl = boolEqRefl x
 
 filterIn : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-        -> Mem x xs -> Eq (p x) true -> Mem x (filterL p xs)
-filterIn p []        ()        e
-filterIn p (y :: ys) memHd     e = filterCons_hd (p y) y (filterL p ys) e
-filterIn p (y :: ys) (memTl m) e =
+        -> x ∈ xs -> p x ≡ true -> x ∈ filterL p xs
+filterIn p []       ()        e
+filterIn p (y ∷ ys) here      e = filterCons_hd (p y) y (filterL p ys) e
+filterIn p (y ∷ ys) (there m) e =
   filterCons_mem (p y) y (filterL p ys) (filterIn p ys m e)
 
 ------------------------------------------------------------------------
 -- Membership, as a boolean.
 --
 -- The converse of memF_tail: LTL.Skel proves what a true memF gives, and this
--- is what gives one.  It is what turns a Mem proof into the side condition of
--- atomLook, so it is the only thing standing between Mem A (sub P) and the
+-- is what gives one.  It is what turns a membership proof into the side condition of
+-- atomLook, so it is the only thing standing between A ∈ sub P and the
 -- bridge below.
 
-memF_mem : (As : List Formula) {A : Formula} -> Mem A As -> Eq (memF As A) true
-memF_mem []        ()
-memF_mem (B :: Bs) memHd     = orL (formEq B B) (memF Bs B) (formEq_refl B)
-memF_mem (B :: Bs) {A} (memTl m) =
+memF_mem : (As : List Formula) {A : Formula} -> A ∈ As -> memF As A ≡ true
+memF_mem []       ()
+memF_mem (B ∷ Bs) here     = orL (formEq B B) (memF Bs B) (formEq_refl B)
+memF_mem (B ∷ Bs) {A} (there m) =
   orR (formEq B A) (memF Bs A) (memF_mem Bs m)
 
 ------------------------------------------------------------------------
@@ -97,12 +97,12 @@ memF_mem (B :: Bs) {A} (memTl m) =
 -- constructions produce, so that ⋁True and ⋀True below are two lines
 -- each.
 
-boolDisL : (x y : Bool) -> Eq x true -> Eq (boolImp (boolNot x) y) true
+boolDisL : (x y : Bool) -> x ≡ true -> ¬ᵇ x ⇒ᵇ y ≡ true
 boolDisL true  y e = refl
 boolDisL false y ()
 
-boolConI : (x y : Bool) -> Eq x true -> Eq y true
-        -> Eq (boolNot (boolImp x (boolNot y))) true
+boolConI : (x y : Bool) -> x ≡ true -> y ≡ true
+        -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
 boolConI true  true  e1 e2 = refl
 boolConI true  false e1 ()
 boolConI false y     () e2
@@ -116,53 +116,53 @@ boolConI false y     () e2
 -- true by boolSelf whatever the atom list makes of var 0.
 
 ⋁True : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
-        -> Mem C Cs -> Eq (valFrom Ats a C) true
-        -> Eq (valFrom Ats a (⋁ Cs)) true
-⋁True Ats a []        ()        e
-⋁True Ats a (D :: Cs) memHd     e =
+        -> C ∈ Cs -> valFrom Ats a C ≡ true
+        -> valFrom Ats a (⋁ Cs) ≡ true
+⋁True Ats a []       ()       e
+⋁True Ats a (D ∷ Cs) here     e =
   boolDisL (valFrom Ats a D) (valFrom Ats a (⋁ Cs)) e
-⋁True Ats a (D :: Cs) (memTl m) e =
-  boolImpR (boolNot (valFrom Ats a D)) (valFrom Ats a (⋁ Cs))
+⋁True Ats a (D ∷ Cs) (there m) e =
+  boolImpR (¬ᵇ valFrom Ats a D) (valFrom Ats a (⋁ Cs))
            (⋁True Ats a Cs m e)
 
 ⋀True : (Ats : List Formula) (a : Val) (Cs : List Formula)
-        -> ({C : Formula} -> Mem C Cs -> Eq (valFrom Ats a C) true)
-        -> Eq (valFrom Ats a (⋀ Cs)) true
-⋀True Ats a []        h = boolSelf (valFrom Ats a (var zero))
-⋀True Ats a (D :: Cs) h =
+        -> ({C : Formula} -> C ∈ Cs -> valFrom Ats a C ≡ true)
+        -> valFrom Ats a (⋀ Cs) ≡ true
+⋀True Ats a []       h = boolSelf (valFrom Ats a (var zero))
+⋀True Ats a (D ∷ Cs) h =
   boolConI (valFrom Ats a D) (valFrom Ats a (⋀ Cs))
-           (h memHd) (⋀True Ats a Cs (\ m -> h (memTl m)))
+           (h here) (⋀True Ats a Cs (λ m -> h (there m)))
 
 ------------------------------------------------------------------------
 -- The characteristic formula of the row the assignment itself gives.
 --
 -- Read the atoms by a, read every formula of As by the skeleton, and collect
 -- the answers: the literals of the resulting chi are true one by one, since
--- lit A true is A and lit A false is ¬ A and valFrom is boolNot at neg.  So
+-- lit A true is A and lit A false is ¬ A and valFrom is ¬ᵇ at neg.  So
 -- chi of that row is true -- which is the witness disjunct for both of the
 -- tautologies of LTL.CompletePC.
 
 litTrue : (Ats : List Formula) (a : Val) (A : Formula)
-       -> Eq (valFrom Ats a (lit A (valFrom Ats a A))) true
+       -> valFrom Ats a (lit A (valFrom Ats a A)) ≡ true
 litTrue Ats a A = go (valFrom Ats a A) refl
   where
-    go : (b : Bool) -> Eq (valFrom Ats a A) b
-      -> Eq (valFrom Ats a (lit A b)) true
+    go : (b : Bool) -> valFrom Ats a A ≡ b
+      -> valFrom Ats a (lit A b) ≡ true
     go true  e = e
-    go false e = eqCong boolNot e
+    go false e = cong ¬ᵇ_ e
 
 litListTrue : (Ats : List Formula) (a : Val) (As : List Formula) {C : Formula}
-           -> Mem C (litList As (map (valFrom Ats a) As))
-           -> Eq (valFrom Ats a C) true
-litListTrue Ats a []        ()
-litListTrue Ats a (A :: As) memHd     = litTrue Ats a A
-litListTrue Ats a (A :: As) (memTl m) = litListTrue Ats a As m
+           -> C ∈ litList As (map (valFrom Ats a) As)
+           -> valFrom Ats a C ≡ true
+litListTrue Ats a []       ()
+litListTrue Ats a (A ∷ As) here      = litTrue Ats a A
+litListTrue Ats a (A ∷ As) (there m) = litListTrue Ats a As m
 
 chiRowTrue : (Ats : List Formula) (a : Val) (As : List Formula)
-          -> Eq (valFrom Ats a (⋀ (litList As (map (valFrom Ats a) As)))) true
+          -> valFrom Ats a (⋀ (litList As (map (valFrom Ats a) As))) ≡ true
 chiRowTrue Ats a As =
   ⋀True Ats a (litList As (map (valFrom Ats a) As))
-           (\ m -> litListTrue Ats a As m)
+           (λ m -> litListTrue Ats a As m)
 
 ------------------------------------------------------------------------
 -- The bridge: the vector a truth-table row gives, read by valOf.
@@ -177,8 +177,8 @@ skelVec : List Formula -> Val -> Formula -> Val
 skelVec Ats a P = map (valFrom Ats a) (sub P)
 
 valOfMk : (P : Formula) (Ats : List Formula) (a : Val) (A : Formula)
-       -> Mem A (sub P)
-       -> Eq (valOf P (skelVec Ats a P) A) (valFrom Ats a A)
+       -> A ∈ sub P
+       -> valOf P (skelVec Ats a P) A ≡ valFrom Ats a A
 valOfMk P Ats a A m =
   atomLook (valFrom Ats a) (sub P) A (memF_mem (sub P) m)
 
@@ -187,7 +187,7 @@ valOfMk P Ats a A m =
 --
 -- (S1) at neg and at imp, and coherence at every position, hold for no reason
 -- at all: valOfMk says the bit at A is valFrom's reading of A, and valFrom IS
--- boolNot at neg and boolImp at imp.  This is the same observation that makes
+-- ¬ᵇ at neg and ⇒ᵇ at imp.  This is the same observation that makes
 -- the (PC) case of soundness one line (LTL.Sound) -- there against evalAt,
 -- here against the vector's own valOf.
 --
@@ -199,40 +199,40 @@ s2Fml : Formula -> Formula
 s2Fml A = □ A ⇒ A
 
 □Ok : List Formula -> Val -> Formula -> Set
-□Ok Ats a P = (B : Formula) -> Mem (□ B) (sub P)
-             -> Eq (boolImp (valFrom Ats a (□ B)) (valFrom Ats a B)) true
+□Ok Ats a P = (B : Formula) -> □ B ∈ sub P
+             -> valFrom Ats a (□ B) ⇒ᵇ valFrom Ats a B ≡ true
 
 okAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (A : Formula)
-        -> Mem A (sub P) -> □Ok Ats a P
-        -> Eq (okAt P (skelVec Ats a P) A) true
+        -> A ∈ sub P -> □Ok Ats a P
+        -> okAt P (skelVec Ats a P) A ≡ true
 okAtSkel Ats a P (var n)   m bo = refl
 okAtSkel Ats a P (○ B)   m bo = refl
 okAtSkel Ats a P (¬ B)   m bo =
   boolEqOf (valOf P (skelVec Ats a P) (¬ B))
-           (boolNot (valOf P (skelVec Ats a P) B))
-           (eqTrans (valOfMk P Ats a (¬ B) m)
-                    (eqCong boolNot
-                            (eqSym (valOfMk P Ats a B (sub_¬ P m)))))
+           (¬ᵇ valOf P (skelVec Ats a P) B)
+           (trans (valOfMk P Ats a (¬ B) m)
+                  (cong ¬ᵇ_
+                        (sym (valOfMk P Ats a B (sub_¬ P m)))))
 okAtSkel Ats a P (B ⇒ C) m bo =
   boolEqOf (valOf P (skelVec Ats a P) (B ⇒ C))
-           (boolImp (valOf P (skelVec Ats a P) B) (valOf P (skelVec Ats a P) C))
-           (eqTrans (valOfMk P Ats a (B ⇒ C) m)
-                    (eqCong2 boolImp
-                             (eqSym (valOfMk P Ats a B (sub_⇒L P m)))
-                             (eqSym (valOfMk P Ats a C (sub_⇒R P m)))))
+           (valOf P (skelVec Ats a P) B ⇒ᵇ valOf P (skelVec Ats a P) C)
+           (trans (valOfMk P Ats a (B ⇒ C) m)
+                  (cong₂ _⇒ᵇ_
+                         (sym (valOfMk P Ats a B (sub_⇒L P m)))
+                         (sym (valOfMk P Ats a C (sub_⇒R P m)))))
 okAtSkel Ats a P (□ B)   m bo =
-  eqTrans (eqCong2 boolImp (valOfMk P Ats a (□ B) m)
-                           (valOfMk P Ats a B (sub_□ P m)))
-          (bo B m)
+  trans (cong₂ _⇒ᵇ_ (valOfMk P Ats a (□ B) m)
+                    (valOfMk P Ats a B (sub_□ P m)))
+        (bo B m)
 
 allOkSkel : (Ats : List Formula) (a : Val) (P : Formula) (As : List Formula)
-         -> ({A : Formula} -> Mem A As -> Mem A (sub P)) -> □Ok Ats a P
-         -> Eq (allOk P (skelVec Ats a P) As) true
-allOkSkel Ats a P []        sb bo = refl
-allOkSkel Ats a P (A :: As) sb bo =
+         -> ({A : Formula} -> A ∈ As -> A ∈ sub P) -> □Ok Ats a P
+         -> allOk P (skelVec Ats a P) As ≡ true
+allOkSkel Ats a P []       sb bo = refl
+allOkSkel Ats a P (A ∷ As) sb bo =
   andIntro (okAt P (skelVec Ats a P) A) (allOk P (skelVec Ats a P) As)
-           (okAtSkel Ats a P A (sb memHd) bo)
-           (allOkSkel Ats a P As (\ m -> sb (memTl m)) bo)
+           (okAtSkel Ats a P A (sb here) bo)
+           (allOkSkel Ats a P As (λ m -> sb (there m)) bo)
 
 -- Coherence.  The bit at position i is the skeleton's reading of the formula
 -- AT position i, by nth_map, and the bit at the first occurrence of that same
@@ -240,43 +240,43 @@ allOkSkel Ats a P (A :: As) sb bo =
 -- cohAt asks; the vector represents a function on the SET Sub(P), which is the
 -- clause of FORMALISATION-PLAN.md section 0.
 
-ltUp : {i n : Nat} -> Lt i n -> Lt i (suc n)
+ltUp : {i n : Nat} -> i < n -> i < suc n
 ltUp ltZero    = ltZero
 ltUp (ltSuc l) = ltSuc (ltUp l)
 
-ltSucSelf : (n : Nat) -> Lt n (suc n)
+ltSucSelf : (n : Nat) -> n < suc n
 ltSucSelf zero    = ltZero
 ltSucSelf (suc n) = ltSuc (ltSucSelf n)
 
 cohAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (i : Nat)
-         -> Lt i (length (sub P))
-         -> Eq (cohAt P (skelVec Ats a P) i) true
+         -> i < length (sub P)
+         -> cohAt P (skelVec Ats a P) i ≡ true
 cohAtSkel Ats a P i l =
   boolEqOf (bitAt (skelVec Ats a P) i)
            (valOf P (skelVec Ats a P) (nth (sub P) i ⊥))
-           (eqTrans (nth_map (valFrom Ats a) (sub P) i l ⊥ false)
-                    (eqSym (valOfMk P Ats a (nth (sub P) i ⊥)
-                                    (nth_mem (sub P) i l ⊥))))
+           (trans (nth_map (valFrom Ats a) (sub P) i l ⊥ false)
+                  (sym (valOfMk P Ats a (nth (sub P) i ⊥)
+                                (nth_mem (sub P) i l ⊥))))
 
 allCohSkel : (Ats : List Formula) (a : Val) (P : Formula) (n : Nat)
-          -> ((i : Nat) -> Lt i n -> Lt i (length (sub P)))
-          -> Eq (allCoh P (skelVec Ats a P) n) true
+          -> ((i : Nat) -> i < n -> i < length (sub P))
+          -> allCoh P (skelVec Ats a P) n ≡ true
 allCohSkel Ats a P zero    h = refl
 allCohSkel Ats a P (suc n) h =
   andIntro (cohAt P (skelVec Ats a P) n) (allCoh P (skelVec Ats a P) n)
            (cohAtSkel Ats a P n (h n (ltSucSelf n)))
-           (allCohSkel Ats a P n (\ i l -> h i (ltUp l)))
+           (allCohSkel Ats a P n (λ i l -> h i (ltUp l)))
 
 isStateSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
-           -> Eq (isState P (skelVec Ats a P)) true
+           -> isState P (skelVec Ats a P) ≡ true
 isStateSkel Ats a P bo =
   andIntro (allOk P (skelVec Ats a P) (sub P))
            (allCoh P (skelVec Ats a P) (length (sub P)))
-           (allOkSkel Ats a P (sub P) (\ m -> m) bo)
-           (allCohSkel Ats a P (length (sub P)) (\ i l -> l))
+           (allOkSkel Ats a P (sub P) (λ m -> m) bo)
+           (allCohSkel Ats a P (length (sub P)) (λ i l -> l))
 
 memStSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
-         -> Mem (skelVec Ats a P) (St P)
+         -> skelVec Ats a P ∈ St P
 memStSkel Ats a P bo =
   filterIn (isState P) (allVecs (length (sub P)))
            (allVecs_complete (length (sub P)) (skelVec Ats a P)
@@ -291,7 +291,7 @@ memStSkel Ats a P bo =
 -- and LTL.CompletePC turns it into a one-node derivation.
 
 betaSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
-        -> Eq (valFrom Ats a (beta P (St P))) true
+        -> valFrom Ats a (beta P (St P)) ≡ true
 betaSkel Ats a P bo =
   ⋁True Ats a (map (chi P) (St P))
            (memMap (chi P) (memStSkel Ats a P bo))
@@ -320,33 +320,33 @@ betaSkel Ats a P bo =
 -- (S2); the caller turns a box-subformula into a member with □Args_of.
 
 ⇒List : List Formula -> Formula -> Formula
-⇒List []        C = C
-⇒List (A :: As) C = A ⇒ (⇒List As C)
+⇒List []       C = C
+⇒List (A ∷ As) C = A ⇒ (⇒List As C)
 
 ⇒Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
-        -> ((({A : Formula} -> Mem A As -> Eq (valFrom Ats a A) true)
-              -> Eq (valFrom Ats a C) true))
-        -> Eq (valFrom Ats a (⇒List As C)) true
-⇒Chain Ats a []        C h = h (\ ())
-⇒Chain Ats a (A :: As) C h =
+        -> ((({A : Formula} -> A ∈ As -> valFrom Ats a A ≡ true)
+              -> valFrom Ats a C ≡ true))
+        -> valFrom Ats a (⇒List As C) ≡ true
+⇒Chain Ats a []       C h = h (λ ())
+⇒Chain Ats a (A ∷ As) C h =
   boolImpI (valFrom Ats a A) (valFrom Ats a (⇒List As C))
-           (\ eA -> ⇒Chain Ats a As C (\ g -> h (more eA g)))
+           (λ eA -> ⇒Chain Ats a As C (λ g -> h (more eA g)))
   where
-    more : Eq (valFrom Ats a A) true
-        -> ({X : Formula} -> Mem X As -> Eq (valFrom Ats a X) true)
-        -> {X : Formula} -> Mem X (A :: As) -> Eq (valFrom Ats a X) true
-    more eA g memHd     = eA
-    more eA g (memTl m) = g m
+    more : valFrom Ats a A ≡ true
+        -> ({X : Formula} -> X ∈ As -> valFrom Ats a X ≡ true)
+        -> {X : Formula} -> X ∈ A ∷ As -> valFrom Ats a X ≡ true
+    more eA g here      = eA
+    more eA g (there m) = g m
 
 S2At : List Formula -> Val -> List Formula -> Set
-S2At Ats a As = (B : Formula) -> Mem B As
-             -> Eq (boolImp (valFrom Ats a (□ B)) (valFrom Ats a B)) true
+S2At Ats a As = (B : Formula) -> B ∈ As
+             -> valFrom Ats a (□ B) ⇒ᵇ valFrom Ats a B ≡ true
 
 □Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
-        -> (S2At Ats a As -> Eq (valFrom Ats a C) true)
-        -> Eq (valFrom Ats a (⇒List (map s2Fml As) C)) true
+        -> (S2At Ats a As -> valFrom Ats a C ≡ true)
+        -> valFrom Ats a (⇒List (map s2Fml As) C) ≡ true
 □Chain Ats a As C h =
-  ⇒Chain Ats a (map s2Fml As) C (\ g -> h (\ B mB -> g (memMap s2Fml mB)))
+  ⇒Chain Ats a (map s2Fml As) C (λ g -> h (λ B mB -> g (memMap s2Fml mB)))
 
 ------------------------------------------------------------------------
 -- (L5), as a boolean.
@@ -366,7 +366,7 @@ S2At Ats a As = (B : Formula) -> Mem B As
 -- premise there.  The empty case is (L0) -- ⋁ [] is ⊥, which cannot be
 -- true, and boolSelf is what says so.
 
-boolMP : (x y : Bool) -> Eq (boolImp x y) true -> Eq x true -> Eq y true
+boolMP : (x y : Bool) -> x ⇒ᵇ y ≡ true -> x ≡ true -> y ≡ true
 boolMP true  y e ex = e
 boolMP false y e ()
 
@@ -374,27 +374,27 @@ boolMP false y e ()
 ⇒To C D = D ⇒ C
 
 ⋁ElimTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) (C : Formula)
-            -> ({D : Formula} -> Mem D Cs
-                  -> Eq (valFrom Ats a (⇒To C D)) true)
-            -> Eq (valFrom Ats a (⋁ Cs ⇒ C)) true
+            -> ({D : Formula} -> D ∈ Cs
+                  -> valFrom Ats a (⇒To C D) ≡ true)
+            -> valFrom Ats a (⋁ Cs ⇒ C) ≡ true
 ⋁ElimTrue Ats a Cs C h =
   boolImpI (valFrom Ats a (⋁ Cs)) (valFrom Ats a C) (go Cs h)
   where
     go : (Ds : List Formula)
-      -> ({D : Formula} -> Mem D Ds -> Eq (valFrom Ats a (⇒To C D)) true)
-      -> Eq (valFrom Ats a (⋁ Ds)) true -> Eq (valFrom Ats a C) true
+      -> ({D : Formula} -> D ∈ Ds -> valFrom Ats a (⇒To C D) ≡ true)
+      -> valFrom Ats a (⋁ Ds) ≡ true -> valFrom Ats a C ≡ true
     go []        k e =
-      emptyElim (tfAbs (eqTrans (eqSym e)
-                                (eqCong boolNot
-                                        (boolSelf (valFrom Ats a (var zero))))))
-    go (D :: Ds) k e = onD (valFrom Ats a D) refl
+      emptyElim (tfAbs (trans (sym e)
+                              (cong ¬ᵇ_
+                                    (boolSelf (valFrom Ats a (var zero))))))
+    go (D ∷ Ds) k e = onD (valFrom Ats a D) refl
       where
-        onD : (b : Bool) -> Eq (valFrom Ats a D) b -> Eq (valFrom Ats a C) true
-        onD true  eb = boolMP (valFrom Ats a D) (valFrom Ats a C) (k memHd) eb
+        onD : (b : Bool) -> valFrom Ats a D ≡ b -> valFrom Ats a C ≡ true
+        onD true  eb = boolMP (valFrom Ats a D) (valFrom Ats a C) (k here) eb
         onD false eb =
-          go Ds (\ m -> k (memTl m))
-             (boolMP (boolNot (valFrom Ats a D)) (valFrom Ats a (⋁ Ds)) e
-                     (eqCong boolNot eb))
+          go Ds (λ m -> k (there m))
+             (boolMP (¬ᵇ valFrom Ats a D) (valFrom Ats a (⋁ Ds)) e
+                     (cong ¬ᵇ_ eb))
 
 ------------------------------------------------------------------------
 -- G34 of PHASE10-PLAN.md: the branch as one node.
@@ -408,7 +408,7 @@ boolMP false y e ()
 -- contain ¬ Q, and for the same reason the derivation works: chi_w is a
 -- conjunction one of whose conjuncts is  lit (¬ Q) (valOf (¬ Q) w (¬ Q))
 -- -- and the hypothesis says that bit is false, so the conjunct is
--- ¬ ¬ Q.  A conjunction implies its conjuncts, and valFrom is boolNot at
+-- ¬ ¬ Q.  A conjunction implies its conjuncts, and valFrom is ¬ᵇ at
 -- neg by definition, so a row making chi_w true makes  not not Q  true and
 -- hence Q.  Nothing about Q's own structure is used; Q is read by the skeleton
 -- like anything else.
@@ -420,30 +420,30 @@ boolMP false y e ()
 -- ∧, read out rather than built up.  boolConI above is the introduction; a
 -- projection needs the two eliminations.
 
-boolConE1 : (x y : Bool) -> Eq (boolNot (boolImp x (boolNot y))) true
-         -> Eq x true
+boolConE1 : (x y : Bool) -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
+         -> x ≡ true
 boolConE1 true  y e = refl
 boolConE1 false y ()
 
-boolConE2 : (x y : Bool) -> Eq (boolNot (boolImp x (boolNot y))) true
-         -> Eq y true
+boolConE2 : (x y : Bool) -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
+         -> y ≡ true
 boolConE2 true  true  e = refl
 boolConE2 true  false ()
 boolConE2 false y     ()
 
-boolNotNot : (x : Bool) -> Eq (boolNot (boolNot x)) true -> Eq x true
+boolNotNot : (x : Bool) -> ¬ᵇ ¬ᵇ x ≡ true -> x ≡ true
 boolNotNot true  e = refl
 boolNotNot false ()
 
 -- the converse of ⋀True: a true conjunction has true conjuncts
 
 ⋀ProjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
-            -> Mem C Cs -> Eq (valFrom Ats a (⋀ Cs)) true
-            -> Eq (valFrom Ats a C) true
-⋀ProjTrue Ats a []        ()        e
-⋀ProjTrue Ats a (D :: Cs) memHd     e =
+            -> C ∈ Cs -> valFrom Ats a (⋀ Cs) ≡ true
+            -> valFrom Ats a C ≡ true
+⋀ProjTrue Ats a []       ()       e
+⋀ProjTrue Ats a (D ∷ Cs) here     e =
   boolConE1 (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e
-⋀ProjTrue Ats a (D :: Cs) (memTl m) e =
+⋀ProjTrue Ats a (D ∷ Cs) (there m) e =
   ⋀ProjTrue Ats a Cs m
                (boolConE2 (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e)
 
@@ -455,21 +455,21 @@ boolNotNot false ()
 -- the five clauses of sub_self, and each is the same one line: nothing is
 -- proved by induction, only that the head of sub P is P.
 
-idxSelf : (P : Formula) -> Eq (idx (sub P) P) (index (sub_self P))
-idxSelf (var n)   = eqCong (\ b -> idxCons b (idx [] (var n))) (formEq_refl (var n))
-idxSelf (¬ A)   = eqCong (\ b -> idxCons b (idx (sub A) (¬ A))) (formEq_refl (¬ A))
+idxSelf : (P : Formula) -> idx (sub P) P ≡ index (sub_self P)
+idxSelf (var n)   = cong (λ b -> idxCons b (idx [] (var n))) (formEq_refl (var n))
+idxSelf (¬ A)   = cong (λ b -> idxCons b (idx (sub A) (¬ A))) (formEq_refl (¬ A))
 idxSelf (A ⇒ B) =
-  eqCong (\ b -> idxCons b (idx (append (sub A) (sub B)) (A ⇒ B)))
-         (formEq_refl (A ⇒ B))
-idxSelf (○ A)   = eqCong (\ b -> idxCons b (idx (sub A) (○ A))) (formEq_refl (○ A))
-idxSelf (□ A)   = eqCong (\ b -> idxCons b (idx (sub A) (□ A))) (formEq_refl (□ A))
+  cong (λ b -> idxCons b (idx (sub A ++ sub B) (A ⇒ B)))
+       (formEq_refl (A ⇒ B))
+idxSelf (○ A)   = cong (λ b -> idxCons b (idx (sub A) (○ A))) (formEq_refl (○ A))
+idxSelf (□ A)   = cong (λ b -> idxCons b (idx (sub A) (□ A))) (formEq_refl (□ A))
 
-litSelf : (P : Formula) (w : Val) -> Eq (length w) (length (sub P))
-       -> Mem (lit P (valOf P w P)) (litList (sub P) w)
+litSelf : (P : Formula) (w : Val) -> length w ≡ length (sub P)
+       -> lit P (valOf P w P) ∈ litList (sub P) w
 litSelf P w len =
-  eqSubst (\ n -> Mem (lit P (bitAt w n)) (litList (sub P) w))
-          (eqSym (idxSelf P))
-          (litList_mem (sub P) w len (sub_self P))
+  subst (λ n -> lit P (bitAt w n) ∈ litList (sub P) w)
+        (sym (idxSelf P))
+        (litList_mem (sub P) w len (sub_self P))
 
 ------------------------------------------------------------------------
 -- G34.
@@ -478,11 +478,11 @@ litSelf P w len =
 -- ¬ Q; then  chi_w ⇒ Q  is a skeleton tautology, so (PC) proves it in one
 -- node where the projection-and-double-negation proof takes 67.
 
-tautChi : (Q : Formula) (w : Val) -> Eq (length w) (length (sub (¬ Q)))
-       -> Eq (valOf (¬ Q) w (¬ Q)) false
-       -> Eq (isTaut ((chi (¬ Q) w) ⇒ Q)) true
+tautChi : (Q : Formula) (w : Val) -> length w ≡ length (sub (¬ Q))
+       -> valOf (¬ Q) w (¬ Q) ≡ false
+       -> isTaut ((chi (¬ Q) w) ⇒ Q) ≡ true
 tautChi Q w len ev =
-  allB_intro (\ a -> valFrom Ats a F) (allVecs (length Ats)) row
+  allB_intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
   where
     R : Formula
     R = ¬ Q
@@ -494,14 +494,14 @@ tautChi Q w len ev =
     Ats = atomsOf F
 
     -- the conjunct  lit R false , i.e.  ¬ ¬ Q
-    mneg : Mem (¬ R) (litList (sub R) w)
-    mneg = eqSubst (\ b -> Mem (lit R b) (litList (sub R) w)) ev (litSelf R w len)
+    mneg : ¬ R ∈ litList (sub R) w
+    mneg = subst (λ b -> lit R b ∈ litList (sub R) w) ev (litSelf R w len)
 
-    row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a F) true
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a F ≡ true
     row {a} m = boolImpI (valFrom Ats a (chi R w)) (valFrom Ats a Q) step
       where
-        step : Eq (valFrom Ats a (chi R w)) true -> Eq (valFrom Ats a Q) true
+        step : valFrom Ats a (chi R w) ≡ true -> valFrom Ats a Q ≡ true
         step ec =
           boolNotNot (valFrom Ats a Q)
                      (⋀ProjTrue Ats a (litList (sub R) w) mneg ec)
@@ -520,79 +520,79 @@ tautChi Q w len ev =
 -- skelEval (LTL.Skel) with the assignment left free instead of being map f Ats.
 -- The five clauses are skelEval's five clauses; only the hypothesis changes.
 
-notTrueT : (b : Bool) -> Eq (boolNot b) true -> Eq b false
+notTrueT : (b : Bool) -> ¬ᵇ b ≡ true -> b ≡ false
 notTrueT true  ()
 notTrueT false e = refl
 
-boolContra : (x y : Bool) -> (Eq y true -> Eq x true)
-          -> Eq (boolImp (boolNot x) (boolNot y)) true
+boolContra : (x y : Bool) -> (y ≡ true -> x ≡ true)
+          -> ¬ᵇ x ⇒ᵇ ¬ᵇ y ≡ true
 boolContra true  y     h = refl
-boolContra false true  h = emptyElim (tfAbs (eqSym (h refl)))
+boolContra false true  h = emptyElim (tfAbs (sym (h refl)))
 boolContra false false h = refl
 
-memF_sound : (As : List Formula) (A : Formula) -> Eq (memF As A) true -> Mem A As
-memF_sound []        A ()
-memF_sound (B :: Bs) A e = go (formEq B A) refl
+memF_sound : (As : List Formula) (A : Formula) -> memF As A ≡ true -> A ∈ As
+memF_sound []       A ()
+memF_sound (B ∷ Bs) A e = go (formEq B A) refl
   where
-    go : (b : Bool) -> Eq (formEq B A) b -> Mem A (B :: Bs)
-    go true  eb = eqSubst (\ X -> Mem X (B :: Bs)) (formEq_sound B A eb) memHd
-    go false eb = memTl (memF_sound Bs A (memF_tail B Bs A e eb))
+    go : (b : Bool) -> formEq B A ≡ b -> A ∈ B ∷ Bs
+    go true  eb = subst (λ X -> X ∈ B ∷ Bs) (formEq_sound B A eb) here
+    go false eb = there (memF_sound Bs A (memF_tail B Bs A e eb))
 
 -- the atoms of a list are members of it
 
 insFIn : (A : Formula) (Bs : List Formula) {X : Formula}
-      -> Mem X (insF A Bs) -> Sum (Eq X A) (Mem X Bs)
+      -> X ∈ insF A Bs -> X ≡ A ⊎ X ∈ Bs
 insFIn A Bs {X} m = go (memF Bs A) refl
   where
-    go : (b : Bool) -> Eq (memF Bs A) b -> Sum (Eq X A) (Mem X Bs)
-    go true  e = inr (eqSubst (\ c -> Mem X (filterCons (boolNot c) A Bs)) e m)
-    go false e = onM (eqSubst (\ c -> Mem X (filterCons (boolNot c) A Bs)) e m)
+    go : (b : Bool) -> memF Bs A ≡ b -> X ≡ A ⊎ X ∈ Bs
+    go true  e = inr (subst (λ c -> X ∈ filterCons (¬ᵇ c) A Bs) e m)
+    go false e = onM (subst (λ c -> X ∈ filterCons (¬ᵇ c) A Bs) e m)
       where
-        onM : Mem X (A :: Bs) -> Sum (Eq X A) (Mem X Bs)
-        onM memHd     = inl refl
-        onM (memTl k) = inr k
+        onM : X ∈ A ∷ Bs -> X ≡ A ⊎ X ∈ Bs
+        onM here      = inl refl
+        onM (there k) = inr k
 
-atomsIn : (As : List Formula) {X : Formula} -> Mem X (atoms As) -> Mem X As
-atomsIn []              ()
-atomsIn (var n   :: As) {X} m =
-  sumElim (\ e -> eqSubst (\ Y -> Mem Y (var n :: As)) (eqSym e) memHd)
-          (\ k -> memTl (atomsIn As k)) (insFIn (var n) (atoms As) m)
-atomsIn (¬ B   :: As)     m = memTl (atomsIn As m)
-atomsIn (B ⇒ C :: As)     m = memTl (atomsIn As m)
-atomsIn (○ B   :: As) {X} m =
-  sumElim (\ e -> eqSubst (\ Y -> Mem Y (○ B :: As)) (eqSym e) memHd)
-          (\ k -> memTl (atomsIn As k)) (insFIn (○ B) (atoms As) m)
-atomsIn (□ B   :: As) {X} m =
-  sumElim (\ e -> eqSubst (\ Y -> Mem Y (□ B :: As)) (eqSym e) memHd)
-          (\ k -> memTl (atomsIn As k)) (insFIn (□ B) (atoms As) m)
+atomsIn : (As : List Formula) {X : Formula} -> X ∈ atoms As -> X ∈ As
+atomsIn []             ()
+atomsIn (var n   ∷ As) {X} m =
+  sumElim (λ e -> subst (λ Y -> Y ∈ var n ∷ As) (sym e) here)
+          (λ k -> there (atomsIn As k)) (insFIn (var n) (atoms As) m)
+atomsIn (¬ B   ∷ As)     m = there (atomsIn As m)
+atomsIn (B ⇒ C ∷ As)     m = there (atomsIn As m)
+atomsIn (○ B   ∷ As) {X} m =
+  sumElim (λ e -> subst (λ Y -> Y ∈ ○ B ∷ As) (sym e) here)
+          (λ k -> there (atomsIn As k)) (insFIn (○ B) (atoms As) m)
+atomsIn (□ B   ∷ As) {X} m =
+  sumElim (λ e -> subst (λ Y -> Y ∈ □ B ∷ As) (sym e) here)
+          (λ k -> there (atomsIn As k)) (insFIn (□ B) (atoms As) m)
 
 ------------------------------------------------------------------------
 -- Literals, read in both directions.
 
 litOfEq : (Ats : List Formula) (a : Val) (A : Formula) (b : Bool)
-       -> Eq (valFrom Ats a A) b -> Eq (valFrom Ats a (lit A b)) true
+       -> valFrom Ats a A ≡ b -> valFrom Ats a (lit A b) ≡ true
 litOfEq Ats a A true  e = e
-litOfEq Ats a A false e = eqCong boolNot e
+litOfEq Ats a A false e = cong ¬ᵇ_ e
 
 litSound : (Ats : List Formula) (a : Val) (A : Formula) (b : Bool)
-        -> Eq (valFrom Ats a (lit A b)) true -> Eq (valFrom Ats a A) b
+        -> valFrom Ats a (lit A b) ≡ true -> valFrom Ats a A ≡ b
 litSound Ats a A true  e = e
 litSound Ats a A false e = notTrueT (valFrom Ats a A) e
 
 litMapMem : (f : Formula -> Bool) (As : List Formula) {X : Formula}
-         -> Mem X As -> Mem (lit X (f X)) (litList As (map f As))
-litMapMem f []        ()
-litMapMem f (A :: As) memHd     = memHd
-litMapMem f (A :: As) (memTl m) = memTl (litMapMem f As m)
+         -> X ∈ As -> lit X (f X) ∈ litList As (map f As)
+litMapMem f []       ()
+litMapMem f (A ∷ As) here      = here
+litMapMem f (A ∷ As) (there m) = there (litMapMem f As m)
 
 litMapOk : (Ats : List Formula) (a : Val) (f : Formula -> Bool) (As : List Formula)
-        -> ((A : Formula) -> Mem A As -> Eq (valFrom Ats a A) (f A))
-        -> {C : Formula} -> Mem C (litList As (map f As))
-        -> Eq (valFrom Ats a C) true
-litMapOk Ats a f []        h ()
-litMapOk Ats a f (A :: As) h memHd     = litOfEq Ats a A (f A) (h A memHd)
-litMapOk Ats a f (A :: As) h (memTl m) =
-  litMapOk Ats a f As (\ B mB -> h B (memTl mB)) m
+        -> ((A : Formula) -> A ∈ As -> valFrom Ats a A ≡ f A)
+        -> {C : Formula} -> C ∈ litList As (map f As)
+        -> valFrom Ats a C ≡ true
+litMapOk Ats a f []       h ()
+litMapOk Ats a f (A ∷ As) h here      = litOfEq Ats a A (f A) (h A here)
+litMapOk Ats a f (A ∷ As) h (there m) =
+  litMapOk Ats a f As (λ B mB -> h B (there mB)) m
 
 ------------------------------------------------------------------------
 -- The fact G35 turns on.
@@ -603,21 +603,21 @@ litMapOk Ats a f (A :: As) h (memTl m) =
 -- of allOk, exactly as valFromEq (LTL.Closure) does.
 
 skelAgree : (Ats : List Formula) (a : Val) (P : Formula) (v : Val)
-         -> Eq (allOk P v (sub P)) true
-         -> ((X : Formula) -> Mem X (sub P) -> Eq (isAtomB X) true
-               -> Eq (valFrom Ats a X) (valOf P v X))
-         -> (A : Formula) -> Mem A (sub P)
-         -> Eq (valFrom Ats a A) (valOf P v A)
+         -> allOk P v (sub P) ≡ true
+         -> ((X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
+               -> valFrom Ats a X ≡ valOf P v X)
+         -> (A : Formula) -> A ∈ sub P
+         -> valFrom Ats a A ≡ valOf P v A
 skelAgree Ats a P v ok at (var n)   m = at (var n) m refl
 skelAgree Ats a P v ok at (○ A)   m = at (○ A) m refl
 skelAgree Ats a P v ok at (□ A)   m = at (□ A) m refl
 skelAgree Ats a P v ok at (¬ A)   m =
-  eqTrans (eqCong boolNot (skelAgree Ats a P v ok at A (sub_¬ P m)))
-          (eqSym (boolEq_sound (valOf P v (¬ A)) (boolNot (valOf P v A))
-                               (allOk_at P v (sub P) m ok)))
+  trans (cong ¬ᵇ_ (skelAgree Ats a P v ok at A (sub_¬ P m)))
+        (sym (boolEq_sound (valOf P v (¬ A)) (¬ᵇ valOf P v A)
+                           (allOk_at P v (sub P) m ok)))
 skelAgree Ats a P v ok at (A ⇒ B) m =
-  eqTrans (eqCong2 boolImp (skelAgree Ats a P v ok at A (sub_⇒L P m))
-                           (skelAgree Ats a P v ok at B (sub_⇒R P m)))
-          (eqSym (boolEq_sound (valOf P v (A ⇒ B))
-                               (boolImp (valOf P v A) (valOf P v B))
-                               (allOk_at P v (sub P) m ok)))
+  trans (cong₂ _⇒ᵇ_ (skelAgree Ats a P v ok at A (sub_⇒L P m))
+                    (skelAgree Ats a P v ok at B (sub_⇒R P m)))
+        (sym (boolEq_sound (valOf P v (A ⇒ B))
+                           (valOf P v A ⇒ᵇ valOf P v B)
+                           (allOk_at P v (sub P) m ok)))

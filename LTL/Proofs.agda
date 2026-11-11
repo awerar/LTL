@@ -2,7 +2,7 @@
 
 -- LTL.Proofs -- printing the derivation decide returns, and what it costs.
 --
--- On the inl branch decide returns a term of Deriv Q, and a derivation is a
+-- On the inl branch decide returns a term of ⊢ Q, and a derivation is a
 -- finite tree, so it can simply be printed.  showD does that, to a given depth, carrying the
 -- formula proved at each node; shapeD does it without the formulas, which is
 -- what one wants as soon as the tree is more than a few nodes deep.
@@ -56,7 +56,7 @@ data RTree : Set where
   rnil  : RTree
   rnode : Rule -> List RTree -> RTree
 
-showD : {A : Formula} -> Nat -> Deriv A -> DTree
+showD : {A : Formula} -> Nat -> ⊢ A -> DTree
 showD {A} zero    d        = node rMore A []
 showD {A} (suc n) p1       = node rP1   A []
 showD {A} (suc n) p2       = node rP2   A []
@@ -67,10 +67,10 @@ showD {A} (suc n) exp      = node rExp  A []
 showD {A} (suc n) ind      = node rInd  A []
 showD {A} (suc n) lin      = node rLin  A []
 showD {A} (suc n) (pc e)   = node rPc   A []
-showD {A} (suc n) (mp d e) = node rMp   A (showD n d :: showD n e :: [])
-showD {A} (suc n) (gen d)  = node rGen  A (showD n d :: [])
+showD {A} (suc n) (mp d e) = node rMp   A (showD n d ∷ showD n e ∷ [])
+showD {A} (suc n) (gen d)  = node rGen  A (showD n d ∷ [])
 
-shapeD : {A : Formula} -> Nat -> Deriv A -> RTree
+shapeD : {A : Formula} -> Nat -> ⊢ A -> RTree
 shapeD zero    d        = rnode rMore []
 shapeD (suc n) p1       = rnode rP1   []
 shapeD (suc n) p2       = rnode rP2   []
@@ -81,15 +81,15 @@ shapeD (suc n) exp      = rnode rExp  []
 shapeD (suc n) ind      = rnode rInd  []
 shapeD (suc n) lin      = rnode rLin  []
 shapeD (suc n) (pc e)   = rnode rPc   []
-shapeD (suc n) (mp d e) = rnode rMp   (shapeD n d :: shapeD n e :: [])
-shapeD (suc n) (gen d)  = rnode rGen  (shapeD n d :: [])
+shapeD (suc n) (mp d e) = rnode rMp   (shapeD n d ∷ shapeD n e ∷ [])
+shapeD (suc n) (gen d)  = rnode rGen  (shapeD n d ∷ [])
 
 -- and the same for whatever decide returns
 
 shapeOfProof : (Q : Formula) -> Nat -> RTree
 shapeOfProof Q n = go (decide Q)
   where
-    go : Sum (Deriv Q) (LassoCountermodel Q) -> RTree
+    go : ⊢ Q ⊎ LassoCountermodel Q -> RTree
     go (inl d) = shapeD n d
     go (inr c) = rnil
 
@@ -103,14 +103,14 @@ shapeOfProof Q n = go (decide Q)
 taut : Formula
 taut = pv ⇒ pv
 
-⇒Refl_full : Eq (showD 9 (⇒Refl {pv}))
-                  (node rMp taut
+⇒Refl_full : showD 9 (⇒Refl {pv}) ≡
+                  node rMp taut
                     (node rMp ((pv ⇒ taut) ⇒ taut)
                       (node rP2 ((pv ⇒ taut ⇒ pv) ⇒ (pv ⇒ taut) ⇒ taut) []
-                       :: node rP1 (pv ⇒ taut ⇒ pv) []
-                       :: [])
-                     :: node rP1 (pv ⇒ taut) []
-                     :: []))
+                       ∷ node rP1 (pv ⇒ taut ⇒ pv) []
+                       ∷ [])
+                     ∷ node rP1 (pv ⇒ taut) []
+                     ∷ [])
 ⇒Refl_full = refl
 
 -- Double negation elimination.  Checkpoint C2 of FORMALISATION-PLAN.md calls it
@@ -121,33 +121,33 @@ taut = pv ⇒ pv
 -- the identity above, since ⊤ IS  p ⇒ p .
 
 ident : RTree
-ident = rnode rMp (rnode rMp (rnode rP2 [] :: rnode rP1 [] :: [])
-                   :: rnode rP1 [] :: [])
+ident = rnode rMp (rnode rMp (rnode rP2 [] ∷ rnode rP1 [] ∷ [])
+                   ∷ rnode rP1 [] ∷ [])
 
 ¬ElimTree : RTree
 ¬ElimTree = rnode rMp (rnode rP2 []
-                         :: rnode rMp (rnode rP1 [] :: rnode rP3 [] :: [])
-                         :: [])
+                         ∷ rnode rMp (rnode rP1 [] ∷ rnode rP3 [] ∷ [])
+                         ∷ [])
 
-dne_full : Eq (shapeD 20 (dne {pv}))
-              (rnode rMp
-                (rnode rMp (rnode rP2 []
-                            :: rnode rMp (¬ElimTree
-                                          :: rnode rMp (¬ElimTree
-                                                        :: rnode rP1 [] :: [])
-                                          :: [])
-                            :: [])
-                 :: rnode rMp (rnode rP1 [] :: ident :: [])
-                 :: []))
+dne_full : shapeD 20 (dne {pv}) ≡
+           rnode rMp
+             (rnode rMp (rnode rP2 []
+                         ∷ rnode rMp (¬ElimTree
+                                      ∷ rnode rMp (¬ElimTree
+                                                   ∷ rnode rP1 [] ∷ [])
+                                      ∷ [])
+                         ∷ [])
+              ∷ rnode rMp (rnode rP1 [] ∷ ident ∷ [])
+              ∷ [])
 dne_full = refl
 
 -- The sizes of a few more, for scale.  Every one is a theorem of L written by
 -- hand in LTL.Prop and LTL.Temporal, and every one is small.
 
-hand_sizes : Eq (derivSize (⇒Refl {pv})   :: derivSize (dne {pv})
-              :: derivSize (linF {pv})      :: derivSize (□Elim {pv})
-              :: derivSize (□○□ {pv}) :: derivSize (expConv {pv}) :: [])
-                (5 :: 23 :: 41 :: 45 :: 77 :: 931 :: [])
+hand_sizes : derivSize (⇒Refl {pv})   ∷ derivSize (dne {pv})
+              ∷ derivSize (linF {pv})      ∷ derivSize (□Elim {pv})
+              ∷ derivSize (□○□ {pv}) ∷ derivSize (expConv {pv}) ∷ [] ≡
+                5 ∷ 23 ∷ 41 ∷ 45 ∷ 77 ∷ 931 ∷ []
 hand_sizes = refl
 
 ------------------------------------------------------------------------
@@ -158,7 +158,7 @@ hand_sizes = refl
 -- 41178 modus ponens steps, no generalisation and no (Ind) -- against the five
 -- of ⇒Refl just above, for literally the same formula.
 
-taut_count : Eq (countOf taut) (prod 82357 (prod 41178 (prod 0 0)))
+taut_count : countOf taut ≡ (82357 , 41178 , 0 , 0)
 taut_count = refl
 
 -- Its top four levels are modus ponens throughout, with a single (P2) visible:
@@ -167,15 +167,15 @@ taut_count = refl
 -- nothing else (Remark 6.4 of m4.tex).
 
 mm : RTree
-mm = rnode rMp (rnode rMore [] :: rnode rMore [] :: [])
+mm = rnode rMp (rnode rMore [] ∷ rnode rMore [] ∷ [])
 
 mm2 : RTree
-mm2 = rnode rMp (mm :: mm :: [])
+mm2 = rnode rMp (mm ∷ mm ∷ [])
 
-taut_⊤ : Eq (shapeOfProof taut 4)
-              (rnode rMp
-                (rnode rMp (rnode rMp (rnode rP2 [] :: mm :: []) :: mm2 :: [])
-                 :: rnode rMp (mm2 :: mm2 :: []) :: []))
+taut_⊤ : shapeOfProof taut 4 ≡
+              rnode rMp
+                (rnode rMp (rnode rMp (rnode rP2 [] ∷ mm ∷ []) ∷ mm2 ∷ [])
+                 ∷ rnode rMp (mm2 ∷ mm2 ∷ []) ∷ [])
 taut_⊤ = refl
 
 ------------------------------------------------------------------------
@@ -185,7 +185,7 @@ taut_⊤ = refl
 --   valuations.  The certificate has 298321 constructors, of which 296839 --
 --   99.5 % -- are stateComplete alone.
 --
--- stateComplete P : Deriv (beta P (St P)) is Lemma 2.6, proved by splitting the
+-- stateComplete P : ⊢ beta P (St P) is Lemma 2.6, proved by splitting the
 -- disjunction over ALL 2^|Sub P| valuations with (L6) and then dropping the
 -- non-states.  So the certificate is exponential in |Sub Q|, and inherently so:
 -- beta_{St P} being a theorem IS the statement that the state set is complete,
@@ -210,10 +210,10 @@ taut_⊤ = refl
 -- is the propositional bookkeeping of (L2)-(L6) over the valuations, not the
 -- temporal argument, which is what the two zeros record.
 
-axT_count : Eq (countOf axT) (prod 298321 (prod 149160 (prod 0 0)))
+axT_count : countOf axT ≡ (298321 , 149160 , 0 , 0)
 axT_count = refl
 
-axT_stateComplete : Eq (derivSize (stateComplete (¬ axT))) 296839
+axT_stateComplete : derivSize (stateComplete (¬ axT)) ≡ 296839
 axT_stateComplete = refl
 
 -- and the two facts behind the zeros: no state of Sub (¬ axT) contains
@@ -221,10 +221,10 @@ axT_stateComplete = refl
 -- demand-driven set is EMPTY, the elimination never runs, and every state is
 -- disposed of by the third case of provable, the one G30 added.
 
-axT_states : Eq (length (St (¬ axT))) 3
+axT_states : length (St (¬ axT)) ≡ 3
 axT_states = refl
 
-axT_search : Eq (length (Ust (¬ axT))) 0
+axT_search : length (Ust (¬ axT)) ≡ 0
 axT_search = refl
 
 ------------------------------------------------------------------------
@@ -240,23 +240,23 @@ axT_search = refl
 -- So ninety-seven per cent of the proof enumerates valuations and then throws
 -- most of them away.  Only the last one per cent is about the formula.
 
-taut_parts : Eq (length (sub (¬ taut))
-              :: derivSize (allComplete (sub (¬ taut)))
-              :: derivSize (stateComplete (¬ taut))
-              :: derivSize (provable taut refl) :: [])
-                (4 :: 19263 :: 81363 :: 82357 :: [])
+taut_parts : length (sub (¬ taut))
+              ∷ derivSize (allComplete (sub (¬ taut)))
+              ∷ derivSize (stateComplete (¬ taut))
+              ∷ derivSize (provable taut refl) ∷ [] ≡
+                4 ∷ 19263 ∷ 81363 ∷ 82357 ∷ []
 taut_parts = refl
 
 -- The case split alone, as the number of formulas split on grows.  Each extra
 -- formula doubles it, at about 620-650 constructors per valuation: this is
 -- Theta(2^n), and n is |Sub P|, not the number of variables.
 
-split_growth : Eq (derivSize (allComplete [])
-               :: derivSize (allComplete (pv :: []))
-               :: derivSize (allComplete (pv :: qv :: []))
-               :: derivSize (allComplete (pv :: qv :: var 2 :: []))
-               :: derivSize (allComplete (pv :: qv :: var 2 :: var 3 :: [])) :: [])
-                  (21 :: 1261 :: 3747 :: 8797 :: 19263 :: [])
+split_growth : derivSize (allComplete [])
+               ∷ derivSize (allComplete (pv ∷ []))
+               ∷ derivSize (allComplete (pv ∷ qv ∷ []))
+               ∷ derivSize (allComplete (pv ∷ qv ∷ var 2 ∷ []))
+               ∷ derivSize (allComplete (pv ∷ qv ∷ var 2 ∷ var 3 ∷ [])) ∷ [] ≡
+                 21 ∷ 1261 ∷ 3747 ∷ 8797 ∷ 19263 ∷ []
 split_growth = refl
 
 ------------------------------------------------------------------------
@@ -272,7 +272,7 @@ split_growth = refl
 -- everywhere, but never twice with the same conclusion.  Sharing is not where
 -- the compression is.
 
-linesD : {A : Formula} -> Deriv A -> List Formula -> List Formula
+linesD : {A : Formula} -> ⊢ A -> List Formula -> List Formula
 linesD {A} p1       acc = insF A acc
 linesD {A} p2       acc = insF A acc
 linesD {A} p3       acc = insF A acc
@@ -285,12 +285,12 @@ linesD {A} (pc e)   acc = insF A acc
 linesD {A} (mp d e) acc = insF A (linesD d (linesD e acc))
 linesD {A} (gen d)  acc = insF A (linesD d acc)
 
-derivLines : {A : Formula} -> Deriv A -> Nat
+derivLines : {A : Formula} -> ⊢ A -> Nat
 derivLines d = length (linesD d [])
 
-sharing : Eq (derivLines (⇒Refl {pv}) :: derivLines (dne {pv})
-           :: derivLines (□Elim {pv}) :: derivLines (expConv {pv}) :: [])
-             (5 :: 23 :: 45 :: 667 :: [])
+sharing : derivLines (⇒Refl {pv}) ∷ derivLines (dne {pv})
+           ∷ derivLines (□Elim {pv}) ∷ derivLines (expConv {pv}) ∷ [] ≡
+             5 ∷ 23 ∷ 45 ∷ 667 ∷ []
 sharing = refl
 
 ------------------------------------------------------------------------
@@ -325,57 +325,57 @@ sharing = refl
 -- generated list, with stcSt and stStc of LTL.Closure lifted from membership to
 -- derivability.  Recorded here rather than done.
 
-atom_factor : Eq (length (atoms (sub (¬ taut)))
-               :: length (atoms (sub (¬ axT)))
-               :: length (atoms (sub (¬ axK5fwd))) :: [])
-                 (1 :: 2 :: 8 :: [])
+atom_factor : length (atoms (sub (¬ taut)))
+               ∷ length (atoms (sub (¬ axT)))
+               ∷ length (atoms (sub (¬ axK5fwd))) ∷ [] ≡
+                 1 ∷ 2 ∷ 8 ∷ []
 atom_factor = refl
 
 ------------------------------------------------------------------------
 -- (PC) at work, and where it stops.
 --
--- The new constructor takes  Eq (isTaut A) true , and isTaut evaluates the
+-- The new constructor takes  isTaut A ≡ true , and isTaut evaluates the
 -- skeleton of A over its atoms.  So pc fires on a CONCRETE formula by refl, and
 -- on a SCHEMATIC one only through a proof -- which is the price of dropping the
 -- substitution relation.  Ben-Ari's Axiom 0 applies to  A ⇒ A  for schematic A
 -- because it is a substitution instance of  p ⇒ p ; here one has to say why.
 --
 -- Saying why is cheap, and it is a BOOLEAN argument rather than a derivation.
--- For A ⇒ A: whatever the skeleton makes of A, boolImp x x is true.  Two lines,
+-- For A ⇒ A: whatever the skeleton makes of A, x ⇒ᵇ x is true.  Two lines,
 -- and the derivation drops from five constructors to one.
 
-tautSelf : (A : Formula) -> Eq (isTaut (A ⇒ A)) true
+tautSelf : (A : Formula) -> isTaut (A ⇒ A) ≡ true
 tautSelf A =
-  allB_intro (\ a -> valFrom (atomsOf (A ⇒ A)) a (A ⇒ A))
+  allB_intro (λ a -> valFrom (atomsOf (A ⇒ A)) a (A ⇒ A))
              (allVecs (length (atomsOf (A ⇒ A))))
-             (\ {a} m -> tid (valFrom (atomsOf (A ⇒ A)) a A))
+             (λ {a} m -> tid (valFrom (atomsOf (A ⇒ A)) a A))
 
-⇒ReflPc : (A : Formula) -> Deriv (A ⇒ A)
+⇒ReflPc : (A : Formula) -> ⊢ A ⇒ A
 ⇒ReflPc A = pc (tautSelf A)
 
 -- and the same for double negation elimination, twenty-three down to one
 
-tdne : (x : Bool) -> Eq (boolImp (boolNot (boolNot x)) x) true
+tdne : (x : Bool) -> ¬ᵇ ¬ᵇ x ⇒ᵇ x ≡ true
 tdne true  = refl
 tdne false = refl
 
-tautDne : (A : Formula) -> Eq (isTaut (¬ ¬ A ⇒ A)) true
+tautDne : (A : Formula) -> isTaut (¬ ¬ A ⇒ A) ≡ true
 tautDne A =
-  allB_intro (\ a -> valFrom (atomsOf (¬ ¬ A ⇒ A)) a (¬ ¬ A ⇒ A))
+  allB_intro (λ a -> valFrom (atomsOf (¬ ¬ A ⇒ A)) a (¬ ¬ A ⇒ A))
              (allVecs (length (atomsOf (¬ ¬ A ⇒ A))))
-             (\ {a} m -> tdne (valFrom (atomsOf (¬ ¬ A ⇒ A)) a A))
+             (λ {a} m -> tdne (valFrom (atomsOf (¬ ¬ A ⇒ A)) a A))
 
-dnePc : (A : Formula) -> Deriv (¬ ¬ A ⇒ A)
+dnePc : (A : Formula) -> ⊢ ¬ ¬ A ⇒ A
 dnePc A = pc (tautDne A)
 
-pc_sizes : Eq (derivSize (⇒ReflPc pv) :: derivSize (dnePc pv)
-            :: derivSize (⇒Refl {pv}) :: derivSize (dne {pv}) :: [])
-              (1 :: 1 :: 5 :: 23 :: [])
+pc_sizes : derivSize (⇒ReflPc pv) ∷ derivSize (dnePc pv)
+            ∷ derivSize (⇒Refl {pv}) ∷ derivSize (dne {pv}) ∷ [] ≡
+              1 ∷ 1 ∷ 5 ∷ 23 ∷ []
 pc_sizes = refl
 
 -- On a concrete formula it is refl, and the whole proof is one node.
 
-taut_pc : Eq (showD 3 (pc {taut} refl)) (node rPc taut [])
+taut_pc : showD 3 (pc {taut} refl) ≡ node rPc taut []
 taut_pc = refl
 
 ------------------------------------------------------------------------
@@ -388,20 +388,20 @@ taut_pc = refl
 -- have to stay axioms, which is why Ben-Ari's list has five temporal axioms
 -- beside PC and ours has seven beside (P1)-(P3).
 
-lin_not_taut : Eq (isTaut (○ ¬ pv ⇒ ¬ ○ pv)) false
+lin_not_taut : isTaut (○ ¬ pv ⇒ ¬ ○ pv) ≡ false
 lin_not_taut = refl
 
-□Elim_not_taut : Eq (isTaut (□ pv ⇒ pv)) false
+□Elim_not_taut : isTaut (□ pv ⇒ pv) ≡ false
 □Elim_not_taut = refl
 
 -- but the propositional consequences of a temporal axiom are (PC) again:
 -- p ∨ ¬ p, and  (□ p ⇒ p) ⇒ (¬ p ⇒ ¬ □ p) , are both skeleton
 -- tautologies, the second because □ p is simply an atom.
 
-lem_taut : Eq (isTaut (pv ∨ ¬ pv)) true
+lem_taut : isTaut (pv ∨ ¬ pv) ≡ true
 lem_taut = refl
 
-contra_taut : Eq (isTaut ((□ pv ⇒ pv) ⇒ ¬ pv ⇒ ¬ □ pv)) true
+contra_taut : isTaut ((□ pv ⇒ pv) ⇒ ¬ pv ⇒ ¬ □ pv) ≡ true
 contra_taut = refl
 
 ------------------------------------------------------------------------
@@ -423,9 +423,9 @@ contra_taut = refl
 -- proved once and for all by tautAll -- a plain induction on the list, since
 -- the witness disjunct is the truth-table row itself.
 
-c6_split : Eq (derivSize (allComplete   (sub (¬ taut)))
-            :: derivSize (allCompletePC (sub (¬ taut))) :: [])
-              (19263 :: 1 :: [])
+c6_split : derivSize (allComplete   (sub (¬ taut)))
+            ∷ derivSize (allCompletePC (sub (¬ taut))) ∷ [] ≡
+              19263 ∷ 1 ∷ []
 c6_split = refl
 
 -- Then Lemma 2.6, which is G32.  For p ⇒ p there is no box-subformula at all,
@@ -438,20 +438,20 @@ c6_split = refl
 -- one □Elim per eventuality, on top of the single (PC) node.  Nothing in it
 -- depends on |Sub P|, which is the whole point.
 
-c6_lemma : Eq (derivSize (stateComplete   (¬ taut))
-            :: derivSize (stateCompletePC (¬ taut))
-            :: derivSize (stateComplete   (¬ axT))
-            :: derivSize (stateCompletePC (¬ axT)) :: [])
-              (81363 :: 1 :: 296839 :: 47 :: [])
+c6_lemma : derivSize (stateComplete   (¬ taut))
+            ∷ derivSize (stateCompletePC (¬ taut))
+            ∷ derivSize (stateComplete   (¬ axT))
+            ∷ derivSize (stateCompletePC (¬ axT)) ∷ [] ≡
+              81363 ∷ 1 ∷ 296839 ∷ 47 ∷ []
 c6_lemma = refl
 
 -- and hence the certificates themselves, which is C6 proper: what decide
 -- returns for p ⇒ p against what decidePC returns for it.  Same formula, same
 -- branch, same countermodel machinery behind both.
 
-c6 : Eq (countOf taut :: countOfPC taut :: [])
-        (prod 82357 (prod 41178 (prod 0 0))
-      :: prod     1 (prod     0 (prod 0 0)) :: [])
+c6 : countOf taut ∷ countOfPC taut ∷ [] ≡
+     (82357 , 41178 , 0 , 0
+      ∷ (1 , 0 , 0 , 0) ∷ [])
 c6 = refl
 
 -- The second (PC) node, and where the rest of the certificate went.
@@ -468,11 +468,11 @@ c6 = refl
 -- betaElim's 17 + 426 n, and the certificate is now linear in |St P| with a
 -- constant of one.
 
-c6_⋁Elim : Eq (derivSize (betaElim   (¬ taut) (St (¬ taut))
-                                        (provableEach taut refl))
-               :: derivSize (betaElimPC (¬ taut) (St (¬ taut))
-                                        (provableEach taut refl)) :: [])
-                 (993 :: 137 :: [])
+c6_⋁Elim : derivSize (betaElim   (¬ taut) (St (¬ taut))
+                                    (provableEach taut refl))
+           ∷ derivSize (betaElimPC (¬ taut) (St (¬ taut))
+                                   (provableEach taut refl)) ∷ [] ≡
+             993 ∷ 137 ∷ []
 c6_⋁Elim = refl
 
 -- What was left after that is the branches themselves: 67 constructors per
@@ -481,10 +481,10 @@ c6_⋁Elim = refl
 -- conjunct ¬ ¬ Q out of chi_w by (L2), 39, then double negation, 23, then
 -- (L1), 5.
 
-c6_branch : Eq (derivSize (⋀Proj (litList (sub (¬ taut))
-                                             (false :: true :: true :: true :: []))
-                                    memHd)
-             :: derivSize (dne {¬ ¬ taut}) :: []) (39 :: 23 :: [])
+c6_branch : derivSize (⋀Proj (litList (sub (¬ taut))
+                                             (false ∷ true ∷ true ∷ true ∷ []))
+                                    here)
+             ∷ derivSize (dne {¬ ¬ taut}) ∷ [] ≡ 39 ∷ 23 ∷ []
 c6_branch = refl
 
 -- G34 of PHASE10-PLAN.md removes those too, and by the same observation a
@@ -523,30 +523,30 @@ c6_branch = refl
 -- (PC) line, which is what it should always have been.
 
 tautW : Val
-tautW = false :: true :: true :: true :: []
+tautW = false ∷ true ∷ true ∷ true ∷ []
 
-c6_branchPC : Eq (derivSize (provableEach   taut refl tautW
-                                            (memB_sound tautW (St (¬ taut)) refl))
-               :: derivSize (provableEachPC taut refl tautW
-                                            (memB_sound tautW (St (¬ taut)) refl))
-               :: []) (67 :: 1 :: [])
+c6_branchPC : derivSize (provableEach   taut refl tautW
+                                        (memB_sound tautW (St (¬ taut)) refl))
+               ∷ derivSize (provableEachPC taut refl tautW
+                                           (memB_sound tautW (St (¬ taut)) refl))
+               ∷ [] ≡ 67 ∷ 1 ∷ []
 c6_branchPC = refl
 
 -- The progression, on one line: Phase 9's certificate is 139, G34's branches
 -- take it to 7, and dropping the disjunction takes it to 1.
 
-c6_steps : Eq (derivSize (provableStPC taut refl)
-            :: derivSize (provablePC   taut refl)
-            :: derivSize (provableStPC axT  refl)
-            :: derivSize (provablePC   axT  refl)
-            :: derivSize (provableStPC axX  refl)
-            :: derivSize (provablePC   axX  refl) :: [])
-              (7 :: 1 :: 55 :: 47 :: 149 :: 139 :: [])
+c6_steps : derivSize (provableStPC taut refl)
+            ∷ derivSize (provablePC   taut refl)
+            ∷ derivSize (provableStPC axT  refl)
+            ∷ derivSize (provablePC   axT  refl)
+            ∷ derivSize (provableStPC axX  refl)
+            ∷ derivSize (provablePC   axX  refl) ∷ [] ≡
+              7 ∷ 1 ∷ 55 ∷ 47 ∷ 149 ∷ 139 ∷ []
 c6_steps = refl
 
 -- □ p ⇒ p, whole:
 
-c6_axT : Eq (countOfPC axT) (prod 47 (prod 23 (prod 0 0)))
+c6_axT : countOfPC axT ≡ (47 , 23 , 0 , 0)
 c6_axT = refl
 
 -- and the formula the old certificate cannot print at all.  axX is
@@ -556,12 +556,12 @@ c6_axT = refl
 -- eventualities at 46, plus the single line.  The certificate has become the
 -- (S2) chain and nothing else.
 
-c6_axX : Eq (length (sub (¬ axX))
-          :: derivSize (stateCompletePC (¬ axX))
-          :: length (□Args (sub (¬ axX))) :: []) (7 :: 139 :: 3 :: [])
+c6_axX : length (sub (¬ axX))
+          ∷ derivSize (stateCompletePC (¬ axX))
+          ∷ length (□Args (sub (¬ axX))) ∷ [] ≡ 7 ∷ 139 ∷ 3 ∷ []
 c6_axX = refl
 
-c6_axX_count : Eq (countOfPC axX) (prod 139 (prod 69 (prod 0 0)))
+c6_axX_count : countOfPC axX ≡ (139 , 69 , 0 , 0)
 c6_axX_count = refl
 
 -- ONE (PC) node, whatever the formula.  Phase 9 had two -- Lemma 2.6 and (L5)
@@ -571,19 +571,19 @@ c6_axX_count = refl
 -- (benari.pdf, Definition 12.1).  Everything else in a certificate is (T) --
 -- once per eventuality -- and (Exp), (Ind), (Lin) inside extract.
 
-c6_pc : Eq (pcOfPC taut :: pcOfPC axT :: pcOfPC axX :: []) (1 :: 1 :: 1 :: [])
+c6_pc : pcOfPC taut ∷ pcOfPC axT ∷ pcOfPC axX ∷ [] ≡ 1 ∷ 1 ∷ 1 ∷ []
 c6_pc = refl
 
-c6_states : Eq (length (St (¬ taut)) :: length (St (¬ axT))
-             :: length (St (¬ axX)) :: []) (2 :: 3 :: 4 :: [])
+c6_states : length (St (¬ taut)) ∷ length (St (¬ axT))
+             ∷ length (St (¬ axX)) ∷ [] ≡ 2 ∷ 3 ∷ 4 ∷ []
 c6_states = refl
 
 -- Lemma 2.6 for p ⇒ p, printed in full.  Against 81363 constructors, the whole
 -- proof that some state of St (¬ taut) holds is one line carrying the formula
 -- it proves -- which is what a Hilbert proof with Axiom 0 looks like.
 
-c6_printed : Eq (showD 3 (stateCompletePC (¬ taut)))
-                (node rPc (beta (¬ taut) (St (¬ taut))) [])
+c6_printed : showD 3 (stateCompletePC (¬ taut)) ≡
+             node rPc (beta (¬ taut) (St (¬ taut))) []
 c6_printed = refl
 
 -- and the side condition of that line, RUN.  This is the cost section 7 warned
@@ -595,13 +595,13 @@ c6_printed = refl
 -- one, two and three atoms respectively.  It is checked by refl, which is what
 -- the old certificate could not do at |Sub| = 7 in 280 s.
 
-c6_rows : Eq (length (atomsOf (stateFml (¬ taut)))
-           :: length (atomsOf (stateFml (¬ axT)))
-           :: length (atomsOf (stateFml (¬ axX))) :: []) (1 :: 2 :: 3 :: [])
+c6_rows : length (atomsOf (stateFml (¬ taut)))
+           ∷ length (atomsOf (stateFml (¬ axT)))
+           ∷ length (atomsOf (stateFml (¬ axX))) ∷ [] ≡ 1 ∷ 2 ∷ 3 ∷ []
 c6_rows = refl
 
-c6_side : Eq (isTaut (stateFml (¬ taut)) :: isTaut (stateFml (¬ axT))
-           :: isTaut (stateFml (¬ axX)) :: []) (true :: true :: true :: [])
+c6_side : isTaut (stateFml (¬ taut)) ∷ isTaut (stateFml (¬ axT))
+           ∷ isTaut (stateFml (¬ axX)) ∷ [] ≡ true ∷ true ∷ true ∷ []
 c6_side = refl
 
 -- G34's side conditions are the cheap ones, and it is worth saying why.  The
@@ -612,12 +612,12 @@ c6_side = refl
 -- 2^|Sub|, which is the same accounting as G30's: the length of a formula is
 -- free, the number of independent atoms is what costs.
 
-c6_branch_rows : Eq (length (atomsOf ((chi (¬ taut) tautW) ⇒ taut))
-                  :: length (sub ((chi (¬ taut) tautW) ⇒ taut)) :: [])
-                    (1 :: 29 :: [])
+c6_branch_rows : length (atomsOf ((chi (¬ taut) tautW) ⇒ taut))
+                  ∷ length (sub ((chi (¬ taut) tautW) ⇒ taut)) ∷ [] ≡
+                    1 ∷ 29 ∷ []
 c6_branch_rows = refl
 
-c6_branch_side : Eq (isTaut ((chi (¬ taut) tautW) ⇒ taut)) true
+c6_branch_side : isTaut ((chi (¬ taut) tautW) ⇒ taut) ≡ true
 c6_branch_side = refl
 
 -- Where the limit now is.  For the twenty-two-subformula example of section 4g --
@@ -639,20 +639,20 @@ c6_branch_side = refl
 -- made the certificate big and what made the side condition big were the same
 -- disjunction, and removing it shrinks both.
 
-c6_k5 : Eq (derivSize (stateCompletePC (¬ axK5fwd))
-         :: length (□Args (sub (¬ axK5fwd))) :: []) (277 :: 6 :: [])
+c6_k5 : derivSize (stateCompletePC (¬ axK5fwd))
+         ∷ length (□Args (sub (¬ axK5fwd))) ∷ [] ≡ 277 ∷ 6 ∷ []
 c6_k5 = refl
 
-c6_k5_rem : Eq (length (removed (¬ axK5fwd))
-             :: length (StC (¬ axK5fwd))
-             :: length (atomsOf (remFml axK5fwd)) :: []) (9 :: 59 :: 8 :: [])
+c6_k5_rem : length (removed (¬ axK5fwd))
+             ∷ length (StC (¬ axK5fwd))
+             ∷ length (atomsOf (remFml axK5fwd)) ∷ [] ≡ 9 ∷ 59 ∷ 8 ∷ []
 c6_k5_rem = refl
 
 -- and the side condition of the certificate for axK5fwd, RUN.  This is the one
 -- line in the file that takes seconds rather than milliseconds, and it is here
 -- because it is the point: it is the check the old certificate could not make.
 
-c6_k5_side : Eq (isTaut (remFml axK5fwd)) true
+c6_k5_side : isTaut (remFml axK5fwd) ≡ true
 c6_k5_side = refl
 
 ------------------------------------------------------------------------
@@ -692,11 +692,11 @@ c6_k5_side = refl
 -- the figure of merit depends on what a certificate is for, and the note does
 -- not say; what can be done is to measure both, which is what this file is.
 
-c7_chiA : Eq (length (sub (remFml  axK5fwd))
-           :: length (sub (remFmlA axK5fwd)) :: []) (1956 :: 687 :: [])
+c7_chiA : length (sub (remFml  axK5fwd))
+           ∷ length (sub (remFmlA axK5fwd)) ∷ [] ≡ 1956 ∷ 687 ∷ []
 c7_chiA = refl
 
-c7_nodes : Eq (derivSize (provablePCA taut refl)
-            :: derivSize (provablePCA axT  refl)
-            :: derivSize (provablePCA axX  refl) :: []) (1 :: 47 :: 139 :: [])
+c7_nodes : derivSize (provablePCA taut refl)
+            ∷ derivSize (provablePCA axT  refl)
+            ∷ derivSize (provablePCA axX  refl) ∷ [] ≡ 1 ∷ 47 ∷ 139 ∷ []
 c7_nodes = refl

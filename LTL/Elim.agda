@@ -25,7 +25,7 @@
 --
 -- The iteration stops when a round removes nothing, by recursion on a Bar,
 -- instead of being run  length (St P)  times and shown afterwards to have
--- reached a fixed point.  There is no fuel and no Le measure here at all.
+-- reached a fixed point.  There is no fuel and no ≤ measure here at all.
 --
 -- The gfp sets are computed ONCE PER ROUND rather than once per state.  W_j
 -- does not depend on the state being tested, but written as  memB v (gfpW P us
@@ -54,38 +54,37 @@ r1 : Formula -> List Val -> Val -> Bool
 r1 P us v = nullB (succs P us v)
 
 pending : Formula -> Val -> Formula -> Bool
-pending P v A = boolNot (valOf P v (□ A))
+pending P v A = ¬ᵇ valOf P v (□ A)
 
 ------------------------------------------------------------------------
 -- (R2), with the sets hoisted out of the state loop
 
 Ev : Set
-Ev = Prod Formula (List Val)
+Ev = Formula × List Val
 
 evList : Formula -> List Val -> List Ev
-evList P us = map (\ A -> prod A (gfpW P us A)) (□Args (sub P))
+evList P us = map (λ A -> A , gfpW P us A) (□Args (sub P))
 
 evList_mem : (P : Formula) (us : List Val) {A : Formula}
-          -> Mem A (□Args (sub P)) -> Mem (prod A (gfpW P us A)) (evList P us)
-evList_mem P us m = memMap (\ A -> prod A (gfpW P us A)) m
+          -> A ∈ □Args (sub P) -> (A , gfpW P us A) ∈ evList P us
+evList_mem P us m = memMap (λ A -> A , gfpW P us A) m
 
 evList_of : (P : Formula) (us : List Val) {A : Formula} {W : List Val}
-         -> Mem (prod A W) (evList P us)
-         -> Prod (Mem A (□Args (sub P))) (Eq W (gfpW P us A))
+         -> (A , W) ∈ evList P us
+         -> A ∈ □Args (sub P) × W ≡ gfpW P us A
 evList_of P us {A} {W} m =
-  fromSig (map_mem_inv (\ B -> prod B (gfpW P us B)) (□Args (sub P)) m)
+  fromSig (map_mem_inv (λ B -> B , gfpW P us B) (□Args (sub P)) m)
   where
-    fromSig : Sigma Formula
-                (\ B -> Prod (Mem B (□Args (sub P)))
-                             (Eq (prod A W) (prod B (gfpW P us B))))
-           -> Prod (Mem A (□Args (sub P))) (Eq W (gfpW P us A))
-    fromSig (sig B (prod mB e)) =
-      eqSubst (\ C -> Prod (Mem C (□Args (sub P))) (Eq W (gfpW P us C)))
-              (eqSym (eqCong prodFst e))
-              (prod mB (eqCong prodSnd e))
+    fromSig : (Σ[ B ∈ Formula ] B ∈ □Args (sub P) ×
+                                (A , W) ≡ (B , gfpW P us B))
+           -> A ∈ □Args (sub P) × W ≡ gfpW P us A
+    fromSig (B , mB , e) =
+      subst (λ C -> C ∈ □Args (sub P) × W ≡ gfpW P us C)
+            (sym (cong fst e))
+            (mB , cong snd e)
 
 badEv : Formula -> Val -> Ev -> Bool
-badEv P v (prod A W) = boolAnd (pending P v A) (memB v W)
+badEv P v (A , W) = pending P v A ∧ᵇ memB v W
 
 r2 : Formula -> List Ev -> Val -> Bool
 r2 P gs v = anyL (badEv P v) gs
@@ -94,7 +93,7 @@ r2 P gs v = anyL (badEv P v) gs
 -- One round
 
 keep : Formula -> List Val -> List Ev -> Val -> Bool
-keep P us gs v = boolNot (boolOr (r1 P us v) (r2 P gs v))
+keep P us gs v = ¬ᵇ (r1 P us v ∨ᵇ r2 P gs v)
 
 elimRound : Formula -> List Val -> List Val
 elimRound P us = filterL (keep P us (evList P us)) us
@@ -137,7 +136,7 @@ Uinf : Formula -> List Val
 Uinf P = elimGo P (Ust P) (ustInE P) (ustBar P)
 
 removed : Formula -> List Val
-removed P = filterL (\ v -> boolNot (memB v (Uinf P))) (Ust P)
+removed P = filterL (λ v -> ¬ᵇ memB v (Uinf P)) (Ust P)
 
 ------------------------------------------------------------------------
 -- The decision, as a boolean.
@@ -146,7 +145,7 @@ removed P = filterL (\ v -> boolNot (memB v (Uinf P))) (Ust P)
 -- input formula holds?  Run on ¬ P, "no" means P is provable.
 
 satB : Formula -> Bool
-satB P = anyL (\ v -> valOf P v P) (Uinf P)
+satB P = anyL (λ v -> valOf P v P) (Uinf P)
 
 ------------------------------------------------------------------------
 -- Checkpoint C1.
@@ -154,10 +153,10 @@ satB P = anyL (\ v -> valOf P v P) (Uinf P)
 -- ◇ p is satisfiable: all three states survive, and one of them makes
 -- ◇ p true.
 
-Uinf_◇P : Eq (length (Uinf ◇P)) 3
+Uinf_◇P : length (Uinf ◇P) ≡ 3
 Uinf_◇P = refl
 
-satB_◇P : Eq (satB ◇P) true
+satB_◇P : satB ◇P ≡ true
 satB_◇P = refl
 
 -- ¬ benAri is unsatisfiable, so □ p ⇒ ○ □ p is provable.
@@ -169,13 +168,13 @@ satB_◇P = refl
 -- in a single step, where his tableau needed the loop invariant because it
 -- carried  ○ □ p  as an explicit member of the closure.
 
-Uinf_¬BenAri : Eq (length (Uinf ¬BenAri)) 0
+Uinf_¬BenAri : length (Uinf ¬BenAri) ≡ 0
 Uinf_¬BenAri = refl
 
-removed_¬BenAri : Eq (length (removed ¬BenAri)) 1
+removed_¬BenAri : length (removed ¬BenAri) ≡ 1
 removed_¬BenAri = refl
 
-satB_¬BenAri : Eq (satB ¬BenAri) false
+satB_¬BenAri : satB ¬BenAri ≡ false
 satB_¬BenAri = refl
 
 ------------------------------------------------------------------------

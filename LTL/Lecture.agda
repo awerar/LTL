@@ -84,10 +84,10 @@ R = ¬ fab
 -- three F's -- so 32 candidates are built and 17 are states.  The lecture's
 -- table is the closure, which is 8.
 
-lec_sizes : Eq (length (sub R) :: length (atoms (sub R)) :: length (cands R)
-             :: length (StC R) :: length (Ust R) :: length (Uinf R)
-             :: length (□Args (sub R)) :: [])
-               (21 :: 5 :: 32 :: 17 :: 8 :: 8 :: 3 :: [])
+lec_sizes : length (sub R) ∷ length (atoms (sub R)) ∷ length (cands R)
+             ∷ length (StC R) ∷ length (Ust R) ∷ length (Uinf R)
+             ∷ length (□Args (sub R)) ∷ [] ≡
+               21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 8 ∷ 3 ∷ []
 lec_sizes = refl
 
 ------------------------------------------------------------------------
@@ -105,19 +105,19 @@ num v = plus (bitV (valOf R v pa) 8)
 -- s0 = 0, s1 = 1, s2 = 2, s3 = 3, s4 = 5, s5 = 7, s6 = 10, s7 = 11: the same
 -- eight, in the order the closure happens to produce them.
 
-lec_states : Eq (map num (Ust R)) (0 :: 5 :: 1 :: 10 :: 2 :: 11 :: 7 :: 3 :: [])
+lec_states : map num (Ust R) ≡ 0 ∷ 5 ∷ 1 ∷ 10 ∷ 2 ∷ 11 ∷ 7 ∷ 3 ∷ []
 lec_states = refl
 
 -- and the same profile: a and b true at two states each, Fa and Fb at five
 -- each, F(a and b) at none -- which is the lecture's standing constraint,
 -- derived here rather than assumed.
 
-lec_profile : Eq (length (filterL (\ v -> valOf R v pa) (Ust R))
-               :: length (filterL (\ v -> valOf R v pb) (Ust R))
-               :: length (filterL (\ v -> valOf R v (◇ pa)) (Ust R))
-               :: length (filterL (\ v -> valOf R v (◇ pb)) (Ust R))
-               :: length (filterL (\ v -> valOf R v (◇ (pa ∧ pb))) (Ust R))
-               :: []) (2 :: 2 :: 5 :: 5 :: 0 :: [])
+lec_profile : length (filterL (λ v -> valOf R v pa) (Ust R))
+               ∷ length (filterL (λ v -> valOf R v pb) (Ust R))
+               ∷ length (filterL (λ v -> valOf R v (◇ pa)) (Ust R))
+               ∷ length (filterL (λ v -> valOf R v (◇ pb)) (Ust R))
+               ∷ length (filterL (λ v -> valOf R v (◇ (pa ∧ pb))) (Ust R))
+               ∷ [] ≡ 2 ∷ 2 ∷ 5 ∷ 5 ∷ 0 ∷ []
 lec_profile = refl
 
 ------------------------------------------------------------------------
@@ -127,11 +127,11 @@ lec_profile = refl
 -- 24; here they come out in the closure's order, which by lec_states is
 -- s0 s4 s1 s6 s2 s7 s5 s3.
 
-lec_outdeg : Eq (map (\ v -> length (succs R (Ust R) v)) (Ust R))
-                (1 :: 3 :: 2 :: 3 :: 2 :: 5 :: 5 :: 3 :: [])
+lec_outdeg : map (λ v -> length (succs R (Ust R) v)) (Ust R) ≡
+             1 ∷ 3 ∷ 2 ∷ 3 ∷ 2 ∷ 5 ∷ 5 ∷ 3 ∷ []
 lec_outdeg = refl
 
-lec_edges : Eq (length (concatL (map (\ v -> succs R (Ust R) v) (Ust R)))) 24
+lec_edges : length (concatL (map (λ v -> succs R (Ust R) v) (Ust R))) ≡ 24
 lec_edges = refl
 
 ------------------------------------------------------------------------
@@ -140,11 +140,11 @@ lec_edges = refl
 -- lassoOfDecide reads the countermodel as (start , rest , cycle), where rest is
 -- the stem followed by the cycle.  Decoded, the run is  s7 s4 s0 s0 ...
 
-lo : Prod Val (Prod (List Val) (List Val))
+lo : Val × List Val × List Val
 lo = lassoOfDecide fab (decide fab)
 
-lec_notValid : Eq (isProof (decide fab) :: isProof (decideSCC fab) :: [])
-                  (false :: false :: [])
+lec_notValid : isProof (decide fab) ∷ isProof (decideSCC fab) ∷ [] ≡
+               false ∷ false ∷ []
 lec_notValid = refl
 
 -- Start, stem-and-cycle, cycle: s7, then s4 s0 s0, looping at s0.  Stated as
@@ -155,10 +155,8 @@ lec_notValid = refl
 -- example and a benchmark, like LTL.Examples and LTL.Proofs, and the 5 s rule
 -- of FORMALISATION-PLAN.md section 4a does not apply to it.
 
-lec_run : Eq (prod (num (prodFst lo))
-                   (prod (map num (prodFst (prodSnd lo)))
-                         (map num (prodSnd (prodSnd lo)))))
-             (prod 11 (prod (5 :: 0 :: 0 :: []) (0 :: [])))
+lec_run : (num (fst lo) , map num (fst (snd lo)) , map num (snd (snd lo))) ≡
+          (11 , 5 ∷ 0 ∷ 0 ∷ [] , 0 ∷ [])
 lec_run = refl
 
 ------------------------------------------------------------------------
@@ -170,15 +168,15 @@ lec_run = refl
 -- which for  F b  is the lecture's own  F_Fb = { v | v (Fb) = 0 or v (b) = 1 } .
 
 s7 : Val
-s7 = prodFst lo
+s7 = fst lo
 
 s0 : Val
-s0 = nth (prodSnd (prodSnd lo)) zero []
+s0 = nth (snd (snd lo)) zero []
 
 -- s7 is outside F_Fb, so the lecture's loop at s7 cannot be fair;
 -- s0 is inside it, so the loop decide returns can be;
 -- and s7 IS inside F_Fa, exactly as the lecture says, since a holds there.
 
-lec_fair : Eq (evPred R (¬ pb) s7 :: evPred R (¬ pb) s0
-            :: evPred R (¬ pa) s7 :: []) (false :: true :: true :: [])
+lec_fair : evPred R (¬ pb) s7 ∷ evPred R (¬ pb) s0
+            ∷ evPred R (¬ pa) s7 ∷ [] ≡ false ∷ true ∷ true ∷ []
 lec_fair = refl

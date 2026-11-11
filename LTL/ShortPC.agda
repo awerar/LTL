@@ -53,44 +53,44 @@ open import LTL.CompletePC public
 -- LTL.Proofs reports 82357 against 7 only because all three proofs are in the
 -- development at once.
 
-provableEachPC : (Q : Formula) -> Eq (satB (¬ Q)) false
-              -> (w : Val) -> Mem w (St (¬ Q))
-              -> Deriv ((chi (¬ Q) w) ⇒ Q)
+provableEachPC : (Q : Formula) -> satB (¬ Q) ≡ false
+              -> (w : Val) -> w ∈ St (¬ Q)
+              -> ⊢ (chi (¬ Q) w) ⇒ Q
 provableEachPC Q e w m = outer (memB w (Ust R)) refl
   where
     R : Formula
     R = ¬ Q
 
     -- w does not contain R, however that was found out: one pc node
-    fromR : Eq (valOf R w R) false -> Deriv ((chi R w) ⇒ Q)
+    fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
     fromR ev = pc (tautChi Q w (stLen R m) ev)
 
-    outer : (c : Bool) -> Eq (memB w (Ust R)) c -> Deriv ((chi R w) ⇒ Q)
+    outer : (c : Bool) -> memB w (Ust R) ≡ c -> ⊢ (chi R w) ⇒ Q
     outer false ec = fromR (notIn (valOf R w R) refl)
       where
-        notIn : (d : Bool) -> Eq (valOf R w R) d -> Eq (valOf R w R) false
+        notIn : (d : Bool) -> valOf R w R ≡ d -> valOf R w R ≡ false
         notIn false ed = ed
         notIn true  ed =
           emptyElim (memB_false w (Ust R) ec (ustSeed R m ed))
     outer true  ec = go (memB w (Uinf R)) refl
       where
-        mu : Mem w (Ust R)
+        mu : w ∈ Ust R
         mu = memB_sound w (Ust R) ec
 
-        go : (b : Bool) -> Eq (memB w (Uinf R)) b -> Deriv ((chi R w) ⇒ Q)
+        go : (b : Bool) -> memB w (Uinf R) ≡ b -> ⊢ (chi R w) ⇒ Q
         go true  eb =
-          fromR (anyL_false (\ z -> valOf R z R) (Uinf R) e
+          fromR (anyL_false (λ z -> valOf R z R) (Uinf R) e
                             (memB_sound w (Uinf R) eb))
         go false eb =
           mp ¬Elim
-             (extract R (filter_true (\ z -> boolNot (memB z (Uinf R)))
-                                     (Ust R) mu (eqCong boolNot eb)))
+             (extract R (filter_true (λ z -> ¬ᵇ memB z (Uinf R))
+                                     (Ust R) mu (cong ¬ᵇ_ eb)))
 
 -- G34's certificate, kept as a named term so that LTL.Proofs can put the whole
 -- progression side by side.  It is the Phase 9 shape with the branches
 -- shortened; provablePC below changes the SHAPE.
 
-provableStPC : (Q : Formula) -> Eq (satB (¬ Q)) false -> Deriv Q
+provableStPC : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provableStPC Q e =
   mp (betaElimPC (¬ Q) (St (¬ Q)) (provableEachPC Q e))
      (stateCompletePC (¬ Q))
@@ -150,9 +150,9 @@ remFml : Formula -> Formula
 remFml Q = ⇒List (s2List (¬ Q))
                    (⇒List (map (¬Chi (¬ Q)) (removed (¬ Q))) Q)
 
-tautRem : (Q : Formula) -> Eq (satB (¬ Q)) false -> Eq (isTaut (remFml Q)) true
+tautRem : (Q : Formula) -> satB (¬ Q) ≡ false -> isTaut (remFml Q) ≡ true
 tautRem Q e =
-  allB_intro (\ a -> valFrom Ats a (remFml Q))
+  allB_intro (λ a -> valFrom Ats a (remFml Q))
              (allVecs (length Ats)) row
   where
     R : Formula
@@ -161,14 +161,14 @@ tautRem Q e =
     Ats : List Formula
     Ats = atomsOf (remFml Q)
 
-    row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a (remFml Q)) true
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a (remFml Q) ≡ true
     row {a} m =
       □Chain Ats a (□Args (sub R))
                (⇒List (map (¬Chi R) (removed R)) Q) outer
       where
         outer : S2At Ats a (□Args (sub R))
-             -> Eq (valFrom Ats a (⇒List (map (¬Chi R) (removed R)) Q)) true
+             -> valFrom Ats a (⇒List (map (¬Chi R) (removed R)) Q) ≡ true
         outer s2 = ⇒Chain Ats a (map (¬Chi R) (removed R)) Q inner
           where
             bo : □Ok Ats a R
@@ -178,82 +178,82 @@ tautRem Q e =
             w : Val
             w = skelVec Ats a R
 
-            mSt : Mem w (St R)
+            mSt : w ∈ St R
             mSt = memStSkel Ats a R bo
 
-            inner : ({X : Formula} -> Mem X (map (¬Chi R) (removed R))
-                       -> Eq (valFrom Ats a X) true)
-                 -> Eq (valFrom Ats a Q) true
+            inner : ({X : Formula} -> X ∈ map (¬Chi R) (removed R)
+                       -> valFrom Ats a X ≡ true)
+                 -> valFrom Ats a Q ≡ true
             inner prem = onQ (valFrom Ats a Q) refl
               where
-                onQ : (b : Bool) -> Eq (valFrom Ats a Q) b
-                   -> Eq (valFrom Ats a Q) true
+                onQ : (b : Bool) -> valFrom Ats a Q ≡ b
+                   -> valFrom Ats a Q ≡ true
                 onQ true  eq = eq
                 onQ false eq = emptyElim bad
                   where
                     -- so the row makes ¬ Q true, and w contains ¬ Q
-                    ev : Eq (valOf R w R) true
-                    ev = eqTrans (valOfMk R Ats a R (sub_self R)) (eqCong boolNot eq)
+                    ev : valOf R w R ≡ true
+                    ev = trans (valOfMk R Ats a R (sub_self R)) (cong ¬ᵇ_ eq)
 
                     -- w joined the search, by ustSeed
-                    mUst : Mem w (Ust R)
+                    mUst : w ∈ Ust R
                     mUst = ustSeed R mSt ev
 
                     -- and did not survive it, because satB is false
-                    notUinf : Eq (memB w (Uinf R)) false
+                    notUinf : memB w (Uinf R) ≡ false
                     notUinf = onU (memB w (Uinf R)) refl
                       where
-                        onU : (b : Bool) -> Eq (memB w (Uinf R)) b
-                           -> Eq (memB w (Uinf R)) false
+                        onU : (b : Bool) -> memB w (Uinf R) ≡ b
+                           -> memB w (Uinf R) ≡ false
                         onU false eu = eu
                         onU true  eu =
-                          emptyElim (tfAbs (eqTrans (eqSym ev)
-                            (anyL_false (\ z -> valOf R z R) (Uinf R) e
+                          emptyElim (tfAbs (trans (sym ev)
+                            (anyL_false (λ z -> valOf R z R) (Uinf R) e
                                         (memB_sound w (Uinf R) eu))))
 
-                    mRem : Mem w (removed R)
-                    mRem = filter_true (\ z -> boolNot (memB z (Uinf R))) (Ust R)
-                                       mUst (eqCong boolNot notUinf)
+                    mRem : w ∈ removed R
+                    mRem = filter_true (λ z -> ¬ᵇ memB z (Uinf R)) (Ust R)
+                                       mUst (cong ¬ᵇ_ notUinf)
 
                     -- but then its own premise denies the chi of the row that
                     -- built it, which chiRowTrue affirms
                     bad : Empty
                     bad =
-                      tfAbs (eqTrans (eqSym (chiRowTrue Ats a (sub R)))
-                                     (notTrue (valFrom Ats a (chi R w))
-                                              (prem (memMap (¬Chi R) mRem))))
+                      tfAbs (trans (sym (chiRowTrue Ats a (sub R)))
+                                   (notTrue (valFrom Ats a (chi R w))
+                                            (prem (memMap (¬Chi R) mRem))))
 
 -- one modus ponens per removed state, against Theorem 4.1.  Same shape as
 -- mpChain and mpVals, and for the same reason: the instances are consumed as
 -- they are met, so there is no propositional glue.
 
 mpRem : (P : Formula) (ws : List Val) {C : Formula}
-     -> ((w : Val) -> Mem w ws -> Deriv (¬ (chi P w)))
-     -> Deriv (⇒List (map (¬Chi P) ws) C) -> Deriv C
-mpRem P []        h d = d
-mpRem P (w :: ws) h d = mpRem P ws (\ z m -> h z (memTl m)) (mp d (h w memHd))
+     -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
+     -> ⊢ ⇒List (map (¬Chi P) ws) C -> ⊢ C
+mpRem P []       h d = d
+mpRem P (w ∷ ws) h d = mpRem P ws (λ z m -> h z (there m)) (mp d (h w here))
 
 ------------------------------------------------------------------------
 -- Theorem 6.1 again
 
-provablePC : (Q : Formula) -> Eq (satB (¬ Q)) false -> Deriv Q
+provablePC : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provablePC Q e =
-  mpRem (¬ Q) (removed (¬ Q)) (\ w m -> extract (¬ Q) m)
+  mpRem (¬ Q) (removed (¬ Q)) (λ w m -> extract (¬ Q) m)
         (mpChain (□Args (sub (¬ Q))) (pc (tautRem Q e)))
 
-decidePC : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
+decidePC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 decidePC Q = onSat (satB (¬ Q)) refl
   where
-    fromSig : Sigma Val (\ v -> Prod (Mem v (Uinf (¬ Q)))
-                                     (Eq (valOf (¬ Q) v (¬ Q)) true))
-           -> Sum (Deriv Q) (LassoCountermodel Q)
-    fromSig (sig v0 (prod m ev)) = inr (buildCM Q v0 m ev)
+    fromSig : (Σ[ v ∈ Val ] v ∈ Uinf (¬ Q) ×
+                                valOf (¬ Q) v (¬ Q) ≡ true)
+           -> ⊢ Q ⊎ LassoCountermodel Q
+    fromSig (v0 , m , ev) = inr (buildCM Q v0 m ev)
 
-    onSat : (x : Bool) -> Eq (satB (¬ Q)) x
-         -> Sum (Deriv Q) (LassoCountermodel Q)
+    onSat : (x : Bool) -> satB (¬ Q) ≡ x
+         -> ⊢ Q ⊎ LassoCountermodel Q
     onSat false e = inl (provablePC Q e)
     onSat true  e =
-      fromSig (anyL_true (\ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
+      fromSig (anyL_true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Counting it.
@@ -262,7 +262,7 @@ decidePC Q = onSat (satB (¬ Q)) refl
 -- generalisations, (Ind) -- so that the two are comparable line by line, and
 -- one more that only the new system can have: how many nodes are (PC).
 
-derivPc : {A : Formula} -> Deriv A -> Nat
+derivPc : {A : Formula} -> ⊢ A -> Nat
 derivPc p1       = 0
 derivPc p2       = 0
 derivPc p3       = 0
@@ -275,19 +275,19 @@ derivPc (pc e)   = 1
 derivPc (mp d e) = plus (derivPc d) (derivPc e)
 derivPc (gen d)  = derivPc d
 
-countOfPC : (Q : Formula) -> Prod Nat (Prod Nat (Prod Nat Nat))
+countOfPC : (Q : Formula) -> Nat × Nat × Nat × Nat
 countOfPC Q = onDec (decidePC Q)
   where
-    onDec : Sum (Deriv Q) (LassoCountermodel Q)
-         -> Prod Nat (Prod Nat (Prod Nat Nat))
+    onDec : ⊢ Q ⊎ LassoCountermodel Q
+         -> Nat × Nat × Nat × Nat
     onDec (inl d) =
-      prod (derivSize d) (prod (derivMP d) (prod (derivGen d) (derivInd d)))
-    onDec (inr c) = prod zero (prod zero (prod zero zero))
+      derivSize d , derivMP d , derivGen d , derivInd d
+    onDec (inr c) = zero , zero , zero , zero
 
 pcOfPC : (Q : Formula) -> Nat
 pcOfPC Q = onDec (decidePC Q)
   where
-    onDec : Sum (Deriv Q) (LassoCountermodel Q) -> Nat
+    onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat
     onDec (inl d) = derivPc d
     onDec (inr c) = zero
 
@@ -297,13 +297,13 @@ pcOfPC Q = onDec (decidePC Q)
 -- The two formulas of C4 are still decided in the affirmative, and by the same
 -- boolean: what changed is the size of the answer, not the answer.
 
-decidePC_benAri : Eq (isProof (decidePC benAri)) true
+decidePC_benAri : isProof (decidePC benAri) ≡ true
 decidePC_benAri = refl
 
-decidePC_bnb : Eq (isProof (decidePC bnb)) true
+decidePC_bnb : isProof (decidePC bnb) ≡ true
 decidePC_bnb = refl
 
-decidePC_◇P : Eq (isProof (decidePC ◇P)) false
+decidePC_◇P : isProof (decidePC ◇P) ≡ false
 decidePC_◇P = refl
 
 ------------------------------------------------------------------------
@@ -339,19 +339,19 @@ chiA P v = ⋀ (litList (atoms (sub P)) (atomBits P v))
 
 -- a row making chiA true makes chi true, for a state v
 
-chiABridge : (P : Formula) (v : Val) -> Eq (isState P v) true
-          -> Eq (length v) (length (sub P))
+chiABridge : (P : Formula) (v : Val) -> isState P v ≡ true
+          -> length v ≡ length (sub P)
           -> (Ats : List Formula) (a : Val)
-          -> Eq (valFrom Ats a (chiA P v)) true
-          -> Eq (valFrom Ats a (chi P v)) true
+          -> valFrom Ats a (chiA P v) ≡ true
+          -> valFrom Ats a (chi P v) ≡ true
 chiABridge P v st len Ats a ec =
-  eqSubst (\ u -> Eq (valFrom Ats a (chi P u)) true) (mkV_id P v st len) full
+  subst (λ u -> valFrom Ats a (chi P u) ≡ true) (mkV_id P v st len) full
   where
-    ok : Eq (allOk P v (sub P)) true
+    ok : allOk P v (sub P) ≡ true
     ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
-    atomAg : (X : Formula) -> Mem X (sub P) -> Eq (isAtomB X) true
-          -> Eq (valFrom Ats a X) (valOf P v X)
+    atomAg : (X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
+          -> valFrom Ats a X ≡ valOf P v X
     atomAg X mX aX =
       litSound Ats a X (valOf P v X)
                (⋀ProjTrue Ats a (litList (atoms (sub P)) (atomBits P v))
@@ -360,18 +360,18 @@ chiABridge P v st len Ats a ec =
                                                     (atomMem (sub P) mX aX)))
                              ec)
 
-    full : Eq (valFrom Ats a (chi P (mkV P (atomBits P v)))) true
+    full : valFrom Ats a (chi P (mkV P (atomBits P v))) ≡ true
     full =
       ⋀True Ats a (litList (sub P) (mkV P (atomBits P v)))
                (litMapOk Ats a (valFrom (atoms (sub P)) (atomBits P v)) (sub P)
-                         (\ A mA -> eqTrans (skelAgree Ats a P v ok atomAg A mA)
-                                            (eqSym (valFromEq P v ok A mA))))
+                         (λ A mA -> trans (skelAgree Ats a P v ok atomAg A mA)
+                                          (sym (valFromEq P v ok A mA))))
 
-tautBridge : (P : Formula) (v : Val) -> Eq (isState P v) true
-          -> Eq (length v) (length (sub P))
-          -> Eq (isTaut (¬ (chi P v) ⇒ (¬ChiA P v))) true
+tautBridge : (P : Formula) (v : Val) -> isState P v ≡ true
+          -> length v ≡ length (sub P)
+          -> isTaut (¬ (chi P v) ⇒ (¬ChiA P v)) ≡ true
 tautBridge P v st len =
-  allB_intro (\ a -> valFrom Ats a F) (allVecs (length Ats)) row
+  allB_intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
   where
     F : Formula
     F = ¬ (chi P v) ⇒ (¬ChiA P v)
@@ -379,7 +379,7 @@ tautBridge P v st len =
     Ats : List Formula
     Ats = atomsOf F
 
-    row : {a : Val} -> Mem a (allVecs (length Ats)) -> Eq (valFrom Ats a F) true
+    row : {a : Val} -> a ∈ allVecs (length Ats) -> valFrom Ats a F ≡ true
     row {a} m = boolContra (valFrom Ats a (chi P v)) (valFrom Ats a (chiA P v))
                            (chiABridge P v st len Ats a)
 
@@ -390,10 +390,10 @@ remFmlA : Formula -> Formula
 remFmlA Q = ⇒List (s2List (¬ Q))
                     (⇒List (map (¬ChiA (¬ Q)) (removed (¬ Q))) Q)
 
-tautRemA : (Q : Formula) -> Eq (satB (¬ Q)) false
-        -> Eq (isTaut (remFmlA Q)) true
+tautRemA : (Q : Formula) -> satB (¬ Q) ≡ false
+        -> isTaut (remFmlA Q) ≡ true
 tautRemA Q e =
-  allB_intro (\ a -> valFrom Ats a (remFmlA Q)) (allVecs (length Ats)) row
+  allB_intro (λ a -> valFrom Ats a (remFmlA Q)) (allVecs (length Ats)) row
   where
     R : Formula
     R = ¬ Q
@@ -401,14 +401,14 @@ tautRemA Q e =
     Ats : List Formula
     Ats = atomsOf (remFmlA Q)
 
-    row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a (remFmlA Q)) true
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a (remFmlA Q) ≡ true
     row {a} m =
       □Chain Ats a (□Args (sub R))
                (⇒List (map (¬ChiA R) (removed R)) Q) outer
       where
         outer : S2At Ats a (□Args (sub R))
-             -> Eq (valFrom Ats a (⇒List (map (¬ChiA R) (removed R)) Q)) true
+             -> valFrom Ats a (⇒List (map (¬ChiA R) (removed R)) Q) ≡ true
         outer s2 = ⇒Chain Ats a (map (¬ChiA R) (removed R)) Q inner
           where
             bo : □Ok Ats a R
@@ -417,61 +417,61 @@ tautRemA Q e =
             w : Val
             w = skelVec Ats a R
 
-            mSt : Mem w (St R)
+            mSt : w ∈ St R
             mSt = memStSkel Ats a R bo
 
             -- the row satisfies the chiA of the state it induces
-            chiARow : Eq (valFrom Ats a (chiA R w)) true
+            chiARow : valFrom Ats a (chiA R w) ≡ true
             chiARow =
               ⋀True Ats a (litList (atoms (sub R)) (atomBits R w))
                        (litMapOk Ats a (valOf R w) (atoms (sub R))
-                                 (\ X mX ->
-                                    eqSym (valOfMk R Ats a X (atomsIn (sub R) mX))))
+                                 (λ X mX ->
+                                    sym (valOfMk R Ats a X (atomsIn (sub R) mX))))
 
-            inner : ({X : Formula} -> Mem X (map (¬ChiA R) (removed R))
-                       -> Eq (valFrom Ats a X) true)
-                 -> Eq (valFrom Ats a Q) true
+            inner : ({X : Formula} -> X ∈ map (¬ChiA R) (removed R)
+                       -> valFrom Ats a X ≡ true)
+                 -> valFrom Ats a Q ≡ true
             inner prem = onQ (valFrom Ats a Q) refl
               where
-                onQ : (b : Bool) -> Eq (valFrom Ats a Q) b
-                   -> Eq (valFrom Ats a Q) true
+                onQ : (b : Bool) -> valFrom Ats a Q ≡ b
+                   -> valFrom Ats a Q ≡ true
                 onQ true  eq = eq
                 onQ false eq = emptyElim bad
                   where
-                    ev : Eq (valOf R w R) true
-                    ev = eqTrans (valOfMk R Ats a R (sub_self R)) (eqCong boolNot eq)
+                    ev : valOf R w R ≡ true
+                    ev = trans (valOfMk R Ats a R (sub_self R)) (cong ¬ᵇ_ eq)
 
-                    mUst : Mem w (Ust R)
+                    mUst : w ∈ Ust R
                     mUst = ustSeed R mSt ev
 
-                    notUinf : Eq (memB w (Uinf R)) false
+                    notUinf : memB w (Uinf R) ≡ false
                     notUinf = onU (memB w (Uinf R)) refl
                       where
-                        onU : (b : Bool) -> Eq (memB w (Uinf R)) b
-                           -> Eq (memB w (Uinf R)) false
+                        onU : (b : Bool) -> memB w (Uinf R) ≡ b
+                           -> memB w (Uinf R) ≡ false
                         onU false eu = eu
                         onU true  eu =
-                          emptyElim (tfAbs (eqTrans (eqSym ev)
-                            (anyL_false (\ z -> valOf R z R) (Uinf R) e
+                          emptyElim (tfAbs (trans (sym ev)
+                            (anyL_false (λ z -> valOf R z R) (Uinf R) e
                                         (memB_sound w (Uinf R) eu))))
 
-                    mRem : Mem w (removed R)
-                    mRem = filter_true (\ z -> boolNot (memB z (Uinf R))) (Ust R)
-                                       mUst (eqCong boolNot notUinf)
+                    mRem : w ∈ removed R
+                    mRem = filter_true (λ z -> ¬ᵇ memB z (Uinf R)) (Ust R)
+                                       mUst (cong ¬ᵇ_ notUinf)
 
                     bad : Empty
                     bad =
-                      tfAbs (eqTrans (eqSym chiARow)
-                                     (notTrue (valFrom Ats a (chiA R w))
-                                              (prem (memMap (¬ChiA R) mRem))))
+                      tfAbs (trans (sym chiARow)
+                                   (notTrue (valFrom Ats a (chiA R w))
+                                            (prem (memMap (¬ChiA R) mRem))))
 
 mpRemA : (P : Formula) (ws : List Val) {C : Formula}
-      -> ((w : Val) -> Mem w ws -> Deriv (¬ChiA P w))
-      -> Deriv (⇒List (map (¬ChiA P) ws) C) -> Deriv C
-mpRemA P []        h d = d
-mpRemA P (w :: ws) h d = mpRemA P ws (\ z m -> h z (memTl m)) (mp d (h w memHd))
+      -> ((w : Val) -> w ∈ ws -> ⊢ ¬ChiA P w)
+      -> ⊢ ⇒List (map (¬ChiA P) ws) C -> ⊢ C
+mpRemA P []       h d = d
+mpRemA P (w ∷ ws) h d = mpRemA P ws (λ z m -> h z (there m)) (mp d (h w here))
 
-provablePCA : (Q : Formula) -> Eq (satB (¬ Q)) false -> Deriv Q
+provablePCA : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provablePCA Q e =
   mpRemA (¬ Q) (removed (¬ Q)) each
          (mpChain (□Args (sub (¬ Q))) (pc (tautRemA Q e)))
@@ -479,9 +479,9 @@ provablePCA Q e =
     R : Formula
     R = ¬ Q
 
-    each : (w : Val) -> Mem w (removed R) -> Deriv (¬ChiA R w)
+    each : (w : Val) -> w ∈ removed R -> ⊢ ¬ChiA R w
     each w m = mp (pc (tautBridge R w (stIsState R mSt) (stLen R mSt)))
                   (extract R m)
       where
-        mSt : Mem w (St R)
-        mSt = ustSt R (filter_sub (\ z -> boolNot (memB z (Uinf R))) (Ust R) m)
+        mSt : w ∈ St R
+        mSt = ustSt R (filter_sub (λ z -> ¬ᵇ memB z (Uinf R)) (Ust R) m)

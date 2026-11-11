@@ -16,40 +16,40 @@ open import LTL.PropList public
 ------------------------------------------------------------------------
 -- Projecting the two biconditional axioms
 
-linF : {A : Formula} -> Deriv (○ ¬ A ⇒ ¬ ○ A)
+linF : {A : Formula} -> ⊢ ○ ¬ A ⇒ ¬ ○ A
 linF = mp ∧Fst lin
 
-linB : {A : Formula} -> Deriv (¬ ○ A ⇒ ○ ¬ A)
+linB : {A : Formula} -> ⊢ ¬ ○ A ⇒ ○ ¬ A
 linB = mp ∧Snd lin
 
-□Elim : {A : Formula} -> Deriv (□ A ⇒ A)
+□Elim : {A : Formula} -> ⊢ □ A ⇒ A
 □Elim = ⇒Trans exp ∧Fst
 
-□○ : {A : Formula} -> Deriv (□ A ⇒ ○ A)
+□○ : {A : Formula} -> ⊢ □ A ⇒ ○ A
 □○ = ⇒Trans exp (⇒Trans ∧Snd ∧Fst)
 
-□○□ : {A : Formula} -> Deriv (□ A ⇒ ○ □ A)
+□○□ : {A : Formula} -> ⊢ □ A ⇒ ○ □ A
 □○□ = ⇒Trans exp (⇒Trans ∧Snd ∧Snd)
 
 ------------------------------------------------------------------------
 -- (D1), (D2), (D3)
 
-○Gen : {A : Formula} -> Deriv A -> Deriv (○ A)
+○Gen : {A : Formula} -> ⊢ A -> ⊢ ○ A
 ○Gen d = mp □○ (gen d)
 
-○Mono : {A B : Formula} -> Deriv (A ⇒ B) -> Deriv (○ A ⇒ ○ B)
+○Mono : {A B : Formula} -> ⊢ A ⇒ B -> ⊢ ○ A ⇒ ○ B
 ○Mono d = mp k○ (○Gen d)
 
-□Mono : {A B : Formula} -> Deriv (A ⇒ B) -> Deriv (□ A ⇒ □ B)
+□Mono : {A B : Formula} -> ⊢ A ⇒ B -> ⊢ □ A ⇒ □ B
 □Mono d = mp k□ (gen d)
 
 ------------------------------------------------------------------------
 -- ○ and ⊥
 
-○⊤ : Deriv (○ ⊤)
+○⊤ : ⊢ ○ ⊤
 ○⊤ = ○Gen deriv⊤
 
-○⊥ : Deriv (○ ⊥ ⇒ ⊥)
+○⊥ : ⊢ ○ ⊥ ⇒ ⊥
 ○⊥ = mpU (mpU (liftP (exf {○ ⊤} {⊥})) (liftP ○⊤)) linF
 
 ------------------------------------------------------------------------
@@ -59,18 +59,18 @@ linB = mp ∧Snd lin
 -- the backward half of (Lin); the second is a case analysis on ○ A.
 
 ○∨1 : {A B : Formula}
-       -> Deriv (○ (A ∨ B) ⇒ ○ A ∨ ○ B)
+       -> ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
 ○∨1 = ⇒TransU (liftP linB) k○
 
 ○∨2 : {A B : Formula}
-       -> Deriv (○ A ∨ ○ B ⇒ ○ (A ∨ B))
+       -> ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
 ○∨2 = caseU (liftP (○Mono exf)) (⇒TransU identP (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
 -- Monotonicity of ∨ in its second argument
 
 ∨MonoR : {X Y Z : Formula}
-        -> Deriv (X ⇒ Y) -> Deriv (Z ∨ X ⇒ Z ∨ Y)
+        -> ⊢ X ⇒ Y -> ⊢ Z ∨ X ⇒ Z ∨ Y
 ∨MonoR d = mp p2 (liftP d)
 
 ------------------------------------------------------------------------
@@ -81,14 +81,14 @@ linB = mp ∧Snd lin
 -- back to |- chi v ⇒ ○ (beta (succs v)).
 
 ○⋁L1 : (As : List Formula)
-         -> Deriv (○ ⋁ As ⇒ ⋁ (map ○_ As))
-○⋁L1 []        = ○⊥
-○⋁L1 (A :: As) = ⇒Trans ○∨1 (∨MonoR (○⋁L1 As))
+         -> ⊢ ○ ⋁ As ⇒ ⋁ (map ○_ As)
+○⋁L1 []       = ○⊥
+○⋁L1 (A ∷ As) = ⇒Trans ○∨1 (∨MonoR (○⋁L1 As))
 
 ○⋁L2 : (As : List Formula)
-         -> Deriv (⋁ (map ○_ As) ⇒ ○ ⋁ As)
-○⋁L2 []        = exFalso
-○⋁L2 (A :: As) = ⇒Trans (∨MonoR (○⋁L2 As)) ○∨2
+         -> ⊢ ⋁ (map ○_ As) ⇒ ○ ⋁ As
+○⋁L2 []       = exFalso
+○⋁L2 (A ∷ As) = ⇒Trans (∨MonoR (○⋁L2 As)) ○∨2
 
 ------------------------------------------------------------------------
 -- (D4) for conjunction, the direction (D6) needs.
@@ -98,7 +98,7 @@ linB = mp ∧Snd lin
 -- ○ X together with ○ A gives ○ ¬ B, hence ¬ ○ B.
 
 ○∧2 : {A B : Formula}
-       -> Deriv (○ A ∧ ○ B ⇒ ○ (A ∧ B))
+       -> ⊢ ○ A ∧ ○ B ⇒ ○ (A ∧ B)
 ○∧2 {A} {B} = ⇒Trans (¬IntroU hB hNB) linB
   where
     P : Formula
@@ -107,24 +107,24 @@ linB = mp ∧Snd lin
     X : Formula
     X = A ⇒ ¬ B
 
-    hB : Deriv (P ⇒ ○ X ⇒ ○ B)
+    hB : ⊢ P ⇒ ○ X ⇒ ○ B
     hB = ⇒Trans ∧Snd p1
 
-    hNB : Deriv (P ⇒ ○ X ⇒ ¬ ○ B)
+    hNB : ⊢ P ⇒ ○ X ⇒ ¬ ○ B
     hNB = ⇒TransU (mpU2 (liftP k○) (⇒Trans ∧Fst p1)) (liftP linF)
 
 ------------------------------------------------------------------------
 -- G15 : (D5) and (D6)
 
 indRule : {A : Formula}
-       -> Deriv (A ⇒ ○ A) -> Deriv (A ⇒ □ A)
+       -> ⊢ A ⇒ ○ A -> ⊢ A ⇒ □ A
 indRule d = mp ind (gen d)
 
 expConv : {A : Formula}
-       -> Deriv (A ∧ ○ □ A ⇒ □ A)
+       -> ⊢ A ∧ ○ □ A ⇒ □ A
 expConv {A} = ⇒Trans (indRule cTo○C) (□Mono ∧Fst)
   where
-    cTo○C : Deriv (A ∧ ○ □ A ⇒ ○ (A ∧ ○ □ A))
+    cTo○C : ⊢ A ∧ ○ □ A ⇒ ○ (A ∧ ○ □ A)
     cTo○C = ⇒Trans (∧Pair (⇒Trans ∧Snd (○Mono □Elim))
                                 (⇒Trans ∧Snd (○Mono □○□)))
                        ○∧2
@@ -135,5 +135,5 @@ expConv {A} = ⇒Trans (indRule cTo○C) (□Mono ∧Fst)
 -- A valuation with  □ A  in v but  A  not in v  is refuted by (Exp); this
 -- completes the list of shapes begun in LTL.Prop.
 
-□Case : {A C : Formula} -> Deriv (□ A ⇒ ¬ A ⇒ C)
+□Case : {A C : Formula} -> ⊢ □ A ⇒ ¬ A ⇒ C
 □Case = ⇒Trans □Elim exf

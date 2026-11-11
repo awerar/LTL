@@ -10,7 +10,7 @@
 -- first.  Here there is no such split: walkPersist does both at once.  A valid
 -- position (s , rest) carries a walk from s to b, the cycle's end, whatever
 -- part of the run s sits on; applying persistence to that walk gives either a
--- fulfilling state among s :: rest -- which is the stem case, and also the
+-- fulfilling state among s ∷ rest -- which is the stem case, and also the
 -- "fulfilled before the cycle closes" half of the cycle case -- or the
 -- eventuality still pending at b, where the cycle-fulfilment property of
 -- Proposition 5.3 finishes it.
@@ -28,62 +28,62 @@ open import LTL.Run public
 -- b is a state of the cycle, so the two readings of "on the cycle" agree
 
 cycMem : {b z : Val} {c0 : Val} {c1 : List Val}
-      -> Mem b (c0 :: c1) -> Mem z (b :: c0 :: c1) -> Mem z (c0 :: c1)
-cycMem mb memHd     = mb
-cycMem mb (memTl m) = m
+      -> b ∈ c0 ∷ c1 -> z ∈ b ∷ c0 ∷ c1 -> z ∈ c0 ∷ c1
+cycMem mb here      = mb
+cycMem mb (there m) = m
 
 ------------------------------------------------------------------------
 -- Lemma 5.4
 
 globalFulfil : (P : Formula) (b c0 : Val) (c1 : List Val)
-            -> Mem b (c0 :: c1)
-            -> ((s : Val) -> Mem s (b :: c0 :: c1)
-                  -> (A : Formula) -> Mem A (□Args (sub P))
-                  -> Eq (valOf P s (□ A)) false -> Fulfil P A b (c0 :: c1))
+            -> b ∈ c0 ∷ c1
+            -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
+                  -> (A : Formula) -> A ∈ □Args (sub P)
+                  -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
             -> {pos : Pos} -> ValidPos P b pos
-            -> (A : Formula) -> Mem A (□Args (sub P))
-            -> Eq (valOf P (posState pos) (□ A)) false
-            -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 pos))
-                                      (Eq (valOf P (posState q) A) false))
+            -> (A : Formula) -> A ∈ □Args (sub P)
+            -> valOf P (posState pos) (□ A) ≡ false
+            -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 pos ×
+                                valOf P (posState q) A ≡ false
 globalFulfil P b c0 c1 mbc cyc (vpos s rest ms wk) A mA pend =
   sumElim onStem onCycle
           (walkPersist P (Uinf P) A (□Args_mem (sub P) mA) wk pend)
   where
-    place : (q : Pos) -> Mem q (orbitOf c0 c1 (prod s rest)) -> {z : Val}
-         -> Eq (posState q) z -> Eq (valOf P z A) false
-         -> Sigma Pos (\ q' -> Prod (Mem q' (orbitOf c0 c1 (prod s rest)))
-                                    (Eq (valOf P (posState q') A) false))
+    place : (q : Pos) -> q ∈ orbitOf c0 c1 (s , rest) -> {z : Val}
+         -> posState q ≡ z -> valOf P z A ≡ false
+         -> Σ[ q' ∈ Pos ] q' ∈ orbitOf c0 c1 (s , rest) ×
+                               valOf P (posState q') A ≡ false
     place q mq eq ez =
-      sig q (prod mq (eqSubst (\ y -> Eq (valOf P y A) false) (eqSym eq) ez))
+      q , mq , subst (λ y -> valOf P y A ≡ false) (sym eq) ez
 
     -- fulfilled before b is reached
     onStem : Fulfil P A s rest
-          -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (prod s rest)))
-                                    (Eq (valOf P (posState q) A) false))
+          -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
+                              valOf P (posState q) A ≡ false
     onStem (ful z mz ez) = fromPL (posList_mem s rest mz)
       where
-        fromPL : Sigma Pos (\ q -> Prod (Mem q (posList s rest)) (Eq (posState q) z))
-              -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (prod s rest)))
-                                        (Eq (valOf P (posState q) A) false))
-        fromPL (sig q (prod mq eq)) =
+        fromPL : (Σ[ q ∈ Pos ] q ∈ posList s rest × posState q ≡ z)
+              -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
+                                  valOf P (posState q) A ≡ false
+        fromPL (q , mq , eq) =
           place q (orbitStem c0 c1 s rest q mq) eq ez
 
     -- still pending at b: Proposition 5.3 fulfils it on the cycle
-    onCycle : Eq (valOf P b (□ A)) false
-           -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (prod s rest)))
-                                     (Eq (valOf P (posState q) A) false))
-    onCycle pb = fromFul (cyc b memHd A mA pb)
+    onCycle : valOf P b (□ A) ≡ false
+           -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
+                               valOf P (posState q) A ≡ false
+    onCycle pb = fromFul (cyc b here A mA pb)
       where
-        fromFul : Fulfil P A b (c0 :: c1)
-               -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (prod s rest)))
-                                         (Eq (valOf P (posState q) A) false))
+        fromFul : Fulfil P A b (c0 ∷ c1)
+               -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
+                                   valOf P (posState q) A ≡ false
         fromFul (ful z mz ez) = fromPL (posList_mem c0 c1 (cycMem mbc mz))
           where
-            fromPL : Sigma Pos (\ q -> Prod (Mem q (posList c0 c1))
-                                            (Eq (posState q) z))
-                  -> Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (prod s rest)))
-                                            (Eq (valOf P (posState q) A) false))
-            fromPL (sig q (prod mq eq)) =
+            fromPL : (Σ[ q ∈ Pos ] q ∈ posList c0 c1 ×
+                                       posState q ≡ z)
+                  -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
+                                      valOf P (posState q) A ≡ false
+            fromPL (q , mq , eq) =
               place q (orbitCycle c0 c1 s rest q mq) eq ez
 
 ------------------------------------------------------------------------
@@ -92,30 +92,30 @@ globalFulfil P b c0 c1 mbc cyc (vpos s rest ms wk) A mA pend =
 -- j = i + t, so j >= i is built into the statement rather than asserted.
 
 globalFulfilAfter : (P : Formula) (b c0 : Val) (c1 : List Val)
-                 -> Mem b (c0 :: c1)
-                 -> ((s : Val) -> Mem s (b :: c0 :: c1)
-                       -> (A : Formula) -> Mem A (□Args (sub P))
-                       -> Eq (valOf P s (□ A)) false -> Fulfil P A b (c0 :: c1))
+                 -> b ∈ c0 ∷ c1
+                 -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
+                       -> (A : Formula) -> A ∈ □Args (sub P)
+                       -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
                  -> (start : Pos) (i : Nat)
                  -> ValidPos P b (posIter c0 c1 i start)
-                 -> (A : Formula) -> Mem A (□Args (sub P))
-                 -> Eq (valOf P (posState (posIter c0 c1 i start)) (□ A)) false
-                 -> Sigma Nat (\ t ->
-                      Eq (valOf P (posState (posIter c0 c1 (plus i t) start)) A) false)
+                 -> (A : Formula) -> A ∈ □Args (sub P)
+                 -> valOf P (posState (posIter c0 c1 i start)) (□ A) ≡ false
+                 -> Σ[ t ∈ Nat ]
+                      valOf P (posState (posIter c0 c1 (plus i t) start)) A ≡ false
 globalFulfilAfter P b c0 c1 mbc cyc start i vp A mA pend =
   fromOrbit (globalFulfil P b c0 c1 mbc cyc vp A mA pend)
   where
-    fromOrbit : Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 (posIter c0 c1 i start)))
-                                       (Eq (valOf P (posState q) A) false))
-             -> Sigma Nat (\ t ->
-                  Eq (valOf P (posState (posIter c0 c1 (plus i t) start)) A) false)
-    fromOrbit (sig q (prod mq eq)) =
+    fromOrbit : (Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (posIter c0 c1 i start) ×
+                                  valOf P (posState q) A ≡ false)
+             -> Σ[ t ∈ Nat ]
+                  valOf P (posState (posIter c0 c1 (plus i t) start)) A ≡ false
+    fromOrbit (q , mq , eq) =
       fromIter (orbitOf_iter c0 c1 (posIter c0 c1 i start) q mq)
       where
-        fromIter : Sigma Nat (\ t -> Eq (posIter c0 c1 t (posIter c0 c1 i start)) q)
-                -> Sigma Nat (\ t ->
-                     Eq (valOf P (posState (posIter c0 c1 (plus i t) start)) A) false)
-        fromIter (sig t et) =
-          sig t (eqSubst (\ r -> Eq (valOf P (posState r) A) false)
-                         (eqSym (eqTrans (posIter_plus c0 c1 i t start) et))
-                         eq)
+        fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t (posIter c0 c1 i start) ≡ q)
+                -> Σ[ t ∈ Nat ]
+                     valOf P (posState (posIter c0 c1 (plus i t) start)) A ≡ false
+        fromIter (t , et) =
+          t , subst (λ r -> valOf P (posState r) A ≡ false)
+                    (sym (trans (posIter_plus c0 c1 i t start) et))
+                    eq

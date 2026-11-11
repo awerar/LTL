@@ -35,8 +35,8 @@ open import LTL.Global public
 
 evalAt : (P : Formula) (c0 : Val) (c1 : List Val) -> Formula -> Pos -> Bool
 evalAt P c0 c1 (var n)   pos = valOf P (posState pos) (var n)
-evalAt P c0 c1 (¬ A)   pos = boolNot (evalAt P c0 c1 A pos)
-evalAt P c0 c1 (A ⇒ B) pos = boolImp (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+evalAt P c0 c1 (¬ A)   pos = ¬ᵇ evalAt P c0 c1 A pos
+evalAt P c0 c1 (A ⇒ B) pos = evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 B pos
 evalAt P c0 c1 (○ A)   pos = evalAt P c0 c1 A (nextPos c0 c1 pos)
 evalAt P c0 c1 (□ A)   pos = allB (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
 
@@ -44,31 +44,31 @@ evalAt P c0 c1 (□ A)   pos = allB (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
 -- The two ways of using it, and the shapes G26 and G27 will want
 
 eval□_at : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
-          -> Eq (evalAt P c0 c1 (□ A) pos) true -> Mem q (orbitOf c0 c1 pos)
-          -> Eq (evalAt P c0 c1 A q) true
+          -> evalAt P c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
+          -> evalAt P c0 c1 A q ≡ true
 eval□_at P c0 c1 A pos q e m =
   allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
 
 eval□_intro : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-             -> ((q : Pos) -> Mem q (orbitOf c0 c1 pos) -> Eq (evalAt P c0 c1 A q) true)
-             -> Eq (evalAt P c0 c1 (□ A) pos) true
+             -> ((q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ true)
+             -> evalAt P c0 c1 (□ A) pos ≡ true
 eval□_intro P c0 c1 A pos f =
-  allB_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos) (\ {q} m -> f q m)
+  allB_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos) (λ {q} m -> f q m)
 
 allB_atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-            -> Mem x xs -> Eq (p x) false -> Eq (allB p xs) false
-allB_atFalse p (y :: ys) memHd     e = eqCong (\ c -> boolAnd c (allB p ys)) e
-allB_atFalse p (y :: ys) (memTl m) e = andFalseR (p y) (allB p ys)
-                                                 (allB_atFalse p ys m e)
+            -> x ∈ xs -> p x ≡ false -> allB p xs ≡ false
+allB_atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ allB p ys) e
+allB_atFalse p (y ∷ ys) (there m) e = andFalseR (p y) (allB p ys)
+                                                (allB_atFalse p ys m e)
   where
-    andFalseR : (a b : Bool) -> Eq b false -> Eq (boolAnd a b) false
+    andFalseR : (a b : Bool) -> b ≡ false -> a ∧ᵇ b ≡ false
     andFalseR true  b eb = eb
     andFalseR false b eb = refl
 allB_atFalse p []        ()        e
 
 eval□_false : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
-             -> Mem q (orbitOf c0 c1 pos) -> Eq (evalAt P c0 c1 A q) false
-             -> Eq (evalAt P c0 c1 (□ A) pos) false
+             -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ false
+             -> evalAt P c0 c1 (□ A) pos ≡ false
 eval□_false P c0 c1 A pos q m e =
   allB_atFalse (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
 
@@ -77,7 +77,7 @@ eval□_false P c0 c1 A pos q m e =
 
 eval : (P : Formula) (v0 : Val) -> Run P v0 -> Formula -> Nat -> Bool
 eval P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A i =
-  evalAt P c0 c1 A (posIter c0 c1 i (prod v0 rest))
+  evalAt P c0 c1 A (posIter c0 c1 i (v0 , rest))
 
 ------------------------------------------------------------------------
 -- Running it.
@@ -86,11 +86,11 @@ eval P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A i =
 -- surviving state v.  It is the whole pipeline in one expression: the states,
 -- the elimination, Proposition 5.3, the unwinding, and the Boolean semantics.
 
-evalOn : (P : Formula) (v : Val) -> Eq (memB v (Uinf P)) true
+evalOn : (P : Formula) (v : Val) -> memB v (Uinf P) ≡ true
       -> Formula -> Nat -> Bool
 evalOn P v e A i = eval P v (runOf P v m (lasso P v m)) A i
   where
-    m : Mem v (Uinf P)
+    m : v ∈ Uinf P
     m = memB_sound v (Uinf P) e
 
 ------------------------------------------------------------------------
@@ -114,39 +114,39 @@ evalOn P v e A i = eval P v (runOf P v m (lasso P v m)) A i
 ◇_p = ◇ (var zero)
 
 ev◇St : Val
-ev◇St = true :: false :: true :: false :: []
+ev◇St = true ∷ false ∷ true ∷ false ∷ []
 
 evBnbSt : Val
-evBnbSt = false :: true :: true :: true :: true :: true :: true :: []
+evBnbSt = false ∷ true ∷ true ∷ true ∷ true ∷ true ∷ true ∷ []
 
-eval_◇ : Eq (evalOn ◇P ev◇St refl ◇_p 0) true
+eval_◇ : evalOn ◇P ev◇St refl ◇_p 0 ≡ true
 eval_◇ = refl
 
-eval_p0 : Eq (evalOn ◇P ev◇St refl (var zero) 0) false
+eval_p0 : evalOn ◇P ev◇St refl (var zero) 0 ≡ false
 eval_p0 = refl
 
-eval_p1 : Eq (evalOn ◇P ev◇St refl (var zero) 1) true
+eval_p1 : evalOn ◇P ev◇St refl (var zero) 1 ≡ true
 eval_p1 = refl
 
-eval_p2 : Eq (evalOn ◇P ev◇St refl (var zero) 2) false
+eval_p2 : evalOn ◇P ev◇St refl (var zero) 2 ≡ false
 eval_p2 = refl
 
-eval_○_p : Eq (evalOn ◇P ev◇St refl (○ (var zero)) 0) true
+eval_○_p : evalOn ◇P ev◇St refl (○ (var zero)) 0 ≡ true
 eval_○_p = refl
 
-eval_□_p : Eq (evalOn ◇P ev◇St refl (□ (var zero)) 0) false
+eval_□_p : evalOn ◇P ev◇St refl (□ (var zero)) 0 ≡ false
 eval_□_p = refl
 
-eval_◇1 : Eq (evalOn ◇P ev◇St refl ◇_p 1) true
+eval_◇1 : evalOn ◇P ev◇St refl ◇_p 1 ≡ true
 eval_◇1 = refl
 
 -- and the formula the procedure was run on holds at stage 0, as Hintikka's
 -- lemma (G27) will say in general
 
-eval_input : Eq (evalOn ◇P ev◇St refl ◇P 0) true
+eval_input : evalOn ◇P ev◇St refl ◇P 0 ≡ true
 eval_input = refl
 
-eval_□_○_p : Eq (evalOn ◇P ev◇St refl (□ ○ (var zero)) 0) false
+eval_□_○_p : evalOn ◇P ev◇St refl (□ ○ (var zero)) 0 ≡ false
 eval_□_○_p = refl
 
 -- The contrast, in the two forms G30 gives it.
@@ -155,10 +155,10 @@ eval_□_○_p = refl
 -- forever, so □ p is TRUE there and the lasso IS a countermodel to
 -- ¬ □ p.
 
-eval_□P_p : Eq (evalOn □P s□ refl (var zero) 3) true
+eval_□P_p : evalOn □P s□ refl (var zero) 3 ≡ true
 eval_□P_p = refl
 
-eval_□P_input : Eq (evalOn □P s□ refl □P 0) true
+eval_□P_input : evalOn □P s□ refl □P 0 ≡ true
 eval_□P_input = refl
 
 -- For ¬ bnb there is no lasso at all: nothing containing ¬ bnb survives,
@@ -167,5 +167,5 @@ eval_□P_input = refl
 -- LTL.Trace).  That is the branch where the certificate is a derivation, and
 -- provable supplies it -- see bnbProof in LTL.Extract.
 
-eval_¬Bnb_empty : Eq (nullB (Uinf ¬Bnb)) true
+eval_¬Bnb_empty : nullB (Uinf ¬Bnb) ≡ true
 eval_¬Bnb_empty = refl

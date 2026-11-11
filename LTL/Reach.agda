@@ -29,25 +29,25 @@ open import LTL.Step public
 -- Valuations as a set
 
 valEq : Val -> Val -> Bool
-valEq []       []       = true
-valEq []       (c :: w) = false
-valEq (b :: v) []       = false
-valEq (b :: v) (c :: w) = boolAnd (boolEq b c) (valEq v w)
+valEq []      []      = true
+valEq []      (c ∷ w) = false
+valEq (b ∷ v) []      = false
+valEq (b ∷ v) (c ∷ w) = (b ⇔ᵇ c) ∧ᵇ valEq v w
 
-valEq_refl : (v : Val) -> Eq (valEq v v) true
-valEq_refl []           = refl
-valEq_refl (true  :: v) = valEq_refl v
-valEq_refl (false :: v) = valEq_refl v
+valEq_refl : (v : Val) -> valEq v v ≡ true
+valEq_refl []          = refl
+valEq_refl (true  ∷ v) = valEq_refl v
+valEq_refl (false ∷ v) = valEq_refl v
 
 memB : Val -> List Val -> Bool
 memB v us = anyL (valEq v) us
 
 insertV : Val -> List Val -> List Val
-insertV v us = filterCons (boolNot (memB v us)) v us
+insertV v us = filterCons (¬ᵇ memB v us) v us
 
 unionV : List Val -> List Val -> List Val
-unionV []        ys = ys
-unionV (x :: xs) ys = insertV x (unionV xs ys)
+unionV []       ys = ys
+unionV (x ∷ xs) ys = insertV x (unionV xs ys)
 
 ------------------------------------------------------------------------
 -- One round of expansion, then the fuel-bounded closure
@@ -60,7 +60,7 @@ reachIter P zero    us acc = acc
 reachIter P (suc n) us acc = reachIter P n us (reachStep P us acc)
 
 reach : Formula -> List Val -> Val -> List Val
-reach P us v = reachIter P (length us) us (v :: [])
+reach P us v = reachIter P (length us) us (v ∷ [])
 
 ------------------------------------------------------------------------
 -- Computational checks.
@@ -69,6 +69,6 @@ reach P us v = reachIter P (length us) us (v :: [])
 -- LTL.Step).  s_a and s_b reach everything; s_c is a sink, reaching only
 -- itself.
 
-reach_◇P : Eq (map (\ v -> length (reach ◇P (St ◇P) v)) (St ◇P))
-                (3 :: 3 :: 1 :: [])
+reach_◇P : map (λ v -> length (reach ◇P (St ◇P) v)) (St ◇P) ≡
+                3 ∷ 3 ∷ 1 ∷ []
 reach_◇P = refl

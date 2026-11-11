@@ -28,20 +28,20 @@ lit A false = ¬ A
 infix 30 ⋀_ ⋁_
 
 ⋀_ : List Formula -> Formula
-⋀ []        = ⊤
-⋀ (A :: As) = A ∧ ⋀ As
+⋀ []       = ⊤
+⋀ (A ∷ As) = A ∧ ⋀ As
 
 ⋁_ : List Formula -> Formula
-⋁ []        = ⊥
-⋁ (A :: As) = A ∨ ⋁ As
+⋁ []       = ⊥
+⋁ (A ∷ As) = A ∨ ⋁ As
 
 ------------------------------------------------------------------------
 -- The characteristic formula
 
 litList : List Formula -> Val -> List Formula
-litList []        v          = []
-litList (A :: As) []         = []
-litList (A :: As) (b :: bs)  = lit A b :: litList As bs
+litList []       v         = []
+litList (A ∷ As) []        = []
+litList (A ∷ As) (b ∷ bs)  = lit A b ∷ litList As bs
 
 chi : Formula -> Val -> Formula
 chi P v = ⋀ (litList (sub P) v)
@@ -58,14 +58,14 @@ beta P vs = ⋁ (map (chi P) vs)
 -- goes through it.
 
 litList_mem : {A : Formula} (As : List Formula) (v : Val)
-           -> Eq (length v) (length As)
-           -> (h : Mem A As)
-           -> Mem (lit A (bitAt v (index h))) (litList As v)
-litList_mem []        v        e ()
-litList_mem (A :: As) []       () h
-litList_mem (A :: As) (b :: v) e memHd     = memHd
-litList_mem (A :: As) (b :: v) e (memTl h) =
-  memTl (litList_mem As v (sucInj e) h)
+           -> length v ≡ length As
+           -> (h : A ∈ As)
+           -> lit A (bitAt v (index h)) ∈ litList As v
+litList_mem []       v       e ()
+litList_mem (A ∷ As) []      () h
+litList_mem (A ∷ As) (b ∷ v) e here      = here
+litList_mem (A ∷ As) (b ∷ v) e (there h) =
+  there (litList_mem As v (sucInj e) h)
 
 ------------------------------------------------------------------------
 -- Sanity checks by computation.
@@ -73,10 +73,10 @@ litList_mem (A :: As) (b :: v) e (memTl h) =
 -- sub benAri has length 6 (LTL.Sub), so there are 2^6 = 64 valuations to
 -- filter in G5.
 
-allVecs_three : Eq (length (allVecs 3)) 8
+allVecs_three : length (allVecs 3) ≡ 8
 allVecs_three = refl
 
-allVecs_benAri : Eq (length (allVecs (length (sub benAri)))) 64
+allVecs_benAri : length (allVecs (length (sub benAri))) ≡ 64
 allVecs_benAri = refl
 
 -- Positions 1 and 4 of sub benAri are the same formula (□ p), so a valuation
@@ -84,7 +84,7 @@ allVecs_benAri = refl
 -- is exactly what the coherence clause of G5 will exclude.
 
 badVal : Val
-badVal = true :: true :: true :: true :: false :: true :: []
+badVal = true ∷ true ∷ true ∷ true ∷ false ∷ true ∷ []
 
-badVal_length : Eq (length badVal) (length (sub benAri))
+badVal_length : length badVal ≡ length (sub benAri)
 badVal_length = refl

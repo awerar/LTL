@@ -35,15 +35,14 @@ valOf P v A = bitAt v (idx (sub P) A)
 
 okAt : Formula -> Val -> Formula -> Bool
 okAt P v (var n)   = true
-okAt P v (¬ A)   = boolEq (valOf P v (¬ A)) (boolNot (valOf P v A))
-okAt P v (A ⇒ B) = boolEq (valOf P v (A ⇒ B))
-                            (boolImp (valOf P v A) (valOf P v B))
+okAt P v (¬ A)   = valOf P v (¬ A) ⇔ᵇ ¬ᵇ valOf P v A
+okAt P v (A ⇒ B) = valOf P v (A ⇒ B) ⇔ᵇ valOf P v A ⇒ᵇ valOf P v B
 okAt P v (○ A)   = true
-okAt P v (□ A)   = boolImp (valOf P v (□ A)) (valOf P v A)
+okAt P v (□ A)   = valOf P v (□ A) ⇒ᵇ valOf P v A
 
 allOk : Formula -> Val -> List Formula -> Bool
-allOk P v []        = true
-allOk P v (A :: As) = boolAnd (okAt P v A) (allOk P v As)
+allOk P v []       = true
+allOk P v (A ∷ As) = okAt P v A ∧ᵇ allOk P v As
 
 ------------------------------------------------------------------------
 -- Coherence on duplicates.
@@ -53,18 +52,18 @@ allOk P v (A :: As) = boolAnd (okAt P v A) (allOk P v As)
 -- that first occurrence.
 
 cohAt : Formula -> Val -> Nat -> Bool
-cohAt P v i = boolEq (bitAt v i) (valOf P v (nth (sub P) i ⊥))
+cohAt P v i = bitAt v i ⇔ᵇ valOf P v (nth (sub P) i ⊥)
 
 allCoh : Formula -> Val -> Nat -> Bool
 allCoh P v zero    = true
-allCoh P v (suc n) = boolAnd (cohAt P v n) (allCoh P v n)
+allCoh P v (suc n) = cohAt P v n ∧ᵇ allCoh P v n
 
 ------------------------------------------------------------------------
 -- States
 
 isState : Formula -> Val -> Bool
-isState P v = boolAnd (allOk P v (sub P))
-                      (allCoh P v (length (sub P)))
+isState P v = allOk P v (sub P) ∧ᵇ
+              allCoh P v (length (sub P))
 
 St : Formula -> List Val
 St P = filterL (isState P) (allVecs (length (sub P)))
@@ -73,57 +72,57 @@ St P = filterL (isState P) (allVecs (length (sub P)))
 -- Searching allOk
 
 allOk_at : (P : Formula) (v : Val) (As : List Formula) {A : Formula}
-        -> Mem A As -> Eq (allOk P v As) true -> Eq (okAt P v A) true
-allOk_at P v []        ()        e
-allOk_at P v (B :: Bs) memHd     e = andTrueL (okAt P v B) (allOk P v Bs) e
-allOk_at P v (B :: Bs) (memTl m) e =
+        -> A ∈ As -> allOk P v As ≡ true -> okAt P v A ≡ true
+allOk_at P v []       ()        e
+allOk_at P v (B ∷ Bs) here      e = andTrueL (okAt P v B) (allOk P v Bs) e
+allOk_at P v (B ∷ Bs) (there m) e =
   allOk_at P v Bs m (andTrueR (okAt P v B) (allOk P v Bs) e)
 
 allOk_false : (P : Formula) (v : Val) (As : List Formula)
-           -> Eq (allOk P v As) false
-           -> Sigma Formula (\ A -> Prod (Mem A As) (Eq (okAt P v A) false))
-allOk_false P v []        ()
-allOk_false P v (B :: Bs) e =
-  sumElim (\ e1 -> sig B (prod memHd e1))
-          (\ e2 -> shift (allOk_false P v Bs e2))
+           -> allOk P v As ≡ false
+           -> Σ[ A ∈ Formula ] A ∈ As × okAt P v A ≡ false
+allOk_false P v []       ()
+allOk_false P v (B ∷ Bs) e =
+  sumElim (λ e1 -> B , here , e1)
+          (λ e2 -> shift (allOk_false P v Bs e2))
           (andFalse (okAt P v B) (allOk P v Bs) e)
   where
-    shift : Sigma Formula (\ A -> Prod (Mem A Bs) (Eq (okAt P v A) false))
-         -> Sigma Formula (\ A -> Prod (Mem A (B :: Bs)) (Eq (okAt P v A) false))
-    shift (sig A (prod m q)) = sig A (prod (memTl m) q)
+    shift : (Σ[ A ∈ Formula ] A ∈ Bs × okAt P v A ≡ false)
+         -> Σ[ A ∈ Formula ] A ∈ B ∷ Bs × okAt P v A ≡ false
+    shift (A , m , q) = A , there m , q
 
 ------------------------------------------------------------------------
 -- Searching allCoh
 
-allCoh_at : (P : Formula) (v : Val) (n i : Nat) -> Lt i n
-         -> Eq (allCoh P v n) true -> Eq (cohAt P v i) true
+allCoh_at : (P : Formula) (v : Val) (n i : Nat) -> i < n
+         -> allCoh P v n ≡ true -> cohAt P v i ≡ true
 allCoh_at P v zero    i ()  e
 allCoh_at P v (suc n) i lt  e =
-  sumElim (\ eq -> eqSubst (\ k -> Eq (cohAt P v k) true) (eqSym eq)
-                           (andTrueL (cohAt P v n) (allCoh P v n) e))
-          (\ l  -> allCoh_at P v n i l (andTrueR (cohAt P v n) (allCoh P v n) e))
+  sumElim (λ eq -> subst (λ k -> cohAt P v k ≡ true) (sym eq)
+                         (andTrueL (cohAt P v n) (allCoh P v n) e))
+          (λ l  -> allCoh_at P v n i l (andTrueR (cohAt P v n) (allCoh P v n) e))
           (ltSucCase i n lt)
 
 allCoh_false : (P : Formula) (v : Val) (n : Nat)
-            -> Eq (allCoh P v n) false
-            -> Sigma Nat (\ i -> Prod (Lt i n) (Eq (cohAt P v i) false))
+            -> allCoh P v n ≡ false
+            -> Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false
 allCoh_false P v zero    ()
 allCoh_false P v (suc n) e =
-  sumElim (\ e1 -> sig n (prod (ltNSucN n) e1))
-          (\ e2 -> shift (allCoh_false P v n e2))
+  sumElim (λ e1 -> n , ltNSucN n , e1)
+          (λ e2 -> shift (allCoh_false P v n e2))
           (andFalse (cohAt P v n) (allCoh P v n) e)
   where
-    ltNSucN : (k : Nat) -> Lt k (suc k)
+    ltNSucN : (k : Nat) -> k < suc k
     ltNSucN zero    = ltZero
     ltNSucN (suc k) = ltSuc (ltNSucN k)
 
-    ltWeak : {i k : Nat} -> Lt i k -> Lt i (suc k)
+    ltWeak : {i k : Nat} -> i < k -> i < suc k
     ltWeak ltZero     = ltZero
     ltWeak (ltSuc l)  = ltSuc (ltWeak l)
 
-    shift : Sigma Nat (\ i -> Prod (Lt i n) (Eq (cohAt P v i) false))
-         -> Sigma Nat (\ i -> Prod (Lt i (suc n)) (Eq (cohAt P v i) false))
-    shift (sig i (prod l q)) = sig i (prod (ltWeak l) q)
+    shift : (Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false)
+         -> Σ[ i ∈ Nat ] i < suc n × cohAt P v i ≡ false
+    shift (i , l , q) = i , ltWeak l , q
 
 ------------------------------------------------------------------------
 -- Computational checks.
@@ -138,7 +137,7 @@ allCoh_false P v (suc n) e =
 ◇P : Formula
 ◇P = ◇ (var zero)
 
-St_◇P : Eq (length (St ◇P)) 3
+St_◇P : length (St ◇P) ≡ 3
 St_◇P = refl
 
 -- The negation of Ben-Ari's formula, the input the decision procedure is
@@ -148,13 +147,13 @@ St_◇P = refl
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St_¬BenAri : Eq (length (allVecs (length (sub ¬BenAri)))) 128
+St_¬BenAri : length (allVecs (length (sub ¬BenAri))) ≡ 128
 St_¬BenAri = refl
 
-St_¬BenAri_count : Eq (length (St ¬BenAri)) 6
+St_¬BenAri_count : length (St ¬BenAri) ≡ 6
 St_¬BenAri_count = refl
 
 -- The duplicate-incoherent valuation of LTL.Val is rejected, as intended.
 
-badVal_rejected : Eq (isState benAri badVal) false
+badVal_rejected : isState benAri badVal ≡ false
 badVal_rejected = refl

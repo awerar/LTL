@@ -111,7 +111,7 @@ are far too large to render; see `LTL/Proofs.agda`.
 
 ## Mathematical entry points
 
-`Formula`, `Deriv`: syntax and deductive rules.
+`Formula`, `Deriv`: syntax and deductive rules (`⊢ A`: A is derivable).
 
 `Closure`, `Gfp`, `Elim`, `Trace`, `Extract`: the finite search and extraction of
 derivations from eliminated states.

@@ -13,7 +13,7 @@
 -- Both are propositional, so Ben-Ari writes PC beside them (benari.pdf,
 -- Definition 12.1, Axiom 0) and never writes them out.  With the eleventh
 -- constructor of LTL.Deriv available they can be discharged the same way and,
--- unlike Ben-Ari's, CHECKED: pc takes Eq (isTaut A) true, a decidable condition
+-- unlike Ben-Ari's, CHECKED: pc takes isTaut A ≡ true, a decidable condition
 -- on A alone, with no substitution relation anywhere.
 --
 --   G31   allCompletePC As  = pc (tautAll As)            19263 -> 1
@@ -62,17 +62,17 @@ open import LTL.Taut     public
 splitFml : List Formula -> Formula
 splitFml As = ⋁ (map (chiOf As) (allVecs (length As)))
 
-tautAll : (As : List Formula) -> Eq (isTaut (splitFml As)) true
+tautAll : (As : List Formula) -> isTaut (splitFml As) ≡ true
 tautAll As =
-  allB_intro (\ a -> valFrom (atomsOf (splitFml As)) a (splitFml As))
+  allB_intro (λ a -> valFrom (atomsOf (splitFml As)) a (splitFml As))
              (allVecs (length (atomsOf (splitFml As))))
              row
   where
     Ats : List Formula
     Ats = atomsOf (splitFml As)
 
-    row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a (splitFml As)) true
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a (splitFml As) ≡ true
     row {a} m =
       ⋁True Ats a (map (chiOf As) (allVecs (length As)))
                (memMap (chiOf As)
@@ -81,7 +81,7 @@ tautAll As =
                (chiRowTrue Ats a As)
 
 allCompletePC : (As : List Formula)
-             -> Deriv (⋁ (map (chiOf As) (allVecs (length As))))
+             -> ⊢ ⋁ (map (chiOf As) (allVecs (length As)))
 allCompletePC As = pc (tautAll As)
 
 ------------------------------------------------------------------------
@@ -108,9 +108,9 @@ s2List P = map s2Fml (□Args (sub P))
 -- the count at 1 + 46 |□Args| with no propositional glue.
 
 mpChain : (As : List Formula) {C : Formula}
-       -> Deriv (⇒List (map s2Fml As) C) -> Deriv C
-mpChain []        d = d
-mpChain (A :: As) d = mpChain As (mp d □Elim)
+       -> ⊢ ⇒List (map s2Fml As) C -> ⊢ C
+mpChain []       d = d
+mpChain (A ∷ As) d = mpChain As (mp d □Elim)
 
 ------------------------------------------------------------------------
 -- G32: Lemma 2.6.
@@ -131,22 +131,22 @@ mpChain (A :: As) d = mpChain As (mp d □Elim)
 stateFml : Formula -> Formula
 stateFml P = ⇒List (s2List P) (beta P (St P))
 
-tautState : (P : Formula) -> Eq (isTaut (stateFml P)) true
+tautState : (P : Formula) -> isTaut (stateFml P) ≡ true
 tautState P =
-  allB_intro (\ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
+  allB_intro (λ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
              (allVecs (length (atomsOf (stateFml P))))
              row
   where
     Ats : List Formula
     Ats = atomsOf (stateFml P)
 
-    row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a (stateFml P)) true
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a (stateFml P) ≡ true
     row {a} m =
       □Chain Ats a (□Args (sub P)) (beta P (St P))
-               (\ g -> betaSkel Ats a P (\ B mb -> g B (□Args_of (sub P) mb)))
+               (λ g -> betaSkel Ats a P (λ B mb -> g B (□Args_of (sub P) mb)))
 
-stateCompletePC : (P : Formula) -> Deriv (beta P (St P))
+stateCompletePC : (P : Formula) -> ⊢ beta P (St P)
 stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 
 ------------------------------------------------------------------------
@@ -172,29 +172,29 @@ stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 ⋁⇒Fml Cs C = ⇒List (map (⇒To C) Cs) (⋁ Cs ⇒ C)
 
 taut⋁Elim : (Cs : List Formula) (C : Formula)
-            -> Eq (isTaut (⋁⇒Fml Cs C)) true
+            -> isTaut (⋁⇒Fml Cs C) ≡ true
 taut⋁Elim Cs C =
-  allB_intro (\ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
+  allB_intro (λ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
              (allVecs (length (atomsOf (⋁⇒Fml Cs C))))
              row
   where
     Ats : List Formula
     Ats = atomsOf (⋁⇒Fml Cs C)
 
-    row : {a : Val} -> Mem a (allVecs (length Ats))
-       -> Eq (valFrom Ats a (⋁⇒Fml Cs C)) true
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a (⋁⇒Fml Cs C) ≡ true
     row {a} m =
       ⇒Chain Ats a (map (⇒To C) Cs) (⋁ Cs ⇒ C)
-               (\ g -> ⋁ElimTrue Ats a Cs C (\ mD -> g (memMap (⇒To C) mD)))
+               (λ g -> ⋁ElimTrue Ats a Cs C (λ mD -> g (memMap (⇒To C) mD)))
 
 mpVals : (P : Formula) {C : Formula} (ws : List Val) {Z : Formula}
-      -> ((w : Val) -> Mem w ws -> Deriv ((chi P w) ⇒ C))
-      -> Deriv (⇒List (map (⇒To C) (map (chi P) ws)) Z) -> Deriv Z
-mpVals P []        h d = d
-mpVals P (w :: ws) h d =
-  mpVals P ws (\ z m -> h z (memTl m)) (mp d (h w memHd))
+      -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
+      -> ⊢ ⇒List (map (⇒To C) (map (chi P) ws)) Z -> ⊢ Z
+mpVals P []       h d = d
+mpVals P (w ∷ ws) h d =
+  mpVals P ws (λ z m -> h z (there m)) (mp d (h w here))
 
 betaElimPC : (P : Formula) {C : Formula} (ws : List Val)
-          -> ((w : Val) -> Mem w ws -> Deriv ((chi P w) ⇒ C))
-          -> Deriv ((beta P ws) ⇒ C)
+          -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
+          -> ⊢ (beta P ws) ⇒ C
 betaElimPC P {C} ws h = mpVals P ws h (pc (taut⋁Elim (map (chi P) ws) C))

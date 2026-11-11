@@ -17,39 +17,44 @@ module LTL.Deriv where
 
 open import LTL.Skel public
 
-data Deriv : Formula -> Set where
+-- ⊢ A  says that A is derivable in system L (⊢_L A in the note).  ⊢ binds
+-- looser than every formula connective, so  ⊢ □ A ⇒ A  is  ⊢ (□ A ⇒ A).
+
+infix 10 ⊢_
+
+data ⊢_ : Formula -> Set where
 
   -- (P1)  A ⇒ (B ⇒ A)
   p1 : {A B : Formula}
-    -> Deriv (A ⇒ B ⇒ A)
+    -> ⊢ A ⇒ B ⇒ A
 
   -- (P2)  (A ⇒ (B ⇒ C)) ⇒ ((A ⇒ B) ⇒ (A ⇒ C))
   p2 : {A B C : Formula}
-    -> Deriv ((A ⇒ B ⇒ C) ⇒ (A ⇒ B) ⇒ A ⇒ C)
+    -> ⊢ (A ⇒ B ⇒ C) ⇒ (A ⇒ B) ⇒ A ⇒ C
 
   -- (P3)  (¬ B ⇒ ¬ A) ⇒ (A ⇒ B)
   p3 : {A B : Formula}
-    -> Deriv ((¬ B ⇒ ¬ A) ⇒ A ⇒ B)
+    -> ⊢ (¬ B ⇒ ¬ A) ⇒ A ⇒ B
 
   -- (K □)  □ (A ⇒ B) ⇒ (□ A ⇒ □ B)
   k□ : {A B : Formula}
-      -> Deriv (□ (A ⇒ B) ⇒ □ A ⇒ □ B)
+      -> ⊢ □ (A ⇒ B) ⇒ □ A ⇒ □ B
 
   -- (K ○)  ○ (A ⇒ B) ⇒ (○ A ⇒ ○ B)
   k○ : {A B : Formula}
-      -> Deriv (○ (A ⇒ B) ⇒ ○ A ⇒ ○ B)
+      -> ⊢ ○ (A ⇒ B) ⇒ ○ A ⇒ ○ B
 
   -- (Exp)  □ A ⇒ (A ∧ ○ A ∧ ○ □ A)
   exp : {A : Formula}
-     -> Deriv (□ A ⇒ A ∧ ○ A ∧ ○ □ A)
+     -> ⊢ □ A ⇒ A ∧ ○ A ∧ ○ □ A
 
   -- (Ind)  □ (A ⇒ ○ A) ⇒ (A ⇒ □ A)
   ind : {A : Formula}
-     -> Deriv (□ (A ⇒ ○ A) ⇒ A ⇒ □ A)
+     -> ⊢ □ (A ⇒ ○ A) ⇒ A ⇒ □ A
 
   -- (Lin)  ○ ¬ A ⇔ ¬ ○ A
   lin : {A : Formula}
-     -> Deriv (○ ¬ A ⇔ ¬ ○ A)
+     -> ⊢ ○ ¬ A ⇔ ¬ ○ A
 
   -- (PC)  Ben-Ari's Axiom 0, without the substitution relation.
   --
@@ -59,18 +64,18 @@ data Deriv : Formula -> Set where
   -- and then a substitution lemma for soundness.  Only the first half is
   -- unavoidable: asking that A be a tautology OF ITS OWN SKELETON -- its var,
   -- nxt and box subformulas taken as atoms -- picks out the same formulas, is a
-  -- decidable condition on A alone, and keeps Deriv a plain inductive family.
+  -- decidable condition on A alone, and keeps ⊢_ a plain inductive family.
   -- isTaut is that test (LTL.Skel), and soundness is tautSound.
   --
   -- Nothing in Phases 1-8 uses it: (L0)-(L7) and everything above them are
   -- derived from (P1)-(P3) exactly as before, so the eleventh constructor is
   -- additive.  What it buys is the length of a certificate; see LTL.Proofs.
-  pc : {A : Formula} -> Eq (isTaut A) true -> Deriv A
+  pc : {A : Formula} -> isTaut A ≡ true -> ⊢ A
 
   -- modus ponens
   mp : {A B : Formula}
-    -> Deriv (A ⇒ B) -> Deriv A -> Deriv B
+    -> ⊢ A ⇒ B -> ⊢ A -> ⊢ B
 
   -- generalisation
   gen : {A : Formula}
-     -> Deriv A -> Deriv (□ A)
+     -> ⊢ A -> ⊢ □ A

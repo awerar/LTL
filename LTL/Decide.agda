@@ -2,7 +2,7 @@
 
 -- LTL.Decide -- G28 of FORMALISATION-PLAN.md, Theorem 6.1 of m4.tex.
 --
---   decide : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
+--   decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 --
 -- Run the elimination on Sub(¬ Q) and ask whether some surviving state
 -- contains ¬ Q.  That is one boolean, satB (¬ Q), and it decides which
@@ -34,9 +34,9 @@ open import LTL.Hintikka public
 
 data LassoCountermodel (Q : Formula) : Set where
   countermodel : (v0 : Val) (r : Run (¬ Q) v0)
-              -> Mem v0 (Uinf (¬ Q))
-              -> Eq (eval (¬ Q) v0 r Q 0) false
-              -> (Deriv Q -> Empty)
+              -> v0 ∈ Uinf (¬ Q)
+              -> eval (¬ Q) v0 r Q 0 ≡ false
+              -> (⊢ Q -> Empty)
               -> LassoCountermodel Q
 
 ------------------------------------------------------------------------
@@ -45,50 +45,50 @@ data LassoCountermodel (Q : Formula) : Set where
 -- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
 -- Hintikka's lemma at stage 0 transfers that to the evaluation.
 
-buildCM : (Q : Formula) (v0 : Val) -> Mem v0 (Uinf (¬ Q))
-       -> Eq (valOf (¬ Q) v0 (¬ Q)) true -> LassoCountermodel Q
+buildCM : (Q : Formula) (v0 : Val) -> v0 ∈ Uinf (¬ Q)
+       -> valOf (¬ Q) v0 (¬ Q) ≡ true -> LassoCountermodel Q
 buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
   where
     r : Run (¬ Q) v0
     r = runOf (¬ Q) v0 m (lasso (¬ Q) v0 m)
 
     -- (S1) at ¬ Q, the head of sub (¬ Q)
-    valQ : Eq (valOf (¬ Q) v0 Q) false
+    valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
       notTrue (valOf (¬ Q) v0 Q)
-        (eqTrans (eqSym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
-                                      (boolNot (valOf (¬ Q) v0 Q))
-                                      (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
-                 ev)
+        (trans (sym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
+                                  (¬ᵇ valOf (¬ Q) v0 Q)
+                                  (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
+               ev)
 
-    evalFalse : Eq (eval (¬ Q) v0 r Q 0) false
+    evalFalse : eval (¬ Q) v0 r Q 0 ≡ false
     evalFalse =
-      eqTrans (eqSym (hintStart (¬ Q) v0 r Q (memTl (sub_self Q)))) valQ
+      trans (sym (hintStart (¬ Q) v0 r Q (there (sub_self Q)))) valQ
 
-    noDeriv : Deriv Q -> Empty
-    noDeriv d = tfAbs (eqTrans (eqSym (soundRun (¬ Q) v0 r d 0)) evalFalse)
+    noDeriv : ⊢ Q -> Empty
+    noDeriv d = tfAbs (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- Theorem 6.1
 
-decide : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
+decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 decide Q = onSat (satB (¬ Q)) refl
   where
-    fromSig : Sigma Val (\ v -> Prod (Mem v (Uinf (¬ Q)))
-                                     (Eq (valOf (¬ Q) v (¬ Q)) true))
-           -> Sum (Deriv Q) (LassoCountermodel Q)
-    fromSig (sig v0 (prod m ev)) = inr (buildCM Q v0 m ev)
+    fromSig : (Σ[ v ∈ Val ] v ∈ Uinf (¬ Q) ×
+                                valOf (¬ Q) v (¬ Q) ≡ true)
+           -> ⊢ Q ⊎ LassoCountermodel Q
+    fromSig (v0 , m , ev) = inr (buildCM Q v0 m ev)
 
-    onSat : (x : Bool) -> Eq (satB (¬ Q)) x
-         -> Sum (Deriv Q) (LassoCountermodel Q)
+    onSat : (x : Bool) -> satB (¬ Q) ≡ x
+         -> ⊢ Q ⊎ LassoCountermodel Q
     onSat false e = inl (provable Q e)
     onSat true  e =
-      fromSig (anyL_true (\ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
+      fromSig (anyL_true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Reading the answer
 
-isProof : {A B : Set} -> Sum A B -> Bool
+isProof : {A B : Set} -> A ⊎ B -> Bool
 isProof (inl a) = true
 isProof (inr b) = false
 
@@ -102,15 +102,15 @@ cmRest Q (countermodel v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) m ef rf
 
 cmCycle : (Q : Formula) -> LassoCountermodel Q -> List Val
 cmCycle Q (countermodel v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) m ef rf) =
-  c0 :: c1
+  c0 ∷ c1
 
 cmStart : (Q : Formula) -> LassoCountermodel Q -> Val
 cmStart Q (countermodel v0 r m ef rf) = v0
 
-lassoOfDecide : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
-             -> Prod Val (Prod (List Val) (List Val))
-lassoOfDecide Q (inl d) = prod [] (prod [] [])
-lassoOfDecide Q (inr c) = prod (cmStart Q c) (prod (cmRest Q c) (cmCycle Q c))
+lassoOfDecide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
+             -> Val × List Val × List Val
+lassoOfDecide Q (inl d) = [] , [] , []
+lassoOfDecide Q (inr c) = cmStart Q c , cmRest Q c , cmCycle Q c
 
 ------------------------------------------------------------------------
 -- Looking at a derivation.
@@ -121,7 +121,7 @@ lassoOfDecide Q (inr c) = prod (cmStart Q c) (prod (cmRest Q c) (cmCycle Q c))
 -- below: what decide returns on a provable formula is not the assertion that it
 -- is provable but the proof, and this is how one looks at it.
 
-derivSize : {A : Formula} -> Deriv A -> Nat
+derivSize : {A : Formula} -> ⊢ A -> Nat
 derivSize p1       = 1
 derivSize p2       = 1
 derivSize p3       = 1
@@ -134,7 +134,7 @@ derivSize (pc e)   = 1
 derivSize (mp d e) = suc (plus (derivSize d) (derivSize e))
 derivSize (gen d)  = suc (derivSize d)
 
-derivMP : {A : Formula} -> Deriv A -> Nat
+derivMP : {A : Formula} -> ⊢ A -> Nat
 derivMP p1       = 0
 derivMP p2       = 0
 derivMP p3       = 0
@@ -147,7 +147,7 @@ derivMP (pc e)   = 0
 derivMP (mp d e) = suc (plus (derivMP d) (derivMP e))
 derivMP (gen d)  = derivMP d
 
-derivGen : {A : Formula} -> Deriv A -> Nat
+derivGen : {A : Formula} -> ⊢ A -> Nat
 derivGen p1       = 0
 derivGen p2       = 0
 derivGen p3       = 0
@@ -164,7 +164,7 @@ derivGen (gen d)  = suc (derivGen d)
 -- case of Theorem 4.1 that the loop invariant needs, so counting it says
 -- whether the refutation went through extractR2 at all.
 
-derivInd : {A : Formula} -> Deriv A -> Nat
+derivInd : {A : Formula} -> ⊢ A -> Nat
 derivInd p1       = 0
 derivInd p2       = 0
 derivInd p3       = 0
@@ -179,12 +179,12 @@ derivInd (gen d)  = derivInd d
 
 -- size, modus ponens steps, generalisations, (Ind) instances
 
-countOf : (Q : Formula) -> Prod Nat (Prod Nat (Prod Nat Nat))
+countOf : (Q : Formula) -> Nat × Nat × Nat × Nat
 countOf Q = onDec (decide Q)
   where
-    onDec : Sum (Deriv Q) (LassoCountermodel Q) -> Prod Nat (Prod Nat (Prod Nat Nat))
-    onDec (inl d) = prod (derivSize d) (prod (derivMP d) (prod (derivGen d) (derivInd d)))
-    onDec (inr c) = prod zero (prod zero (prod zero zero))
+    onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat × Nat × Nat × Nat
+    onDec (inl d) = derivSize d , derivMP d , derivGen d , derivInd d
+    onDec (inr c) = zero , zero , zero , zero
 
 ------------------------------------------------------------------------
 -- Looking at a countermodel.
@@ -204,7 +204,7 @@ cmEval Q (countermodel v0 r m ef rf) A i = eval (¬ Q) v0 r A i
 
 cmFrom : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Nat -> List Bool
 cmFrom Q c A i zero    = []
-cmFrom Q c A i (suc n) = cmEval Q c A i :: cmFrom Q c A (suc i) n
+cmFrom Q c A i (suc n) = cmEval Q c A i ∷ cmFrom Q c A (suc i) n
 
 -- The truth values of A at stages 0,...,n-1 of the countermodel to Q, or the
 -- empty list if Q turned out to be provable and there is no countermodel.
@@ -212,7 +212,7 @@ cmFrom Q c A i (suc n) = cmEval Q c A i :: cmFrom Q c A (suc i) n
 traceOf : (Q : Formula) -> Formula -> Nat -> List Bool
 traceOf Q A n = onDec (decide Q)
   where
-    onDec : Sum (Deriv Q) (LassoCountermodel Q) -> List Bool
+    onDec : ⊢ Q ⊎ LassoCountermodel Q -> List Bool
     onDec (inl d) = []
     onDec (inr c) = cmFrom Q c A zero n
 
@@ -220,12 +220,12 @@ traceOf Q A n = onDec (decide Q)
 -- the cycle, so it is periodic from stage  1 + |cmRest| - |cmCycle|  on, with
 -- period |cmCycle|.
 
-shapeOf : (Q : Formula) -> Prod Nat Nat
+shapeOf : (Q : Formula) -> Nat × Nat
 shapeOf Q = onDec (decide Q)
   where
-    onDec : Sum (Deriv Q) (LassoCountermodel Q) -> Prod Nat Nat
-    onDec (inl d) = prod zero zero
-    onDec (inr c) = prod (length (cmRest Q c)) (length (cmCycle Q c))
+    onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat × Nat
+    onDec (inl d) = zero , zero
+    onDec (inr c) = length (cmRest Q c) , length (cmCycle Q c)
 
 ------------------------------------------------------------------------
 -- Checkpoint C4.
@@ -235,10 +235,10 @@ shapeOf Q = onDec (decide Q)
 -- same for  □ p ⇒ □ ○ p , whose derivation goes through case (R2) of
 -- Theorem 4.1 -- see bnbProof in LTL.Extract.
 
-decide_benAri : Eq (isProof (decide benAri)) true
+decide_benAri : isProof (decide benAri) ≡ true
 decide_benAri = refl
 
-decide_bnb : Eq (isProof (decide bnb)) true
+decide_bnb : isProof (decide bnb) ≡ true
 decide_bnb = refl
 
 -- ◇ p is decided in the negative, and the certificate is a lasso.
@@ -251,17 +251,17 @@ decide_bnb = refl
 -- and the surviving state it starts from is  1 0 1 1 0 : ◇ p fails, □ ¬ p
 -- holds, p does not.  The stem is empty -- rest and cycle coincide -- and the
 -- cycle is that state looping to itself.  So the countermodel is the obvious
--- one, p false forever, and by the Deriv Q -> Empty field of the record,
+-- one, p false forever, and by the ⊢ Q -> Empty field of the record,
 -- ◇ p has no derivation in L.
 
 cmState : Val
-cmState = true :: false :: true :: true :: false :: []
+cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
 
-decide_◇P : Eq (isProof (decide ◇P)) false
+decide_◇P : isProof (decide ◇P) ≡ false
 decide_◇P = refl
 
-decide_◇P_lasso : Eq (lassoOfDecide ◇P (decide ◇P))
-                       (prod cmState (prod (cmState :: []) (cmState :: [])))
+decide_◇P_lasso : lassoOfDecide ◇P (decide ◇P) ≡
+                       (cmState , cmState ∷ [] , cmState ∷ [])
 decide_◇P_lasso = refl
 
 ------------------------------------------------------------------------
@@ -297,28 +297,28 @@ c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
 
 -- p and q, but neither forever
 c5both : Val
-c5both = true  :: false :: true :: true :: false :: true :: true
-      :: false :: true  :: false :: true  :: false :: true :: []
+c5both = true  ∷ false ∷ true ∷ true ∷ false ∷ true ∷ true
+      ∷ false ∷ true  ∷ false ∷ true  ∷ false ∷ true ∷ []
 
 -- q, not p
 c5q : Val
-c5q = true  :: false :: true :: true :: true  :: false :: true
-   :: false :: true  :: false :: false :: false :: true :: []
+c5q = true  ∷ false ∷ true ∷ true ∷ true  ∷ false ∷ true
+   ∷ false ∷ true  ∷ false ∷ false ∷ false ∷ true ∷ []
 
 -- p, not q
 c5p : Val
-c5p = false :: true :: true :: true :: false :: true :: false
-   :: true  :: false :: true  :: true  :: false :: false :: []
+c5p = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ false
+   ∷ true  ∷ false ∷ true  ∷ true  ∷ false ∷ false ∷ []
 
 -- p and q, both forever
 c5pq : Val
-c5pq = false :: true :: true :: true :: false :: true :: true
-    :: true  :: false :: true :: true :: true  :: true :: []
+c5pq = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
+    ∷ true  ∷ false ∷ true ∷ true ∷ true  ∷ true ∷ []
 
-decide_c5 : Eq (isProof (decide c5)) false
+decide_c5 : isProof (decide c5) ≡ false
 decide_c5 = refl
 
-decide_c5_lasso : Eq (lassoOfDecide c5 (decide c5))
-                     (prod c5both (prod (c5q :: c5p :: c5pq :: c5pq :: [])
-                                        (c5pq :: [])))
+decide_c5_lasso : lassoOfDecide c5 (decide c5) ≡
+                  (c5both , c5q ∷ c5p ∷ c5pq ∷ c5pq ∷ [] ,
+                            c5pq ∷ [])
 decide_c5_lasso = refl

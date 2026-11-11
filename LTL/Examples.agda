@@ -10,7 +10,7 @@
 --
 --   isProof (decide X) = true    decide returned inl, a derivation of X in L
 --   isProof (decide X) = false   decide returned inr, a lasso countermodel
---                                together with  Deriv X -> Empty
+--                                together with  ⊢ X -> Empty
 --
 -- So the file is not a comparison of two programs' outputs.  Every line below
 -- is a theorem: the true ones assert that a derivation exists, the false ones
@@ -197,142 +197,142 @@ axK5 = □ ◇ (pv ∨ qv) ⇔ □ ◇ pv ∨ □ ◇ qv
 ------------------------------------------------------------------------
 -- The results
 
-check_T : Eq (isProof (decide axT)) true
+check_T : isProof (decide axT) ≡ true
 check_T = refl
 
-check_pb2 : Eq (isProof (decide pb2)) false
+check_pb2 : isProof (decide pb2) ≡ false
 check_pb2 = refl
 
-check_G : Eq (isProof (decide axG)) true
+check_G : isProof (decide axG) ≡ true
 check_G = refl
 
-check_M : Eq (isProof (decide axM)) false
+check_M : isProof (decide axM) ≡ false
 check_M = refl
 
-check_M2 : Eq (isProof (decide axM2)) false
+check_M2 : isProof (decide axM2) ≡ false
 check_M2 = refl
 
-check_M3 : Eq (isProof (decide axM3)) false
+check_M3 : isProof (decide axM3) ≡ false
 check_M3 = refl
 
-check_pb5 : Eq (isProof (decide pb5)) true
+check_pb5 : isProof (decide pb5) ≡ true
 check_pb5 = refl
 
-check_lin1 : Eq (isProof (decide lin1)) true
+check_lin1 : isProof (decide lin1) ≡ true
 check_lin1 = refl
 
-check_Dum : Eq (isProof (decide axDum)) true
+check_Dum : isProof (decide axDum) ≡ true
 check_Dum = refl
 
-check_Dum1 : Eq (isProof (decide axDum1)) true
+check_Dum1 : isProof (decide axDum1) ≡ true
 check_Dum1 = refl
 
-check_Dum2 : Eq (isProof (decide axDum2)) true
+check_Dum2 : isProof (decide axDum2) ≡ true
 check_Dum2 = refl
 
-check_Dum3 : Eq (isProof (decide axDum3)) true
+check_Dum3 : isProof (decide axDum3) ≡ true
 check_Dum3 = refl
 
-check_Dum4 : Eq (isProof (decide axDum4)) true
+check_Dum4 : isProof (decide axDum4) ≡ true
 check_Dum4 = refl
 
-check_D : Eq (isProof (decide axD)) true
+check_D : isProof (decide axD) ≡ true
 check_D = refl
 
-check_ax4 : Eq (isProof (decide ax4)) true
+check_ax4 : isProof (decide ax4) ≡ true
 check_ax4 = refl
 
-check_ax4M : Eq (isProof (decide ax4M)) true
+check_ax4M : isProof (decide ax4M) ≡ true
 check_ax4M = refl
 
-check_ax5 : Eq (isProof (decide ax5)) false
+check_ax5 : isProof (decide ax5) ≡ false
 check_ax5 = refl
 
-check_ax5M : Eq (isProof (decide ax5M)) false
+check_ax5M : isProof (decide ax5M) ≡ false
 check_ax5M = refl
 
-check_B : Eq (isProof (decide axB)) false
+check_B : isProof (decide axB) ≡ false
 check_B = refl
 
-check_BM : Eq (isProof (decide axBM)) false
+check_BM : isProof (decide axBM) ≡ false
 check_BM = refl
 
-check_G0 : Eq (isProof (decide axG0)) true
+check_G0 : isProof (decide axG0) ≡ true
 check_G0 = refl
 
-check_H : Eq (isProof (decide axH)) true
+check_H : isProof (decide axH) ≡ true
 check_H = refl
 
-check_Hplus : Eq (isProof (decide axHplus)) true
+check_Hplus : isProof (decide axHplus) ≡ true
 check_Hplus = refl
 
-check_L : Eq (isProof (decide axL)) true
+check_L : isProof (decide axL) ≡ true
 check_L = refl
 
-check_Lplus : Eq (isProof (decide axLplus)) true
+check_Lplus : isProof (decide axLplus) ≡ true
 check_Lplus = refl
 
-check_Lplusplus : Eq (isProof (decide axLplusplus)) true
+check_Lplusplus : isProof (decide axLplusplus) ≡ true
 check_Lplusplus = refl
 
-check_Pt : Eq (isProof (decide axPt)) false
+check_Pt : isProof (decide axPt) ≡ false
 check_Pt = refl
 
-check_W : Eq (isProof (decide axW)) false
+check_W : isProof (decide axW) ≡ false
 check_W = refl
 
-check_Z : Eq (isProof (decide axZ)) false
+check_Z : isProof (decide axZ) ≡ false
 check_Z = refl
 
-check_Grz : Eq (isProof (decide axGrz)) false
+check_Grz : isProof (decide axGrz) ≡ false
 check_Grz = refl
 
-check_Grz1 : Eq (isProof (decide axGrz1)) false
+check_Grz1 : isProof (decide axGrz1) ≡ false
 check_Grz1 = refl
 
-check_Grz2 : Eq (isProof (decide axGrz2)) false
+check_Grz2 : isProof (decide axGrz2) ≡ false
 check_Grz2 = refl
 
-check_Grz3 : Eq (isProof (decide axGrz3)) false
+check_Grz3 : isProof (decide axGrz3) ≡ false
 check_Grz3 = refl
 
-check_Grz4 : Eq (isProof (decide axGrz4)) false
+check_Grz4 : isProof (decide axGrz4) ≡ false
 check_Grz4 = refl
 
-check_Grz5 : Eq (isProof (decide axGrz5)) false
+check_Grz5 : isProof (decide axGrz5) ≡ false
 check_Grz5 = refl
 
-check_F : Eq (isProof (decide axF)) false
+check_F : isProof (decide axF) ≡ false
 check_F = refl
 
-check_Hs : Eq (isProof (decide axHs)) false
+check_Hs : isProof (decide axHs) ≡ false
 check_Hs = refl
 
-check_P : Eq (isProof (decide axP)) false
+check_P : isProof (decide axP) ≡ false
 check_P = refl
 
-check_R : Eq (isProof (decide axR)) false
+check_R : isProof (decide axR) ≡ false
 check_R = refl
 
-check_X : Eq (isProof (decide axX)) true
+check_X : isProof (decide axX) ≡ true
 check_X = refl
 
-check_Zem : Eq (isProof (decide axZem)) false
+check_Zem : isProof (decide axZem) ≡ false
 check_Zem = refl
 
-check_K1 : Eq (isProof (decide axK1)) false
+check_K1 : isProof (decide axK1) ≡ false
 check_K1 = refl
 
-check_K2 : Eq (isProof (decide axK2)) false
+check_K2 : isProof (decide axK2) ≡ false
 check_K2 = refl
 
-check_K3 : Eq (isProof (decide axK3)) true
+check_K3 : isProof (decide axK3) ≡ true
 check_K3 = refl
 
-check_K4 : Eq (isProof (decide axK4)) true
+check_K4 : isProof (decide axK4) ≡ true
 check_K4 = refl
 
-check_K5 : Eq (isProof (decide axK5)) true
+check_K5 : isProof (decide axK5) ≡ true
 check_K5 = refl
 
 ------------------------------------------------------------------------
@@ -342,7 +342,7 @@ check_K5 = refl
 -- states as the procedure stores them, but a bit vector read against
 -- sub (¬ Q) is not something one wants to look at.  traceOf evaluates a
 -- chosen formula at the successive stages of the run instead, and shapeOf says
--- where the run starts repeating: with shapeOf Q = prod r c the run is
+-- where the run starts repeating: with shapeOf Q = r , c the run is
 --
 --    v0 , rest_0 , ... , rest_{r-1} , then the last c of those, forever
 --
@@ -350,13 +350,13 @@ check_K5 = refl
 --
 -- Nothing here is an extra assumption.  traceOf goes through eval of LTL.Eval,
 -- which is the semantics soundness (G26) is proved against, so
--- "traceOf Q Q 1 = false :: []" below and the Deriv Q -> Empty field of the
+-- "traceOf Q Q 1 = false ∷ []" below and the ⊢ Q -> Empty field of the
 -- record are the same fact seen from the two ends.
 
 ------------------------------------------------------------------------
 -- pb2 = p ⇒ □ p.
 --
--- shapeOf pb2 = prod 3 1: three states then a fixed point, so the run is
+-- shapeOf pb2 = 3 , 1: three states then a fixed point, so the run is
 --
 --    p       1  0  1  1  1  1  1  1  ...
 --    □ p   0  0  1  1
@@ -366,23 +366,23 @@ check_K5 = refl
 -- stage 2 on p holds forever, so □ p holds and pb2 holds at every stage but
 -- the first.  That single false at stage 0 is the countermodel.
 
-pb2_shape : Eq (shapeOf pb2) (prod 3 1)
+pb2_shape : shapeOf pb2 ≡ (3 , 1)
 pb2_shape = refl
 
-pb2_p : Eq (traceOf pb2 pv 8)
-           (true :: false :: true :: true :: true :: true :: true :: true :: [])
+pb2_p : traceOf pb2 pv 8 ≡
+        true ∷ false ∷ true ∷ true ∷ true ∷ true ∷ true ∷ true ∷ []
 pb2_p = refl
 
-pb2_□ : Eq (traceOf pb2 (□ pv) 4) (false :: false :: true :: true :: [])
+pb2_□ : traceOf pb2 (□ pv) 4 ≡ false ∷ false ∷ true ∷ true ∷ []
 pb2_□ = refl
 
-pb2_input : Eq (traceOf pb2 pb2 4) (false :: true :: true :: true :: [])
+pb2_input : traceOf pb2 pb2 4 ≡ false ∷ true ∷ true ∷ true ∷ []
 pb2_input = refl
 
 ------------------------------------------------------------------------
 -- axM2 = ◇ □ (p ⇒ □ p).
 --
--- shapeOf axM2 = prod 2 2: the cycle has two states and the stem is empty, so
+-- shapeOf axM2 = 2 , 2: the cycle has two states and the stem is empty, so
 -- the run is periodic from stage 1 with period 2 --
 --
 --    p            1  0  1  0  1  0  1  0  ...
@@ -395,18 +395,18 @@ pb2_input = refl
 -- alternating run refutes axM2 not just at stage 0 but everywhere, which is
 -- what an eventuality being unfulfillable on a cycle looks like.
 
-axM2_shape : Eq (shapeOf axM2) (prod 2 2)
+axM2_shape : shapeOf axM2 ≡ (2 , 2)
 axM2_shape = refl
 
-axM2_p : Eq (traceOf axM2 pv 8)
-            (true :: false :: true :: false :: true :: false :: true :: false :: [])
+axM2_p : traceOf axM2 pv 8 ≡
+         true ∷ false ∷ true ∷ false ∷ true ∷ false ∷ true ∷ false ∷ []
 axM2_p = refl
 
-axM2_step : Eq (traceOf axM2 (pv ⇒ □ pv) 8)
-               (false :: true :: false :: true :: false :: true :: false :: true :: [])
+axM2_step : traceOf axM2 (pv ⇒ □ pv) 8 ≡
+            false ∷ true ∷ false ∷ true ∷ false ∷ true ∷ false ∷ true ∷ []
 axM2_step = refl
 
-axM2_input : Eq (traceOf axM2 axM2 4) (false :: false :: false :: false :: [])
+axM2_input : traceOf axM2 axM2 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 axM2_input = refl
 
 ------------------------------------------------------------------------
@@ -446,28 +446,28 @@ axM2_input = refl
 axK5fwd : Formula
 axK5fwd = □ ◇ (pv ∨ qv) ⇒ □ ◇ pv ∨ □ ◇ qv
 
-K5fwd_sub : Eq (length (sub (¬ axK5fwd))) 22
+K5fwd_sub : length (sub (¬ axK5fwd)) ≡ 22
 K5fwd_sub = refl
 
-K5fwd_atoms : Eq (length (atoms (sub (¬ axK5fwd)))) 8
+K5fwd_atoms : length (atoms (sub (¬ axK5fwd))) ≡ 8
 K5fwd_atoms = refl
 
-K5fwd_cands : Eq (length (cands (¬ axK5fwd))) 256
+K5fwd_cands : length (cands (¬ axK5fwd)) ≡ 256
 K5fwd_cands = refl
 
-K5fwd_states : Eq (length (StC (¬ axK5fwd))) 59
+K5fwd_states : length (StC (¬ axK5fwd)) ≡ 59
 K5fwd_states = refl
 
-K5fwd_closure : Eq (length (Ust (¬ axK5fwd))) 9
+K5fwd_closure : length (Ust (¬ axK5fwd)) ≡ 9
 K5fwd_closure = refl
 
 -- the first round removes one state, and by (R2)
 
-K5fwd_round1 : Eq (reasons (¬ axK5fwd) (Ust (¬ axK5fwd))) (false :: [])
+K5fwd_round1 : reasons (¬ axK5fwd) (Ust (¬ axK5fwd)) ≡ false ∷ []
 K5fwd_round1 = refl
 
-K5fwd_uinf : Eq (length (Uinf (¬ axK5fwd))) 0
+K5fwd_uinf : length (Uinf (¬ axK5fwd)) ≡ 0
 K5fwd_uinf = refl
 
-check_K5fwd : Eq (isProof (decide axK5fwd)) true
+check_K5fwd : isProof (decide axK5fwd) ≡ true
 check_K5fwd = refl

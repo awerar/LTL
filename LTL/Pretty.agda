@@ -67,10 +67,10 @@ import Agda.Builtin.List as B
 ------------------------------------------------------------------------
 -- Strings and numbers
 
-infixr 5 _++_
+infixr 5 _<>_
 
-_++_ : String -> String -> String
-_++_ = primStringAppend
+_<>_ : String -> String -> String
+_<>_ = primStringAppend
 
 -- C-u C-u C-c C-n wraps its input as  show (...)
 show : String -> String
@@ -101,25 +101,25 @@ natMinus (suc n) (suc m) = natMinus n m
 
 spaces : Nat -> String
 spaces zero    = ""
-spaces (suc n) = " " ++ spaces n
+spaces (suc n) = " " <> spaces n
 
 padL padR : Nat -> String -> String
-padL w s = spaces (natMinus w (strLen s)) ++ s
-padR w s = s ++ spaces (natMinus w (strLen s))
+padL w s = spaces (natMinus w (strLen s)) <> s
+padR w s = s <> spaces (natMinus w (strLen s))
 
 concatS : List String -> String
 concatS []        = ""
-concatS (s :: ss) = s ++ concatS ss
+concatS (s ∷ ss) = s <> concatS ss
 
 -- the lines, each followed by a line break
 unlines : List String -> String
 unlines []        = ""
-unlines (s :: ss) = s ++ "\n" ++ unlines ss
+unlines (s ∷ ss) = s <> "\n" <> unlines ss
 
 commaSep : List String -> String
-commaSep []             = ""
-commaSep (s :: [])      = s
-commaSep (s :: t :: ss) = s ++ ", " ++ commaSep (t :: ss)
+commaSep []           = ""
+commaSep (s ∷ [])     = s
+commaSep (s ∷ t ∷ ss) = s <> ", " <> commaSep (t ∷ ss)
 
 ------------------------------------------------------------------------
 -- Formulas
@@ -137,27 +137,27 @@ showVar (suc (suc zero))             = "r"
 showVar (suc (suc (suc zero)))       = "s"
 showVar (suc (suc (suc (suc zero)))) = "t"
 showVar (suc (suc (suc (suc (suc n))))) =
-  "x" ++ showNat (suc (suc (suc (suc (suc n)))))
+  "x" <> showNat (suc (suc (suc (suc (suc n)))))
 
 paren : Nat -> Nat -> String -> String
-paren c prec s = boolCase (natLe c prec) s ("(" ++ s ++ ")")
+paren c prec s = boolCase (natLe c prec) s ("(" <> s <> ")")
 
 notS : Nat -> String -> String
-notS c s = paren c 30 ("¬ " ++ s)
+notS c s = paren c 30 ("¬ " <> s)
 
 impS : Nat -> String -> String -> String
-impS c a b = paren c 20 (a ++ " ⇒ " ++ b)
+impS c a b = paren c 20 (a <> " ⇒ " <> b)
 
 andS : Nat -> String -> String -> String
-andS c a b = paren c 22 (a ++ " ∧ " ++ b)
+andS c a b = paren c 22 (a <> " ∧ " <> b)
 
 mutual
   fm : Nat -> Formula -> String
   fm c (var n) = showVar n
   fm c (¬ A)   = fmNot c A
   fm c (A ⇒ B) = impS c (fm 21 A) (fm 20 B)
-  fm c (○ A)   = paren c 30 ("○ " ++ fm 30 A)
-  fm c (□ A)   = paren c 30 ("□ " ++ fm 30 A)
+  fm c (○ A)   = paren c 30 ("○ " <> fm 30 A)
+  fm c (□ A)   = paren c 30 ("□ " <> fm 30 A)
 
   -- the formula  ¬ A
   fmNot : Nat -> Formula -> String
@@ -169,11 +169,11 @@ mutual
 
   -- the formula  ¬ □ A ;  ◇ A when A is a negation
   fmNotBox : Nat -> Formula -> String
-  fmNotBox c (¬ A)   = paren c 30 ("◇ " ++ fm 30 A)
-  fmNotBox c (var n) = notS c ("□ " ++ fm 30 (var n))
-  fmNotBox c (A ⇒ B) = notS c ("□ " ++ fm 30 (A ⇒ B))
-  fmNotBox c (○ A)   = notS c ("□ " ++ fm 30 (○ A))
-  fmNotBox c (□ A)   = notS c ("□ " ++ fm 30 (□ A))
+  fmNotBox c (¬ A)   = paren c 30 ("◇ " <> fm 30 A)
+  fmNotBox c (var n) = notS c ("□ " <> fm 30 (var n))
+  fmNotBox c (A ⇒ B) = notS c ("□ " <> fm 30 (A ⇒ B))
+  fmNotBox c (○ A)   = notS c ("□ " <> fm 30 (○ A))
+  fmNotBox c (□ A)   = notS c ("□ " <> fm 30 (□ A))
 
   -- the formula  ¬ (A ⇒ B) ;  A ∧ B' when B is  ¬ B'
   fmNotImp : Nat -> Formula -> Formula -> String
@@ -193,8 +193,8 @@ mutual
 
   fmAndImp : Nat -> Formula -> Formula -> Formula -> String
   fmAndImp c X Y (Y' ⇒ X') =
-    boolCase (boolAnd (formEq X X') (formEq Y Y'))
-             (paren c 19 (fm 20 X ++ " ⇔ " ++ fm 20 Y))
+    boolCase (formEq X X' ∧ᵇ formEq Y Y')
+             (paren c 19 (fm 20 X <> " ⇔ " <> fm 20 Y))
              (andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (Y' ⇒ X')))
   fmAndImp c X Y (var n) = andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (var n))
   fmAndImp c X Y (¬ B)   = andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (¬ B))
@@ -209,8 +209,8 @@ fmRaw : Nat -> Formula -> String
 fmRaw c (var n) = showVar n
 fmRaw c (¬ A)   = notS c (fmRaw 30 A)
 fmRaw c (A ⇒ B) = impS c (fmRaw 21 A) (fmRaw 20 B)
-fmRaw c (○ A)   = paren c 30 ("○ " ++ fmRaw 30 A)
-fmRaw c (□ A)   = paren c 30 ("□ " ++ fmRaw 30 A)
+fmRaw c (○ A)   = paren c 30 ("○ " <> fmRaw 30 A)
+fmRaw c (□ A)   = paren c 30 ("□ " <> fmRaw 30 A)
 
 showFormulaRaw : Formula -> String
 showFormulaRaw = fmRaw 0
@@ -241,19 +241,19 @@ data Found : Set where
 
 -- the line proving A, searching lines n, n-1, ..., 1
 findLine : Formula -> Nat -> List PLine -> Found
-findLine A zero    ls                = notFound
-findLine A (suc n) []                = notFound
-findLine A (suc n) (pline B j :: ls) =
+findLine A zero    ls               = notFound
+findLine A (suc n) []               = notFound
+findLine A (suc n) (pline B j ∷ ls) =
   boolCase (formEq A B) (foundAt (suc n)) (findLine A n ls)
 
-pushFound : Formula -> Justif -> Nat -> List PLine -> Found -> Prod PState Nat
-pushFound A j n ls (foundAt i) = prod (pstate n ls) i
-pushFound A j n ls notFound    = prod (pstate (suc n) (pline A j :: ls)) (suc n)
+pushFound : Formula -> Justif -> Nat -> List PLine -> Found -> PState × Nat
+pushFound A j n ls (foundAt i) = pstate n ls , i
+pushFound A j n ls notFound    = pstate (suc n) (pline A j ∷ ls) , suc n
 
-push : Formula -> Justif -> PState -> Prod PState Nat
+push : Formula -> Justif -> PState -> PState × Nat
 push A j (pstate n ls) = pushFound A j n ls (findLine A n ls)
 
-axName : {A : Formula} -> Deriv A -> String
+axName : {A : Formula} -> ⊢ A -> String
 axName p1       = "P1"
 axName p2       = "P2"
 axName p3       = "P3"
@@ -266,21 +266,21 @@ axName (pc e)   = "PC"
 axName (mp d e) = "MP"
 axName (gen d)  = "Gen"
 
-linMP2 : Formula -> Nat -> Prod PState Nat -> Prod PState Nat
-linMP2 B i (prod s j) = push B (byMP i j) s
+linMP2 : Formula -> Nat -> PState × Nat -> PState × Nat
+linMP2 B i (s , j) = push B (byMP i j) s
 
-linGen : Formula -> Prod PState Nat -> Prod PState Nat
-linGen A (prod s i) = push A (byGen i) s
+linGen : Formula -> PState × Nat -> PState × Nat
+linGen A (s , i) = push A (byGen i) s
 
 mutual
-  linearise : {A : Formula} -> Deriv A -> PState -> Prod PState Nat
+  linearise : {A : Formula} -> ⊢ A -> PState -> PState × Nat
   linearise {A} d (pstate n ls) = linFound d (pstate n ls) (findLine A n ls)
 
-  linFound : {A : Formula} -> Deriv A -> PState -> Found -> Prod PState Nat
-  linFound d s (foundAt i) = prod s i
+  linFound : {A : Formula} -> ⊢ A -> PState -> Found -> PState × Nat
+  linFound d s (foundAt i) = s , i
   linFound d s notFound    = linNew d s
 
-  linNew : {A : Formula} -> Deriv A -> PState -> Prod PState Nat
+  linNew : {A : Formula} -> ⊢ A -> PState -> PState × Nat
   linNew {A} p1       s = push A (byAx "P1")  s
   linNew {A} p2       s = push A (byAx "P2")  s
   linNew {A} p3       s = push A (byAx "P3")  s
@@ -293,45 +293,45 @@ mutual
   linNew {A} (mp d e) s = linMP A (linearise d s) e
   linNew {A} (gen d)  s = linGen A (linearise d s)
 
-  linMP : (B : Formula) {A : Formula} -> Prod PState Nat -> Deriv A
-       -> Prod PState Nat
-  linMP B (prod s i) e = linMP2 B i (linearise e s)
+  linMP : (B : Formula) {A : Formula} -> PState × Nat -> ⊢ A
+       -> PState × Nat
+  linMP B (s , i) e = linMP2 B i (linearise e s)
 
 justifStr : Justif -> String
 justifStr (byAx s)   = s
-justifStr (byMP i j) = "MP " ++ showNat i ++ ", " ++ showNat j
-justifStr (byGen i)  = "Gen " ++ showNat i
+justifStr (byMP i j) = "MP " <> showNat i <> ", " <> showNat j
+justifStr (byGen i)  = "Gen " <> showNat i
 
 -- number, justification and formula of each line, oldest first
 data Row : Set where
   row : String -> String -> String -> Row
 
 rowsRev : Nat -> List PLine -> List Row -> List Row
-rowsRev n       []                acc = acc
-rowsRev zero    (pline A j :: ls) acc = acc
-rowsRev (suc n) (pline A j :: ls) acc =
-  rowsRev n ls (row (showNat (suc n)) (justifStr j) (showFormula A) :: acc)
+rowsRev n       []               acc = acc
+rowsRev zero    (pline A j ∷ ls) acc = acc
+rowsRev (suc n) (pline A j ∷ ls) acc =
+  rowsRev n ls (row (showNat (suc n)) (justifStr j) (showFormula A) ∷ acc)
 
 justWidth : List Row -> Nat
 justWidth []                 = zero
-justWidth (row _ j _ :: rs) = natMax (strLen j) (justWidth rs)
+justWidth (row _ j _ ∷ rs) = natMax (strLen j) (justWidth rs)
 
 rowLines : Nat -> Nat -> List Row -> List String
 rowLines nw jw []                 = []
-rowLines nw jw (row k j f :: rs) =
-  (padL nw k ++ "  " ++ padR jw j ++ "  " ++ f) :: rowLines nw jw rs
+rowLines nw jw (row k j f ∷ rs) =
+  (padL nw k <> "  " <> padR jw j <> "  " <> f) ∷ rowLines nw jw rs
 
 stateLines : Formula -> PState -> List String
 stateLines A (pstate n ls) =
-  ("⊢ " ++ showFormula A) :: "" :: rowLines (strLen (showNat n)) (justWidth rows) rows
+  ("⊢ " <> showFormula A) ∷ "" ∷ rowLines (strLen (showNat n)) (justWidth rows) rows
   where
     rows : List Row
     rows = rowsRev n ls []
 
-proofLines : {A : Formula} -> Deriv A -> List String
-proofLines {A} d = stateLines A (prodFst (linearise d (pstate zero [])))
+proofLines : {A : Formula} -> ⊢ A -> List String
+proofLines {A} d = stateLines A (fst (linearise d (pstate zero [])))
 
-renderDeriv : {A : Formula} -> Deriv A -> String
+renderDeriv : {A : Formula} -> ⊢ A -> String
 renderDeriv d = unlines (proofLines d)
 
 ------------------------------------------------------------------------
@@ -341,15 +341,15 @@ renderDeriv d = unlines (proofLines d)
 -- then its antecedent.  Below depth n a subtree is shown as ⋮ .
 
 mutual
-  treeS : {A : Formula} -> Nat -> String -> String -> Deriv A -> List String
-  treeS     zero    here rest d = (here ++ "⋮") :: []
-  treeS {A} (suc n) here rest d =
-    (here ++ padR 3 (axName d) ++ "  " ++ showFormula A) :: treeKids n rest d
+  treeS : {A : Formula} -> Nat -> String -> String -> ⊢ A -> List String
+  treeS     zero    pre rest d = (pre <> "⋮") ∷ []
+  treeS {A} (suc n) pre rest d =
+    (pre <> padR 3 (axName d) <> "  " <> showFormula A) ∷ treeKids n rest d
 
-  treeKids : {A : Formula} -> Nat -> String -> Deriv A -> List String
-  treeKids n rest (mp d e) = append (treeS n (rest ++ "├─ ") (rest ++ "│  ") d)
-                                    (treeS n (rest ++ "└─ ") (rest ++ "   ") e)
-  treeKids n rest (gen d)  = treeS n (rest ++ "└─ ") (rest ++ "   ") d
+  treeKids : {A : Formula} -> Nat -> String -> ⊢ A -> List String
+  treeKids n rest (mp d e) = treeS n (rest <> "├─ ") (rest <> "│  ") d ++
+                             treeS n (rest <> "└─ ") (rest <> "   ") e
+  treeKids n rest (gen d)  = treeS n (rest <> "└─ ") (rest <> "   ") d
   treeKids n rest p1       = []
   treeKids n rest p2       = []
   treeKids n rest p3       = []
@@ -360,10 +360,10 @@ mutual
   treeKids n rest lin      = []
   treeKids n rest (pc e)   = []
 
-treeLines : {A : Formula} -> Nat -> Deriv A -> List String
+treeLines : {A : Formula} -> Nat -> ⊢ A -> List String
 treeLines n d = treeS n "" "" d
 
-renderTree : {A : Formula} -> Nat -> Deriv A -> String
+renderTree : {A : Formula} -> Nat -> ⊢ A -> String
 renderTree n d = unlines (treeLines n d)
 
 ------------------------------------------------------------------------
@@ -385,27 +385,27 @@ isVar (□ A)   = false
 
 -- sub P may list a formula more than once
 nubF : List Formula -> List Formula
-nubF []        = []
-nubF (A :: As) = A :: filterL (\ B -> boolNot (formEq A B)) (nubF As)
+nubF []       = []
+nubF (A ∷ As) = A ∷ filterL (λ B -> ¬ᵇ formEq A B) (nubF As)
 
 stateStr : Formula -> Val -> String
 stateStr P v =
-  "{" ++ commaSep (map showFormula (filterL (\ A -> valOf P v A)
-                                            (nubF (filterL isVar (sub P))))) ++ "}"
+  "{" <> commaSep (map showFormula (filterL (λ A -> valOf P v A)
+                                            (nubF (filterL isVar (sub P))))) <> "}"
 
 statesLines : Formula -> Nat -> List Val -> List String
-statesLines P i []        = []
-statesLines P i (v :: vs) =
-  ("  " ++ padL 3 (showNat i) ++ "  " ++ stateStr P v) :: statesLines P (suc i) vs
+statesLines P i []       = []
+statesLines P i (v ∷ vs) =
+  ("  " <> padL 3 (showNat i) <> "  " <> stateStr P v) ∷ statesLines P (suc i) vs
 
 cmLines : (Q : Formula) -> LassoCountermodel Q -> List String
 cmLines Q (countermodel v0 (mkRun b c0 c1 _ _ _ _ _ rest _ _) _ _ _) =
-  ("⊬ " ++ showFormula Q) :: ""
-  :: "Countermodel: the formula is false at time 0.  Variables true at each time:"
-  :: append (statesLines (¬ Q) zero (v0 :: rest))
-     ("then repeating forever:"
-      :: append (statesLines (¬ Q) loopStart (c0 :: c1))
-                (("  (back to time " ++ showNat loopStart ++ ")") :: []))
+  ("⊬ " <> showFormula Q) ∷ ""
+  ∷ "Countermodel: the formula is false at time 0.  Variables true at each time:"
+  ∷ statesLines (¬ Q) zero (v0 ∷ rest)
+  ++ "then repeating forever:"
+  ∷ statesLines (¬ Q) loopStart (c0 ∷ c1)
+  ++ ("  (back to time " <> showNat loopStart <> ")") ∷ []
   where
     loopStart : Nat
     loopStart = suc (length rest)
@@ -417,9 +417,9 @@ renderCM Q c = unlines (cmLines Q c)
 -- Entry points
 
 Decider : Set
-Decider = (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
+Decider = (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 
-resultLines : (Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)
+resultLines : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
            -> List String
 resultLines Q (inl d) = proofLines d
 resultLines Q (inr c) = cmLines Q c
@@ -440,7 +440,7 @@ prove = proveWith decidePC
 proveTree : Nat -> Formula -> String
 proveTree n Q = go (decidePC Q)
   where
-    go : Sum (Deriv Q) (LassoCountermodel Q) -> String
+    go : ⊢ Q ⊎ LassoCountermodel Q -> String
     go (inl d) = renderTree n d
     go (inr c) = renderCM Q c
 
@@ -448,27 +448,27 @@ proveTree n Q = go (decidePC Q)
 -- Checks: the printer on the identity (L1), the abbreviations, and a
 -- countermodel.  The first is ⇒Refl_full of LTL.Proofs, as text.
 
-pretty_identity : Eq (renderDeriv (⇒Refl {var zero}))
+pretty_identity : renderDeriv (⇒Refl {var zero}) ≡
   "⊢ p ⇒ p\n\n1  P2       (p ⇒ (p ⇒ p) ⇒ p) ⇒ (p ⇒ p ⇒ p) ⇒ p ⇒ p\n2  P1       p ⇒ (p ⇒ p) ⇒ p\n3  MP 1, 2  (p ⇒ p ⇒ p) ⇒ p ⇒ p\n4  P1       p ⇒ p ⇒ p\n5  MP 3, 4  p ⇒ p\n"
 pretty_identity = refl
 
 pretty_sugar :
-  Eq (showFormula (□ var 0 ⇒ var 0 ∧ ○ var 0 ∧ ○ □ var 0)
-   :: showFormula (◇ var 0 ∧ ◇ var 1 ⇒ ◇ (var 0 ∧ var 1))
-   :: showFormula (○ ¬ var 0 ⇔ ¬ ○ var 0)
-   :: showFormula (¬ var 0 ⇒ var 1)
-   :: showFormula (¬ (var 0 ⇒ var 1))
-   :: showFormulaRaw (◇ var 0)
-   :: [])
-     ("□ p ⇒ p ∧ ○ p ∧ ○ □ p"
-   :: "◇ p ∧ ◇ q ⇒ ◇ (p ∧ q)"
-   :: "○ ¬ p ⇔ ¬ ○ p"
-   :: "¬ p ⇒ q"
-   :: "¬ (p ⇒ q)"
-   :: "¬ □ ¬ p"
-   :: [])
+  showFormula (□ var 0 ⇒ var 0 ∧ ○ var 0 ∧ ○ □ var 0)
+   ∷ showFormula (◇ var 0 ∧ ◇ var 1 ⇒ ◇ (var 0 ∧ var 1))
+   ∷ showFormula (○ ¬ var 0 ⇔ ¬ ○ var 0)
+   ∷ showFormula (¬ var 0 ⇒ var 1)
+   ∷ showFormula (¬ (var 0 ⇒ var 1))
+   ∷ showFormulaRaw (◇ var 0)
+   ∷ [] ≡
+     "□ p ⇒ p ∧ ○ p ∧ ○ □ p"
+   ∷ "◇ p ∧ ◇ q ⇒ ◇ (p ∧ q)"
+   ∷ "○ ¬ p ⇔ ¬ ○ p"
+   ∷ "¬ p ⇒ q"
+   ∷ "¬ (p ⇒ q)"
+   ∷ "¬ □ ¬ p"
+   ∷ []
 pretty_sugar = refl
 
-pretty_countermodel : Eq (prove (var 0 ⇒ □ var 0))
+pretty_countermodel : prove (var 0 ⇒ □ var 0) ≡
   "⊬ p ⇒ □ p\n\nCountermodel: the formula is false at time 0.  Variables true at each time:\n    0  {p}\n    1  {}\n    2  {p}\n    3  {p}\nthen repeating forever:\n    4  {p}\n  (back to time 4)\n"
 pretty_countermodel = refl

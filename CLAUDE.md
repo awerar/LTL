@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Constructive LTL decision procedures in Agda. Given `Q : Formula`, the
-procedures return `Sum (Deriv Q) (LassoCountermodel Q)`: a Hilbert-style
+procedures return `⊢ Q ⊎ LassoCountermodel Q`: a Hilbert-style
 derivation or a certified finite lasso countermodel.
 
 ## Ground rules
@@ -18,6 +18,14 @@ derivation or a certified finite lasso countermodel.
   `⋀`/`⋁` over lists in `LTL/Val.agda`). Implication is `⇒` because Agda
   reserves `→`. Lemma names use the same symbols (`⇒Trans`, `□Elim`, `k□`).
   **Until is not implemented** (it is the thesis goal).
+- Prelude notation follows Agda's standard library: `x ≡ y` (`sym`, `trans`,
+  `cong`, `subst`), `A ⊎ B` (`inl`/`inr`), `Σ[ x ∈ A ] B` and `A × B` (both
+  built with `_,_`; `fst`/`snd`), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
+  (`here`/`there`), `m < n`, `m ≤ n`. Boolean connectives are `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ
+  ⇔ᵇ`, because the plain symbols are the LTL connectives. `⊢ A` (`data ⊢_` in
+  `LTL/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
+  `⊥`/`⊤` are formulas. Function types and lambdas stay ASCII (`->`) apart from
+  `λ`.
 - Module headers cite goals G1–G40 of `FORMALISATION-PLAN.md` /
   `PHASE11-PLAN.md` (gitignored, not in the repo) and the lemma/theorem numbers
   of `m4.tex` / `m5.tex`. Keep that comment style: long header comments that
@@ -34,11 +42,11 @@ derivation or a certified finite lasso countermodel.
 
 ## Module index (`LTL/`, in dependency order)
 
-1. **Foundations** — `Base` (Nat, Bool, Empty, Unit, Eq); `Prelude` (Sum,
-   Sigma, Prod, List, Mem, index/nth, Boolean lemmas).
+1. **Foundations** — `Base` (Nat, Bool, Empty, Unit, `≡`); `Prelude` (`⊎`,
+   `Σ`, `×`, List, `∈`, `<`, index/nth, Boolean connectives and lemmas).
 2. **Syntax and proof system** — `Formula` (datatype, abbreviations, decidable
    `formEq`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
-   `isTaut` for (PC)); `Deriv` (`data Deriv`: 10 constructors + optional `pc`).
+   `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** — `Prop` (L0–L7 via
    `identP`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).
@@ -72,7 +80,7 @@ derivation or a certified finite lasso countermodel.
 
 - `decide` (`LTL/Decide.agda`), `decideSCC` (`LTL/DecideSCC.agda`),
   `decidePC` (`LTL/ShortPC.agda`) — all of type
-  `(Q : Formula) -> Sum (Deriv Q) (LassoCountermodel Q)`.
+  `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q`.
 
 ## Adding Until (expected touch points)
 

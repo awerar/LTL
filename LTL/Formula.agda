@@ -76,7 +76,7 @@ formEq (¬ A)    (□ B)   = false
 
 formEq (A ⇒ A') (var m) = false
 formEq (A ⇒ A') (¬ B)   = false
-formEq (A ⇒ A') (B ⇒ C) = boolAnd (formEq A B) (formEq A' C)
+formEq (A ⇒ A') (B ⇒ C) = formEq A B ∧ᵇ formEq A' C
 formEq (A ⇒ A') (○ B)   = false
 formEq (A ⇒ A') (□ B)   = false
 
@@ -95,7 +95,7 @@ formEq (□ A)    (□ B)   = formEq A B
 ------------------------------------------------------------------------
 -- formEq is reflexive, hence complete
 
-formEq_refl : (A : Formula) -> Eq (formEq A A) true
+formEq_refl : (A : Formula) -> formEq A A ≡ true
 formEq_refl (var n) = natEq_refl n
 formEq_refl (¬ A)   = formEq_refl A
 formEq_refl (A ⇒ B) = andIntro (formEq A A) (formEq B B)
@@ -103,21 +103,21 @@ formEq_refl (A ⇒ B) = andIntro (formEq A A) (formEq B B)
 formEq_refl (○ A)   = formEq_refl A
 formEq_refl (□ A)   = formEq_refl A
 
-formEq_complete : (A B : Formula) -> Eq A B -> Eq (formEq A B) true
+formEq_complete : (A B : Formula) -> A ≡ B -> formEq A B ≡ true
 formEq_complete A B refl = formEq_refl A
 
 ------------------------------------------------------------------------
 -- formEq is sound
 
-formEq_sound : (A B : Formula) -> Eq (formEq A B) true -> Eq A B
-formEq_sound (var n)  (var m) p = eqCong var (natEq_sound n m p)
+formEq_sound : (A B : Formula) -> formEq A B ≡ true -> A ≡ B
+formEq_sound (var n)  (var m) p = cong var (natEq_sound n m p)
 formEq_sound (var n)  (¬ B)   ()
 formEq_sound (var n)  (B ⇒ C) ()
 formEq_sound (var n)  (○ B)   ()
 formEq_sound (var n)  (□ B)   ()
 
 formEq_sound (¬ A)    (var m) ()
-formEq_sound (¬ A)    (¬ B)   p = eqCong ¬_ (formEq_sound A B p)
+formEq_sound (¬ A)    (¬ B)   p = cong ¬_ (formEq_sound A B p)
 formEq_sound (¬ A)    (B ⇒ C) ()
 formEq_sound (¬ A)    (○ B)   ()
 formEq_sound (¬ A)    (□ B)   ()
@@ -128,7 +128,7 @@ formEq_sound (A ⇒ A') (B ⇒ C) p =
   ⇒Cong (formEq_sound A B (andTrueL (formEq A B) (formEq A' C) p))
         (formEq_sound A' C (andTrueR (formEq A B) (formEq A' C) p))
   where
-    ⇒Cong : {X Y X' Y' : Formula} -> Eq X Y -> Eq X' Y' -> Eq (X ⇒ X') (Y ⇒ Y')
+    ⇒Cong : {X Y X' Y' : Formula} -> X ≡ Y -> X' ≡ Y' -> X ⇒ X' ≡ Y ⇒ Y'
     ⇒Cong refl refl = refl
 formEq_sound (A ⇒ A') (○ B)   ()
 formEq_sound (A ⇒ A') (□ B)   ()
@@ -136,11 +136,11 @@ formEq_sound (A ⇒ A') (□ B)   ()
 formEq_sound (○ A)    (var m) ()
 formEq_sound (○ A)    (¬ B)   ()
 formEq_sound (○ A)    (B ⇒ C) ()
-formEq_sound (○ A)    (○ B)   p = eqCong ○_ (formEq_sound A B p)
+formEq_sound (○ A)    (○ B)   p = cong ○_ (formEq_sound A B p)
 formEq_sound (○ A)    (□ B)   ()
 
 formEq_sound (□ A)    (var m) ()
 formEq_sound (□ A)    (¬ B)   ()
 formEq_sound (□ A)    (B ⇒ C) ()
 formEq_sound (□ A)    (○ B)   ()
-formEq_sound (□ A)    (□ B)   p = eqCong □_ (formEq_sound A B p)
+formEq_sound (□ A)    (□ B)   p = cong □_ (formEq_sound A B p)

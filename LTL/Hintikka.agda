@@ -34,146 +34,145 @@ open import LTL.Extract public
 ------------------------------------------------------------------------
 -- Reading (S1) and (S2) off a survivor
 
-stateOk : (P : Formula) (s : Val) -> Mem s (Uinf P) -> {A : Formula}
-       -> Mem A (sub P) -> Eq (okAt P s A) true
+stateOk : (P : Formula) (s : Val) -> s ∈ Uinf P -> {A : Formula}
+       -> A ∈ sub P -> okAt P s A ≡ true
 stateOk P s m mA =
   allOk_at P s (sub P) mA
            (andTrueL (allOk P s (sub P)) (allCoh P s (length (sub P)))
                      (uinfState P s m))
 
 -- (S2)
-□S2 : (P : Formula) (s : Val) -> Mem s (Uinf P) -> (B : Formula)
-     -> Mem (□ B) (sub P) -> Eq (valOf P s (□ B)) true -> Eq (valOf P s B) true
+□S2 : (P : Formula) (s : Val) -> s ∈ Uinf P -> (B : Formula)
+     -> □ B ∈ sub P -> valOf P s (□ B) ≡ true -> valOf P s B ≡ true
 □S2 P s m B mb e =
   ⇒TrueB (valOf P s (□ B)) (valOf P s B) (stateOk P s m mb) e
 
-⇒Cong : {a a' b b' : Bool} -> Eq a a' -> Eq b b'
-       -> Eq (boolImp a b) (boolImp a' b')
+⇒Cong : {a a' b b' : Bool} -> a ≡ a' -> b ≡ b'
+       -> a ⇒ᵇ b ≡ a' ⇒ᵇ b'
 ⇒Cong refl refl = refl
 
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
 
 □Along : (P : Formula) (b c0 : Val) (c1 : List Val)
-        -> Mem c0 (Uinf P) -> Walk P (Uinf P) c0 c1 b -> Eq (step P b c0) true
-        -> (B : Formula) -> Mem (□ B) (sub P)
+        -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
+        -> (B : Formula) -> □ B ∈ sub P
         -> (t : Nat) (pos : Pos) -> ValidPos P b pos
-        -> Eq (valOf P (posState pos) (□ B)) true
-        -> Eq (valOf P (posState (posIter c0 c1 t pos)) (□ B)) true
+        -> valOf P (posState pos) (□ B) ≡ true
+        -> valOf P (posState (posIter c0 c1 t pos)) (□ B) ≡ true
 □Along P b c0 c1 mc0 wc stb B mb zero    pos vp e = e
 □Along P b c0 c1 mc0 wc stb B mb (suc t) pos vp e =
   □Along P b c0 c1 mc0 wc stb B mb t (nextPos c0 c1 pos)
-           (prodFst (posStep P b c0 c1 mc0 wc stb vp))
+           (fst (posStep P b c0 c1 mc0 wc stb vp))
            (carry P (posState pos) (posState (nextPos c0 c1 pos)) B mb
-                  (prodSnd (posStep P b c0 c1 mc0 wc stb vp)) e)
+                  (snd (posStep P b c0 c1 mc0 wc stb vp)) e)
 
 □True : (P : Formula) (b c0 : Val) (c1 : List Val)
-       -> Mem c0 (Uinf P) -> Walk P (Uinf P) c0 c1 b -> Eq (step P b c0) true
-       -> (B : Formula) -> Mem (□ B) (sub P)
-       -> (pos q : Pos) -> ValidPos P b pos -> Mem q (orbitOf c0 c1 pos)
-       -> Eq (valOf P (posState pos) (□ B)) true
-       -> Eq (valOf P (posState q) B) true
+       -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
+       -> (B : Formula) -> □ B ∈ sub P
+       -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbitOf c0 c1 pos
+       -> valOf P (posState pos) (□ B) ≡ true
+       -> valOf P (posState q) B ≡ true
 □True P b c0 c1 mc0 wc stb B mb pos q vp m e =
   fromIter (orbitOf_iter c0 c1 pos q m)
   where
-    fromIter : Sigma Nat (\ t -> Eq (posIter c0 c1 t pos) q)
-            -> Eq (valOf P (posState q) B) true
-    fromIter (sig t et) =
-      eqSubst (\ r -> Eq (valOf P (posState r) B) true) et
-              (□S2 P (posState (posIter c0 c1 t pos))
-                     (posIn P b (posIterValid P b c0 c1 mc0 wc stb t pos vp))
-                     B mb (□Along P b c0 c1 mc0 wc stb B mb t pos vp e))
+    fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
+            -> valOf P (posState q) B ≡ true
+    fromIter (t , et) =
+      subst (λ r -> valOf P (posState r) B ≡ true) et
+            (□S2 P (posState (posIter c0 c1 t pos))
+                   (posIn P b (posIterValid P b c0 c1 mc0 wc stb t pos vp))
+                   B mb (□Along P b c0 c1 mc0 wc stb B mb t pos vp e))
 
 ------------------------------------------------------------------------
 -- Hintikka's lemma
 
 hint : (P : Formula) (b c0 : Val) (c1 : List Val)
-    -> Mem c0 (Uinf P) -> Walk P (Uinf P) c0 c1 b -> Eq (step P b c0) true
-    -> Mem b (c0 :: c1)
-    -> ((s : Val) -> Mem s (b :: c0 :: c1)
-          -> (A : Formula) -> Mem A (□Args (sub P))
-          -> Eq (valOf P s (□ A)) false -> Fulfil P A b (c0 :: c1))
-    -> (A : Formula) -> Mem A (sub P)
+    -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
+    -> b ∈ c0 ∷ c1
+    -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
+          -> (A : Formula) -> A ∈ □Args (sub P)
+          -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
+    -> (A : Formula) -> A ∈ sub P
     -> (pos : Pos) -> ValidPos P b pos
-    -> Eq (valOf P (posState pos) A) (evalAt P c0 c1 A pos)
+    -> valOf P (posState pos) A ≡ evalAt P c0 c1 A pos
 
 hint P b c0 c1 mc0 wc stb mbc cyc (var n) mA pos vp = refl
 
 hint P b c0 c1 mc0 wc stb mbc cyc (¬ B) mA pos vp =
-  eqTrans (boolEq_sound (valOf P (posState pos) (¬ B))
-                        (boolNot (valOf P (posState pos) B))
-                        (stateOk P (posState pos) (posIn P b vp) mA))
-          (eqCong boolNot
-                  (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_¬ P mA) pos vp))
+  trans (boolEq_sound (valOf P (posState pos) (¬ B))
+                      (¬ᵇ valOf P (posState pos) B)
+                      (stateOk P (posState pos) (posIn P b vp) mA))
+        (cong ¬ᵇ_
+              (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_¬ P mA) pos vp))
 
 hint P b c0 c1 mc0 wc stb mbc cyc (B ⇒ C) mA pos vp =
-  eqTrans (boolEq_sound (valOf P (posState pos) (B ⇒ C))
-                        (boolImp (valOf P (posState pos) B)
-                                 (valOf P (posState pos) C))
-                        (stateOk P (posState pos) (posIn P b vp) mA))
-          (⇒Cong (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_⇒L P mA) pos vp)
-                   (hint P b c0 c1 mc0 wc stb mbc cyc C (sub_⇒R P mA) pos vp))
+  trans (boolEq_sound (valOf P (posState pos) (B ⇒ C))
+                      (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
+                      (stateOk P (posState pos) (posIn P b vp) mA))
+        (⇒Cong (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_⇒L P mA) pos vp)
+                 (hint P b c0 c1 mc0 wc stb mbc cyc C (sub_⇒R P mA) pos vp))
 
 hint P b c0 c1 mc0 wc stb mbc cyc (○ B) mA pos vp =
-  eqTrans (boolEq_sound (valOf P (posState pos) (○ B))
-                        (valOf P (posState (nextPos c0 c1 pos)) B)
-                        (allStep_at P (posState pos)
-                                    (posState (nextPos c0 c1 pos)) (sub P) mA
-                                    (prodSnd (posStep P b c0 c1 mc0 wc stb vp))))
-          (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_○ P mA)
-                (nextPos c0 c1 pos) (prodFst (posStep P b c0 c1 mc0 wc stb vp)))
+  trans (boolEq_sound (valOf P (posState pos) (○ B))
+                      (valOf P (posState (nextPos c0 c1 pos)) B)
+                      (allStep_at P (posState pos)
+                                  (posState (nextPos c0 c1 pos)) (sub P) mA
+                                  (snd (posStep P b c0 c1 mc0 wc stb vp))))
+        (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_○ P mA)
+              (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
 
 hint P b c0 c1 mc0 wc stb mbc cyc (□ B) mA pos vp =
   on□ (valOf P (posState pos) (□ B)) refl
   where
     ih : (q : Pos) -> ValidPos P b q
-      -> Eq (valOf P (posState q) B) (evalAt P c0 c1 B q)
+      -> valOf P (posState q) B ≡ evalAt P c0 c1 B q
     ih q vq = hint P b c0 c1 mc0 wc stb mbc cyc B (sub_□ P mA) q vq
 
     -- □ B holds: (T2) carries it, (S2) delivers B at every stage
-    allTrue : Eq (valOf P (posState pos) (□ B)) true
-           -> Eq (evalAt P c0 c1 (□ B) pos) true
+    allTrue : valOf P (posState pos) (□ B) ≡ true
+           -> evalAt P c0 c1 (□ B) pos ≡ true
     allTrue e =
-      allB_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (\ {q} m -> atQ q m)
+      allB_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
       where
-        atQ : (q : Pos) -> Mem q (orbitOf c0 c1 pos) -> Eq (evalAt P c0 c1 B q) true
+        atQ : (q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 B q ≡ true
         atQ q m =
-          eqTrans (eqSym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp m)))
-                  (□True P b c0 c1 mc0 wc stb B mA pos q vp m e)
+          trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp m)))
+                (□True P b c0 c1 mc0 wc stb B mA pos q vp m e)
 
     -- □ B fails: Lemma 5.4 supplies the false conjunct
-    allFalse : Eq (valOf P (posState pos) (□ B)) false
-            -> Eq (evalAt P c0 c1 (□ B) pos) false
+    allFalse : valOf P (posState pos) (□ B) ≡ false
+            -> evalAt P c0 c1 (□ B) pos ≡ false
     allFalse e =
       fromGF (globalFulfil P b c0 c1 mbc cyc vp B (□Args_of (sub P) mA) e)
       where
-        fromGF : Sigma Pos (\ q -> Prod (Mem q (orbitOf c0 c1 pos))
-                                        (Eq (valOf P (posState q) B) false))
-              -> Eq (evalAt P c0 c1 (□ B) pos) false
-        fromGF (sig q (prod mq eq)) =
+        fromGF : (Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 pos ×
+                                   valOf P (posState q) B ≡ false)
+              -> evalAt P c0 c1 (□ B) pos ≡ false
+        fromGF (q , mq , eq) =
           eval□_false P c0 c1 B pos q mq
-            (eqTrans (eqSym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
-                     eq)
+            (trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
+                   eq)
 
-    on□ : (x : Bool) -> Eq (valOf P (posState pos) (□ B)) x
-         -> Eq (valOf P (posState pos) (□ B)) (evalAt P c0 c1 (□ B) pos)
-    on□ true  e = eqTrans e (eqSym (allTrue e))
-    on□ false e = eqTrans e (eqSym (allFalse e))
+    on□ : (x : Bool) -> valOf P (posState pos) (□ B) ≡ x
+         -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
+    on□ true  e = trans e (sym (allTrue e))
+    on□ false e = trans e (sym (allFalse e))
 
 ------------------------------------------------------------------------
 -- Hintikka's lemma on a run, at every stage and at the start
 
-hintRun : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> Mem A (sub P)
-       -> (i : Nat) -> Eq (valOf P (stateAt P v0 r i) A) (eval P v0 r A i)
+hintRun : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> A ∈ sub P
+       -> (i : Nat) -> valOf P (stateAt P v0 r i) A ≡ eval P v0 r A i
 hintRun P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA i =
   hint P b c0 c1 mc0 wc stb mbc cyc A mA
-       (posIter c0 c1 i (prod v0 rest))
-       (posIterValid P b c0 c1 mc0 wc stb i (prod v0 rest) (vpos v0 rest mv0 wr))
+       (posIter c0 c1 i (v0 , rest))
+       (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest) (vpos v0 rest mv0 wr))
 
-hintStart : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> Mem A (sub P)
-         -> Eq (valOf P v0 A) (eval P v0 r A 0)
+hintStart : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> A ∈ sub P
+         -> valOf P v0 A ≡ eval P v0 r A 0
 hintStart P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
-  hint P b c0 c1 mc0 wc stb mbc cyc A mA (prod v0 rest) (vpos v0 rest mv0 wr)
+  hint P b c0 c1 mc0 wc stb mbc cyc A mA (v0 , rest) (vpos v0 rest mv0 wr)
 
 ------------------------------------------------------------------------
 -- What the two lemmas together say.
@@ -183,22 +182,22 @@ hintStart P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
 -- and soundness would give [[¬ P]] = 1 there too.  This is the countermodel
 -- half of Theorem 6.1, with only the packaging left for G28.
 
-clash : (x : Bool) -> Eq x true -> Eq (boolNot x) true -> Empty
+clash : (x : Bool) -> x ≡ true -> ¬ᵇ x ≡ true -> Empty
 clash true  ex ()
 clash false () en
 
 notRefutable : (P : Formula) (v0 : Val) (r : Run P v0)
-            -> Eq (valOf P v0 P) true -> Deriv (¬ P) -> Empty
+            -> valOf P v0 P ≡ true -> ⊢ ¬ P -> Empty
 notRefutable P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) e d =
-  clash (evalAt P c0 c1 P (prod v0 rest)) holds negated
+  clash (evalAt P c0 c1 P (v0 , rest)) holds negated
   where
     r : Run P v0
     r = mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr
 
-    holds : Eq (evalAt P c0 c1 P (prod v0 rest)) true
-    holds = eqTrans (eqSym (hintStart P v0 r P (sub_self P))) e
+    holds : evalAt P c0 c1 P (v0 , rest) ≡ true
+    holds = trans (sym (hintStart P v0 r P (sub_self P))) e
 
-    negated : Eq (boolNot (evalAt P c0 c1 P (prod v0 rest))) true
+    negated : ¬ᵇ evalAt P c0 c1 P (v0 , rest) ≡ true
     negated = soundRun P v0 r d 0
 
 -- and in the form the decision procedure produces it: if the procedure reports
@@ -206,11 +205,11 @@ notRefutable P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) e d =
 -- derivable in L.  No enumeration of derivations is involved; the lasso through
 -- that state is the certificate.
 
-notRefutableSat : (P : Formula) -> Eq (satB P) true -> Deriv (¬ P) -> Empty
-notRefutableSat P e d = go (anyL_true (\ v -> valOf P v P) (Uinf P) e)
+notRefutableSat : (P : Formula) -> satB P ≡ true -> ⊢ ¬ P -> Empty
+notRefutableSat P e d = go (anyL_true (λ v -> valOf P v P) (Uinf P) e)
   where
-    go : Sigma Val (\ v -> Prod (Mem v (Uinf P)) (Eq (valOf P v P) true)) -> Empty
-    go (sig v (prod m ev)) = notRefutable P v (runOf P v m (lasso P v m)) ev d
+    go : (Σ[ v ∈ Val ] v ∈ Uinf P × valOf P v P ≡ true) -> Empty
+    go (v , m , ev) = notRefutable P v (runOf P v m (lasso P v m)) ev d
 
 ------------------------------------------------------------------------
 -- Checkpoint.
@@ -219,5 +218,5 @@ notRefutableSat P e d = go (anyL_true (\ v -> valOf P v P) (Uinf P) e)
 -- not a computation -- the certificate is the two-state lasso of LTL.Lasso, and
 -- the proof is Hintikka's lemma at stage 0 against soundness.
 
-◇P_consistent : Deriv (¬ ◇P) -> Empty
+◇P_consistent : ⊢ ¬ ◇P -> Empty
 ◇P_consistent = notRefutableSat ◇P satB_◇P

@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Base  (copy of BRA3.Base, module renamed) -- basic ASCII prelude (Nat, Bool, Eq).
+-- LTL.Base  (after BRA3.Base) -- basic prelude (Nat, Bool, Empty, Unit, ≡).
 --
 -- Self-contained; no dependency on BRA2.  The one change from BRA3.Base: Nat is
 -- Agda's own Agda.Builtin.Nat rather than a local copy bound with the NATURAL
@@ -9,6 +9,11 @@
 -- Agda.Builtin.String (needed by LTL.Pretty, the proof printer) makes it
 -- through Agda.Builtin.Nat.  This is Agda's builtin library, not the standard
 -- library, and the module is --safe.
+--
+-- BRA3.Base was pure ASCII (Eq x y, eqSym, ...).  The notation here follows
+-- Agda's standard library instead -- x ≡ y, sym, trans, cong, subst -- since
+-- that is what readers of Agda expect.  Empty and Unit keep their names:
+-- ⊥ and ⊤ are the LTL constants of LTL.Formula.
 
 module LTL.Base where
 
@@ -48,17 +53,19 @@ record Unit : Set where
 ------------------------------------------------------------------------
 -- Propositional equality
 
-data Eq {A : Set} (x : A) : A -> Set where
-  refl : Eq x x
+infix 4 _≡_
 
-eqSym : {A : Set} {x y : A} -> Eq x y -> Eq y x
-eqSym refl = refl
+data _≡_ {A : Set} (x : A) : A -> Set where
+  refl : x ≡ x
 
-eqTrans : {A : Set} {x y z : A} -> Eq x y -> Eq y z -> Eq x z
-eqTrans refl q = q
+sym : {A : Set} {x y : A} -> x ≡ y -> y ≡ x
+sym refl = refl
 
-eqCong : {A B : Set} (f : A -> B) {x y : A} -> Eq x y -> Eq (f x) (f y)
-eqCong f refl = refl
+trans : {A : Set} {x y z : A} -> x ≡ y -> y ≡ z -> x ≡ z
+trans refl q = q
 
-eqSubst : {A : Set} (P : A -> Set) {x y : A} -> Eq x y -> P x -> P y
-eqSubst P refl px = px
+cong : {A B : Set} (f : A -> B) {x y : A} -> x ≡ y -> f x ≡ f y
+cong f refl = refl
+
+subst : {A : Set} (P : A -> Set) {x y : A} -> x ≡ y -> P x -> P y
+subst P refl px = px
