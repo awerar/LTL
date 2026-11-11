@@ -155,8 +155,14 @@ lec_notValid = refl
 -- example and a benchmark, like LTL.Examples and LTL.Proofs, and the 5 s rule
 -- of FORMALISATION-PLAN.md section 4a does not apply to it.
 
-lec_run : (num (fst lo) , map num (fst (snd lo)) , map num (snd (snd lo))) ≡
-          (11 , 5 ∷ 0 ∷ 0 ∷ [] , 0 ∷ [])
+-- The triple gets its own typed definition: written inline on the left of ≡,
+-- Agda has to infer the type of a Σ pair, and that unification forces lo and
+-- takes over half an hour instead of seconds.
+
+lec_shape : Nat × List Nat × List Nat
+lec_shape = num (fst lo) , map num (fst (snd lo)) , map num (snd (snd lo))
+
+lec_run : lec_shape ≡ (11 , 5 ∷ 0 ∷ 0 ∷ [] , 0 ∷ [])
 lec_run = refl
 
 ------------------------------------------------------------------------

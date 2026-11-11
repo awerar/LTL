@@ -450,8 +450,8 @@ c6_lemma = refl
 -- branch, same countermodel machinery behind both.
 
 c6 : countOf taut ∷ countOfPC taut ∷ [] ≡
-     (82357 , 41178 , 0 , 0
-      ∷ (1 , 0 , 0 , 0) ∷ [])
+     ((82357 , 41178 , 0 , 0)
+      ∷ (1     , 0     , 0 , 0) ∷ [])
 c6 = refl
 
 -- The second (PC) node, and where the rest of the certificate went.
