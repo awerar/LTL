@@ -113,7 +113,7 @@ walkTrail P us (wcons m e wk)  = tCons m e (walkTrail P us wk)
 -- that it lies in the vertex list.
 
 walkLast : (P : Formula) (us : List Val) {v : Val} {zs : List Val} {w : Val}
-        -> Walk P us v zs w -> nullB zs ≡ false -> w ∈ zs
+        -> Walk P us v zs w -> null zs ≡ false -> w ∈ zs
 walkLast P us wk nn = trailLast us (step P) (walkTrail P us wk) nn
 
 ------------------------------------------------------------------------
@@ -146,7 +146,7 @@ evWitness : (P : Formula) (A : Formula) (z : Val)
          -> evPred P A z ≡ true -> valOf P z (□ A) ≡ false
          -> valOf P z A ≡ false
 evWitness P A z ez pd =
-  sumElim (λ e1 -> emptyElim (tfAbs (trans (sym e1) pd)))
+  sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
           (λ e2 -> notTrue (valOf P z A) e2)
           (orTrue (valOf P z (□ A)) (¬ᵇ valOf P z A) ez)
 
@@ -184,7 +184,7 @@ persistTo P us A mb (wcons {v} {w} {ws} {x} mw st wk) e {z} mz =
     onA false ea y my        = inl (ful v here ea)
     onA true  ea y here      = inr (persist P v w A mb st e ea)
     onA true  ea y (there k) =
-      sumElim (λ f -> inl (fulTl f)) inr
+      sumElim (λ f -> inl (fulfilCons f)) inr
               (persistTo P us A mb wk (persist P v w A mb st e ea) k)
 
 ------------------------------------------------------------------------
@@ -321,18 +321,18 @@ sccRunOf P v0 mv0 = runOf P v0 mv0 (sccLassoOf P v0 mv0)
 -- LTL.Lasso reads the round-based search the same way, so sccAt and lassoAt are
 -- two List Val × List Val to be compared.
 
-sccAt : (P : Formula) (v : Val) -> memB v (Uinf P) ≡ true
+sccAt : (P : Formula) (v : Val) -> v ∈ᵛ Uinf P ≡ true
      -> List Val × List Val
 sccAt P v e = lassoStem P v l , lassoCycle P v l
   where
     l : Lasso P v
-    l = sccLassoOf P v (memB_sound v (Uinf P) e)
+    l = sccLassoOf P v (∈ᵛ-sound v (Uinf P) e)
 
-sccState : (P : Formula) (v0 : Val) -> memB v0 (Uinf P) ≡ true -> Nat -> Val
+sccState : (P : Formula) (v0 : Val) -> v0 ∈ᵛ Uinf P ≡ true -> Nat -> Val
 sccState P v0 e i = stateAt P v0 (sccRunOf P v0 m) i
   where
     m : v0 ∈ Uinf P
-    m = memB_sound v0 (Uinf P) e
+    m = ∈ᵛ-sound v0 (Uinf P) e
 
 ------------------------------------------------------------------------
 -- The lassos, computed, beside the ones LTL.Lasso records.
@@ -342,15 +342,15 @@ sccState P v0 e i = stateAt P v0 (sccRunOf P v0 m) i
 -- always starts from the bare loop found by loopAt and prepends one LEG per
 -- fairness predicate, each leg being the loop again followed by the trip out to
 -- the witness and back.  Here there is one eventuality, its witness in the
--- terminal component {sC} is sC itself, so both halves of the trip are empty
--- and the leg is the bare loop over again.  The SCC construction chooses its
--- witnesses in its own order and does not produce the shortest fair cycle --
--- which is the observation checkpoint C8 is to make, not a defect.
+-- terminal component {sSink} is sSink itself, so both halves of the trip are
+-- empty and the leg is the bare loop over again.  The SCC construction chooses
+-- its witnesses in its own order and does not produce the shortest fair cycle
+-- -- which is the observation checkpoint C8 is to make, not a defect.
 
-scc◇P : sccAt ◇P sA refl ≡ (sB ∷ sC ∷ [] , sC ∷ sC ∷ [])
+scc◇P : sccAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ sSink ∷ [])
 scc◇P = refl
 
-lasso◇P : lassoAt ◇P sA refl ≡ (sB ∷ sC ∷ [] , sC ∷ [])
+lasso◇P : lassoAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ [])
 lasso◇P = refl
 
 -- and the same doubling in the degenerate case, where the state set is one
@@ -365,6 +365,6 @@ lasso□P = refl
 -- The run, unwound, to show that runOf accepts the result unchanged: the stem
 -- of ◇ p walked out, then the cycle forever.
 
-scc◇P_run : map (sccState ◇P sA refl) (0 ∷ 1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ≡
-                 sA ∷ sB ∷ sC ∷ sC ∷ sC ∷ sC ∷ []
+scc◇P_run : map (sccState ◇P sPending refl) (0 ∷ 1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ≡
+                 sPending ∷ sFulfil ∷ sSink ∷ sSink ∷ sSink ∷ sSink ∷ []
 scc◇P_run = refl

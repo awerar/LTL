@@ -12,15 +12,22 @@
 --
 -- BRA3.Base was pure ASCII (Eq x y, eqSym, ...).  The notation here follows
 -- Agda's standard library instead -- x ≡ y, sym, trans, cong, subst -- since
--- that is what readers of Agda expect.  Empty and Unit keep their names:
--- ⊥ and ⊤ are the LTL constants of LTL.Formula.
+-- that is what readers of Agda expect, and so do if_then_else_ and the
+-- builtin _+_ and _∸_ (Agda.Builtin.Nat's _-_).  Empty and Unit keep their
+-- names: ⊥ and ⊤ are the LTL constants of LTL.Formula.
+--
+-- Boolean-valued tests carry a superscript naming the type they compare:
+-- ≡ⁿ here on Nat, ≡ᵛ ∈ᵛ ≢ᵛ on valuations (LTL.Reach, LTL.Bar), ≡ᶠ ∈ᶠ on
+-- formulas (LTL.Formula, LTL.Skel), just as ∧ᵇ etc. (LTL.Prelude) act on
+-- Bool.  They are infix 4.5: tighter than ≡, looser than ∷ and ++.
 
 module LTL.Base where
 
 ------------------------------------------------------------------------
 -- Natural numbers
 
-open import Agda.Builtin.Nat public using (Nat; zero; suc)
+open import Agda.Builtin.Nat public using (Nat; zero; suc; _+_)
+  renaming (_-_ to _∸_)
 
 ------------------------------------------------------------------------
 -- Bool
@@ -29,15 +36,19 @@ data Bool : Set where
   true  : Bool
   false : Bool
 
-boolCase : {A : Set} -> Bool -> A -> A -> A
-boolCase true  x _ = x
-boolCase false _ y = y
+infix 0 if_then_else_
 
-natEq : Nat -> Nat -> Bool
-natEq zero    zero    = true
-natEq zero    (suc _) = false
-natEq (suc _) zero    = false
-natEq (suc n) (suc m) = natEq n m
+if_then_else_ : {A : Set} -> Bool -> A -> A -> A
+if true  then x else _ = x
+if false then _ else y = y
+
+infix 4.5 _≡ⁿ_
+
+_≡ⁿ_ : Nat -> Nat -> Bool
+zero  ≡ⁿ zero  = true
+zero  ≡ⁿ suc _ = false
+suc _ ≡ⁿ zero  = false
+suc n ≡ⁿ suc m = n ≡ⁿ m
 
 ------------------------------------------------------------------------
 -- Empty and Unit

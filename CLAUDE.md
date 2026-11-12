@@ -21,11 +21,21 @@ derivation or a certified finite lasso countermodel.
 - Prelude notation follows Agda's standard library: `x ≡ y` (`sym`, `trans`,
   `cong`, `subst`), `A ⊎ B` (`inl`/`inr`), `Σ[ x ∈ A ] B` and `A × B` (both
   built with `_,_`; `fst`/`snd`), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
-  (`here`/`there`), `m < n`, `m ≤ n`. Boolean connectives are `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ
-  ⇔ᵇ`, because the plain symbols are the LTL connectives. `⊢ A` (`data ⊢_` in
+  (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
+  `if b then x else y`, and list helpers `filter any all null concat`.
+  Boolean-valued operators carry a superscript naming their domain:
+  connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
+  connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,
+  `v ∈ᵛ us` on valuations, `A ≡ᶠ B`, `A ∈ᶠ As` on formulas (all `infix 4.5`,
+  so `v ∈ᵛ us ≡ true` needs no parentheses). Lemmas about a symbol use the
+  stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`). `⊢ A` (`data ⊢_` in
   `LTL/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
   `⊥`/`⊤` are formulas. Function types and lambdas stay ASCII (`->`) apart from
   `λ`.
+- Names: prefer a readable name to an abbreviation. Names that follow the notes
+  (`St`, `Ust`, `Uinf`, `r1`/`r2`, `gfpW`, `wZero`, `chi`, `beta`) stay, with a
+  comment at the definition. The search conventions (`fooGo`/`fooFind`, the
+  `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/Bar.agda`.
 - Module headers cite goals G1–G40 of `FORMALISATION-PLAN.md` /
   `PHASE11-PLAN.md` (gitignored, not in the repo) and the lemma/theorem numbers
   of `m4.tex` / `m5.tex`. Keep that comment style: long header comments that
@@ -43,9 +53,9 @@ derivation or a certified finite lasso countermodel.
 ## Module index (`LTL/`, in dependency order)
 
 1. **Foundations** — `Base` (Nat, Bool, Empty, Unit, `≡`); `Prelude` (`⊎`,
-   `Σ`, `×`, List, `∈`, `<`, index/nth, Boolean connectives and lemmas).
+   `Σ`, `×`, List, `∈`, `⊆`, `<`, index/nth, Boolean connectives and lemmas).
 2. **Syntax and proof system** — `Formula` (datatype, abbreviations, decidable
-   `formEq`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
+   `≡ᶠ`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
    `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** — `Prop` (L0–L7 via
    `identP`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,

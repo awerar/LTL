@@ -455,7 +455,7 @@ K5fwd_atoms = refl
 K5fwd_cands : length (cands (¬ axK5fwd)) ≡ 256
 K5fwd_cands = refl
 
-K5fwd_states : length (StC (¬ axK5fwd)) ≡ 59
+K5fwd_states : length (StCand (¬ axK5fwd)) ≡ 59
 K5fwd_states = refl
 
 K5fwd_closure : length (Ust (¬ axK5fwd)) ≡ 9

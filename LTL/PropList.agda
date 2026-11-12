@@ -21,6 +21,8 @@ open import LTL.Val  public
 -- From  P ⇒ (C ⇒ B)  and  P ⇒ (C ⇒ ¬ B)  conclude  P ⇒ ¬ C.  Every
 -- refutation below factors through this.
 
+-- mpU2 is mpU under two antecedents P and Q.
+
 mpU2 : {P Q A B : Formula}
     -> ⊢ P ⇒ Q ⇒ A ⇒ B -> ⊢ P ⇒ Q ⇒ A
     -> ⊢ P ⇒ Q ⇒ B
@@ -31,7 +33,7 @@ mpU2 f g = mpU (mpU (liftP p2) f) g
          -> ⊢ P ⇒ ¬ C
 ¬IntroU {P} {C} {B} f g =
   mpU (mpU (liftP (p3 {⊤} {¬ C}))
-           (mpU2 (mpU2 (liftP (liftP (exf {B} {¬ ⊤})))
+           (mpU2 (mpU2 (liftP (liftP (explode {B} {¬ ⊤})))
                        (⇒TransU (liftP dne) f))
                  (⇒TransU (liftP dne) g)))
       (liftP deriv⊤)
@@ -67,15 +69,17 @@ caseU {P} {X} {Z} f g = ⇒Trans (¬IntroU h1 h2) dne
 ------------------------------------------------------------------------
 -- G11 : (L2)
 
-data AllD (C : Formula) : List Formula -> Set where
-  adNil  : AllD C []
-  adCons : {A : Formula} {As : List Formula}
-        -> ⊢ C ⇒ A -> AllD C As -> AllD C (A ∷ As)
+-- AllFrom C As: every A in As follows from C (⊢ C ⇒ A for each).
 
-allD_map : {C : Formula} (As : List Formula)
-        -> ({A : Formula} -> A ∈ As -> ⊢ C ⇒ A) -> AllD C As
-allD_map []       f = adNil
-allD_map (A ∷ As) f = adCons (f here) (allD_map As (λ m -> f (there m)))
+data AllFrom (C : Formula) : List Formula -> Set where
+  fromNil  : AllFrom C []
+  fromCons : {A : Formula} {As : List Formula}
+          -> ⊢ C ⇒ A -> AllFrom C As -> AllFrom C (A ∷ As)
+
+allFrom_map : {C : Formula} (As : List Formula)
+           -> ({A : Formula} -> A ∈ As -> ⊢ C ⇒ A) -> AllFrom C As
+allFrom_map []       f = fromNil
+allFrom_map (A ∷ As) f = fromCons (f here) (allFrom_map As (λ m -> f (there m)))
 
 ⋀Proj : {A : Formula} (As : List Formula)
         -> A ∈ As -> ⊢ ⋀ As ⇒ A
@@ -84,27 +88,29 @@ allD_map (A ∷ As) f = adCons (f here) (allD_map As (λ m -> f (there m)))
 ⋀Proj (B ∷ Bs) (there h) = ⇒Trans ∧Snd (⋀Proj Bs h)
 
 ⋀Intro : {C : Formula} (As : List Formula)
-         -> AllD C As -> ⊢ C ⇒ ⋀ As
-⋀Intro []       adNil         = liftP deriv⊤
-⋀Intro (A ∷ As) (adCons d ds) = ∧Pair d (⋀Intro As ds)
+         -> AllFrom C As -> ⊢ C ⇒ ⋀ As
+⋀Intro []       fromNil         = liftP deriv⊤
+⋀Intro (A ∷ As) (fromCons d ds) = ∧Pair d (⋀Intro As ds)
 
 ------------------------------------------------------------------------
 -- G12 : (L5)
 
-data AllI (C : Formula) : List Formula -> Set where
-  aiNil  : AllI C []
-  aiCons : {A : Formula} {As : List Formula}
-        -> ⊢ A ⇒ C -> AllI C As -> AllI C (A ∷ As)
+-- AllInto C As: every A in As implies C (⊢ A ⇒ C for each).
 
-allI_map : {C : Formula} (As : List Formula)
-        -> ({A : Formula} -> A ∈ As -> ⊢ A ⇒ C) -> AllI C As
-allI_map []       f = aiNil
-allI_map (A ∷ As) f = aiCons (f here) (allI_map As (λ m -> f (there m)))
+data AllInto (C : Formula) : List Formula -> Set where
+  intoNil  : AllInto C []
+  intoCons : {A : Formula} {As : List Formula}
+          -> ⊢ A ⇒ C -> AllInto C As -> AllInto C (A ∷ As)
+
+allInto_map : {C : Formula} (As : List Formula)
+           -> ({A : Formula} -> A ∈ As -> ⊢ A ⇒ C) -> AllInto C As
+allInto_map []       f = intoNil
+allInto_map (A ∷ As) f = intoCons (f here) (allInto_map As (λ m -> f (there m)))
 
 ⋁Intro : {A : Formula} (As : List Formula)
          -> A ∈ As -> ⊢ A ⇒ ⋁ As
 ⋁Intro []       ()
-⋁Intro (B ∷ Bs) here      = exf
+⋁Intro (B ∷ Bs) here      = explode
 ⋁Intro (B ∷ Bs) (there h) = ⇒Trans (⋁Intro Bs h) p1
 
 -- The cons case is the classical one: under the antecedent
@@ -112,9 +118,9 @@ allI_map (A ∷ As) f = aiCons (f here) (allI_map As (λ m -> f (there m)))
 -- ¬ C ⇒ A and ¬ C ⇒ ¬ A, hence ¬ ¬ C, hence C.
 
 ⋁Elim : {C : Formula} (As : List Formula)
-        -> AllI C As -> ⊢ ⋁ As ⇒ C
-⋁Elim []       aiNil         = exFalso
-⋁Elim {C} (A ∷ As) (aiCons d ds) = ⇒Trans (¬IntroU h1 h2) dne
+        -> AllInto C As -> ⊢ ⋁ As ⇒ C
+⋁Elim []       intoNil         = exFalso
+⋁Elim {C} (A ∷ As) (intoCons d ds) = ⇒Trans (¬IntroU h1 h2) dne
   where
     P : Formula
     P = ¬ A ⇒ ⋁ As
@@ -141,12 +147,12 @@ allI_map (A ∷ As) f = aiCons (f here) (allI_map As (λ m -> f (there m)))
 ⋁Mono : (As Bs : List Formula)
         -> ({A : Formula} -> A ∈ As -> A ∈ Bs)
         -> ⊢ ⋁ As ⇒ ⋁ Bs
-⋁Mono As Bs sb = ⋁Elim As (allI_map As (λ m -> ⋁Intro Bs (sb m)))
+⋁Mono As Bs sb = ⋁Elim As (allInto_map As (λ m -> ⋁Intro Bs (sb m)))
 
 ⋀Mono : (As Bs : List Formula)
         -> ({A : Formula} -> A ∈ Bs -> A ∈ As)
         -> ⊢ ⋀ As ⇒ ⋀ Bs
-⋀Mono As Bs sb = ⋀Intro Bs (allD_map Bs (λ m -> ⋀Proj As (sb m)))
+⋀Mono As Bs sb = ⋀Intro Bs (allFrom_map Bs (λ m -> ⋀Proj As (sb m)))
 
 -- Dropping a single refuted disjunct.  Lemma 2.6 discharges the non-states
 -- this way, and Lemma 2.7 the successors w with v not-> w.
@@ -155,7 +161,7 @@ allI_map (A ∷ As) f = aiCons (f here) (allI_map As (λ m -> f (there m)))
         -> ⊢ ¬ A -> ⊢ ⋁ (A ∷ As) ⇒ ⋁ As
 ⋁Drop {A} As d =
   ⋁Elim (A ∷ As)
-           (aiCons (mp ¬Elim d) (allI_map As (λ m -> ⋁Intro As m)))
+           (intoCons (mp ¬Elim d) (allInto_map As (λ m -> ⋁Intro As m)))
 
 ------------------------------------------------------------------------
 -- G13 : (L6)
@@ -175,7 +181,7 @@ splitOn A Cs = map (A ∧_) Cs ++ map (¬ A ∧_) Cs
 
 splitD : {A : Formula} (Cs : List Formula)
       -> ⊢ ⋁ Cs -> ⊢ ⋁ (splitOn A Cs)
-splitD {A} Cs d = mp (⋁Elim Cs (allI_map Cs each)) d
+splitD {A} Cs d = mp (⋁Elim Cs (allInto_map Cs each)) d
   where
     Z : Formula
     Z = ⋁ (splitOn A Cs)

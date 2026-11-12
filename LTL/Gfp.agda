@@ -46,14 +46,19 @@ open import LTL.Closure public
 holdsAt : Formula -> Formula -> Val -> Bool
 holdsAt P A w = valOf P w A
 
-wZero : Formula -> List Val -> Formula -> List Val
-wZero P us A = filterL (holdsAt P A) us
+-- W_0 of the header: the states of us at which A holds.
 
-succIn : Formula -> List Val -> List Val -> Val -> Bool
-succIn P us W w = allB (λ w' -> step P w w' ⇒ᵇ memB w' W) us
+wZero : Formula -> List Val -> Formula -> List Val
+wZero P us A = filter (holdsAt P A) us
+
+-- Every successor of w that lies in us also lies in W.  shrink keeps exactly
+-- the w of W for which this is true.
+
+succsInside : Formula -> List Val -> List Val -> Val -> Bool
+succsInside P us W w = all (λ w' -> step P w w' ⇒ᵇ (w' ∈ᵛ W)) us
 
 shrink : Formula -> List Val -> List Val -> List Val
-shrink P us W = filterL (succIn P us W) W
+shrink P us W = filter (succsInside P us W) W
 
 ------------------------------------------------------------------------
 -- The iteration, run until it stops.
@@ -61,22 +66,22 @@ shrink P us W = filterL (succIn P us W) W
 -- findFalse asks the one question the round needs: is there a state of W with
 -- a successor in us that has already left W?  If there is not, W is closed and
 -- is the answer.  If there is, that state leaves W -- and it leaves the Bar's
--- predicate with it, which is what dropInE says and what makes the recursive
+-- predicate with it, which is what dropAllSat says and what makes the recursive
 -- call structurally smaller.
 
 shrinkGo   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-          -> InE E W -> IFin E -> List Val
+          -> AllSat E W -> IFin E -> List Val
 shrinkFind : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-          -> InE E W -> IFin E -> FindResult (succIn P us W) W -> List Val
+          -> AllSat E W -> IFin E -> FindResult (succsInside P us W) W -> List Val
 
-shrinkGo P us W sb bar = shrinkFind P us W sb bar (findFalse (succIn P us W) W)
+shrinkGo P us W sb bar = shrinkFind P us W sb bar (findFalse (succsInside P us W) W)
 
-shrinkFind P us W sb bar      (allT f)      = W
+shrinkFind P us W sb bar      (allTrue f)   = W
 shrinkFind P us W sb (cBar h) (found x m q) =
-  shrinkGo P us (shrink P us W) (dropInE (succIn P us W) W sb x q) (h x (sb x m))
+  shrinkGo P us (shrink P us W) (dropAllSat (succsInside P us W) W sb x q) (h x (sb x m))
 
 gfpW : Formula -> List Val -> Formula -> List Val
-gfpW P us A = shrinkGo P us (wZero P us A) (memInE (wZero P us A))
+gfpW P us A = shrinkGo P us (wZero P us A) (memAllSat (wZero P us A))
                        (listBar (wZero P us A))
 
 ------------------------------------------------------------------------
@@ -87,60 +92,60 @@ ClosedIn P us W =
   (w w' : Val) -> w ∈ W -> w' ∈ us -> step P w w' ≡ true -> w' ∈ W
 
 closedOfAll : (P : Formula) (us W : List Val)
-           -> ({x : Val} -> x ∈ W -> succIn P us W x ≡ true)
+           -> ({x : Val} -> x ∈ W -> succsInside P us W x ≡ true)
            -> ClosedIn P us W
 closedOfAll P us W f w w' mw mw' st =
-  memB_sound w' W
-    (⇒TrueB (step P w w') (memB w' W)
-              (allB_at (λ z -> step P w z ⇒ᵇ memB z W) us mw' (f mw))
+  ∈ᵛ-sound w' W
+    (⇒TrueB (step P w w') (w' ∈ᵛ W)
+              (all_at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
               st)
 
 shrinkGoClosed   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                -> (sb : InE E W) (bar : IFin E)
+                -> (sb : AllSat E W) (bar : IFin E)
                 -> ClosedIn P us (shrinkGo P us W sb bar)
 shrinkFindClosed : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                -> (sb : InE E W) (bar : IFin E)
-                -> (fr : FindResult (succIn P us W) W)
+                -> (sb : AllSat E W) (bar : IFin E)
+                -> (fr : FindResult (succsInside P us W) W)
                 -> ClosedIn P us (shrinkFind P us W sb bar fr)
 
 shrinkGoClosed P us W sb bar =
-  shrinkFindClosed P us W sb bar (findFalse (succIn P us W) W)
+  shrinkFindClosed P us W sb bar (findFalse (succsInside P us W) W)
 
-shrinkFindClosed P us W sb bar      (allT f)      = closedOfAll P us W f
+shrinkFindClosed P us W sb bar      (allTrue f)   = closedOfAll P us W f
 shrinkFindClosed P us W sb (cBar h) (found x m q) =
-  shrinkGoClosed P us (shrink P us W) (dropInE (succIn P us W) W sb x q)
+  shrinkGoClosed P us (shrink P us W) (dropAllSat (succsInside P us W) W sb x q)
                  (h x (sb x m))
 
 gfpClosed : (P : Formula) (us : List Val) (A : Formula)
          -> ClosedIn P us (gfpW P us A)
 gfpClosed P us A =
-  shrinkGoClosed P us (wZero P us A) (memInE (wZero P us A))
+  shrinkGoClosed P us (wZero P us A) (memAllSat (wZero P us A))
                  (listBar (wZero P us A))
 
 ------------------------------------------------------------------------
 -- The other two properties: W sits inside U_k, and A holds throughout it
 
 shrinkGoSub   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-             -> (sb : InE E W) (bar : IFin E) {z : Val}
+             -> (sb : AllSat E W) (bar : IFin E) {z : Val}
              -> z ∈ shrinkGo P us W sb bar -> z ∈ W
 shrinkFindSub : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-             -> (sb : InE E W) (bar : IFin E)
-             -> (fr : FindResult (succIn P us W) W) {z : Val}
+             -> (sb : AllSat E W) (bar : IFin E)
+             -> (fr : FindResult (succsInside P us W) W) {z : Val}
              -> z ∈ shrinkFind P us W sb bar fr -> z ∈ W
 
 shrinkGoSub P us W sb bar =
-  shrinkFindSub P us W sb bar (findFalse (succIn P us W) W)
+  shrinkFindSub P us W sb bar (findFalse (succsInside P us W) W)
 
-shrinkFindSub P us W sb bar      (allT f)      mz = mz
+shrinkFindSub P us W sb bar      (allTrue f)   mz = mz
 shrinkFindSub P us W sb (cBar h) (found x m q) mz =
-  filter_sub (succIn P us W) W
+  filter_sub (succsInside P us W) W
              (shrinkGoSub P us (shrink P us W)
-                          (dropInE (succIn P us W) W sb x q) (h x (sb x m)) mz)
+                          (dropAllSat (succsInside P us W) W sb x q) (h x (sb x m)) mz)
 
 gfpWZero : (P : Formula) (us : List Val) (A : Formula) {w : Val}
         -> w ∈ gfpW P us A -> w ∈ wZero P us A
 gfpWZero P us A =
-  shrinkGoSub P us (wZero P us A) (memInE (wZero P us A))
+  shrinkGoSub P us (wZero P us A) (memAllSat (wZero P us A))
               (listBar (wZero P us A))
 
 gfpIn : (P : Formula) (us : List Val) (A : Formula) {w : Val}
@@ -158,35 +163,35 @@ gfpHolds P us A m = filter_prop (holdsAt P A) us (gfpWZero P us A m)
 -- gfpComplete below instantiate it at Path.
 
 shrinkGoGreatest   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                  -> (sb : InE E W) (bar : IFin E) (X : Val -> Set)
+                  -> (sb : AllSat E W) (bar : IFin E) (X : Val -> Set)
                   -> ((w : Val) -> X w -> w ∈ W)
                   -> ((w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w')
                   -> (w : Val) -> X w -> w ∈ shrinkGo P us W sb bar
 shrinkFindGreatest : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                  -> (sb : InE E W) (bar : IFin E)
-                  -> (fr : FindResult (succIn P us W) W) (X : Val -> Set)
+                  -> (sb : AllSat E W) (bar : IFin E)
+                  -> (fr : FindResult (succsInside P us W) W) (X : Val -> Set)
                   -> ((w : Val) -> X w -> w ∈ W)
                   -> ((w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w')
                   -> (w : Val) -> X w -> w ∈ shrinkFind P us W sb bar fr
 
 shrinkGoGreatest P us W sb bar =
-  shrinkFindGreatest P us W sb bar (findFalse (succIn P us W) W)
+  shrinkFindGreatest P us W sb bar (findFalse (succsInside P us W) W)
 
-shrinkFindGreatest P us W sb bar      (allT f)      X inW cl w x = inW w x
+shrinkFindGreatest P us W sb bar      (allTrue f)      X inW cl w x = inW w x
 shrinkFindGreatest P us W sb (cBar h) (found x0 m q) X inW cl w x =
-  shrinkGoGreatest P us (shrink P us W) (dropInE (succIn P us W) W sb x0 q)
+  shrinkGoGreatest P us (shrink P us W) (dropAllSat (succsInside P us W) W sb x0 q)
                    (h x0 (sb x0 m)) X inW' cl w x
   where
     inW' : (z : Val) -> X z -> z ∈ shrink P us W
     inW' z xz =
-      filter_true (succIn P us W) W (inW z xz)
-                  (allB_intro (λ w' -> step P z w' ⇒ᵇ memB w' W) us inner)
+      filter_true (succsInside P us W) W (inW z xz)
+                  (all_intro (λ w' -> step P z w' ⇒ᵇ (w' ∈ᵛ W)) us inner)
       where
         inner : {w' : Val} -> w' ∈ us
-             -> step P z w' ⇒ᵇ memB w' W ≡ true
+             -> step P z w' ⇒ᵇ (w' ∈ᵛ W) ≡ true
         inner {w'} mw' =
-          ⇒IntroB (step P z w') (memB w' W)
-                    (λ st -> memB_complete w' W (inW w' (cl z w' xz mw' st)))
+          ⇒IntroB (step P z w') (w' ∈ᵛ W)
+                    (λ st -> ∈ᵛ-complete w' W (inW w' (cl z w' xz mw' st)))
 
 gfpGreatest : (P : Formula) (us : List Val) (A : Formula) (X : Val -> Set)
            -> ((w : Val) -> X w -> w ∈ us)
@@ -194,7 +199,7 @@ gfpGreatest : (P : Formula) (us : List Val) (A : Formula) (X : Val -> Set)
            -> ((w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w')
            -> (w : Val) -> X w -> w ∈ gfpW P us A
 gfpGreatest P us A X inUs hol cl =
-  shrinkGoGreatest P us (wZero P us A) (memInE (wZero P us A))
+  shrinkGoGreatest P us (wZero P us A) (memAllSat (wZero P us A))
                    (listBar (wZero P us A)) X
                    (λ w x -> filter_true (holdsAt P A) us (inUs w x) (hol w x)) cl
 

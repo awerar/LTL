@@ -60,16 +60,16 @@ dropped P us v e =
             -> Reason P us v
     fromPair (A , W) mg q =
       byR2 A (□Args_mem (sub P) (fst (evList_of P us mg)))
-           (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (memB v W) q))
+           (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (v ∈ᵛ W) q))
            (subst (λ Z -> v ∈ Z) (snd (evList_of P us mg))
-                  (memB_sound v W (andTrueR (pending P v A) (memB v W) q)))
+                  (∈ᵛ-sound v W (andTrueR (pending P v A) (v ∈ᵛ W) q)))
 
     fromSig : (Σ[ g ∈ Ev ] g ∈ evList P us × badEv P v g ≡ true)
            -> Reason P us v
     fromSig (g , m , q) = fromPair g m q
 
     fromR2 : r2 P (evList P us) v ≡ true -> Reason P us v
-    fromR2 e2 = fromSig (anyL_true (badEv P v) (evList P us) e2)
+    fromR2 e2 = fromSig (any_true (badEv P v) (evList P us) e2)
 
 ------------------------------------------------------------------------
 -- The printed form.
@@ -80,7 +80,7 @@ dropped P us v e =
 elimTrace : Formula -> List Val -> List (Val × Bool)
 elimTrace P us =
   map (λ v -> v , r1 P us v)
-      (filterL (λ v -> ¬ᵇ keep P us (evList P us) v) us)
+      (filter (λ v -> ¬ᵇ keep P us (evList P us) v) us)
 
 reasons : Formula -> List Val -> List Bool
 reasons P us = map snd (elimTrace P us)

@@ -19,7 +19,7 @@
 -- F(a and b) = 0 to cut its table down to eight rows, while here the eight are
 -- the closure under successors of the states containing the negation, and
 -- F(a and b) = 0 falls out because the negation forces it and the closure
--- propagates it.  Before that, StC has seventeen locally consistent states,
+-- propagates it.  Before that, StCand has seventeen locally consistent states,
 -- built from 32 candidates over 5 atoms, where the lecture would filter 2^6
 -- valuations of its Sub.
 --
@@ -85,7 +85,7 @@ R = ¬ fab
 -- table is the closure, which is 8.
 
 lec_sizes : length (sub R) ∷ length (atoms (sub R)) ∷ length (cands R)
-             ∷ length (StC R) ∷ length (Ust R) ∷ length (Uinf R)
+             ∷ length (StCand R) ∷ length (Ust R) ∷ length (Uinf R)
              ∷ length (□Args (sub R)) ∷ [] ≡
                21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 8 ∷ 3 ∷ []
 lec_sizes = refl
@@ -98,9 +98,8 @@ bitV true  n = n
 bitV false n = 0
 
 num : Val -> Nat
-num v = plus (bitV (valOf R v pa) 8)
-        (plus (bitV (valOf R v pb) 4)
-        (plus (bitV (valOf R v (◇ pa)) 2) (bitV (valOf R v (◇ pb)) 1)))
+num v = bitV (valOf R v pa) 8 + bitV (valOf R v pb) 4
+        + bitV (valOf R v (◇ pa)) 2 + bitV (valOf R v (◇ pb)) 1
 
 -- s0 = 0, s1 = 1, s2 = 2, s3 = 3, s4 = 5, s5 = 7, s6 = 10, s7 = 11: the same
 -- eight, in the order the closure happens to produce them.
@@ -112,11 +111,11 @@ lec_states = refl
 -- each, F(a and b) at none -- which is the lecture's standing constraint,
 -- derived here rather than assumed.
 
-lec_profile : length (filterL (λ v -> valOf R v pa) (Ust R))
-               ∷ length (filterL (λ v -> valOf R v pb) (Ust R))
-               ∷ length (filterL (λ v -> valOf R v (◇ pa)) (Ust R))
-               ∷ length (filterL (λ v -> valOf R v (◇ pb)) (Ust R))
-               ∷ length (filterL (λ v -> valOf R v (◇ (pa ∧ pb))) (Ust R))
+lec_profile : length (filter (λ v -> valOf R v pa) (Ust R))
+               ∷ length (filter (λ v -> valOf R v pb) (Ust R))
+               ∷ length (filter (λ v -> valOf R v (◇ pa)) (Ust R))
+               ∷ length (filter (λ v -> valOf R v (◇ pb)) (Ust R))
+               ∷ length (filter (λ v -> valOf R v (◇ (pa ∧ pb))) (Ust R))
                ∷ [] ≡ 2 ∷ 2 ∷ 5 ∷ 5 ∷ 0 ∷ []
 lec_profile = refl
 
@@ -131,7 +130,7 @@ lec_outdeg : map (λ v -> length (succs R (Ust R) v)) (Ust R) ≡
              1 ∷ 3 ∷ 2 ∷ 3 ∷ 2 ∷ 5 ∷ 5 ∷ 3 ∷ []
 lec_outdeg = refl
 
-lec_edges : length (concatL (map (λ v -> succs R (Ust R) v) (Ust R))) ≡ 24
+lec_edges : length (concat (map (λ v -> succs R (Ust R) v) (Ust R))) ≡ 24
 lec_edges = refl
 
 ------------------------------------------------------------------------

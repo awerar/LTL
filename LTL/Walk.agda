@@ -65,15 +65,15 @@ memConsApp2 : {z v x : Val} (ws zs : List Val)
 memConsApp2 ws zs mx here      = memConsApp ws zs mx
 memConsApp2 ws zs mx (there m) = there (memAppR ws zs m)
 
-nullB_appR : (ws : List Val) (y : Val) (zs : List Val)
-          -> nullB (ws ++ y ∷ zs) ≡ false
-nullB_appR []       y zs = refl
-nullB_appR (w ∷ ws) y zs = refl
+null_appR : (ws : List Val) (y : Val) (zs : List Val)
+         -> null (ws ++ y ∷ zs) ≡ false
+null_appR []       y zs = refl
+null_appR (w ∷ ws) y zs = refl
 
-nullB_appL : (ws zs : List Val)
-          -> nullB ws ≡ false -> nullB (ws ++ zs) ≡ false
-nullB_appL []       zs ()
-nullB_appL (w ∷ ws) zs e = refl
+null_appL : (ws zs : List Val)
+         -> null ws ≡ false -> null (ws ++ zs) ≡ false
+null_appL []       zs ()
+null_appL (w ∷ ws) zs e = refl
 
 ------------------------------------------------------------------------
 -- The tail of a walk starting at any state it visits.
@@ -104,17 +104,21 @@ walkFrom P us (wcons mw st wk) (there m) = subWalkTl (walkFrom P us wk m)
 data Fulfil (P : Formula) (A : Formula) (v : Val) (ws : List Val) : Set where
   ful : (z : Val) -> z ∈ v ∷ ws -> valOf P z A ≡ false -> Fulfil P A v ws
 
-fulTl : {P A : Formula} {v w : Val} {ws : List Val}
-     -> Fulfil P A w ws -> Fulfil P A v (w ∷ ws)
-fulTl (ful z m q) = ful z (there m) q
+-- A Fulfil proof carries over to a longer walk: one more state in front
+-- (fulfilCons), more states behind (fulfilPrefix: it lies in the prefix ws),
+-- or a walk that reaches the fulfilling walk (fulfilSuffix).
 
-fulApp : {P A : Formula} {v : Val} (ws zs : List Val)
-      -> Fulfil P A v ws -> Fulfil P A v (ws ++ zs)
-fulApp ws zs (ful z m q) = ful z (memConsApp ws zs m) q
+fulfilCons : {P A : Formula} {v w : Val} {ws : List Val}
+          -> Fulfil P A w ws -> Fulfil P A v (w ∷ ws)
+fulfilCons (ful z m q) = ful z (there m) q
 
-fulApp2 : {P A : Formula} {v x : Val} (ws zs : List Val)
-       -> x ∈ v ∷ ws -> Fulfil P A x zs -> Fulfil P A v (ws ++ zs)
-fulApp2 ws zs mx (ful z m q) = ful z (memConsApp2 ws zs mx m) q
+fulfilPrefix : {P A : Formula} {v : Val} (ws zs : List Val)
+            -> Fulfil P A v ws -> Fulfil P A v (ws ++ zs)
+fulfilPrefix ws zs (ful z m q) = ful z (memConsApp ws zs m) q
+
+fulfilSuffix : {P A : Formula} {v x : Val} (ws zs : List Val)
+            -> x ∈ v ∷ ws -> Fulfil P A x zs -> Fulfil P A v (ws ++ zs)
+fulfilSuffix ws zs mx (ful z m q) = ful z (memConsApp2 ws zs mx m) q
 
 ------------------------------------------------------------------------
 -- Persistence along a walk (Lemma 2.8, propagated).
@@ -135,5 +139,5 @@ walkPersist P us A mb (wcons {v} {w} {ws} {x} mw st wk) e = onA (valOf P v A) re
        -> Fulfil P A v (w ∷ ws) ⊎ valOf P x (□ A) ≡ false
     onA false ea = inl (ful v here ea)
     onA true  ea =
-      sumElim (λ f -> inl (fulTl f)) inr
+      sumElim (λ f -> inl (fulfilCons f)) inr
               (walkPersist P us A mb wk (persist P v w A mb st e ea))

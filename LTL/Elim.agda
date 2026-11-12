@@ -28,8 +28,8 @@
 -- reached a fixed point.  There is no fuel and no ≤ measure here at all.
 --
 -- The gfp sets are computed ONCE PER ROUND rather than once per state.  W_j
--- does not depend on the state being tested, but written as  memB v (gfpW P us
--- A)  under the binder for v it was rebuilt for every pending state of the
+-- does not depend on the state being tested, but written as  v ∈ᵛ gfpW P us A
+-- under the binder for v it was rebuilt for every pending state of the
 -- round, which is where most of the 34.6 s of checkpoint C5 was going.  evList
 -- pairs each eventuality with its set, the pair list is the argument the round
 -- filters against, and badEv reads the set out of the pair.  Laziness keeps the
@@ -51,13 +51,16 @@ open import LTL.Gfp public
 -- (R1)
 
 r1 : Formula -> List Val -> Val -> Bool
-r1 P us v = nullB (succs P us v)
+r1 P us v = null (succs P us v)
 
 pending : Formula -> Val -> Formula -> Bool
 pending P v A = ¬ᵇ valOf P v (□ A)
 
 ------------------------------------------------------------------------
 -- (R2), with the sets hoisted out of the state loop
+
+-- An eventuality □A of Sub P, given by its argument A, paired with its gfp set
+-- W_A = gfpW P us A.
 
 Ev : Set
 Ev = Formula × List Val
@@ -83,11 +86,13 @@ evList_of P us {A} {W} m =
             (sym (cong fst e))
             (mB , cong snd e)
 
+-- (R2) fires at v for this eventuality: □A is pending at v and v ∈ W_A.
+
 badEv : Formula -> Val -> Ev -> Bool
-badEv P v (A , W) = pending P v A ∧ᵇ memB v W
+badEv P v (A , W) = pending P v A ∧ᵇ (v ∈ᵛ W)
 
 r2 : Formula -> List Ev -> Val -> Bool
-r2 P gs v = anyL (badEv P v) gs
+r2 P gs v = any (badEv P v) gs
 
 ------------------------------------------------------------------------
 -- One round
@@ -96,7 +101,7 @@ keep : Formula -> List Val -> List Ev -> Val -> Bool
 keep P us gs v = ¬ᵇ (r1 P us v ∨ᵇ r2 P gs v)
 
 elimRound : Formula -> List Val -> List Val
-elimRound P us = filterL (keep P us (evList P us)) us
+elimRound P us = filter (keep P us (evList P us)) us
 
 ------------------------------------------------------------------------
 -- The elimination, run until a round removes nothing.
@@ -108,18 +113,18 @@ elimRound P us = filterL (keep P us (evList P us)) us
 -- call structurally smaller.
 
 elimGo   : (P : Formula) {E : Val -> Bool} (us : List Val)
-        -> InE E us -> IFin E -> List Val
+        -> AllSat E us -> IFin E -> List Val
 elimFind : (P : Formula) {E : Val -> Bool} (us : List Val)
-        -> InE E us -> IFin E
+        -> AllSat E us -> IFin E
         -> FindResult (keep P us (evList P us)) us -> List Val
 
 elimGo P us sb bar =
   elimFind P us sb bar (findFalse (keep P us (evList P us)) us)
 
-elimFind P us sb bar      (allT f)      = us
+elimFind P us sb bar      (allTrue f)   = us
 elimFind P us sb (cBar h) (found x m q) =
   elimGo P (elimRound P us)
-         (dropInE (keep P us (evList P us)) us sb x q) (h x (sb x m))
+         (dropAllSat (keep P us (evList P us)) us sb x q) (h x (sb x m))
 
 ------------------------------------------------------------------------
 -- U_infinity.
@@ -132,11 +137,16 @@ elimFind P us sb (cBar h) (found x m q) =
 -- fuel of the old elimIter forced.  guardBar (siles.pdf section 5) is what
 -- keeps the finiteness proof from being forced as the search runs.
 
+-- Uinf P is U_inf of m4.tex: what is left of Ust P when (R1) and (R2) no
+-- longer remove anything.
+
 Uinf : Formula -> List Val
-Uinf P = elimGo P (Ust P) (ustInE P) (ustBar P)
+Uinf P = elimGo P (Ust P) (ustAllSat P) (ustBar P)
+
+-- The states the elimination removed: R = U_st minus U_inf (m4.tex section 4).
 
 removed : Formula -> List Val
-removed P = filterL (λ v -> ¬ᵇ memB v (Uinf P)) (Ust P)
+removed P = filter (λ v -> ¬ᵇ (v ∈ᵛ Uinf P)) (Ust P)
 
 ------------------------------------------------------------------------
 -- The decision, as a boolean.
@@ -145,7 +155,7 @@ removed P = filterL (λ v -> ¬ᵇ memB v (Uinf P)) (Ust P)
 -- input formula holds?  Run on ¬ P, "no" means P is provable.
 
 satB : Formula -> Bool
-satB P = anyL (λ v -> valOf P v P) (Uinf P)
+satB P = any (λ v -> valOf P v P) (Uinf P)
 
 ------------------------------------------------------------------------
 -- Checkpoint C1.

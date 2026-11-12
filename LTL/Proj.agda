@@ -33,9 +33,9 @@ cohLookup : (P : Formula) (v : Val)
          -> {A : Formula} (h : A ∈ sub P)
          -> bitAt v (index h) ≡ valOf P v A
 cohLookup P v ch {A} h =
-  trans (boolEq_sound (bitAt v (index h))
-                      (valOf P v (nth (sub P) (index h) ⊥))
-                      (allCoh_at P v (length (sub P)) (index h)
+  trans (⇔ᵇ-sound (bitAt v (index h))
+                  (valOf P v (nth (sub P) (index h) ⊥))
+                  (allCoh_at P v (length (sub P)) (index h)
                                  (index_length h) ch))
         (cong (valOf P v) (index_nth h ⊥))
 
@@ -82,38 +82,38 @@ chiProjPos P v len i lt =
 ------------------------------------------------------------------------
 -- The first-occurrence index is a genuine position carrying its formula.
 --
--- valOf P v X is the bit at position  idx (sub P) X , so to project the
+-- valOf P v X is the bit at position  indexOf (sub P) X , so to project the
 -- literal of X signed by valOf, without coherence, we need that this position
 -- is in range and carries X.
 
-idx_lt : (xs : List Formula) {X : Formula} -> X ∈ xs -> idx xs X < length xs
-idx_lt []       ()
-idx_lt (B ∷ Bs) here     = aux (formEq B B) (formEq_refl B)
+indexOf_lt : (xs : List Formula) {X : Formula} -> X ∈ xs -> indexOf xs X < length xs
+indexOf_lt []       ()
+indexOf_lt (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
-    aux : (b : Bool) -> b ≡ true -> idxCons b (idx Bs B) < suc (length Bs)
+    aux : (b : Bool) -> b ≡ true -> indexOfCons b (indexOf Bs B) < suc (length Bs)
     aux true  e  = ltZero
     aux false ()
-idx_lt (B ∷ Bs) {X} (there m) = aux (formEq B X)
+indexOf_lt (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
   where
-    aux : (b : Bool) -> idxCons b (idx Bs X) < suc (length Bs)
+    aux : (b : Bool) -> indexOfCons b (indexOf Bs X) < suc (length Bs)
     aux true  = ltZero
-    aux false = ltSuc (idx_lt Bs m)
+    aux false = ltSuc (indexOf_lt Bs m)
 
-idx_nth : (xs : List Formula) {X : Formula} -> X ∈ xs
-       -> nth xs (idx xs X) ⊥ ≡ X
-idx_nth []       ()
-idx_nth (B ∷ Bs) here     = aux (formEq B B) (formEq_refl B)
+indexOf_nth : (xs : List Formula) {X : Formula} -> X ∈ xs
+           -> nth xs (indexOf xs X) ⊥ ≡ X
+indexOf_nth []       ()
+indexOf_nth (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
     aux : (b : Bool) -> b ≡ true
-       -> nth (B ∷ Bs) (idxCons b (idx Bs B)) ⊥ ≡ B
+       -> nth (B ∷ Bs) (indexOfCons b (indexOf Bs B)) ⊥ ≡ B
     aux true  e  = refl
     aux false ()
-idx_nth (B ∷ Bs) {X} (there m) = aux (formEq B X) (formEq_sound B X)
+indexOf_nth (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X) (≡ᶠ-sound B X)
   where
     aux : (b : Bool) -> (b ≡ true -> B ≡ X)
-       -> nth (B ∷ Bs) (idxCons b (idx Bs X)) ⊥ ≡ X
+       -> nth (B ∷ Bs) (indexOfCons b (indexOf Bs X)) ⊥ ≡ X
     aux true  f = f refl
-    aux false f = idx_nth Bs m
+    aux false f = indexOf_nth Bs m
 
 -- Projection signed by valOf, available without coherence.
 
@@ -122,6 +122,6 @@ chiProjVal : (P : Formula) (v : Val)
           -> {X : Formula} (m : X ∈ sub P)
           -> ⊢ (chi P v) ⇒ (lit X (valOf P v X))
 chiProjVal P v len {X} m =
-  subst (λ Y -> ⊢ (chi P v) ⇒ (lit Y (bitAt v (idx (sub P) X))))
-        (idx_nth (sub P) m)
-        (chiProjPos P v len (idx (sub P) X) (idx_lt (sub P) m))
+  subst (λ Y -> ⊢ (chi P v) ⇒ (lit Y (bitAt v (indexOf (sub P) X))))
+        (indexOf_nth (sub P) m)
+        (chiProjPos P v len (indexOf (sub P) X) (indexOf_lt (sub P) m))

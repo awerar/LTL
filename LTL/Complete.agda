@@ -31,17 +31,17 @@ appCong : {A : Set} {xs xs' ys ys' : List A}
        -> xs ≡ xs' -> ys ≡ ys' -> xs ++ ys ≡ xs' ++ ys'
 appCong refl refl = refl
 
-lemTrue : (A : Formula) (As : List Formula) (V : List Val)
-       -> map (chiOf (A ∷ As)) (map (λ w -> true ∷ w) V) ≡
-          map (A ∧_) (map (chiOf As) V)
-lemTrue A As V = trans (map_map (chiOf (A ∷ As)) (λ w -> true ∷ w) V)
-                       (sym (map_map (A ∧_) (chiOf As) V))
+chiOfTrue : (A : Formula) (As : List Formula) (V : List Val)
+         -> map (chiOf (A ∷ As)) (map (λ w -> true ∷ w) V) ≡
+            map (A ∧_) (map (chiOf As) V)
+chiOfTrue A As V = trans (map_map (chiOf (A ∷ As)) (λ w -> true ∷ w) V)
+                         (sym (map_map (A ∧_) (chiOf As) V))
 
-lemFalse : (A : Formula) (As : List Formula) (V : List Val)
-        -> map (chiOf (A ∷ As)) (map (λ w -> false ∷ w) V) ≡
-           map (¬ A ∧_) (map (chiOf As) V)
-lemFalse A As V = trans (map_map (chiOf (A ∷ As)) (λ w -> false ∷ w) V)
-                        (sym (map_map (¬ A ∧_) (chiOf As) V))
+chiOfFalse : (A : Formula) (As : List Formula) (V : List Val)
+          -> map (chiOf (A ∷ As)) (map (λ w -> false ∷ w) V) ≡
+             map (¬ A ∧_) (map (chiOf As) V)
+chiOfFalse A As V = trans (map_map (chiOf (A ∷ As)) (λ w -> false ∷ w) V)
+                          (sym (map_map (¬ A ∧_) (chiOf As) V))
 
 stepEq : (A : Formula) (As : List Formula)
       -> map (chiOf (A ∷ As)) (allVecs (suc (length As))) ≡
@@ -50,8 +50,8 @@ stepEq A As =
   trans (map_append (chiOf (A ∷ As))
                     (map (λ w -> true  ∷ w) (allVecs (length As)))
                     (map (λ w -> false ∷ w) (allVecs (length As))))
-        (appCong (lemTrue  A As (allVecs (length As)))
-                 (lemFalse A As (allVecs (length As))))
+        (appCong (chiOfTrue  A As (allVecs (length As)))
+                 (chiOfFalse A As (allVecs (length As))))
 
 ------------------------------------------------------------------------
 -- The disjunction over all valuations
@@ -99,20 +99,20 @@ map_filterCons P false v L = refl
 ⋁Filter : (P : Formula) (vs : List Val)
           -> AllLen (length (sub P)) vs
           -> ⊢ ⋁ (map (chi P) vs)
-               ⇒ ⋁ (map (chi P) (filterL (isState P) vs))
+               ⇒ ⋁ (map (chi P) (filter (isState P) vs))
 ⋁Filter P []       alNil          = ⇒Refl
 ⋁Filter P (v ∷ vs) (alCons len al) =
   subst (λ L -> ⊢ ⋁ (chi P v ∷ map (chi P) vs) ⇒ ⋁ L)
-        (sym (map_filterCons P (isState P v) v (filterL (isState P) vs)))
+        (sym (map_filterCons P (isState P v) v (filter (isState P) vs)))
         (onState (isState P v) refl)
   where
-    ih : ⊢ ⋁ (map (chi P) vs) ⇒ ⋁ (map (chi P) (filterL (isState P) vs))
+    ih : ⊢ ⋁ (map (chi P) vs) ⇒ ⋁ (map (chi P) (filter (isState P) vs))
     ih = ⋁Filter P vs al
 
     onState : (b : Bool) -> isState P v ≡ b
            -> ⊢ ⋁ (chi P v ∷ map (chi P) vs)
                 ⇒ ⋁ (filterCons b (chi P v)
-                        (map (chi P) (filterL (isState P) vs)))
+                        (map (chi P) (filter (isState P) vs)))
     onState true  e = ∨MonoR ih
     onState false e =
       ⇒Trans (⋁Drop (map (chi P) vs) (nonState P v len e)) ih

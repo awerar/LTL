@@ -63,10 +63,10 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
           where
             prop : (B : Formula) -> B ∈ A ∷ As
                 -> valOf P u (□ B) ≡ false -> Fulfil P B u (ws1 ++ ws2)
-            prop B here      pd = fulApp ws1 ws2 (hA pd)
+            prop B here      pd = fulfilPrefix ws1 ws2 (hA pd)
             prop B (there m) pd =
-              sumElim (λ f   -> fulApp ws1 ws2 f)
-                      (λ pd2 -> fulApp2 ws1 ws2 (walkEnd P (Uinf P) wk1) (h2 B m pd2))
+              sumElim (λ f   -> fulfilPrefix ws1 ws2 f)
+                      (λ pd2 -> fulfilSuffix ws1 ws2 (walkEnd P (Uinf P) wk1) (h2 B m pd2))
                       (walkPersist P (Uinf P) B (□Args_mem (sub P) (sbA (there m)))
                                    wk1 pd)
 
@@ -74,7 +74,7 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
     -- not pending at u: the empty path, and the obligation is vacuous
     onPend true  ep =
       combine [] u wnil mu
-              (λ pd -> emptyElim (tfAbs (trans (sym ep) pd)))
+              (λ pd -> emptyElim (true≢false (trans (sym ep) pd)))
     -- pending at u: Lemma 5.1 supplies a walk to a state fulfilling it
     onPend false ep = fromEsc (uinfFulfil P u mu A (sbA here) ep)
       where
@@ -88,7 +88,7 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
 data Round (P : Formula) (u : Val) : Set where
   mkRound : (rs : List Val) (x : Val)
          -> Walk P (Uinf P) u rs x -> x ∈ Uinf P
-         -> nullB rs ≡ false
+         -> null rs ≡ false
          -> ((A : Formula) -> A ∈ □Args (sub P)
                -> valOf P u (□ A) ≡ false -> Fulfil P A u rs)
          -> Round P u
@@ -99,12 +99,12 @@ roundOf P u mu = fromBody (roundBody P (□Args (sub P)) (λ m -> m) u mu)
     fromBody : RoundB P (□Args (sub P)) u -> Round P u
     fromBody (mkRoundB ws x wk mx h) = fromSucc (uinfSucc P x mx)
       where
-        fromSucc : Succ P x -> Round P u
-        fromSucc (succ y my st) =
+        fromSucc : SuccInUinf P x -> Round P u
+        fromSucc (succInUinf y my st) =
           mkRound (ws ++ y ∷ []) y
                   (walkApp P (Uinf P) wk (wcons my st wnil)) my
-                  (nullB_appR ws y [])
-                  (λ A mA pd -> fulApp ws (y ∷ []) (h A mA pd))
+                  (null_appR ws y [])
+                  (λ A mA pd -> fulfilPrefix ws (y ∷ []) (h A mA pd))
 
 ------------------------------------------------------------------------
 -- The list the note calls the round

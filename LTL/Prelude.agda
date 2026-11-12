@@ -2,7 +2,7 @@
 
 -- LTL.Prelude -- the small amount of infrastructure beyond LTL.Base that the
 -- development needs: boolean connectives with their elimination lemmas,
--- soundness/reflexivity of natEq, sums, Σ-types and products, lists with
+-- soundness/reflexivity of ≡ⁿ, sums, Σ-types and products, lists with
 -- membership, and the index/nth round-trip of FORMALISATION-PLAN.md G2.
 --
 -- The notation is that of Agda's standard library: A ⊎ B, Σ[ x ∈ A ] B,
@@ -59,17 +59,17 @@ true  ⇔ᵇ b = b
 false ⇔ᵇ b = ¬ᵇ b
 
 ------------------------------------------------------------------------
--- natEq
+-- ≡ⁿ
 
-natEq_refl : (n : Nat) -> natEq n n ≡ true
-natEq_refl zero    = refl
-natEq_refl (suc n) = natEq_refl n
+≡ⁿ-refl : (n : Nat) -> n ≡ⁿ n ≡ true
+≡ⁿ-refl zero    = refl
+≡ⁿ-refl (suc n) = ≡ⁿ-refl n
 
-natEq_sound : (n m : Nat) -> natEq n m ≡ true -> n ≡ m
-natEq_sound zero    zero    p = refl
-natEq_sound zero    (suc m) ()
-natEq_sound (suc n) zero    ()
-natEq_sound (suc n) (suc m) p = cong suc (natEq_sound n m p)
+≡ⁿ-sound : (n m : Nat) -> n ≡ⁿ m ≡ true -> n ≡ m
+≡ⁿ-sound zero    zero    p = refl
+≡ⁿ-sound zero    (suc m) ()
+≡ⁿ-sound (suc n) zero    ()
+≡ⁿ-sound (suc n) (suc m) p = cong suc (≡ⁿ-sound n m p)
 
 sucInj : {n m : Nat} -> suc n ≡ suc m -> n ≡ m
 sucInj refl = refl
@@ -87,6 +87,13 @@ sumElim : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
 sumElim f g (inl a) = f a
 sumElim f g (inr b) = g b
 
+-- Does a sum hold its left alternative?  (decide's results are proofs on the
+-- left, so LTL.Decide calls this isProof.)
+
+isInl : {A B : Set} -> A ⊎ B -> Bool
+isInl (inl _) = true
+isInl (inr _) = false
+
 ------------------------------------------------------------------------
 -- Strict order on Nat, needed to index into sub P
 
@@ -95,6 +102,16 @@ infix 4 _<_
 data _<_ : Nat -> Nat -> Set where
   ltZero : {n : Nat}             -> zero < suc n
   ltSuc  : {n m : Nat} -> n < m  -> suc n < suc m
+
+-- Two facts about <
+
+ltNSucN : (n : Nat) -> n < suc n
+ltNSucN zero    = ltZero
+ltNSucN (suc n) = ltSuc (ltNSucN n)
+
+ltWeak : {i n : Nat} -> i < n -> i < suc n
+ltWeak ltZero    = ltZero
+ltWeak (ltSuc l) = ltSuc (ltWeak l)
 
 ------------------------------------------------------------------------
 -- Σ-types and products
@@ -132,26 +149,58 @@ andFalse : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ false ⊎ b ≡ false
 andFalse true  b e = inr e
 andFalse false b e = inl refl
 
-boolNot_not : (b : Bool) -> ¬ᵇ ¬ᵇ b ≡ b
-boolNot_not true  = refl
-boolNot_not false = refl
+-- ¬ᵇ (a ∧ᵇ b) is true and a is true, so b is false
+nandTrueL : (a b : Bool) -> ¬ᵇ (a ∧ᵇ b) ≡ true -> a ≡ true -> b ≡ false
+nandTrueL true  true  () e
+nandTrueL true  false q  e = refl
+nandTrueL false b     q  ()
 
-boolEq_sound : (a b : Bool) -> a ⇔ᵇ b ≡ true -> a ≡ b
-boolEq_sound true  true  e = refl
-boolEq_sound true  false ()
-boolEq_sound false true  ()
-boolEq_sound false false e = refl
+-- a ∧ᵇ b is false when b is
+andFalseIntroR : (a b : Bool) -> b ≡ false -> a ∧ᵇ b ≡ false
+andFalseIntroR true  b eb = eb
+andFalseIntroR false b eb = refl
 
-boolEq_false_eq : (a b : Bool) -> a ⇔ᵇ b ≡ false -> a ≡ ¬ᵇ b
-boolEq_false_eq true  true  ()
-boolEq_false_eq true  false e = refl
-boolEq_false_eq false true  e = refl
-boolEq_false_eq false false ()
+-- a ∧ᵇ b is false and a is true, so b is false
+andFalseTrueL : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ true -> b ≡ false
+andFalseTrueL true  b eab ea = eab
+andFalseTrueL false b eab ()
 
-boolImp_false : (a b : Bool) -> a ⇒ᵇ b ≡ false -> a ≡ true × b ≡ false
-boolImp_false true  true  ()
-boolImp_false true  false e = refl , refl
-boolImp_false false b     ()
+notTrue : (b : Bool) -> ¬ᵇ b ≡ true -> b ≡ false
+notTrue true  ()
+notTrue false e = refl
+
+notFalse : (b : Bool) -> ¬ᵇ b ≡ false -> b ≡ true
+notFalse true  e = refl
+notFalse false ()
+
+⇒TrueB : (a b : Bool) -> a ⇒ᵇ b ≡ true -> a ≡ true -> b ≡ true
+⇒TrueB true  b e q  = e
+⇒TrueB false b e ()
+
+⇒IntroB : (a b : Bool) -> (a ≡ true -> b ≡ true) -> a ⇒ᵇ b ≡ true
+⇒IntroB true  b f = f refl
+⇒IntroB false b f = refl
+
+¬ᵇ-involutive : (b : Bool) -> ¬ᵇ ¬ᵇ b ≡ b
+¬ᵇ-involutive true  = refl
+¬ᵇ-involutive false = refl
+
+⇔ᵇ-sound : (a b : Bool) -> a ⇔ᵇ b ≡ true -> a ≡ b
+⇔ᵇ-sound true  true  e = refl
+⇔ᵇ-sound true  false ()
+⇔ᵇ-sound false true  ()
+⇔ᵇ-sound false false e = refl
+
+⇔ᵇ-false : (a b : Bool) -> a ⇔ᵇ b ≡ false -> a ≡ ¬ᵇ b
+⇔ᵇ-false true  true  ()
+⇔ᵇ-false true  false e = refl
+⇔ᵇ-false false true  e = refl
+⇔ᵇ-false false false ()
+
+⇒ᵇ-false : (a b : Bool) -> a ⇒ᵇ b ≡ false -> a ≡ true × b ≡ false
+⇒ᵇ-false true  true  ()
+⇒ᵇ-false true  false e = refl , refl
+⇒ᵇ-false false b     ()
 
 ------------------------------------------------------------------------
 -- Disjunction, read in both directions.
@@ -171,8 +220,8 @@ orR : (a b : Bool) -> b ≡ true -> a ∨ᵇ b ≡ true
 orR true  b e = refl
 orR false b e = e
 
-tfAbs : true ≡ false -> Empty
-tfAbs ()
+true≢false : true ≡ false -> Empty
+true≢false ()
 
 ------------------------------------------------------------------------
 -- Lists
@@ -203,22 +252,25 @@ filterCons : {A : Set} -> Bool -> A -> List A -> List A
 filterCons true  x ys = x ∷ ys
 filterCons false x ys = ys
 
-filterL : {A : Set} -> (A -> Bool) -> List A -> List A
-filterL p []       = []
-filterL p (x ∷ xs) = filterCons (p x) x (filterL p xs)
+filter : {A : Set} -> (A -> Bool) -> List A -> List A
+filter p []       = []
+filter p (x ∷ xs) = filterCons (p x) x (filter p xs)
 
-anyL : {A : Set} -> (A -> Bool) -> List A -> Bool
-anyL p []       = false
-anyL p (x ∷ xs) = p x ∨ᵇ anyL p xs
+any : {A : Set} -> (A -> Bool) -> List A -> Bool
+any p []       = false
+any p (x ∷ xs) = p x ∨ᵇ any p xs
 
-nullB : {A : Set} -> List A -> Bool
-nullB []       = true
-nullB (x ∷ xs) = false
+null : {A : Set} -> List A -> Bool
+null []       = true
+null (x ∷ xs) = false
 
-concatL : {A : Set} -> List (List A) -> List A
-concatL []         = []
-concatL (xs ∷ xss) = xs ++ concatL xss
+concat : {A : Set} -> List (List A) -> List A
+concat []         = []
+concat (xs ∷ xss) = xs ++ concat xss
 
+++-identityʳ : {A : Set} (xs : List A) -> xs ++ [] ≡ xs
+++-identityʳ []       = refl
+++-identityʳ (x ∷ xs) = cong (λ zs -> x ∷ zs) (++-identityʳ xs)
 
 ------------------------------------------------------------------------
 -- Membership
@@ -228,6 +280,14 @@ infix 4 _∈_
 data _∈_ {A : Set} (x : A) : List A -> Set where
   here  : {xs : List A}              -> x ∈ x ∷ xs
   there : {y : A} {xs : List A} -> x ∈ xs -> x ∈ y ∷ xs
+
+-- Inclusion of lists as sets.  The element is explicit, as in the lemmas that
+-- use it (LTL.Extract).
+
+infix 4 _⊆_
+
+_⊆_ : {A : Set} -> List A -> List A -> Set
+xs ⊆ ys = (x : _) -> x ∈ xs -> x ∈ ys
 
 memAppL : {A : Set} {x : A} (xs ys : List A) -> x ∈ xs -> x ∈ xs ++ ys
 memAppL []       ys ()
@@ -247,6 +307,13 @@ filterCons_hd : {A : Set} (b : Bool) (y : A) (ys : List A)
              -> b ≡ true -> y ∈ filterCons b y ys
 filterCons_hd true  y ys e = here
 filterCons_hd false y ys ()
+
+filter_true : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+           -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
+filter_true p []       ()        e
+filter_true p (y ∷ ys) here      e = filterCons_hd (p y) y (filter p ys) e
+filter_true p (y ∷ ys) (there m) e =
+  filterCons_mem (p y) y (filter p ys) (filter_true p ys m e)
 
 memMap : {A B : Set} (f : A -> B) {x : A} {xs : List A}
       -> x ∈ xs -> f x ∈ map f xs

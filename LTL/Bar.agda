@@ -72,14 +72,20 @@ barMono {R = R} {E = E} {F = F} sb (cBar h) =
 ------------------------------------------------------------------------
 -- Inductive finiteness for valuations
 
-neqB : Val -> Val -> Bool
-neqB x y = ¬ᵇ valEq x y
+infix 4.5 _≢ᵛ_
 
-neqB_self : (x : Val) -> neqB x x ≡ false
-neqB_self x = cong ¬ᵇ_ (valEq_refl x)
+_≢ᵛ_ : Val -> Val -> Bool
+x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
+
+≢ᵛ-self : (x : Val) -> x ≢ᵛ x ≡ false
+≢ᵛ-self x = cong ¬ᵇ_ (≡ᵛ-refl x)
+
+-- IFin E: E is inductively finite.  One cannot keep choosing pairwise distinct
+-- vectors that satisfy E forever, so a search that always picks a new one
+-- stops.
 
 IFin : (Val -> Bool) -> Set
-IFin E = Bar neqB E
+IFin E = Bar _≢ᵛ_ E
 
 ------------------------------------------------------------------------
 -- Kuratowski implies inductively finite.
@@ -92,34 +98,34 @@ barOfList : {E : Val -> Bool} (n : Nat) (xs : List Val) -> length xs ≤ n
 barOfList         zero    xs le sb =
   cBar (λ x ex -> emptyElim (leZeroNil xs le (sb x ex)))
 barOfList {E = E} (suc n) xs le sb =
-  cBar (λ x ex -> barOfList n (filterL (neqB x) xs)
-                    (lePred (leTrans (filterL_lt (neqB x) xs (sb x ex)
-                                                 (neqB_self x)) le))
-                    (λ z ez -> filter_true (neqB x) xs
-                                 (sb z (andTrueL (E z) (neqB x z) ez))
-                                 (andTrueR (E z) (neqB x z) ez)))
+  cBar (λ x ex -> barOfList n (filter (x ≢ᵛ_) xs)
+                    (lePred (leTrans (filter_lt (x ≢ᵛ_) xs (sb x ex)
+                                                (≢ᵛ-self x)) le))
+                    (λ z ez -> filter_true (x ≢ᵛ_) xs
+                                 (sb z (andTrueL (E z) (x ≢ᵛ z) ez))
+                                 (andTrueR (E z) (x ≢ᵛ z) ez)))
 
 ------------------------------------------------------------------------
 -- Boolean glue for the two closure lemmas
 
-taut1 : (g h t : Bool) -> (g ∨ᵇ h) ∧ᵇ t ≡ true
-     -> g ∧ᵇ t ∨ᵇ h ∧ᵇ t ≡ true
-taut1 true  h true  e = refl
-taut1 true  h false ()
-taut1 false h t     e = e
+∧∨-distrib : (g h t : Bool) -> (g ∨ᵇ h) ∧ᵇ t ≡ true
+          -> g ∧ᵇ t ∨ᵇ h ∧ᵇ t ≡ true
+∧∨-distrib true  h true  e = refl
+∧∨-distrib true  h false ()
+∧∨-distrib false h t     e = e
 
-taut2 : (g h t : Bool) -> (g ∨ᵇ h) ∧ᵇ t ≡ true
-     -> g ∨ᵇ h ∧ᵇ t ≡ true
-taut2 true  h t e = refl
-taut2 false h t e = e
+∧∨-weaken : (g h t : Bool) -> (g ∨ᵇ h) ∧ᵇ t ≡ true
+         -> g ∨ᵇ h ∧ᵇ t ≡ true
+∧∨-weaken true  h t e = refl
+∧∨-weaken false h t e = e
 
-taut3 : (e f r s : Bool)
-     -> (e ∧ᵇ f) ∧ᵇ (r ∨ᵇ s) ≡ true
-     -> (e ∧ᵇ r) ∧ᵇ f ∨ᵇ e ∧ᵇ f ∧ᵇ s ≡ true
-taut3 true  true  true  s h = refl
-taut3 true  true  false s h = h
-taut3 true  false r     s ()
-taut3 false f     r     s ()
+∧∨-split : (e f r s : Bool)
+        -> (e ∧ᵇ f) ∧ᵇ (r ∨ᵇ s) ≡ true
+        -> (e ∧ᵇ r) ∧ᵇ f ∨ᵇ e ∧ᵇ f ∧ᵇ s ≡ true
+∧∨-split true  true  true  s h = refl
+∧∨-split true  true  false s h = h
+∧∨-split true  false r     s ()
+∧∨-split false f     r     s ()
 
 ------------------------------------------------------------------------
 -- Union.  Lemma 1, second bullet.
@@ -142,7 +148,7 @@ barUnion {A} {T} {G} {H} (cBar hg) bh = inner H bh
             fromG : G x ≡ true
                  -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
             fromG eg =
-              barMono (λ y ey -> taut1 (G y) (H' y) (T x y) ey)
+              barMono (λ y ey -> ∧∨-distrib (G y) (H' y) (T x y) ey)
                       (barUnion (hg x eg)
                                 (barMono (λ y ey -> andTrueL (H' y) (T x y) ey)
                                          (cBar hh)))
@@ -150,7 +156,7 @@ barUnion {A} {T} {G} {H} (cBar hg) bh = inner H bh
             fromH : H' x ≡ true
                  -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
             fromH eh =
-              barMono (λ y ey -> taut2 (G y) (H' y) (T x y) ey)
+              barMono (λ y ey -> ∧∨-weaken (G y) (H' y) (T x y) ey)
                       (inner (λ y -> H' y ∧ᵇ T x y) (hh x eh))
 
 ------------------------------------------------------------------------
@@ -168,7 +174,7 @@ prodMono : {A B : Set} (R : A -> A -> Bool) (S : B -> B -> Bool)
         -> prodPred E F q ∧ᵇ prodRel R S (x , y) q ≡ true
         -> prodPred (λ a -> E a ∧ᵇ R x a) F q ∨ᵇ
            prodPred E (λ b -> F b ∧ᵇ S y b) q ≡ true
-prodMono R S E F x y (u , v) e = taut3 (E u) (F v) (R x u) (S y v) e
+prodMono R S E F x y (u , v) e = ∧∨-split (E u) (F v) (R x u) (S y v) e
 
 barProd : {A B : Set} {R : A -> A -> Bool} {S : B -> B -> Bool}
        -> {E : A -> Bool} {F : B -> Bool}
@@ -222,26 +228,28 @@ barPull {A} {B} {R} {S} f D h {E} (cBar hE) = cBar pick
 ------------------------------------------------------------------------
 -- Bool is inductively finite
 
-neqBool : Bool -> Bool -> Bool
-neqBool a b = ¬ᵇ (a ⇔ᵇ b)
+infix 4.5 _≢ᵇ_
 
-bool3 : (x y z : Bool) -> neqBool x y ≡ true -> neqBool x z ≡ true
-     -> neqBool y z ≡ true -> Empty
-bool3 true  true  z     () e2 e3
-bool3 true  false true  e1 () e3
-bool3 true  false false e1 e2 ()
-bool3 false false z     () e2 e3
-bool3 false true  false e1 () e3
-bool3 false true  true  e1 e2 ()
+_≢ᵇ_ : Bool -> Bool -> Bool
+a ≢ᵇ b = ¬ᵇ (a ⇔ᵇ b)
 
-boolIFin : Bar neqBool (λ b -> true)
+noThreeDistinct : (x y z : Bool) -> x ≢ᵇ y ≡ true -> x ≢ᵇ z ≡ true
+               -> y ≢ᵇ z ≡ true -> Empty
+noThreeDistinct true  true  z     () e2 e3
+noThreeDistinct true  false true  e1 () e3
+noThreeDistinct true  false false e1 e2 ()
+noThreeDistinct false false z     () e2 e3
+noThreeDistinct false true  false e1 () e3
+noThreeDistinct false true  true  e1 e2 ()
+
+boolIFin : Bar _≢ᵇ_ (λ b -> true)
 boolIFin =
   cBar (λ x ex ->
   cBar (λ y ey ->
   cBar (λ z ez ->
-    emptyElim (bool3 x y z ey
-                 (andTrueL (neqBool x z) (neqBool y z) ez)
-                 (andTrueR (neqBool x z) (neqBool y z) ez)))))
+    emptyElim (noThreeDistinct x y z ey
+                 (andTrueL (x ≢ᵇ z) (y ≢ᵇ z) ez)
+                 (andTrueR (x ≢ᵇ z) (y ≢ᵇ z) ez)))))
 
 ------------------------------------------------------------------------
 -- Vectors of a given length are inductively finite -- in O(n), not 2^n.
@@ -250,8 +258,10 @@ boolIFin =
 -- with a valuation of length n, so barProd applies, and barPull transports the
 -- result back along uncons.  The recursion is on n; allVecs never appears.
 
-lenB : Nat -> Val -> Bool
-lenB n v = natEq (length v) n
+-- v has length n, as a boolean predicate (so that it can be a Bar's E).
+
+hasLength : Nat -> Val -> Bool
+hasLength n v = length v ≡ⁿ n
 
 headV : Val -> Bool
 headV []      = false
@@ -264,12 +274,12 @@ tailV (b ∷ v) = v
 unconsV : Val -> Bool × Val
 unconsV v = headV v , tailV v
 
-lenZero : (v : Val) -> natEq (length v) zero ≡ true -> v ≡ []
+lenZero : (v : Val) -> length v ≡ⁿ zero ≡ true -> v ≡ []
 lenZero []      e = refl
 lenZero (b ∷ v) ()
 
-lenTail : (m : Nat) (v : Val) -> lenB (suc m) v ≡ true
-       -> lenB m (tailV v) ≡ true
+lenTail : (m : Nat) (v : Val) -> hasLength (suc m) v ≡ true
+       -> hasLength m (tailV v) ≡ true
 lenTail m []      ()
 lenTail m (b ∷ v) e = e
 
@@ -279,72 +289,82 @@ deMorgan true  true  ()
 deMorgan true  false e = refl
 deMorgan false b     e = refl
 
-unconsNeq : (m : Nat) (y z : Val) -> lenB (suc m) y ≡ true
-         -> lenB (suc m) z ≡ true -> neqB y z ≡ true
-         -> prodRel neqBool neqB (unconsV y) (unconsV z) ≡ true
+unconsNeq : (m : Nat) (y z : Val) -> hasLength (suc m) y ≡ true
+         -> hasLength (suc m) z ≡ true -> y ≢ᵛ z ≡ true
+         -> prodRel _≢ᵇ_ _≢ᵛ_ (unconsV y) (unconsV z) ≡ true
 unconsNeq m []      z       () ez e
 unconsNeq m (b ∷ v) []      ey () e
-unconsNeq m (b ∷ v) (c ∷ w) ey ez e = deMorgan (b ⇔ᵇ c) (valEq v w) e
+unconsNeq m (b ∷ v) (c ∷ w) ey ez e = deMorgan (b ⇔ᵇ c) (v ≡ᵛ w) e
 
-vecIFin : (n : Nat) -> IFin (lenB n)
+vecIFin : (n : Nat) -> IFin (hasLength n)
 vecIFin zero =
   cBar (λ x ex -> cBar (λ y ey ->
-    emptyElim (clash x y ex (andTrueL (lenB zero y) (neqB x y) ey)
-                            (andTrueR (lenB zero y) (neqB x y) ey))))
+    emptyElim (clash x y ex (andTrueL (hasLength zero y) (x ≢ᵛ y) ey)
+                            (andTrueR (hasLength zero y) (x ≢ᵛ y) ey))))
   where
-    clash : (x y : Val) -> lenB zero x ≡ true -> lenB zero y ≡ true
-         -> neqB x y ≡ true -> Empty
-    clash x y ex ey e = tfAbs (sym nil2)
+    clash : (x y : Val) -> hasLength zero x ≡ true -> hasLength zero y ≡ true
+         -> x ≢ᵛ y ≡ true -> Empty
+    clash x y ex ey e = true≢false (sym nil2)
       where
-        -- both are [], and neqB [] [] is false
-        nil2 : neqB [] [] ≡ true
-        nil2 = subst (λ u -> neqB u [] ≡ true) (lenZero x ex)
-                     (subst (λ u -> neqB x u ≡ true) (lenZero y ey) e)
+        -- both are [], and [] ≢ᵛ [] is false
+        nil2 : [] ≢ᵛ [] ≡ true
+        nil2 = subst (λ u -> u ≢ᵛ [] ≡ true) (lenZero x ex)
+                     (subst (λ u -> x ≢ᵛ u ≡ true) (lenZero y ey) e)
 vecIFin (suc m) =
-  barMono (λ v ev -> andIntro (lenB (suc m) v)
-                              (prodPred (λ b -> true) (lenB m) (unconsV v))
+  barMono (λ v ev -> andIntro (hasLength (suc m) v)
+                              (prodPred (λ b -> true) (hasLength m) (unconsV v))
                               ev (lenTail m v ev))
-          (barPull unconsV (lenB (suc m)) (unconsNeq m)
+          (barPull unconsV (hasLength (suc m)) (unconsNeq m)
                    (barProd boolIFin (vecIFin m)))
 
 
 ------------------------------------------------------------------------
 -- The invariant the removing searches carry.
 --
--- InE E xs says the list xs lies inside the predicate E.  A search that
+-- AllSat E xs says the list xs lies inside the predicate E.  A search that
 -- removes an element x from xs passes to E intersect (R x), and that is
 -- precisely the sub-Bar cBar hands over -- so the "pool" of section 4c of
 -- FORMALISATION-PLAN.md is no longer a list carried alongside the search: it
 -- is the Bar's own predicate.
 
-InE : (Val -> Bool) -> List Val -> Set
-InE E xs = (x : Val) -> x ∈ xs -> E x ≡ true
+-- Naming convention for the searches built on this (Closure, Gfp, Elim, Fix,
+-- Graph, SccTrap):
+--   sb    a subset proof: AllSat E xs, or xs ⊆ ys written out pointwise;
+--   bar   the IFin E the search recurses on;
+--   av    the "available" invariant of a growing search: every candidate not
+--         yet in the accumulator still satisfies the Bar's predicate E.
+-- A search comes as a pair fooGo / fooFind: fooGo runs findFalse for one
+-- round, and fooFind cases on its FindResult -- allTrue stops, found x
+-- recurses on the smaller Bar that cBar hands over.
 
-memInE : (xs : List Val) -> InE (λ v -> memB v xs) xs
-memInE xs x m = memB_complete x xs m
+AllSat : (Val -> Bool) -> List Val -> Set
+AllSat E xs = (x : Val) -> x ∈ xs -> E x ≡ true
 
-listBar : (xs : List Val) -> IFin (λ v -> memB v xs)
+memAllSat : (xs : List Val) -> AllSat (λ v -> v ∈ᵛ xs) xs
+memAllSat xs x m = ∈ᵛ-complete x xs m
+
+listBar : (xs : List Val) -> IFin (λ v -> v ∈ᵛ xs)
 listBar xs = barOfList (length xs) xs (leRefl (length xs))
-                       (λ x ex -> memB_sound x xs ex)
+                       (λ x ex -> ∈ᵛ-sound x xs ex)
 
 -- Dropping x from the list is dropping x from the predicate.  Both searches of
 -- G29 that remove a member of the list they are searching use this.
 
-dropInE : {E : Val -> Bool} (p : Val -> Bool) (xs : List Val) -> InE E xs
-       -> (x : Val) -> p x ≡ false
-       -> InE (λ y -> E y ∧ᵇ neqB x y) (filterL p xs)
-dropInE {E} p xs sb x q z mz =
-  andIntro (E z) (neqB x z)
+dropAllSat : {E : Val -> Bool} (p : Val -> Bool) (xs : List Val) -> AllSat E xs
+          -> (x : Val) -> p x ≡ false
+          -> AllSat (λ y -> E y ∧ᵇ (x ≢ᵛ y)) (filter p xs)
+dropAllSat {E} p xs sb x q z mz =
+  andIntro (E z) (x ≢ᵛ z)
            (sb z (filter_sub p xs mz))
-           (cong ¬ᵇ_ (onEq (valEq x z) refl))
+           (cong ¬ᵇ_ (onEq (x ≡ᵛ z) refl))
   where
-    onEq : (b : Bool) -> valEq x z ≡ b -> valEq x z ≡ false
+    onEq : (b : Bool) -> x ≡ᵛ z ≡ b -> x ≡ᵛ z ≡ false
     onEq false e = e
     onEq true  e =
-      emptyElim (tfAbs (trans (sym (subst (λ u -> p u ≡ true)
-                                          (sym (valEq_sound x z e))
-                                          (filter_prop p xs mz)))
-                              q))
+      emptyElim (true≢false (trans (sym (subst (λ u -> p u ≡ true)
+                                               (sym (≡ᵛ-sound x z e))
+                                               (filter_prop p xs mz)))
+                                   q))
 
 ------------------------------------------------------------------------
 -- Members of allVecs n have length n.
@@ -362,7 +382,7 @@ map_mem_inv f (x ∷ xs) (there m) = shift (map_mem_inv f xs m)
     shift : (Σ[ z ∈ _ ] z ∈ xs × _) -> Σ[ z ∈ _ ] z ∈ x ∷ xs × _
     shift (z , mz , ez) = z , there mz , ez
 
-allVecs_len : (n : Nat) {v : Val} -> v ∈ allVecs n -> lenB n v ≡ true
+allVecs_len : (n : Nat) {v : Val} -> v ∈ allVecs n -> hasLength n v ≡ true
 allVecs_len zero    here      = refl
 allVecs_len zero    (there ())
 allVecs_len (suc n) m =
@@ -371,16 +391,16 @@ allVecs_len (suc n) m =
                       (map (λ bs -> false ∷ bs) (allVecs n)) m)
   where
     fromHalf : {v : Val} (b : Bool) -> v ∈ map (λ bs -> b ∷ bs) (allVecs n)
-            -> lenB (suc n) v ≡ true
+            -> hasLength (suc n) v ≡ true
     fromHalf {v} b mv = fromSig (map_mem_inv (λ bs -> b ∷ bs) (allVecs n) mv)
       where
         fromSig : (Σ[ w ∈ Val ] w ∈ allVecs n × v ≡ b ∷ w)
-               -> lenB (suc n) v ≡ true
+               -> hasLength (suc n) v ≡ true
         fromSig (w , mw , ew) =
-          subst (λ u -> lenB (suc n) u ≡ true) (sym ew) (allVecs_len n mw)
+          subst (λ u -> hasLength (suc n) u ≡ true) (sym ew) (allVecs_len n mw)
 
-stInE : (P : Formula) -> InE (lenB (length (sub P))) (St P)
-stInE P x m =
+stAllSat : (P : Formula) -> AllSat (hasLength (length (sub P))) (St P)
+stAllSat P x m =
   allVecs_len (length (sub P))
               (filter_sub (isState P) (allVecs (length (sub P))) m)
 
@@ -404,7 +424,7 @@ stInE P x m =
 
 AllBar : Nat -> Set
 AllBar n = (E : Val -> Bool)
-        -> ((v : Val) -> E v ≡ true -> lenB n v ≡ true) -> IFin E
+        -> ((v : Val) -> E v ≡ true -> hasLength n v ≡ true) -> IFin E
 
 allVecBar : (n : Nat) -> AllBar n
 allVecBar n E sb = barMono sb (vecIFin n)
@@ -414,8 +434,8 @@ guardBar n zero    w = w
 guardBar n (suc k) w =
   λ E sb -> cBar (λ x ex ->
     guardBar n k (guardBar n k w)
-             (λ y -> E y ∧ᵇ neqB x y)
-             (λ v ev -> sb v (andTrueL (E v) (neqB x v) ev)))
+             (λ y -> E y ∧ᵇ (x ≢ᵛ y))
+             (λ v ev -> sb v (andTrueL (E v) (x ≢ᵛ v) ev)))
 
 -- The guard depth is n itself, and that is not a cosmetic choice.
 --
@@ -427,12 +447,12 @@ guardBar n (suc k) w =
 -- More importantly, a literal depth is unusable.  guardBar n k unfolds to 2^k
 -- copies of what it wraps, so with k a literal the NORMAL FORM of the guarded
 -- Bar has 2^k nodes -- and Agda normalises the constructor types of a data
--- declaration, so every data type whose constructors mention U_infinity (Succ,
--- Escape, Walk, Round, Lasso, Run, ValidPos: most of Phases 5 and 6) would
--- normalise it.  With k = n and P a variable the match on k is blocked, the
--- guard stays folded, and the explosion cannot happen; on a closed formula n
--- reduces and the guard does its job.  Laziness has to be arranged in the term,
--- not merely relied on in the evaluator.
+-- declaration, so every data type whose constructors mention U_infinity
+-- (SuccInUinf, Escape, Walk, Round, Lasso, Run, ValidPos: most of Phases 5 and
+-- 6) would normalise it.  With k = n and P a variable the match on k is
+-- blocked, the guard stays folded, and the explosion cannot happen; on a closed
+-- formula n reduces and the guard does its job.  Laziness has to be arranged
+-- in the term, not merely relied on in the evaluator.
 
 guardedVecBar : (n : Nat) -> AllBar n
 guardedVecBar n = guardBar n n (allVecBar n)

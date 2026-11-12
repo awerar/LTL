@@ -101,20 +101,20 @@ globalFulfilAfter : (P : Formula) (b c0 : Val) (c1 : List Val)
                  -> (A : Formula) -> A ∈ □Args (sub P)
                  -> valOf P (posState (posIter c0 c1 i start)) (□ A) ≡ false
                  -> Σ[ t ∈ Nat ]
-                      valOf P (posState (posIter c0 c1 (plus i t) start)) A ≡ false
+                      valOf P (posState (posIter c0 c1 (i + t) start)) A ≡ false
 globalFulfilAfter P b c0 c1 mbc cyc start i vp A mA pend =
   fromOrbit (globalFulfil P b c0 c1 mbc cyc vp A mA pend)
   where
     fromOrbit : (Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (posIter c0 c1 i start) ×
                                   valOf P (posState q) A ≡ false)
              -> Σ[ t ∈ Nat ]
-                  valOf P (posState (posIter c0 c1 (plus i t) start)) A ≡ false
+                  valOf P (posState (posIter c0 c1 (i + t) start)) A ≡ false
     fromOrbit (q , mq , eq) =
       fromIter (orbitOf_iter c0 c1 (posIter c0 c1 i start) q mq)
       where
         fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t (posIter c0 c1 i start) ≡ q)
                 -> Σ[ t ∈ Nat ]
-                     valOf P (posState (posIter c0 c1 (plus i t) start)) A ≡ false
+                     valOf P (posState (posIter c0 c1 (i + t) start)) A ≡ false
         fromIter (t , et) =
           t , subst (λ r -> valOf P (posState r) A ≡ false)
                     (sym (trans (posIter_plus c0 c1 i t start) et))

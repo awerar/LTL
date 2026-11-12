@@ -8,9 +8,10 @@
 -- ⊤ and ⊥ are abbreviations, exactly as in the note.  Implication is ⇒
 -- rather than → because Agda reserves → for function types.
 --
--- formEq is decidable equality.  It is used by the duplicate-coherence clause
--- of isState (G5), by lookup (G4), and by the pigeonhole of G23, so it is
--- proved sound and complete here once and for all.
+-- ≡ᶠ is decidable equality (Boolean-valued; the superscript names the type,
+-- as in ≡ⁿ on Nat and ≡ᵛ on valuations).  It is used by the
+-- duplicate-coherence clause of isState (G5), by lookup (G4), and by the
+-- pigeonhole of G23, so it is proved sound and complete here once and for all.
 
 module LTL.Formula where
 
@@ -61,86 +62,88 @@ A ⇔ B = (A ⇒ B) ∧ (B ⇒ A)
 -- All twenty-five cases are written out: --exact-split rejects a catch-all
 -- clause overlapping the diagonal ones.
 
-formEq : Formula -> Formula -> Bool
-formEq (var n)  (var m) = natEq n m
-formEq (var n)  (¬ B)   = false
-formEq (var n)  (B ⇒ C) = false
-formEq (var n)  (○ B)   = false
-formEq (var n)  (□ B)   = false
+infix 4.5 _≡ᶠ_
 
-formEq (¬ A)    (var m) = false
-formEq (¬ A)    (¬ B)   = formEq A B
-formEq (¬ A)    (B ⇒ C) = false
-formEq (¬ A)    (○ B)   = false
-formEq (¬ A)    (□ B)   = false
+_≡ᶠ_ : Formula -> Formula -> Bool
+var n    ≡ᶠ var m   = n ≡ⁿ m
+var n    ≡ᶠ ¬ B     = false
+var n    ≡ᶠ (B ⇒ C) = false
+var n    ≡ᶠ ○ B     = false
+var n    ≡ᶠ □ B     = false
 
-formEq (A ⇒ A') (var m) = false
-formEq (A ⇒ A') (¬ B)   = false
-formEq (A ⇒ A') (B ⇒ C) = formEq A B ∧ᵇ formEq A' C
-formEq (A ⇒ A') (○ B)   = false
-formEq (A ⇒ A') (□ B)   = false
+¬ A      ≡ᶠ var m   = false
+¬ A      ≡ᶠ ¬ B     = A ≡ᶠ B
+¬ A      ≡ᶠ (B ⇒ C) = false
+¬ A      ≡ᶠ ○ B     = false
+¬ A      ≡ᶠ □ B     = false
 
-formEq (○ A)    (var m) = false
-formEq (○ A)    (¬ B)   = false
-formEq (○ A)    (B ⇒ C) = false
-formEq (○ A)    (○ B)   = formEq A B
-formEq (○ A)    (□ B)   = false
+(A ⇒ A') ≡ᶠ var m   = false
+(A ⇒ A') ≡ᶠ ¬ B     = false
+(A ⇒ A') ≡ᶠ (B ⇒ C) = (A ≡ᶠ B) ∧ᵇ (A' ≡ᶠ C)
+(A ⇒ A') ≡ᶠ ○ B     = false
+(A ⇒ A') ≡ᶠ □ B     = false
 
-formEq (□ A)    (var m) = false
-formEq (□ A)    (¬ B)   = false
-formEq (□ A)    (B ⇒ C) = false
-formEq (□ A)    (○ B)   = false
-formEq (□ A)    (□ B)   = formEq A B
+○ A      ≡ᶠ var m   = false
+○ A      ≡ᶠ ¬ B     = false
+○ A      ≡ᶠ (B ⇒ C) = false
+○ A      ≡ᶠ ○ B     = A ≡ᶠ B
+○ A      ≡ᶠ □ B     = false
 
-------------------------------------------------------------------------
--- formEq is reflexive, hence complete
-
-formEq_refl : (A : Formula) -> formEq A A ≡ true
-formEq_refl (var n) = natEq_refl n
-formEq_refl (¬ A)   = formEq_refl A
-formEq_refl (A ⇒ B) = andIntro (formEq A A) (formEq B B)
-                               (formEq_refl A) (formEq_refl B)
-formEq_refl (○ A)   = formEq_refl A
-formEq_refl (□ A)   = formEq_refl A
-
-formEq_complete : (A B : Formula) -> A ≡ B -> formEq A B ≡ true
-formEq_complete A B refl = formEq_refl A
+□ A      ≡ᶠ var m   = false
+□ A      ≡ᶠ ¬ B     = false
+□ A      ≡ᶠ (B ⇒ C) = false
+□ A      ≡ᶠ ○ B     = false
+□ A      ≡ᶠ □ B     = A ≡ᶠ B
 
 ------------------------------------------------------------------------
--- formEq is sound
+-- ≡ᶠ is reflexive, hence complete
 
-formEq_sound : (A B : Formula) -> formEq A B ≡ true -> A ≡ B
-formEq_sound (var n)  (var m) p = cong var (natEq_sound n m p)
-formEq_sound (var n)  (¬ B)   ()
-formEq_sound (var n)  (B ⇒ C) ()
-formEq_sound (var n)  (○ B)   ()
-formEq_sound (var n)  (□ B)   ()
+≡ᶠ-refl : (A : Formula) -> A ≡ᶠ A ≡ true
+≡ᶠ-refl (var n) = ≡ⁿ-refl n
+≡ᶠ-refl (¬ A)   = ≡ᶠ-refl A
+≡ᶠ-refl (A ⇒ B) = andIntro (A ≡ᶠ A) (B ≡ᶠ B)
+                           (≡ᶠ-refl A) (≡ᶠ-refl B)
+≡ᶠ-refl (○ A)   = ≡ᶠ-refl A
+≡ᶠ-refl (□ A)   = ≡ᶠ-refl A
 
-formEq_sound (¬ A)    (var m) ()
-formEq_sound (¬ A)    (¬ B)   p = cong ¬_ (formEq_sound A B p)
-formEq_sound (¬ A)    (B ⇒ C) ()
-formEq_sound (¬ A)    (○ B)   ()
-formEq_sound (¬ A)    (□ B)   ()
+≡ᶠ-complete : (A B : Formula) -> A ≡ B -> A ≡ᶠ B ≡ true
+≡ᶠ-complete A B refl = ≡ᶠ-refl A
 
-formEq_sound (A ⇒ A') (var m) ()
-formEq_sound (A ⇒ A') (¬ B)   ()
-formEq_sound (A ⇒ A') (B ⇒ C) p =
-  ⇒Cong (formEq_sound A B (andTrueL (formEq A B) (formEq A' C) p))
-        (formEq_sound A' C (andTrueR (formEq A B) (formEq A' C) p))
+------------------------------------------------------------------------
+-- ≡ᶠ is sound
+
+≡ᶠ-sound : (A B : Formula) -> A ≡ᶠ B ≡ true -> A ≡ B
+≡ᶠ-sound (var n)  (var m) p = cong var (≡ⁿ-sound n m p)
+≡ᶠ-sound (var n)  (¬ B)   ()
+≡ᶠ-sound (var n)  (B ⇒ C) ()
+≡ᶠ-sound (var n)  (○ B)   ()
+≡ᶠ-sound (var n)  (□ B)   ()
+
+≡ᶠ-sound (¬ A)    (var m) ()
+≡ᶠ-sound (¬ A)    (¬ B)   p = cong ¬_ (≡ᶠ-sound A B p)
+≡ᶠ-sound (¬ A)    (B ⇒ C) ()
+≡ᶠ-sound (¬ A)    (○ B)   ()
+≡ᶠ-sound (¬ A)    (□ B)   ()
+
+≡ᶠ-sound (A ⇒ A') (var m) ()
+≡ᶠ-sound (A ⇒ A') (¬ B)   ()
+≡ᶠ-sound (A ⇒ A') (B ⇒ C) p =
+  ⇒Cong (≡ᶠ-sound A B (andTrueL (A ≡ᶠ B) (A' ≡ᶠ C) p))
+        (≡ᶠ-sound A' C (andTrueR (A ≡ᶠ B) (A' ≡ᶠ C) p))
   where
     ⇒Cong : {X Y X' Y' : Formula} -> X ≡ Y -> X' ≡ Y' -> X ⇒ X' ≡ Y ⇒ Y'
     ⇒Cong refl refl = refl
-formEq_sound (A ⇒ A') (○ B)   ()
-formEq_sound (A ⇒ A') (□ B)   ()
+≡ᶠ-sound (A ⇒ A') (○ B)   ()
+≡ᶠ-sound (A ⇒ A') (□ B)   ()
 
-formEq_sound (○ A)    (var m) ()
-formEq_sound (○ A)    (¬ B)   ()
-formEq_sound (○ A)    (B ⇒ C) ()
-formEq_sound (○ A)    (○ B)   p = cong ○_ (formEq_sound A B p)
-formEq_sound (○ A)    (□ B)   ()
+≡ᶠ-sound (○ A)    (var m) ()
+≡ᶠ-sound (○ A)    (¬ B)   ()
+≡ᶠ-sound (○ A)    (B ⇒ C) ()
+≡ᶠ-sound (○ A)    (○ B)   p = cong ○_ (≡ᶠ-sound A B p)
+≡ᶠ-sound (○ A)    (□ B)   ()
 
-formEq_sound (□ A)    (var m) ()
-formEq_sound (□ A)    (¬ B)   ()
-formEq_sound (□ A)    (B ⇒ C) ()
-formEq_sound (□ A)    (○ B)   ()
-formEq_sound (□ A)    (□ B)   p = cong □_ (formEq_sound A B p)
+≡ᶠ-sound (□ A)    (var m) ()
+≡ᶠ-sound (□ A)    (¬ B)   ()
+≡ᶠ-sound (□ A)    (B ⇒ C) ()
+≡ᶠ-sound (□ A)    (○ B)   ()
+≡ᶠ-sound (□ A)    (□ B)   p = cong □_ (≡ᶠ-sound A B p)

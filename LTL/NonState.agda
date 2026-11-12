@@ -61,39 +61,35 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
         m = nth_mem (sub P) i lt ⊥
 
         flip : bitAt v i ≡ ¬ᵇ valOf P v X
-        flip = boolEq_false_eq (bitAt v i) (valOf P v X) cf
+        flip = ⇔ᵇ-false (bitAt v i) (valOf P v X) cf
 
     ----------------------------------------------------------------
     -- Coherence holds; now (S1) or (S2) fails at some member of sub P.
+
+    -- The literal of A that chi P v contains, read off by chiProj.
+    prAt : allCoh P v (length (sub P)) ≡ true
+        -> {A : Formula} -> A ∈ sub P -> (c : Bool)
+        -> valOf P v A ≡ c -> ⊢ C ⇒ (lit A c)
+    prAt ch h c eq = subst (λ d -> ⊢ C ⇒ (lit _ d)) eq (chiProj P v len ch h)
 
     okFail : allCoh P v (length (sub P)) ≡ true
           -> {A : Formula} -> A ∈ sub P -> okAt P v A ≡ false
           -> ⊢ ¬ C
     okFail ch {var n}   m ()
     okFail ch {○ B}   m ()
-    okFail ch {¬ B}   m e = refute¬ b (prAt (sub_¬ P m) b refl)
-                                          (prAt m b eq¬B)
+    okFail ch {¬ B}   m e = refute¬ b (prAt ch (sub_¬ P m) b refl)
+                                      (prAt ch m b eq¬B)
       where
-        prAt : {A : Formula} -> A ∈ sub P -> (c : Bool)
-            -> valOf P v A ≡ c -> ⊢ C ⇒ (lit A c)
-        prAt h c eq = subst (λ d -> ⊢ C ⇒ (lit _ d)) eq
-                            (chiProj P v len ch h)
-
         b : Bool
         b = valOf P v B
 
         eq¬B : valOf P v (¬ B) ≡ b
-        eq¬B = trans (boolEq_false_eq (valOf P v (¬ B))
+        eq¬B = trans (⇔ᵇ-false (valOf P v (¬ B))
                                           (¬ᵇ valOf P v B) e)
-                         (boolNot_not (valOf P v B))
+                         (¬ᵇ-involutive (valOf P v B))
 
     okFail ch {B ⇒ D} m e = aux (valOf P v B) (valOf P v D) refl refl eqI
       where
-        prAt : {A : Formula} -> A ∈ sub P -> (c : Bool)
-            -> valOf P v A ≡ c -> ⊢ C ⇒ (lit A c)
-        prAt h c eq = subst (λ d -> ⊢ C ⇒ (lit _ d)) eq
-                            (chiProj P v len ch h)
-
         mB : B ∈ sub P
         mB = sub_⇒L P m
 
@@ -102,32 +98,27 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
 
         eqI : valOf P v (B ⇒ D) ≡
               ¬ᵇ (valOf P v B ⇒ᵇ valOf P v D)
-        eqI = boolEq_false_eq (valOf P v (B ⇒ D))
-                              (valOf P v B ⇒ᵇ valOf P v D) e
+        eqI = ⇔ᵇ-false (valOf P v (B ⇒ D))
+                       (valOf P v B ⇒ᵇ valOf P v D) e
 
         aux : (bB bD : Bool) -> valOf P v B ≡ bB -> valOf P v D ≡ bD
            -> valOf P v (B ⇒ D) ≡ ¬ᵇ (bB ⇒ᵇ bD)
            -> ⊢ ¬ C
         -- v D = 1 forces imp = 1, but v (B ⇒ D) = 0
         aux true  true  eB eD eI =
-          refute (⇒Trans (prAt mD true eD) p1) (prAt m false eI)
+          refute (⇒Trans (prAt ch mD true eD) p1) (prAt ch m false eI)
         -- v B = 1, v D = 0, v (B ⇒ D) = 1 : modus ponens under chi
         aux true  false eB eD eI =
-          refute (mpU (prAt m true eI) (prAt mB true eB)) (prAt mD false eD)
+          refute (mpU (prAt ch m true eI) (prAt ch mB true eB)) (prAt ch mD false eD)
         -- v B = 0 forces imp = 1, but v (B ⇒ D) = 0
         aux false bD    eB eD eI =
-          refute (⇒Trans (prAt mB false eB) ¬Elim) (prAt m false eI)
+          refute (⇒Trans (prAt ch mB false eB) ¬Elim) (prAt ch m false eI)
 
-    okFail ch {□ B}   m e = refute (⇒Trans (prAt m true e□) □Elim)
-                                     (prAt (sub_□ P m) false eB)
+    okFail ch {□ B}   m e = refute (⇒Trans (prAt ch m true e□) □Elim)
+                                   (prAt ch (sub_□ P m) false eB)
       where
-        prAt : {A : Formula} -> A ∈ sub P -> (c : Bool)
-            -> valOf P v A ≡ c -> ⊢ C ⇒ (lit A c)
-        prAt h c eq = subst (λ d -> ⊢ C ⇒ (lit _ d)) eq
-                            (chiProj P v len ch h)
-
         pr2 : valOf P v (□ B) ≡ true × valOf P v B ≡ false
-        pr2 = boolImp_false (valOf P v (□ B)) (valOf P v B) e
+        pr2 = ⇒ᵇ-false (valOf P v (□ B)) (valOf P v B) e
 
         e□ : valOf P v (□ B) ≡ true
         e□ = fst pr2
@@ -148,7 +139,7 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
         sigElim (i , lt , cf) = cohFail i lt cf
     onCoh true  ce e =
       sumElim (λ ef -> sigElim (allOk_false P v (sub P) ef))
-              (λ bad -> emptyElim (tfAbs (trans (sym ce) bad)))
+              (λ bad -> emptyElim (true≢false (trans (sym ce) bad)))
               (andFalse (allOk P v (sub P)) (allCoh P v (length (sub P))) e)
       where
         sigElim : (Σ[ A ∈ Formula ] A ∈ sub P ×

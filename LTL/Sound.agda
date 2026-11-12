@@ -10,8 +10,8 @@
 -- evalAt commutes with nxt definitionally, both sides of (Lin) being
 -- ¬ᵇ evalAt A (nextPos pos) on the nose.  That leaves four.
 --
---   (K □)  is allB pointwise: the SAME orbit on both sides, so it is
---            allB_at then ⇒TrueB then allB_intro.
+--   (K □)  is all pointwise: the SAME orbit on both sides, so it is
+--            all_at then ⇒TrueB then all_intro.
 --
 --   (Exp)    needs the orbit of pos to contain pos, its successor, and the
 --            whole orbit of its successor.  All three are orbitIter, since
@@ -37,29 +37,29 @@ open import LTL.Eval public
 ------------------------------------------------------------------------
 -- The Boolean tautologies behind (P1), (P2), (P3) and the identity
 
-tp1 : (a b : Bool) -> a ⇒ᵇ b ⇒ᵇ a ≡ true
-tp1 true  true  = refl
-tp1 true  false = refl
-tp1 false b     = refl
+tautP1 : (a b : Bool) -> a ⇒ᵇ b ⇒ᵇ a ≡ true
+tautP1 true  true  = refl
+tautP1 true  false = refl
+tautP1 false b     = refl
 
-tp2 : (a b c : Bool)
-   -> (a ⇒ᵇ b ⇒ᵇ c) ⇒ᵇ (a ⇒ᵇ b) ⇒ᵇ a ⇒ᵇ c ≡ true
-tp2 true  true  true  = refl
-tp2 true  true  false = refl
-tp2 true  false true  = refl
-tp2 true  false false = refl
-tp2 false b     c     = refl
+tautP2 : (a b c : Bool)
+      -> (a ⇒ᵇ b ⇒ᵇ c) ⇒ᵇ (a ⇒ᵇ b) ⇒ᵇ a ⇒ᵇ c ≡ true
+tautP2 true  true  true  = refl
+tautP2 true  true  false = refl
+tautP2 true  false true  = refl
+tautP2 true  false false = refl
+tautP2 false b     c     = refl
 
-tp3 : (a b : Bool)
-   -> (¬ᵇ b ⇒ᵇ ¬ᵇ a) ⇒ᵇ a ⇒ᵇ b ≡ true
-tp3 true  true  = refl
-tp3 true  false = refl
-tp3 false true  = refl
-tp3 false false = refl
+tautP3 : (a b : Bool)
+      -> (¬ᵇ b ⇒ᵇ ¬ᵇ a) ⇒ᵇ a ⇒ᵇ b ≡ true
+tautP3 true  true  = refl
+tautP3 true  false = refl
+tautP3 false true  = refl
+tautP3 false false = refl
 
-tid : (a : Bool) -> a ⇒ᵇ a ≡ true
-tid true  = refl
-tid false = refl
+tautId : (a : Bool) -> a ⇒ᵇ a ≡ true
+tautId true  = refl
+tautId false = refl
 
 ------------------------------------------------------------------------
 -- Conjunction, as (Exp) and (Lin) need it
@@ -79,15 +79,15 @@ tid false = refl
 ------------------------------------------------------------------------
 -- (K □)
 
-□K : (P : Formula) (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
-    -> evalAt P c0 c1 (□ (A ⇒ B)) pos ≡ true
-    -> evalAt P c0 c1 (□ A) pos ≡ true
-    -> evalAt P c0 c1 (□ B) pos ≡ true
-□K P c0 c1 A B pos e1 e2 =
-  allB_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
+k□Sound : (P : Formula) (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
+         -> evalAt P c0 c1 (□ (A ⇒ B)) pos ≡ true
+         -> evalAt P c0 c1 (□ A) pos ≡ true
+         -> evalAt P c0 c1 (□ B) pos ≡ true
+k□Sound P c0 c1 A B pos e1 e2 =
+  all_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
     (λ {q} m -> ⇒TrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
-                         (allB_at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
-                         (allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
+                         (all_at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
+                         (all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
 
 ------------------------------------------------------------------------
 -- (Exp)
@@ -103,16 +103,16 @@ expSound P c0 c1 A pos =
         -> evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos ≡ true
     body eb =
       ∧True P c0 c1 A (○ A ∧ ○ □ A) pos
-              (allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                       (orbitIter c0 c1 zero pos) eb)
+              (all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                      (orbitIter c0 c1 zero pos) eb)
               (∧True P c0 c1 (○ A) (○ □ A) pos
-                       (allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                                (orbitIter c0 c1 (suc zero) pos) eb)
-                       (allB_intro (evalAt P c0 c1 A)
-                                   (orbitOf c0 c1 (nextPos c0 c1 pos))
-                                   (λ {q} m ->
-                                      allB_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                                              (orbitSub c0 c1 pos q m) eb)))
+                       (all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                               (orbitIter c0 c1 (suc zero) pos) eb)
+                       (all_intro (evalAt P c0 c1 A)
+                                  (orbitOf c0 c1 (nextPos c0 c1 pos))
+                                  (λ {q} m ->
+                                     all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                                            (orbitSub c0 c1 pos q m) eb)))
 
 ------------------------------------------------------------------------
 -- (Ind).
@@ -133,8 +133,8 @@ indSound P c0 c1 A pos =
         -> evalAt P c0 c1 A pos ≡ true
         -> evalAt P c0 c1 (□ A) pos ≡ true
     body e1 e2 =
-      allB_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                 (λ {q} m -> fromIter q (orbitOf_iter c0 c1 pos q m))
+      all_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                (λ {q} m -> fromIter q (orbitOf_iter c0 c1 pos q m))
       where
         along : (t : Nat) -> evalAt P c0 c1 A (posIter c0 c1 t pos) ≡ true
         along zero    = e2
@@ -144,9 +144,9 @@ indSound P c0 c1 A pos =
                 (⇒TrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
                           (evalAt P c0 c1 A
                                   (nextPos c0 c1 (posIter c0 c1 t pos)))
-                          (allB_at (evalAt P c0 c1 (A ⇒ ○ A))
-                                   (orbitOf c0 c1 pos)
-                                   (orbitIter c0 c1 t pos) e1)
+                          (all_at (evalAt P c0 c1 (A ⇒ ○ A))
+                                  (orbitOf c0 c1 pos)
+                                  (orbitIter c0 c1 t pos) e1)
                           (along t))
 
         fromIter : (q : Pos) -> (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
@@ -164,25 +164,25 @@ sound : (P : Formula) (b c0 : Val) (c1 : List Val)
      -> evalAt P c0 c1 C pos ≡ true
 
 sound P b c0 c1 mc0 wc stb (p1 {A} {B}) pos vp =
-  tp1 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+  tautP1 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
 
 sound P b c0 c1 mc0 wc stb (p2 {A} {B} {C}) pos vp =
-  tp2 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos) (evalAt P c0 c1 C pos)
+  tautP2 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos) (evalAt P c0 c1 C pos)
 
 sound P b c0 c1 mc0 wc stb (p3 {A} {B}) pos vp =
-  tp3 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+  tautP3 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
 
 sound P b c0 c1 mc0 wc stb (k□ {A} {B}) pos vp =
   ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ B)) pos)
             (evalAt P c0 c1 (□ A) pos ⇒ᵇ evalAt P c0 c1 (□ B) pos)
             (λ e1 -> ⇒IntroB (evalAt P c0 c1 (□ A) pos)
                                (evalAt P c0 c1 (□ B) pos)
-                               (λ e2 -> □K P c0 c1 A B pos e1 e2))
+                               (λ e2 -> k□Sound P c0 c1 A B pos e1 e2))
 
 -- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
 sound P b c0 c1 mc0 wc stb (k○ {A} {B}) pos vp =
-  tid (evalAt P c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
-       evalAt P c0 c1 B (nextPos c0 c1 pos))
+  tautId (evalAt P c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
+          evalAt P c0 c1 B (nextPos c0 c1 pos))
 
 sound P b c0 c1 mc0 wc stb (exp {A}) pos vp = expSound P c0 c1 A pos
 
@@ -193,8 +193,8 @@ sound P b c0 c1 mc0 wc stb (ind {A}) pos vp = indSound P c0 c1 A pos
 sound P b c0 c1 mc0 wc stb (lin {A}) pos vp =
   ∧True P c0 c1 (○ ¬ A ⇒ ¬ ○ A)
                   (¬ ○ A ⇒ ○ ¬ A) pos
-          (tid (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
-          (tid (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
+          (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
+          (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
 
 -- (PC).  evalAt is DEFINED by ¬ᵇ at neg and by ⇒ᵇ at imp, so the two
 -- compositionality hypotheses of tautSound are refl and the case is one line.
@@ -209,9 +209,9 @@ sound P b c0 c1 mc0 wc stb (mp {A} {B} d e) pos vp =
            (sound P b c0 c1 mc0 wc stb e pos vp)
 
 sound P b c0 c1 mc0 wc stb (gen {A} d) pos vp =
-  allB_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-             (λ {q} m -> sound P b c0 c1 mc0 wc stb d q
-                               (orbitValid P b c0 c1 mc0 wc stb pos q vp m))
+  all_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+            (λ {q} m -> sound P b c0 c1 mc0 wc stb d q
+                              (orbitValid P b c0 c1 mc0 wc stb pos q vp m))
 
 ------------------------------------------------------------------------
 -- Soundness on a run, at every stage

@@ -27,7 +27,7 @@
 --    anticipated and called the interesting observation:
 --
 --                    start          stem   cycle
---        decide      c5both           3      1
+--        decide      c5pqNow          3      1
 --        decideSCC   c5q              2      4
 --
 --    (the run stores stem ++ cycle, so the recorded rest lengths are 4 and 6).
@@ -389,10 +389,10 @@ c5Decide = lassoOfDecide c5 (decide c5)
 c5Scc : Val × List Val × List Val
 c5Scc = lassoOfDecide c5 (decideSCC c5)
 
-c5_decide_start : valEq (fst c5Decide) c5both ≡ true
+c5_decide_start : fst c5Decide ≡ᵛ c5pqNow ≡ true
 c5_decide_start = refl
 
-c5_scc_start : valEq (fst c5Scc) c5q ≡ true
+c5_scc_start : fst c5Scc ≡ᵛ c5q ≡ true
 c5_scc_start = refl
 
 c5_decide_len : lassoLen c5Decide ≡ (4 , 1)
@@ -404,5 +404,5 @@ c5_scc_len = refl
 -- and the observation itself: the two countermodels do not even start at the
 -- same state.
 
-c5_differ : valEq (fst c5Decide) (fst c5Scc) ≡ false
+c5_differ : fst c5Decide ≡ᵛ fst c5Scc ≡ false
 c5_differ = refl

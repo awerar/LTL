@@ -94,17 +94,17 @@ trapFail P C A mbx z w (reachesBy as t) pd atW =
           x , reachPath P C (trailTo C (step P) t m) , e
 
 ------------------------------------------------------------------------
--- A fair loop, cut down to the vertices it uses, with its Trap.
+-- A fair loop, cut down to the vertices it uses, with its Trap: a TrapLoop.
 
-data ScLasso (P : Formula) (v0 : Val) : Set where
-  scLasso : (C : List Val) -> v0 ∈ C
+data TrapLoop (P : Formula) (v0 : Val) : Set where
+  trapLoop : (C : List Val) -> v0 ∈ C
          -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
-         -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> ScLasso P v0
+         -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> TrapLoop P v0
 
-fairScLasso : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
-           -> FairLoop (Ust P) (step P) (evPreds P) v0 -> ScLasso P v0
-fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
-  scLasso C here inC (mkTrap succC fulC) (fairLoop r st cy tsC tcC nn wit)
+fairTrapLoop : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
+            -> FairLoop (Ust P) (step P) (evPreds P) v0 -> TrapLoop P v0
+fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
+  trapLoop C here inC (mkTrap succC fulC) (fairLoop r st cy tsC tcC nn wit)
   where
     C : List Val
     C = v0 ∷ st ++ cy
@@ -129,8 +129,8 @@ fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
 
     -- (R1) fails on C: the base point steps onto its own cycle, everything on
     -- the cycle inherits that, and everything on the stem steps forward.
-    hr : HasSucc C (step P) r
-    hr = firstStep C (step P) tcC nn
+    rSucc : HasSucc C (step P) r
+    rSucc = firstStep C (step P) tcC nn
 
     toSig : (x : Val) -> HasSucc C (step P) x
          -> Σ[ y ∈ Val ] y ∈ C × step P x y ≡ true
@@ -138,9 +138,9 @@ fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
 
     succC : (z : Val) -> z ∈ C
          -> Σ[ y ∈ Val ] y ∈ C × step P z y ≡ true
-    succC z here      = toSig z (headSucc C (step P) tsC hr)
+    succC z here      = toSig z (headSucc C (step P) tsC rSucc)
     succC z (there m) =
-      sumElim (λ m1 -> toSig z (trailSucc C (step P) tsC hr m1))
+      sumElim (λ m1 -> toSig z (trailSucc C (step P) tsC rSucc m1))
               (λ m2 -> toSig z (cycSucc C (step P) r cy tcC nn m2))
               (memAppCase st cy m)
 
@@ -170,9 +170,9 @@ fairScLasso P v0 mv0 (fairLoop r st cy ts tc nn wit) =
 
 -- and then the trap survives the elimination, so G38 applies.
 
-scRun : (P : Formula) (v0 : Val) -> ScLasso P v0
-     -> v0 ∈ Uinf P × Run P v0
-scRun P v0 (scLasso C mv0 inU tr flC) =
+trapLoopRun : (P : Formula) (v0 : Val) -> TrapLoop P v0
+           -> v0 ∈ Uinf P × Run P v0
+trapLoopRun P v0 (trapLoop C mv0 inU tr flC) =
   mv0U , sccRun P C intoU v0 mv0U flC
   where
     intoU : (z : Val) -> z ∈ C -> z ∈ Uinf P
@@ -197,8 +197,8 @@ buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
       notTrue (valOf (¬ Q) v0 Q)
-        (trans (sym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
-                                  (¬ᵇ valOf (¬ Q) v0 Q)
+        (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
+                              (¬ᵇ valOf (¬ Q) v0 Q)
                                   (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
                ev)
 
@@ -207,7 +207,7 @@ buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
       trans (sym (hintStart (¬ Q) v0 r Q (there (sub_self Q)))) valQ
 
     noDeriv : ⊢ Q -> Empty
-    noDeriv d = tfAbs (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
+    noDeriv d = true≢false (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- Theorem 6.1, by the SCC route.
@@ -234,8 +234,8 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
             onSeed : SeedTo R r -> ⊢ Q ⊎ LassoCountermodel Q
             onSeed (seedTo s st ms es ts) =
               fromRun s es
-                      (scRun R s (fairScLasso R s ms
-                                              (fairLoop r st cy ts tc nn wit)))
+                      (trapLoopRun R s (fairTrapLoop R s ms
+                                                     (fairLoop r st cy ts tc nn wit)))
 
 ------------------------------------------------------------------------
 -- Checkpoints.

@@ -12,7 +12,9 @@
 --     liftP  : ⊢ A -> ⊢ P ⇒ A
 --     mpU    : ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ A -> ⊢ P ⇒ B
 --
--- which is the style of ~/CHWISTEK/T4/CARNEIRO-WITNESS-IMP-LIFTING.md.
+-- which is the style of ~/CHWISTEK/T4/CARNEIRO-WITNESS-IMP-LIFTING.md.  A
+-- trailing U in a name (mpU, ⇒TransU, ¬IntroU, caseU, mpU2) marks a rule that
+-- works under such an antecedent.
 
 module LTL.Prop where
 
@@ -72,9 +74,9 @@ mpU f g = mp (mp p2 f) g
 ⇒IntroR : {A B : Formula} -> ⊢ B ⇒ A ⇒ B
 ⇒IntroR = p1
 
--- (L3)
-exf : {A B : Formula} -> ⊢ A ⇒ ¬ A ⇒ B
-exf = ⇒Swap ¬Elim
+-- (L3): from A and ¬ A, anything (compare exFalso, from ⊥).
+explode : {A B : Formula} -> ⊢ A ⇒ ¬ A ⇒ B
+explode = ⇒Swap ¬Elim
 
 ------------------------------------------------------------------------
 -- ⊤ and ⊥
@@ -82,7 +84,7 @@ exf = ⇒Swap ¬Elim
 deriv⊤ : ⊢ ⊤
 deriv⊤ = ⇒Refl
 
--- Double negation.  dne comes first: under the antecedent  ¬ ¬ A  we
+-- Double negation: dne eliminates it, dni introduces it.  dne comes first: under the antecedent  ¬ ¬ A  we
 -- have  ¬ A ⇒ ¬ ⊤  by ¬Elim, hence  ⊤ ⇒ A  by (P3), and  ⊤  is
 -- available, so A follows.
 
@@ -141,19 +143,19 @@ contra {A} {B} = ⇒Trans dnMono (p3 {¬ B} {¬ A})
 -- The (S2) violation needs (Exp), so it belongs to Phase 3.
 
 ¬Case1 : {A C : Formula} -> ⊢ A ⇒ ¬ A ⇒ C
-¬Case1 = exf
+¬Case1 = explode
 
 ¬Case0 : {A C : Formula} -> ⊢ ¬ ¬ A ⇒ ¬ A ⇒ C
 ¬Case0 {A} {C} = ¬Elim {¬ A} {C}
 
 ⇒Case1 : {A B C : Formula}
         -> ⊢ (A ⇒ B) ⇒ A ⇒ ¬ B ⇒ C
-⇒Case1 = ⇒TransU identP (liftP exf)
+⇒Case1 = ⇒TransU identP (liftP explode)
 
 ⇒Case0L : {A B C : Formula}
          -> ⊢ ¬ A ⇒ ¬ (A ⇒ B) ⇒ C
-⇒Case0L = ⇒Trans ¬Elim exf
+⇒Case0L = ⇒Trans ¬Elim explode
 
 ⇒Case0R : {A B C : Formula}
          -> ⊢ B ⇒ ¬ (A ⇒ B) ⇒ C
-⇒Case0R = ⇒Trans p1 exf
+⇒Case0R = ⇒Trans p1 explode

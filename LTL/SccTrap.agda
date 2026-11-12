@@ -25,10 +25,10 @@
 --    empty trail does it -- or is a successor of something already in, and then
 --    that thing's trail grows by one step.
 --
---    The trail comes out inside StC P, the candidate list, and seedTrail lifts
---    it into Ust P: a trail of STATES starting at a member of Ust P stays in
---    Ust P, by ustClosed at each step.  So no new closure property is needed
---    and LTL.Closure is not touched.
+--    The trail comes out inside StCand P, the candidate list, and seedTrail
+--    lifts it into Ust P: a trail of STATES starting at a member of Ust P stays
+--    in Ust P, by ustClosed at each step.  So no new closure property is
+--    needed and LTL.Closure is not touched.
 --
 -- 2. A TRAP SURVIVES THE ELIMINATION.
 --
@@ -65,16 +65,16 @@ open import LTL.SccExtract public
 ------------------------------------------------------------------------
 -- Two list facts, in the shape the two lemmas want.
 
-memNullB : {A : Set} (xs : List A) {x : A} -> x ∈ xs -> nullB xs ≡ false
-memNullB []       ()
-memNullB (y ∷ ys) m = refl
+mem_notNull : {A : Set} (xs : List A) {x : A} -> x ∈ xs -> null xs ≡ false
+mem_notNull []       ()
+mem_notNull (y ∷ ys) m = refl
 
-anyL_none : {A : Set} (p : A -> Bool) (xs : List A)
-         -> ((y : A) -> y ∈ xs -> p y ≡ false) -> anyL p xs ≡ false
-anyL_none p []       h = refl
-anyL_none p (y ∷ ys) h =
-  subst (λ b -> b ∨ᵇ anyL p ys ≡ false) (sym (h y here))
-        (anyL_none p ys (λ z m -> h z (there m)))
+any_none : {A : Set} (p : A -> Bool) (xs : List A)
+        -> ((y : A) -> y ∈ xs -> p y ≡ false) -> any p xs ≡ false
+any_none p []       h = refl
+any_none p (y ∷ ys) h =
+  subst (λ b -> b ∨ᵇ any p ys ≡ false) (sym (h y here))
+        (any_none p ys (λ z m -> h z (there m)))
 
 orBothFalse : (a b : Bool) -> a ≡ false -> b ≡ false -> a ∨ᵇ b ≡ false
 orBothFalse a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
@@ -82,13 +82,13 @@ orBothFalse a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
 ------------------------------------------------------------------------
 -- 1. Every state of Ust P is reached from a state containing P.
 --
--- The trail is carried inside StC P, the list closeGo filters; lifting it into
--- Ust P is seedTrail below.
+-- The trail is carried inside StCand P, the list closeGo filters; lifting it
+-- into Ust P is seedTrail below.
 
 data Seeded (P : Formula) (w : Val) : Set where
   seeded : (s : Val) (zs : List Val)
-        -> s ∈ StC P -> valOf P s P ≡ true
-        -> Trail (StC P) (step P) s zs w -> Seeded P w
+        -> s ∈ StCand P -> valOf P s P ≡ true
+        -> Trail (StCand P) (step P) s zs w -> Seeded P w
 
 -- One round: a state it adds is a seed, or a successor of something already in.
 
@@ -97,25 +97,25 @@ addSeeded : (P : Formula) (acc : List Val)
          -> (z : Val) -> z ∈ addAll P acc -> Seeded P z
 addSeeded P acc sd z m =
   sumElim fromNew (λ m2 -> sd z m2)
-          (memAppCase (filterL (missing P acc) (StC P)) acc m)
+          (memAppCase (filter (missing P acc) (StCand P)) acc m)
   where
-    fromNew : z ∈ filterL (missing P acc) (StC P) -> Seeded P z
+    fromNew : z ∈ filter (missing P acc) (StCand P) -> Seeded P z
     fromNew m1 =
       sumElim isSeed viaU
-              (orTrue (valOf P z P) (anyL (λ u -> step P u z) acc) want)
+              (orTrue (valOf P z P) (any (λ u -> step P u z) acc) want)
       where
-        mzs : z ∈ StC P
-        mzs = filter_sub (missing P acc) (StC P) m1
+        mzs : z ∈ StCand P
+        mzs = filter_sub (missing P acc) (StCand P) m1
 
         want : wanted P acc z ≡ true
-        want = andTrueL (wanted P acc z) (¬ᵇ memB z acc)
-                        (filter_prop (missing P acc) (StC P) m1)
+        want = andTrueL (wanted P acc z) (¬ᵇ (z ∈ᵛ acc))
+                        (filter_prop (missing P acc) (StCand P) m1)
 
         isSeed : valOf P z P ≡ true -> Seeded P z
         isSeed e = seeded z [] mzs e tNil
 
-        viaU : anyL (λ u -> step P u z) acc ≡ true -> Seeded P z
-        viaU ea = pick (anyL_true (λ u -> step P u z) acc ea)
+        viaU : any (λ u -> step P u z) acc ≡ true -> Seeded P z
+        viaU ea = pick (any_true (λ u -> step P u z) acc ea)
           where
             pick : (Σ[ u ∈ Val ] u ∈ acc × step P u z ≡ true)
                 -> Seeded P z
@@ -124,32 +124,32 @@ addSeeded P acc sd z m =
                 ext : Seeded P u -> Seeded P z
                 ext (seeded s zs ms es t) =
                   seeded s (zs ++ z ∷ []) ms es
-                         (trailApp (StC P) (step P) t (tCons mzs su tNil))
+                         (trailApp (StCand P) (step P) t (tCons mzs su tNil))
 
 closeGoSeeded   : (P : Formula) {E : Val -> Bool} (acc : List Val)
-               -> (av : (z : Val) -> z ∈ StC P -> memB z acc ≡ false
+               -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
                       -> E z ≡ true)
                -> (bar : IFin E)
                -> ((z : Val) -> z ∈ acc -> Seeded P z)
                -> {z : Val} -> z ∈ closeGo P acc av bar -> Seeded P z
 closeFindSeeded : (P : Formula) {E : Val -> Bool} (acc : List Val)
-               -> (av : (z : Val) -> z ∈ StC P -> memB z acc ≡ false
+               -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
                       -> E z ≡ true)
-               -> (bar : IFin E) (fr : FindResult (okAcc P acc) (StC P))
+               -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P))
                -> ((z : Val) -> z ∈ acc -> Seeded P z)
                -> {z : Val} -> z ∈ closeFind P acc av bar fr -> Seeded P z
 
 closeGoSeeded P acc av bar =
-  closeFindSeeded P acc av bar (findFalse (okAcc P acc) (StC P))
+  closeFindSeeded P acc av bar (findFalse (settled P acc) (StCand P))
 
-closeFindSeeded P acc av bar      (allT f)       sd {z} m = sd z m
+closeFindSeeded P acc av bar      (allTrue f)    sd {z} m = sd z m
 closeFindSeeded P acc av (cBar h) (found x mx q) sd     m =
   closeGoSeeded P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q)))
                 (addSeeded P acc sd) m
 
 ustSeeded : (P : Formula) {z : Val} -> z ∈ Ust P -> Seeded P z
 ustSeeded P =
-  closeGoSeeded P [] (λ z mz e -> stInE P z (stcSt P mz)) (vecBar P) noSd
+  closeGoSeeded P [] (λ z mz e -> stAllSat P z (stCandSt P mz)) (vecBar P) noSd
   where
     noSd : (z : Val) -> z ∈ [] {A = Val} -> Seeded P z
     noSd z ()
@@ -157,13 +157,13 @@ ustSeeded P =
 -- A trail of states out of Ust P stays in Ust P.
 
 seedTrail : (P : Formula) {s : Val} {zs : List Val} {w : Val}
-         -> s ∈ Ust P -> Trail (StC P) (step P) s zs w
+         -> s ∈ Ust P -> Trail (StCand P) (step P) s zs w
          -> Trail (Ust P) (step P) s zs w
 seedTrail P ms tNil                   = tNil
 seedTrail P ms (tCons {x = y} m e t) = tCons my e (seedTrail P my t)
   where
     my : y ∈ Ust P
-    my = ustClosed P ms (stcSt P m) e
+    my = ustClosed P ms (stCandSt P m) e
 
 data SeedTo (P : Formula) (w : Val) : Set where
   seedTo : (s : Val) (zs : List Val)
@@ -177,7 +177,7 @@ ustSeedTo P w m = conv (ustSeeded P m)
     conv (seeded s zs ms es t) = seedTo s zs mu es (seedTrail P mu t)
       where
         mu : s ∈ Ust P
-        mu = ustSeed P (stcSt P ms) es
+        mu = ustSeed P (stCandSt P ms) es
 
 ------------------------------------------------------------------------
 -- 2. Traps.
@@ -214,12 +214,12 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
     e1 = onS (hsucc z mz)
       where
         onS : (Σ[ y ∈ Val ] y ∈ C × step P z y ≡ true)
-           -> nullB (succs P us z) ≡ false
+           -> null (succs P us z) ≡ false
         onS (y , my , st) =
-          memNullB (succs P us z) (succsIn P us z (sb y my) st)
+          mem_notNull (succs P us z) (succsIn P us z (sb y my) st)
 
     e2 : r2 P (evList P us) z ≡ false
-    e2 = anyL_none (badEv P z) (evList P us) each
+    e2 = any_none (badEv P z) (evList P us) each
       where
         each : (g : Ev) -> g ∈ evList P us -> badEv P z g ≡ false
         each (A , W) mg = onPend (valOf P z (□ A)) refl
@@ -227,33 +227,33 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
             pr : A ∈ □Args (sub P) × W ≡ gfpW P us A
             pr = evList_of P us mg
 
-            notInW : valOf P z (□ A) ≡ false -> memB z W ≡ false
-            notInW ep = onM (memB z W) refl
+            notInW : valOf P z (□ A) ≡ false -> z ∈ᵛ W ≡ false
+            notInW ep = onM (z ∈ᵛ W) refl
               where
-                onM : (b : Bool) -> memB z W ≡ b -> memB z W ≡ false
+                onM : (b : Bool) -> z ∈ᵛ W ≡ b -> z ∈ᵛ W ≡ false
                 onM false em = em
                 onM true  em =
                   emptyElim (clash (hful z mz A (fst pr) ep))
                   where
                     mzW : z ∈ gfpW P us A
                     mzW = subst (λ L -> z ∈ L) (snd pr)
-                                (memB_sound z W em)
+                                (∈ᵛ-sound z W em)
 
                     clash : (Σ[ y ∈ Val ] Path P C z y ×
                                           valOf P y A ≡ false)
                          -> Empty
                     clash (y , pa , ef) =
-                      tfAbs (trans (sym (gfpSound P us A z mzW y
-                                                  (pathMono P C us sb pa)))
-                                   ef)
+                      true≢false (trans (sym (gfpSound P us A z mzW y
+                                                       (pathMono P C us sb pa)))
+                                        ef)
 
             onPend : (b : Bool) -> valOf P z (□ A) ≡ b
                   -> badEv P z (A , W) ≡ false
             onPend true  ep =
-              subst (λ c -> ¬ᵇ c ∧ᵇ memB z W ≡ false)
+              subst (λ c -> ¬ᵇ c ∧ᵇ (z ∈ᵛ W) ≡ false)
                     (sym ep) refl
             onPend false ep =
-              subst (λ c -> ¬ᵇ c ∧ᵇ memB z W ≡ false)
+              subst (λ c -> ¬ᵇ c ∧ᵇ (z ∈ᵛ W) ≡ false)
                     (sym ep) (notInW ep)
 
 -- and therefore the whole elimination keeps it.  Same recursion as elimGo, one
@@ -261,11 +261,11 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
 -- proof" move of section 4f one more time.
 
 elimGoTrap   : (P : Formula) {E : Val -> Bool} (us : List Val)
-               (sb : InE E us) (bar : IFin E)
+               (sb : AllSat E us) (bar : IFin E)
             -> (C : List Val) -> Trap P C -> ((z : Val) -> z ∈ C -> z ∈ us)
             -> (z : Val) -> z ∈ C -> z ∈ elimGo P us sb bar
 elimFindTrap : (P : Formula) {E : Val -> Bool} (us : List Val)
-               (sb : InE E us) (bar : IFin E)
+               (sb : AllSat E us) (bar : IFin E)
                (fr : FindResult (keep P us (evList P us)) us)
             -> (C : List Val) -> Trap P C -> ((z : Val) -> z ∈ C -> z ∈ us)
             -> (z : Val) -> z ∈ C -> z ∈ elimFind P us sb bar fr
@@ -273,10 +273,10 @@ elimFindTrap : (P : Formula) {E : Val -> Bool} (us : List Val)
 elimGoTrap P us sb bar =
   elimFindTrap P us sb bar (findFalse (keep P us (evList P us)) us)
 
-elimFindTrap P us sb bar      (allT f)      C tr inc z mz = inc z mz
+elimFindTrap P us sb bar      (allTrue f)   C tr inc z mz = inc z mz
 elimFindTrap P us sb (cBar h) (found x m q) C tr inc z mz =
   elimGoTrap P (elimRound P us)
-             (dropInE (keep P us (evList P us)) us sb x q) (h x (sb x m))
+             (dropAllSat (keep P us (evList P us)) us sb x q) (h x (sb x m))
              C tr inc' z mz
   where
     inc' : (y : Val) -> y ∈ C -> y ∈ elimRound P us
@@ -286,4 +286,4 @@ elimFindTrap P us sb (cBar h) (found x m q) C tr inc z mz =
 uinfTrap : (P : Formula) (C : List Val) -> Trap P C
         -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
         -> (z : Val) -> z ∈ C -> z ∈ Uinf P
-uinfTrap P = elimGoTrap P (Ust P) (ustInE P) (ustBar P)
+uinfTrap P = elimGoTrap P (Ust P) (ustAllSat P) (ustBar P)

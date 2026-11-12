@@ -79,6 +79,9 @@ show s = s
 showNat : Nat -> String
 showNat = primShowNat
 
+-- Length of a builtin list (primStringToList gives one; it is not
+-- LTL.Prelude's List).
+
 blen : {A : Set} -> B.List A -> Nat
 blen B.[]       = zero
 blen (_ B.∷ xs) = suc (blen xs)
@@ -86,26 +89,24 @@ blen (_ B.∷ xs) = suc (blen xs)
 strLen : String -> Nat
 strLen s = blen (primStringToList s)
 
-natLe : Nat -> Nat -> Bool
-natLe zero    m       = true
-natLe (suc n) zero    = false
-natLe (suc n) (suc m) = natLe n m
+infix  4.5 _≤ⁿ_
+infixl 6   _⊔_
 
-natMax : Nat -> Nat -> Nat
-natMax n m = boolCase (natLe n m) m n
+_≤ⁿ_ : Nat -> Nat -> Bool
+zero  ≤ⁿ m     = true
+suc n ≤ⁿ zero  = false
+suc n ≤ⁿ suc m = n ≤ⁿ m
 
-natMinus : Nat -> Nat -> Nat
-natMinus n       zero    = n
-natMinus zero    (suc m) = zero
-natMinus (suc n) (suc m) = natMinus n m
+_⊔_ : Nat -> Nat -> Nat
+n ⊔ m = if n ≤ⁿ m then m else n
 
 spaces : Nat -> String
 spaces zero    = ""
 spaces (suc n) = " " <> spaces n
 
 padL padR : Nat -> String -> String
-padL w s = spaces (natMinus w (strLen s)) <> s
-padR w s = s <> spaces (natMinus w (strLen s))
+padL w s = spaces (w ∸ strLen s) <> s
+padR w s = s <> spaces (w ∸ strLen s)
 
 concatS : List String -> String
 concatS []        = ""
@@ -140,7 +141,7 @@ showVar (suc (suc (suc (suc (suc n))))) =
   "x" <> showNat (suc (suc (suc (suc (suc n)))))
 
 paren : Nat -> Nat -> String -> String
-paren c prec s = boolCase (natLe c prec) s ("(" <> s <> ")")
+paren c prec s = if c ≤ⁿ prec then s else "(" <> s <> ")"
 
 notS : Nat -> String -> String
 notS c s = paren c 30 ("¬ " <> s)
@@ -193,9 +194,9 @@ mutual
 
   fmAndImp : Nat -> Formula -> Formula -> Formula -> String
   fmAndImp c X Y (Y' ⇒ X') =
-    boolCase (formEq X X' ∧ᵇ formEq Y Y')
-             (paren c 19 (fm 20 X <> " ⇔ " <> fm 20 Y))
-             (andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (Y' ⇒ X')))
+    if (X ≡ᶠ X') ∧ᵇ (Y ≡ᶠ Y')
+       then paren c 19 (fm 20 X <> " ⇔ " <> fm 20 Y)
+       else andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (Y' ⇒ X'))
   fmAndImp c X Y (var n) = andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (var n))
   fmAndImp c X Y (¬ B)   = andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (¬ B))
   fmAndImp c X Y (○ B)   = andS c (impS 23 (fm 21 X) (fm 20 Y)) (fm 22 (○ B))
@@ -223,35 +224,38 @@ showFormulaRaw = fmRaw 0
 -- subtree is not visited again.  For mp d e the line reads  MP i, j  with i the
 -- line of the implication (d) and j that of its antecedent (e).
 
-data Justif : Set where
-  byAx  : String -> Justif
-  byMP  : Nat -> Nat -> Justif
-  byGen : Nat -> Justif
+data Justification : Set where
+  byAx  : String -> Justification
+  byMP  : Nat -> Nat -> Justification
+  byGen : Nat -> Justification
 
-data PLine : Set where
-  pline : Formula -> Justif -> PLine
+data ProofLine : Set where
+  proofLine : Formula -> Justification -> ProofLine
 
 -- the number of lines so far, and the lines, newest first
-data PState : Set where
-  pstate : Nat -> List PLine -> PState
+data ProofState : Set where
+  proofState : Nat -> List ProofLine -> ProofState
 
 data Found : Set where
   notFound : Found
   foundAt  : Nat -> Found
 
 -- the line proving A, searching lines n, n-1, ..., 1
-findLine : Formula -> Nat -> List PLine -> Found
-findLine A zero    ls               = notFound
-findLine A (suc n) []               = notFound
-findLine A (suc n) (pline B j ∷ ls) =
-  boolCase (formEq A B) (foundAt (suc n)) (findLine A n ls)
+findLine : Formula -> Nat -> List ProofLine -> Found
+findLine A zero    ls                   = notFound
+findLine A (suc n) []                   = notFound
+findLine A (suc n) (proofLine B j ∷ ls) =
+  if A ≡ᶠ B then foundAt (suc n) else findLine A n ls
 
-pushFound : Formula -> Justif -> Nat -> List PLine -> Found -> PState × Nat
-pushFound A j n ls (foundAt i) = pstate n ls , i
-pushFound A j n ls notFound    = pstate (suc n) (pline A j ∷ ls) , suc n
+pushFound : Formula -> Justification -> Nat -> List ProofLine -> Found -> ProofState × Nat
+pushFound A j n ls (foundAt i) = proofState n ls , i
+pushFound A j n ls notFound    = proofState (suc n) (proofLine A j ∷ ls) , suc n
 
-push : Formula -> Justif -> PState -> PState × Nat
-push A j (pstate n ls) = pushFound A j n ls (findLine A n ls)
+-- Add A as a new line, unless an earlier line already proves it; either way
+-- return the number of the line that proves A.
+
+push : Formula -> Justification -> ProofState -> ProofState × Nat
+push A j (proofState n ls) = pushFound A j n ls (findLine A n ls)
 
 axName : {A : Formula} -> ⊢ A -> String
 axName p1       = "P1"
@@ -266,21 +270,25 @@ axName (pc e)   = "PC"
 axName (mp d e) = "MP"
 axName (gen d)  = "Gen"
 
-linMP2 : Formula -> Nat -> PState × Nat -> PState × Nat
+-- The last step of MP: the implication is line i and the antecedent has just
+-- been laid out as line j, so B follows by MP i, j.  linGen is the same for
+-- Gen, after its premise.
+
+linMP2 : Formula -> Nat -> ProofState × Nat -> ProofState × Nat
 linMP2 B i (s , j) = push B (byMP i j) s
 
-linGen : Formula -> PState × Nat -> PState × Nat
+linGen : Formula -> ProofState × Nat -> ProofState × Nat
 linGen A (s , i) = push A (byGen i) s
 
 mutual
-  linearise : {A : Formula} -> ⊢ A -> PState -> PState × Nat
-  linearise {A} d (pstate n ls) = linFound d (pstate n ls) (findLine A n ls)
+  linearise : {A : Formula} -> ⊢ A -> ProofState -> ProofState × Nat
+  linearise {A} d (proofState n ls) = linFound d (proofState n ls) (findLine A n ls)
 
-  linFound : {A : Formula} -> ⊢ A -> PState -> Found -> PState × Nat
+  linFound : {A : Formula} -> ⊢ A -> ProofState -> Found -> ProofState × Nat
   linFound d s (foundAt i) = s , i
   linFound d s notFound    = linNew d s
 
-  linNew : {A : Formula} -> ⊢ A -> PState -> PState × Nat
+  linNew : {A : Formula} -> ⊢ A -> ProofState -> ProofState × Nat
   linNew {A} p1       s = push A (byAx "P1")  s
   linNew {A} p2       s = push A (byAx "P2")  s
   linNew {A} p3       s = push A (byAx "P3")  s
@@ -293,11 +301,11 @@ mutual
   linNew {A} (mp d e) s = linMP A (linearise d s) e
   linNew {A} (gen d)  s = linGen A (linearise d s)
 
-  linMP : (B : Formula) {A : Formula} -> PState × Nat -> ⊢ A
-       -> PState × Nat
+  linMP : (B : Formula) {A : Formula} -> ProofState × Nat -> ⊢ A
+       -> ProofState × Nat
   linMP B (s , i) e = linMP2 B i (linearise e s)
 
-justifStr : Justif -> String
+justifStr : Justification -> String
 justifStr (byAx s)   = s
 justifStr (byMP i j) = "MP " <> showNat i <> ", " <> showNat j
 justifStr (byGen i)  = "Gen " <> showNat i
@@ -306,30 +314,30 @@ justifStr (byGen i)  = "Gen " <> showNat i
 data Row : Set where
   row : String -> String -> String -> Row
 
-rowsRev : Nat -> List PLine -> List Row -> List Row
-rowsRev n       []               acc = acc
-rowsRev zero    (pline A j ∷ ls) acc = acc
-rowsRev (suc n) (pline A j ∷ ls) acc =
+rowsRev : Nat -> List ProofLine -> List Row -> List Row
+rowsRev n       []                   acc = acc
+rowsRev zero    (proofLine A j ∷ ls) acc = acc
+rowsRev (suc n) (proofLine A j ∷ ls) acc =
   rowsRev n ls (row (showNat (suc n)) (justifStr j) (showFormula A) ∷ acc)
 
 justWidth : List Row -> Nat
 justWidth []                 = zero
-justWidth (row _ j _ ∷ rs) = natMax (strLen j) (justWidth rs)
+justWidth (row _ j _ ∷ rs) = strLen j ⊔ justWidth rs
 
 rowLines : Nat -> Nat -> List Row -> List String
 rowLines nw jw []                 = []
 rowLines nw jw (row k j f ∷ rs) =
   (padL nw k <> "  " <> padR jw j <> "  " <> f) ∷ rowLines nw jw rs
 
-stateLines : Formula -> PState -> List String
-stateLines A (pstate n ls) =
+stateLines : Formula -> ProofState -> List String
+stateLines A (proofState n ls) =
   ("⊢ " <> showFormula A) ∷ "" ∷ rowLines (strLen (showNat n)) (justWidth rows) rows
   where
     rows : List Row
     rows = rowsRev n ls []
 
 proofLines : {A : Formula} -> ⊢ A -> List String
-proofLines {A} d = stateLines A (fst (linearise d (pstate zero [])))
+proofLines {A} d = stateLines A (fst (linearise d (proofState zero [])))
 
 renderDeriv : {A : Formula} -> ⊢ A -> String
 renderDeriv d = unlines (proofLines d)
@@ -338,7 +346,8 @@ renderDeriv d = unlines (proofLines d)
 -- Derivations as trees
 --
 -- Each node is  rule  formula ; the children of  MP  are the implication and
--- then its antecedent.  Below depth n a subtree is shown as ⋮ .
+-- then its antecedent.  Below depth n a subtree is shown as ⋮ .  pre is the
+-- prefix of the node's own line, rest the prefix its children continue from.
 
 mutual
   treeS : {A : Formula} -> Nat -> String -> String -> ⊢ A -> List String
@@ -384,14 +393,14 @@ isVar (○ A)   = false
 isVar (□ A)   = false
 
 -- sub P may list a formula more than once
-nubF : List Formula -> List Formula
-nubF []       = []
-nubF (A ∷ As) = A ∷ filterL (λ B -> ¬ᵇ formEq A B) (nubF As)
+nubFormulas : List Formula -> List Formula
+nubFormulas []       = []
+nubFormulas (A ∷ As) = A ∷ filter (λ B -> ¬ᵇ (A ≡ᶠ B)) (nubFormulas As)
 
 stateStr : Formula -> Val -> String
 stateStr P v =
-  "{" <> commaSep (map showFormula (filterL (λ A -> valOf P v A)
-                                            (nubF (filterL isVar (sub P))))) <> "}"
+  "{" <> commaSep (map showFormula (filter (λ A -> valOf P v A)
+                                           (nubFormulas (filter isVar (sub P))))) <> "}"
 
 statesLines : Formula -> Nat -> List Val -> List String
 statesLines P i []       = []

@@ -10,7 +10,7 @@
 -- Computed by fuel-bounded iteration rather than well-founded recursion: each
 -- round either adds a state or stabilises, so length us rounds suffice.
 --
--- What survives of this module is the SET machinery -- valEq, memB, insertV,
+-- What survives of this module is the SET machinery -- ≡ᵛ, ∈ᵛ, insertV,
 -- unionV -- which the rest of the development uses throughout.  reach itself is
 -- kept for the computation below, but the elimination procedure does not use
 -- it: "length us rounds suffice" is exactly the claim one has to prove to get
@@ -28,22 +28,24 @@ open import LTL.Step public
 ------------------------------------------------------------------------
 -- Valuations as a set
 
-valEq : Val -> Val -> Bool
-valEq []      []      = true
-valEq []      (c ∷ w) = false
-valEq (b ∷ v) []      = false
-valEq (b ∷ v) (c ∷ w) = (b ⇔ᵇ c) ∧ᵇ valEq v w
+infix 4.5 _≡ᵛ_ _∈ᵛ_
 
-valEq_refl : (v : Val) -> valEq v v ≡ true
-valEq_refl []          = refl
-valEq_refl (true  ∷ v) = valEq_refl v
-valEq_refl (false ∷ v) = valEq_refl v
+_≡ᵛ_ : Val -> Val -> Bool
+[]      ≡ᵛ []      = true
+[]      ≡ᵛ (c ∷ w) = false
+(b ∷ v) ≡ᵛ []      = false
+(b ∷ v) ≡ᵛ (c ∷ w) = (b ⇔ᵇ c) ∧ᵇ (v ≡ᵛ w)
 
-memB : Val -> List Val -> Bool
-memB v us = anyL (valEq v) us
+≡ᵛ-refl : (v : Val) -> v ≡ᵛ v ≡ true
+≡ᵛ-refl []          = refl
+≡ᵛ-refl (true  ∷ v) = ≡ᵛ-refl v
+≡ᵛ-refl (false ∷ v) = ≡ᵛ-refl v
+
+_∈ᵛ_ : Val -> List Val -> Bool
+v ∈ᵛ us = any (v ≡ᵛ_) us
 
 insertV : Val -> List Val -> List Val
-insertV v us = filterCons (¬ᵇ memB v us) v us
+insertV v us = filterCons (¬ᵇ (v ∈ᵛ us)) v us
 
 unionV : List Val -> List Val -> List Val
 unionV []       ys = ys
@@ -53,7 +55,7 @@ unionV (x ∷ xs) ys = insertV x (unionV xs ys)
 -- One round of expansion, then the fuel-bounded closure
 
 reachStep : Formula -> List Val -> List Val -> List Val
-reachStep P us acc = unionV (concatL (map (succs P us) acc)) acc
+reachStep P us acc = unionV (concat (map (succs P us) acc)) acc
 
 reachIter : Formula -> Nat -> List Val -> List Val -> List Val
 reachIter P zero    us acc = acc
@@ -65,9 +67,9 @@ reach P us v = reachIter P (length us) us (v ∷ [])
 ------------------------------------------------------------------------
 -- Computational checks.
 --
--- For ◇ p the three states are s_a = 1010, s_b = 1001, s_c = 0110 (see
--- LTL.Step).  s_a and s_b reach everything; s_c is a sink, reaching only
--- itself.
+-- For ◇ p the three states are sPending = 1010, sFulfil = 1001 and
+-- sSink = 0110 (see LTL.Step).  sPending and sFulfil reach everything; sSink
+-- reaches only itself.
 
 reach_◇P : map (λ v -> length (reach ◇P (St ◇P) v)) (St ◇P) ≡
                 3 ∷ 3 ∷ 1 ∷ []

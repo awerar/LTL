@@ -40,7 +40,8 @@ data LassoCountermodel (Q : Formula) : Set where
               -> LassoCountermodel Q
 
 ------------------------------------------------------------------------
--- Building one.
+-- Building one.  Names starting with cm (buildCM, cmEval, cmFrom, ...) are
+-- about countermodels.
 --
 -- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
 -- Hintikka's lemma at stage 0 transfers that to the evaluation.
@@ -56,8 +57,8 @@ buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
       notTrue (valOf (¬ Q) v0 Q)
-        (trans (sym (boolEq_sound (valOf (¬ Q) v0 (¬ Q))
-                                  (¬ᵇ valOf (¬ Q) v0 Q)
+        (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
+                              (¬ᵇ valOf (¬ Q) v0 Q)
                                   (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
                ev)
 
@@ -66,7 +67,7 @@ buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
       trans (sym (hintStart (¬ Q) v0 r Q (there (sub_self Q)))) valQ
 
     noDeriv : ⊢ Q -> Empty
-    noDeriv d = tfAbs (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
+    noDeriv d = true≢false (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- Theorem 6.1
@@ -83,14 +84,13 @@ decide Q = onSat (satB (¬ Q)) refl
          -> ⊢ Q ⊎ LassoCountermodel Q
     onSat false e = inl (provable Q e)
     onSat true  e =
-      fromSig (anyL_true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
+      fromSig (any_true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Reading the answer
 
 isProof : {A B : Set} -> A ⊎ B -> Bool
-isProof (inl a) = true
-isProof (inr b) = false
+isProof = isInl
 
 -- The run stores the states still to come before the cycle restarts, which is
 -- the lasso's stem followed by its cycle; so the stem has length
@@ -131,7 +131,7 @@ derivSize exp      = 1
 derivSize ind      = 1
 derivSize lin      = 1
 derivSize (pc e)   = 1
-derivSize (mp d e) = suc (plus (derivSize d) (derivSize e))
+derivSize (mp d e) = suc (derivSize d + derivSize e)
 derivSize (gen d)  = suc (derivSize d)
 
 derivMP : {A : Formula} -> ⊢ A -> Nat
@@ -144,7 +144,7 @@ derivMP exp      = 0
 derivMP ind      = 0
 derivMP lin      = 0
 derivMP (pc e)   = 0
-derivMP (mp d e) = suc (plus (derivMP d) (derivMP e))
+derivMP (mp d e) = suc (derivMP d + derivMP e)
 derivMP (gen d)  = derivMP d
 
 derivGen : {A : Formula} -> ⊢ A -> Nat
@@ -157,7 +157,7 @@ derivGen exp      = 0
 derivGen ind      = 0
 derivGen lin      = 0
 derivGen (pc e)   = 0
-derivGen (mp d e) = plus (derivGen d) (derivGen e)
+derivGen (mp d e) = derivGen d + derivGen e
 derivGen (gen d)  = suc (derivGen d)
 
 -- (Ind) is the only constructor whose presence is interesting: it is the one
@@ -174,7 +174,7 @@ derivInd exp      = 0
 derivInd ind      = 1
 derivInd lin      = 0
 derivInd (pc e)   = 0
-derivInd (mp d e) = plus (derivInd d) (derivInd e)
+derivInd (mp d e) = derivInd d + derivInd e
 derivInd (gen d)  = derivInd d
 
 -- size, modus ponens steps, generalisations, (Ind) instances
@@ -201,6 +201,8 @@ countOf Q = onDec (decide Q)
 
 cmEval : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Bool
 cmEval Q (countermodel v0 r m ef rf) A i = eval (¬ Q) v0 r A i
+
+-- The values of A at the n stages i, i+1, ..., i+n-1.
 
 cmFrom : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Nat -> List Bool
 cmFrom Q c A i zero    = []
@@ -254,14 +256,14 @@ decide_bnb = refl
 -- one, p false forever, and by the ⊢ Q -> Empty field of the record,
 -- ◇ p has no derivation in L.
 
-cmState : Val
-cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
+◇P_cmState : Val
+◇P_cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
 
 decide_◇P : isProof (decide ◇P) ≡ false
 decide_◇P = refl
 
 decide_◇P_lasso : lassoOfDecide ◇P (decide ◇P) ≡
-                       (cmState , cmState ∷ [] , cmState ∷ [])
+                       (◇P_cmState , ◇P_cmState ∷ [] , ◇P_cmState ∷ [])
 decide_◇P_lasso = refl
 
 ------------------------------------------------------------------------
@@ -286,6 +288,8 @@ decide_◇P_lasso = refl
 -- Hence □ (p ∨ q) holds and neither □ p nor □ q does.  The stem is
 -- three states and the cycle is the single state at which both hold forever.
 
+-- The atoms p and q of C5 (c for C5).
+
 cp : Formula
 cp = var zero
 
@@ -296,8 +300,8 @@ c5 : Formula
 c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
 
 -- p and q, but neither forever
-c5both : Val
-c5both = true  ∷ false ∷ true ∷ true ∷ false ∷ true ∷ true
+c5pqNow : Val
+c5pqNow = true  ∷ false ∷ true ∷ true ∷ false ∷ true ∷ true
       ∷ false ∷ true  ∷ false ∷ true  ∷ false ∷ true ∷ []
 
 -- q, not p
@@ -311,14 +315,14 @@ c5p = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ false
    ∷ true  ∷ false ∷ true  ∷ true  ∷ false ∷ false ∷ []
 
 -- p and q, both forever
-c5pq : Val
-c5pq = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
+c5pqForever : Val
+c5pqForever = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
     ∷ true  ∷ false ∷ true ∷ true ∷ true  ∷ true ∷ []
 
 decide_c5 : isProof (decide c5) ≡ false
 decide_c5 = refl
 
 decide_c5_lasso : lassoOfDecide c5 (decide c5) ≡
-                  (c5both , c5q ∷ c5p ∷ c5pq ∷ c5pq ∷ [] ,
-                            c5pq ∷ [])
+                  (c5pqNow , c5q ∷ c5p ∷ c5pqForever ∷ c5pqForever ∷ [] ,
+                             c5pqForever ∷ [])
 decide_c5_lasso = refl

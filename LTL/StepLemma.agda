@@ -46,7 +46,7 @@ refute○ : {R B : Formula} (c : Bool)
          -> ⊢ R ⇒ ○ (lit B c)
          -> ⊢ ¬ R
 refute○ true  f g = refute g f
-refute○ false f g = refute f (⇒Trans g linF)
+refute○ false f g = refute f (⇒Trans g linFwd)
 
 ------------------------------------------------------------------------
 -- Refuting a non-successor
@@ -84,7 +84,7 @@ notSucc P v w lenv lenw e = sigElim (allStep_false P v w (sub P) e)
     case○ {B} m q =
       refute○ (valOf P w B)
                 (pvAt m (¬ᵇ valOf P w B)
-                      (boolEq_false_eq (valOf P v (○ B)) (valOf P w B) q))
+                      (⇔ᵇ-false (valOf P v (○ B)) (valOf P w B) q))
                 (pwAt (sub_○ P m) (valOf P w B) refl)
 
     ----------------------------------------------------------------
@@ -100,10 +100,10 @@ notSucc P v w lenv lenw e = sigElim (allStep_false P v w (sub P) e)
         t2 : valOf P v (□ B) ⇒ᵇ valOf P w (□ B) ≡ false
           -> ⊢ ¬ R
         t2 q2 = refute (⇒Trans (pvAt m true (fst pr)) □○□)
-                       (⇒Trans (pwAt m false (snd pr)) linF)
+                       (⇒Trans (pwAt m false (snd pr)) linFwd)
           where
             pr : valOf P v (□ B) ≡ true × valOf P w (□ B) ≡ false
-            pr = boolImp_false (valOf P v (□ B)) (valOf P w (□ B)) q2
+            pr = ⇒ᵇ-false (valOf P v (□ B)) (valOf P w (□ B)) q2
 
         -- (T3): □ B fails at v while B holds, so □ B must fail at w;
         -- it holds, and (D6) turns B with ○ □ B back into □ B.
@@ -116,26 +116,18 @@ notSucc P v w lenv lenw e = sigElim (allStep_false P v w (sub P) e)
           where
             pr : ¬ᵇ valOf P v (□ B) ∧ᵇ valOf P v B ≡ true ×
                  ¬ᵇ valOf P w (□ B) ≡ false
-            pr = boolImp_false _ _ q3
+            pr = ⇒ᵇ-false _ _ q3
 
             eV : valOf P v (□ B) ≡ false
             eV = notTrue (valOf P v (□ B))
                          (andTrueL (¬ᵇ valOf P v (□ B)) (valOf P v B)
                                    (fst pr))
-              where
-                notTrue : (b : Bool) -> ¬ᵇ b ≡ true -> b ≡ false
-                notTrue true  ()
-                notTrue false e' = refl
 
             eB : valOf P v B ≡ true
             eB = andTrueR (¬ᵇ valOf P v (□ B)) (valOf P v B) (fst pr)
 
             eW : valOf P w (□ B) ≡ true
             eW = notFalse (valOf P w (□ B)) (snd pr)
-              where
-                notFalse : (b : Bool) -> ¬ᵇ b ≡ false -> b ≡ true
-                notFalse true  e' = refl
-                notFalse false ()
 
     ----------------------------------------------------------------
 
@@ -163,11 +155,11 @@ badSucc P v w lenv lenw e = mp dne (notSucc P v w lenv lenw e)
 -- Dropping the non-successors under the antecedent chi P v
 
 allLen_filter : {n : Nat} (p : Val -> Bool) {vs : List Val}
-             -> AllLen n vs -> AllLen n (filterL p vs)
+             -> AllLen n vs -> AllLen n (filter p vs)
 allLen_filter p alNil                 = alNil
 allLen_filter p {v ∷ vs} (alCons e al) = aux (p v)
   where
-    aux : (b : Bool) -> AllLen _ (filterCons b v (filterL p vs))
+    aux : (b : Bool) -> AllLen _ (filterCons b v (filter p vs))
     aux true  = alCons e (allLen_filter p al)
     aux false = allLen_filter p al
 
@@ -183,16 +175,16 @@ filter⇒ : (P : Formula) (v : Val) (Q : Formula) (ws : List Val)
                -> ⊢ Q ⇒ ¬ ○ (chi P w))
          -> ⊢ Q ⇒ ⋁ (map ○_ (map (chi P) ws))
                   ⇒ ⋁ (map ○_ (map (chi P)
-                           (filterL (step P v) ws)))
+                           (filter (step P v) ws)))
 filter⇒ P v Q []       alNil           bad = liftP ⇒Refl
 filter⇒ P v Q (w ∷ ws) (alCons lenw al) bad =
   subst (λ L -> ⊢ Q ⇒ ⋁ (○ (chi P w) ∷ map ○_ (map (chi P) ws))
                       ⇒ ⋁ L)
-        (sym (map_filterCons2 P (step P v w) w (filterL (step P v) ws)))
+        (sym (map_filterCons2 P (step P v w) w (filter (step P v) ws)))
         (onStep (step P v w) refl)
   where
     ih : ⊢ Q ⇒ ⋁ (map ○_ (map (chi P) ws))
-               ⇒ ⋁ (map ○_ (map (chi P) (filterL (step P v) ws)))
+               ⇒ ⋁ (map ○_ (map (chi P) (filter (step P v) ws)))
     ih = filter⇒ P v Q ws al bad
 
     X : Formula
@@ -202,7 +194,7 @@ filter⇒ P v Q (w ∷ ws) (alCons lenw al) bad =
           -> ⊢ Q ⇒ ⋁ (X ∷ map ○_ (map (chi P) ws))
                    ⇒ ⋁ (filterCons b X
                            (map ○_ (map (chi P)
-                              (filterL (step P v) ws))))
+                              (filter (step P v) ws))))
     -- kept: compose under the same antecedent ¬ X
     onStep true  e = mpU (liftP p2) (⇒Trans ih p1)
     -- dropped: ¬ X is available, so the antecedent ¬ X can be discharged

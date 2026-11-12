@@ -64,32 +64,39 @@ allVecs_complete (suc n) (false ∷ v)  e  =
 ------------------------------------------------------------------------
 -- Lookup by first occurrence
 
-idxCons : Bool -> Nat -> Nat
-idxCons true  n = zero
-idxCons false n = suc n
+indexOfCons : Bool -> Nat -> Nat
+indexOfCons true  n = zero
+indexOfCons false n = suc n
 
-idx : List Formula -> Formula -> Nat
-idx []       A = zero
-idx (B ∷ Bs) A = idxCons (formEq B A) (idx Bs A)
+indexOf : List Formula -> Formula -> Nat
+indexOf []       A = zero
+indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
 
 ------------------------------------------------------------------------
 -- Conjunction over a list
 
-allB : {A : Set} -> (A -> Bool) -> List A -> Bool
-allB p []       = true
-allB p (x ∷ xs) = p x ∧ᵇ allB p xs
+all : {A : Set} -> (A -> Bool) -> List A -> Bool
+all p []       = true
+all p (x ∷ xs) = p x ∧ᵇ all p xs
 
-allB_at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-       -> x ∈ xs -> allB p xs ≡ true -> p x ≡ true
-allB_at p []       ()        e
-allB_at p (y ∷ ys) here      e = andTrueL (p y) (allB p ys) e
-allB_at p (y ∷ ys) (there m) e = allB_at p ys m (andTrueR (p y) (allB p ys) e)
+all_at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+      -> x ∈ xs -> all p xs ≡ true -> p x ≡ true
+all_at p []       ()        e
+all_at p (y ∷ ys) here      e = andTrueL (p y) (all p ys) e
+all_at p (y ∷ ys) (there m) e = all_at p ys m (andTrueR (p y) (all p ys) e)
 
-allB_intro : {A : Set} (p : A -> Bool) (xs : List A)
-          -> ({x : A} -> x ∈ xs -> p x ≡ true) -> allB p xs ≡ true
-allB_intro p []       f = refl
-allB_intro p (y ∷ ys) f =
-  andIntro (p y) (allB p ys) (f here) (allB_intro p ys (λ m -> f (there m)))
+all_atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+           -> x ∈ xs -> p x ≡ false -> all p xs ≡ false
+all_atFalse p []       ()        e
+all_atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
+all_atFalse p (y ∷ ys) (there m) e =
+  andFalseIntroR (p y) (all p ys) (all_atFalse p ys m e)
+
+all_intro : {A : Set} (p : A -> Bool) (xs : List A)
+         -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true
+all_intro p []       f = refl
+all_intro p (y ∷ ys) f =
+  andIntro (p y) (all p ys) (f here) (all_intro p ys (λ m -> f (there m)))
 
 ------------------------------------------------------------------------
 -- Small list infrastructure
@@ -112,40 +119,45 @@ nth_map f (x ∷ xs) (suc i) (ltSuc l) d e = nth_map f xs i l d e
 ------------------------------------------------------------------------
 -- Formula membership as a boolean, and the idx/nth round-trip for it.
 --
--- idx locates the FIRST occurrence of a formula by formEq, so this is the
+-- indexOf locates the FIRST occurrence of a formula by ≡ᶠ, so this is the
 -- round-trip of FORMALISATION-PLAN.md G2 once more, for lookup by formula
 -- rather than by position.
 
-memF : List Formula -> Formula -> Bool
-memF []       A = false
-memF (B ∷ Bs) A = formEq B A ∨ᵇ memF Bs A
+infix 4.5 _∈ᶠ_
 
-memF_tail : (B : Formula) (Bs : List Formula) (A : Formula)
-         -> memF (B ∷ Bs) A ≡ true -> formEq B A ≡ false
-         -> memF Bs A ≡ true
-memF_tail B Bs A e eb =
-  sumElim (λ e1 -> emptyElim (tfAbs (trans (sym e1) eb)))
-          (λ e2 -> e2) (orTrue (formEq B A) (memF Bs A) e)
+_∈ᶠ_ : Formula -> List Formula -> Bool
+A ∈ᶠ      [] = false
+A ∈ᶠ (B ∷ Bs) = (B ≡ᶠ A) ∨ᵇ (A ∈ᶠ Bs)
 
-idxF_nth : (As : List Formula) (A : Formula) -> memF As A ≡ true
-        -> nth As (idx As A) ⊥ ≡ A
-idxF_nth []       A ()
-idxF_nth (B ∷ Bs) A e = go (formEq B A) refl
+∈ᶠ-tail : (B : Formula) (Bs : List Formula) (A : Formula)
+       -> A ∈ᶠ B ∷ Bs ≡ true -> B ≡ᶠ A ≡ false
+       -> A ∈ᶠ Bs ≡ true
+∈ᶠ-tail B Bs A e eb =
+  sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) eb)))
+          (λ e2 -> e2) (orTrue (B ≡ᶠ A) (A ∈ᶠ Bs) e)
+
+-- (The F in indexOf_nthF, indexOf_ltF: from the Boolean A ∈ᶠ As, where
+-- LTL.Proj's indexOf_nth, indexOf_lt start from a proof of A ∈ As.)
+
+indexOf_nthF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
+            -> nth As (indexOf As A) ⊥ ≡ A
+indexOf_nthF []       A ()
+indexOf_nthF (B ∷ Bs) A e = go (B ≡ᶠ A) refl
   where
-    go : (b : Bool) -> formEq B A ≡ b
-      -> nth (B ∷ Bs) (idxCons b (idx Bs A)) ⊥ ≡ A
-    go true  eb = formEq_sound B A eb
-    go false eb = idxF_nth Bs A (memF_tail B Bs A e eb)
+    go : (b : Bool) -> B ≡ᶠ A ≡ b
+      -> nth (B ∷ Bs) (indexOfCons b (indexOf Bs A)) ⊥ ≡ A
+    go true  eb = ≡ᶠ-sound B A eb
+    go false eb = indexOf_nthF Bs A (∈ᶠ-tail B Bs A e eb)
 
-idxF_lt : (As : List Formula) (A : Formula) -> memF As A ≡ true
-       -> idx As A < length As
-idxF_lt []       A ()
-idxF_lt (B ∷ Bs) A e = go (formEq B A) refl
+indexOf_ltF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
+           -> indexOf As A < length As
+indexOf_ltF []       A ()
+indexOf_ltF (B ∷ Bs) A e = go (B ≡ᶠ A) refl
   where
-    go : (b : Bool) -> formEq B A ≡ b
-      -> idxCons b (idx Bs A) < suc (length Bs)
+    go : (b : Bool) -> B ≡ᶠ A ≡ b
+      -> indexOfCons b (indexOf Bs A) < suc (length Bs)
     go true  eb = ltZero
-    go false eb = ltSuc (idxF_lt Bs A (memF_tail B Bs A e eb))
+    go false eb = ltSuc (indexOf_ltF Bs A (∈ᶠ-tail B Bs A e eb))
 
 ------------------------------------------------------------------------
 -- The atoms of a list of formulas.
@@ -161,24 +173,24 @@ isAtomB (○ A)   = true
 isAtomB (□ A)   = true
 
 insF : Formula -> List Formula -> List Formula
-insF A Bs = filterCons (¬ᵇ memF Bs A) A Bs
+insF A Bs = filterCons (¬ᵇ (A ∈ᶠ Bs)) A Bs
 
-insF_self : (A : Formula) (Bs : List Formula) -> memF (insF A Bs) A ≡ true
-insF_self A Bs = go (memF Bs A) refl
+insF_self : (A : Formula) (Bs : List Formula) -> A ∈ᶠ insF A Bs ≡ true
+insF_self A Bs = go (A ∈ᶠ Bs) refl
   where
-    go : (b : Bool) -> memF Bs A ≡ b
-      -> memF (filterCons (¬ᵇ b) A Bs) A ≡ true
+    go : (b : Bool) -> A ∈ᶠ Bs ≡ b
+      -> A ∈ᶠ filterCons (¬ᵇ b) A Bs ≡ true
     go true  e = e
-    go false e = orL (formEq A A) (memF Bs A) (formEq_refl A)
+    go false e = orL (A ≡ᶠ A) (A ∈ᶠ Bs) (≡ᶠ-refl A)
 
 insF_mono : (A : Formula) (Bs : List Formula) (X : Formula)
-         -> memF Bs X ≡ true -> memF (insF A Bs) X ≡ true
-insF_mono A Bs X e = go (memF Bs A) refl
+         -> X ∈ᶠ Bs ≡ true -> X ∈ᶠ insF A Bs ≡ true
+insF_mono A Bs X e = go (A ∈ᶠ Bs) refl
   where
-    go : (b : Bool) -> memF Bs A ≡ b
-      -> memF (filterCons (¬ᵇ b) A Bs) X ≡ true
+    go : (b : Bool) -> A ∈ᶠ Bs ≡ b
+      -> X ∈ᶠ filterCons (¬ᵇ b) A Bs ≡ true
     go true  eb = e
-    go false eb = orR (formEq A X) (memF Bs X) e
+    go false eb = orR (A ≡ᶠ X) (X ∈ᶠ Bs) e
 
 atoms : List Formula -> List Formula
 atoms []             = []
@@ -189,7 +201,7 @@ atoms (○ A   ∷ As) = insF (○ A) (atoms As)
 atoms (□ A   ∷ As) = insF (□ A) (atoms As)
 
 atomMem : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
-       -> memF (atoms As) A ≡ true
+       -> A ∈ᶠ atoms As ≡ true
 atomMem []             ()        e
 atomMem (var n   ∷ As) here      e = insF_self (var n) (atoms As)
 atomMem (var n   ∷ As) (there m) e = insF_mono (var n) (atoms As) _ (atomMem As m e)
@@ -239,11 +251,11 @@ atomMem (□ B   ∷ As) (there m) e = insF_mono (□ B) (atoms As) _ (atomMem A
 -- state out of an assignment; here it is one row of a truth table.
 
 valFrom : List Formula -> Val -> Formula -> Bool
-valFrom Ats a (var n)   = bitAt a (idx Ats (var n))
+valFrom Ats a (var n)   = bitAt a (indexOf Ats (var n))
 valFrom Ats a (¬ A)   = ¬ᵇ valFrom Ats a A
 valFrom Ats a (A ⇒ B) = valFrom Ats a A ⇒ᵇ valFrom Ats a B
-valFrom Ats a (○ A)   = bitAt a (idx Ats (○ A))
-valFrom Ats a (□ A)   = bitAt a (idx Ats (□ A))
+valFrom Ats a (○ A)   = bitAt a (indexOf Ats (○ A))
+valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation agrees with any compositional reading.
@@ -256,15 +268,15 @@ valFrom Ats a (□ A)   = bitAt a (idx Ats (□ A))
 -- DEFINED by ¬ᵇ and ⇒ᵇ at neg and imp -- LTL.Sound.
 
 atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
-        -> memF Ats X ≡ true
-        -> bitAt (map f Ats) (idx Ats X) ≡ f X
+        -> X ∈ᶠ Ats ≡ true
+        -> bitAt (map f Ats) (indexOf Ats X) ≡ f X
 atomLook f Ats X mX =
-  trans (nth_map f Ats (idx Ats X) (idxF_lt Ats X mX) ⊥ false)
-        (cong f (idxF_nth Ats X mX))
+  trans (nth_map f Ats (indexOf Ats X) (indexOf_ltF Ats X mX) ⊥ false)
+        (cong f (indexOf_nthF Ats X mX))
 
 skelEval : (f : Formula -> Bool) (Ats : List Formula) (P : Formula)
         -> ((X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
-              -> memF Ats X ≡ true)
+              -> X ∈ᶠ Ats ≡ true)
         -> ((X : Formula) -> ¬ X ∈ sub P
               -> f (¬ X) ≡ ¬ᵇ f X)
         -> ((X Y : Formula) -> X ⇒ Y ∈ sub P
@@ -289,8 +301,8 @@ atomsOf : Formula -> List Formula
 atomsOf A = atoms (sub A)
 
 isTaut : Formula -> Bool
-isTaut A = allB (λ a -> valFrom (atomsOf A) a A)
-                (allVecs (length (atomsOf A)))
+isTaut A = all (λ a -> valFrom (atomsOf A) a A)
+               (allVecs (length (atomsOf A)))
 
 -- and its soundness: any compositional reading of a skeleton tautology is true
 
@@ -304,8 +316,8 @@ tautSound f A fn fi e =
   trans (sym (skelEval f (atomsOf A) A
                        (λ X mX aX -> atomMem (sub A) mX aX) fn fi A
                        (sub_self A)))
-        (allB_at (λ a -> valFrom (atomsOf A) a A)
-                 (allVecs (length (atomsOf A)))
-                 (allVecs_complete (length (atomsOf A)) (map f (atomsOf A))
-                                   (map_length f (atomsOf A)))
-                 e)
+        (all_at (λ a -> valFrom (atomsOf A) a A)
+                (allVecs (length (atomsOf A)))
+                (allVecs_complete (length (atomsOf A)) (map f (atomsOf A))
+                                  (map_length f (atomsOf A)))
+                e)

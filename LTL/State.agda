@@ -25,7 +25,7 @@ open import LTL.Val public
 -- below (built by lookup) be about the same thing.
 
 valOf : Formula -> Val -> Formula -> Bool
-valOf P v A = bitAt v (idx (sub P) A)
+valOf P v A = bitAt v (indexOf (sub P) A)
 
 ------------------------------------------------------------------------
 -- (S1) and (S2), imposed at each member of sub P.
@@ -66,7 +66,7 @@ isState P v = allOk P v (sub P) ∧ᵇ
               allCoh P v (length (sub P))
 
 St : Formula -> List Val
-St P = filterL (isState P) (allVecs (length (sub P)))
+St P = filter (isState P) (allVecs (length (sub P)))
 
 ------------------------------------------------------------------------
 -- Searching allOk
@@ -112,14 +112,6 @@ allCoh_false P v (suc n) e =
           (λ e2 -> shift (allCoh_false P v n e2))
           (andFalse (cohAt P v n) (allCoh P v n) e)
   where
-    ltNSucN : (k : Nat) -> k < suc k
-    ltNSucN zero    = ltZero
-    ltNSucN (suc k) = ltSuc (ltNSucN k)
-
-    ltWeak : {i k : Nat} -> i < k -> i < suc k
-    ltWeak ltZero     = ltZero
-    ltWeak (ltSuc l)  = ltSuc (ltWeak l)
-
     shift : (Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false)
          -> Σ[ i ∈ Nat ] i < suc n × cohAt P v i ≡ false
     shift (i , l , q) = i , ltWeak l , q

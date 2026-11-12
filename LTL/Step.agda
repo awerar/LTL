@@ -42,7 +42,7 @@ step P v w = allStep P v w (sub P)
 -- Successors within a given set of states
 
 succs : Formula -> List Val -> Val -> List Val
-succs P us v = filterL (step P v) us
+succs P us v = filter (step P v) us
 
 ------------------------------------------------------------------------
 -- Reading one conjunct out of a true step
@@ -107,9 +107,11 @@ carry P v w A h st bx =
 -- For ◇ p the three states of LTL.State are, writing the bits of
 -- [ ¬ □ ¬ p , □ ¬ p , ¬ p , p ] :
 --
---   s0 = 1 0 0 1   (p holds now)
---   s1 = 1 0 1 0   (p fails now, ◇ p still pending)
---   s2 = 0 1 1 0   (◇ p false, so p fails forever)
+--   sPending = 1 0 1 0   (p fails now, ◇ p still pending)
+--   sFulfil  = 1 0 0 1   (p holds now)
+--   sSink    = 0 1 1 0   (◇ p false, so p fails forever)
+--
+-- in the order of St ◇P, and with the names LTL.Lasso gives them.
 --
 -- Every state has at least one successor, so no state is removed by (R1).
 

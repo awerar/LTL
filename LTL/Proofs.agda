@@ -145,7 +145,7 @@ dne_full = refl
 -- hand in LTL.Prop and LTL.Temporal, and every one is small.
 
 hand_sizes : derivSize (⇒Refl {pv})   ∷ derivSize (dne {pv})
-              ∷ derivSize (linF {pv})      ∷ derivSize (□Elim {pv})
+              ∷ derivSize (linFwd {pv})    ∷ derivSize (□Elim {pv})
               ∷ derivSize (□○□ {pv}) ∷ derivSize (expConv {pv}) ∷ [] ≡
                 5 ∷ 23 ∷ 41 ∷ 45 ∷ 77 ∷ 931 ∷ []
 hand_sizes = refl
@@ -322,8 +322,8 @@ sharing = refl
 --
 -- It is not a small change: stateComplete, nonState and ⋁Filter are Lemma
 -- 2.6 and Lemma 2.5, and beta (St P) would have to become beta over the
--- generated list, with stcSt and stStc of LTL.Closure lifted from membership to
--- derivability.  Recorded here rather than done.
+-- generated list, with stCandSt and stStCand of LTL.Closure lifted from
+-- membership to derivability.  Recorded here rather than done.
 
 atom_factor : length (atoms (sub (¬ taut)))
                ∷ length (atoms (sub (¬ axT)))
@@ -346,9 +346,9 @@ atom_factor = refl
 
 tautSelf : (A : Formula) -> isTaut (A ⇒ A) ≡ true
 tautSelf A =
-  allB_intro (λ a -> valFrom (atomsOf (A ⇒ A)) a (A ⇒ A))
-             (allVecs (length (atomsOf (A ⇒ A))))
-             (λ {a} m -> tid (valFrom (atomsOf (A ⇒ A)) a A))
+  all_intro (λ a -> valFrom (atomsOf (A ⇒ A)) a (A ⇒ A))
+            (allVecs (length (atomsOf (A ⇒ A))))
+            (λ {a} m -> tautId (valFrom (atomsOf (A ⇒ A)) a A))
 
 ⇒ReflPc : (A : Formula) -> ⊢ A ⇒ A
 ⇒ReflPc A = pc (tautSelf A)
@@ -361,9 +361,9 @@ tdne false = refl
 
 tautDne : (A : Formula) -> isTaut (¬ ¬ A ⇒ A) ≡ true
 tautDne A =
-  allB_intro (λ a -> valFrom (atomsOf (¬ ¬ A ⇒ A)) a (¬ ¬ A ⇒ A))
-             (allVecs (length (atomsOf (¬ ¬ A ⇒ A))))
-             (λ {a} m -> tdne (valFrom (atomsOf (¬ ¬ A ⇒ A)) a A))
+  all_intro (λ a -> valFrom (atomsOf (¬ ¬ A ⇒ A)) a (¬ ¬ A ⇒ A))
+            (allVecs (length (atomsOf (¬ ¬ A ⇒ A))))
+            (λ {a} m -> tdne (valFrom (atomsOf (¬ ¬ A ⇒ A)) a A))
 
 dnePc : (A : Formula) -> ⊢ ¬ ¬ A ⇒ A
 dnePc A = pc (tautDne A)
@@ -526,9 +526,9 @@ tautW : Val
 tautW = false ∷ true ∷ true ∷ true ∷ []
 
 c6_branchPC : derivSize (provableEach   taut refl tautW
-                                        (memB_sound tautW (St (¬ taut)) refl))
+                                        (∈ᵛ-sound tautW (St (¬ taut)) refl))
                ∷ derivSize (provableEachPC taut refl tautW
-                                           (memB_sound tautW (St (¬ taut)) refl))
+                                           (∈ᵛ-sound tautW (St (¬ taut)) refl))
                ∷ [] ≡ 67 ∷ 1 ∷ []
 c6_branchPC = refl
 
@@ -571,7 +571,7 @@ c6_axX_count = refl
 -- (benari.pdf, Definition 12.1).  Everything else in a certificate is (T) --
 -- once per eventuality -- and (Exp), (Ind), (Lin) inside extract.
 
-c6_pc : pcOfPC taut ∷ pcOfPC axT ∷ pcOfPC axX ∷ [] ≡ 1 ∷ 1 ∷ 1 ∷ []
+c6_pc : pcCountOf taut ∷ pcCountOf axT ∷ pcCountOf axX ∷ [] ≡ 1 ∷ 1 ∷ 1 ∷ []
 c6_pc = refl
 
 c6_states : length (St (¬ taut)) ∷ length (St (¬ axT))
@@ -630,7 +630,7 @@ c6_branch_side = refl
 -- for here: stateFml carries beta over St (¬ axK5fwd), the states among
 -- 2^22 vectors, so 2^8 rows of it is not a computation one starts.  Collapsing
 -- the disjunction moves that too, and this is the part that was not expected.
--- remFml carries chi for the NINE removed states and nothing else, with the
+-- removedFml carries chi for the NINE removed states and nothing else, with the
 -- same eight atoms, so the table is the same 2^8 rows of a formula that fits on
 -- a page -- and it can simply be run.  Nine seconds, by refl, below.
 --
@@ -644,15 +644,15 @@ c6_k5 : derivSize (stateCompletePC (¬ axK5fwd))
 c6_k5 = refl
 
 c6_k5_rem : length (removed (¬ axK5fwd))
-             ∷ length (StC (¬ axK5fwd))
-             ∷ length (atomsOf (remFml axK5fwd)) ∷ [] ≡ 9 ∷ 59 ∷ 8 ∷ []
+             ∷ length (StCand (¬ axK5fwd))
+             ∷ length (atomsOf (removedFml axK5fwd)) ∷ [] ≡ 9 ∷ 59 ∷ 8 ∷ []
 c6_k5_rem = refl
 
 -- and the side condition of the certificate for axK5fwd, RUN.  This is the one
 -- line in the file that takes seconds rather than milliseconds, and it is here
 -- because it is the point: it is the check the old certificate could not make.
 
-c6_k5_side : isTaut (remFml axK5fwd) ≡ true
+c6_k5_side : isTaut (removedFml axK5fwd) ≡ true
 c6_k5_side = refl
 
 ------------------------------------------------------------------------
@@ -676,8 +676,8 @@ c6_k5_side = refl
 -- And the cost of CHECKING goes UP, which is the one place in the phase where
 -- the trade reverses.  Measured, cold, on the axK5fwd side conditions:
 --
---     isTaut (remFml  axK5fwd)          9.2 s     the chi certificate
---     isTaut (remFmlA axK5fwd)          8.0 s     the chiA certificate
+--     isTaut (removedFml  axK5fwd)          9.2 s     the chi certificate
+--     isTaut (removedFmlA axK5fwd)          8.0 s     the chiA certificate
 --     the nine bridge conditions        9.2 s
 --
 -- so 17.2 s against 9.2 s.  The reason is structural and worth stating: chi
@@ -692,8 +692,8 @@ c6_k5_side = refl
 -- the figure of merit depends on what a certificate is for, and the note does
 -- not say; what can be done is to measure both, which is what this file is.
 
-c7_chiA : length (sub (remFml  axK5fwd))
-           ∷ length (sub (remFmlA axK5fwd)) ∷ [] ≡ 1956 ∷ 687 ∷ []
+c7_chiA : length (sub (removedFml  axK5fwd))
+           ∷ length (sub (removedFmlA axK5fwd)) ∷ [] ≡ 1956 ∷ 687 ∷ []
 c7_chiA = refl
 
 c7_nodes : derivSize (provablePCA taut refl)

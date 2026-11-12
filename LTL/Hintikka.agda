@@ -87,53 +87,53 @@ stateOk P s m mA =
 ------------------------------------------------------------------------
 -- Hintikka's lemma
 
-hint : (P : Formula) (b c0 : Val) (c1 : List Val)
-    -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
-    -> b ∈ c0 ∷ c1
-    -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
-          -> (A : Formula) -> A ∈ □Args (sub P)
-          -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
-    -> (A : Formula) -> A ∈ sub P
-    -> (pos : Pos) -> ValidPos P b pos
-    -> valOf P (posState pos) A ≡ evalAt P c0 c1 A pos
+hintikka : (P : Formula) (b c0 : Val) (c1 : List Val)
+        -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
+        -> b ∈ c0 ∷ c1
+        -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
+              -> (A : Formula) -> A ∈ □Args (sub P)
+              -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
+        -> (A : Formula) -> A ∈ sub P
+        -> (pos : Pos) -> ValidPos P b pos
+        -> valOf P (posState pos) A ≡ evalAt P c0 c1 A pos
 
-hint P b c0 c1 mc0 wc stb mbc cyc (var n) mA pos vp = refl
+hintikka P b c0 c1 mc0 wc stb mbc cyc (var n) mA pos vp = refl
 
-hint P b c0 c1 mc0 wc stb mbc cyc (¬ B) mA pos vp =
-  trans (boolEq_sound (valOf P (posState pos) (¬ B))
-                      (¬ᵇ valOf P (posState pos) B)
+hintikka P b c0 c1 mc0 wc stb mbc cyc (¬ B) mA pos vp =
+  trans (⇔ᵇ-sound (valOf P (posState pos) (¬ B))
+                  (¬ᵇ valOf P (posState pos) B)
                       (stateOk P (posState pos) (posIn P b vp) mA))
         (cong ¬ᵇ_
-              (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_¬ P mA) pos vp))
+              (hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_¬ P mA) pos vp))
 
-hint P b c0 c1 mc0 wc stb mbc cyc (B ⇒ C) mA pos vp =
-  trans (boolEq_sound (valOf P (posState pos) (B ⇒ C))
-                      (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
-                      (stateOk P (posState pos) (posIn P b vp) mA))
-        (⇒Cong (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_⇒L P mA) pos vp)
-                 (hint P b c0 c1 mc0 wc stb mbc cyc C (sub_⇒R P mA) pos vp))
+hintikka P b c0 c1 mc0 wc stb mbc cyc (B ⇒ C) mA pos vp =
+  trans (⇔ᵇ-sound (valOf P (posState pos) (B ⇒ C))
+                  (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
+                  (stateOk P (posState pos) (posIn P b vp) mA))
+        (⇒Cong (hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_⇒L P mA) pos vp)
+                 (hintikka P b c0 c1 mc0 wc stb mbc cyc C (sub_⇒R P mA) pos vp))
 
-hint P b c0 c1 mc0 wc stb mbc cyc (○ B) mA pos vp =
-  trans (boolEq_sound (valOf P (posState pos) (○ B))
-                      (valOf P (posState (nextPos c0 c1 pos)) B)
-                      (allStep_at P (posState pos)
-                                  (posState (nextPos c0 c1 pos)) (sub P) mA
-                                  (snd (posStep P b c0 c1 mc0 wc stb vp))))
-        (hint P b c0 c1 mc0 wc stb mbc cyc B (sub_○ P mA)
-              (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
+hintikka P b c0 c1 mc0 wc stb mbc cyc (○ B) mA pos vp =
+  trans (⇔ᵇ-sound (valOf P (posState pos) (○ B))
+                  (valOf P (posState (nextPos c0 c1 pos)) B)
+                  (allStep_at P (posState pos)
+                              (posState (nextPos c0 c1 pos)) (sub P) mA
+                              (snd (posStep P b c0 c1 mc0 wc stb vp))))
+        (hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_○ P mA)
+                  (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
 
-hint P b c0 c1 mc0 wc stb mbc cyc (□ B) mA pos vp =
+hintikka P b c0 c1 mc0 wc stb mbc cyc (□ B) mA pos vp =
   on□ (valOf P (posState pos) (□ B)) refl
   where
     ih : (q : Pos) -> ValidPos P b q
       -> valOf P (posState q) B ≡ evalAt P c0 c1 B q
-    ih q vq = hint P b c0 c1 mc0 wc stb mbc cyc B (sub_□ P mA) q vq
+    ih q vq = hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_□ P mA) q vq
 
     -- □ B holds: (T2) carries it, (S2) delivers B at every stage
-    allTrue : valOf P (posState pos) (□ B) ≡ true
+    □Holds : valOf P (posState pos) (□ B) ≡ true
            -> evalAt P c0 c1 (□ B) pos ≡ true
-    allTrue e =
-      allB_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
+    □Holds e =
+      all_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
       where
         atQ : (q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 B q ≡ true
         atQ q m =
@@ -156,7 +156,7 @@ hint P b c0 c1 mc0 wc stb mbc cyc (□ B) mA pos vp =
 
     on□ : (x : Bool) -> valOf P (posState pos) (□ B) ≡ x
          -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
-    on□ true  e = trans e (sym (allTrue e))
+    on□ true  e = trans e (sym (□Holds e))
     on□ false e = trans e (sym (allFalse e))
 
 ------------------------------------------------------------------------
@@ -165,14 +165,14 @@ hint P b c0 c1 mc0 wc stb mbc cyc (□ B) mA pos vp =
 hintRun : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> A ∈ sub P
        -> (i : Nat) -> valOf P (stateAt P v0 r i) A ≡ eval P v0 r A i
 hintRun P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA i =
-  hint P b c0 c1 mc0 wc stb mbc cyc A mA
-       (posIter c0 c1 i (v0 , rest))
-       (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest) (vpos v0 rest mv0 wr))
+  hintikka P b c0 c1 mc0 wc stb mbc cyc A mA
+           (posIter c0 c1 i (v0 , rest))
+           (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest) (vpos v0 rest mv0 wr))
 
 hintStart : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> A ∈ sub P
          -> valOf P v0 A ≡ eval P v0 r A 0
 hintStart P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
-  hint P b c0 c1 mc0 wc stb mbc cyc A mA (v0 , rest) (vpos v0 rest mv0 wr)
+  hintikka P b c0 c1 mc0 wc stb mbc cyc A mA (v0 , rest) (vpos v0 rest mv0 wr)
 
 ------------------------------------------------------------------------
 -- What the two lemmas together say.
@@ -206,7 +206,7 @@ notRefutable P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) e d =
 -- that state is the certificate.
 
 notRefutableSat : (P : Formula) -> satB P ≡ true -> ⊢ ¬ P -> Empty
-notRefutableSat P e d = go (anyL_true (λ v -> valOf P v P) (Uinf P) e)
+notRefutableSat P e d = go (any_true (λ v -> valOf P v P) (Uinf P) e)
   where
     go : (Σ[ v ∈ Val ] v ∈ Uinf P × valOf P v P ≡ true) -> Empty
     go (v , m , ev) = notRefutable P v (runOf P v m (lasso P v m)) ev d
@@ -215,7 +215,7 @@ notRefutableSat P e d = go (anyL_true (λ v -> valOf P v P) (Uinf P) e)
 -- Checkpoint.
 --
 -- ◇ p is consistent: ¬ ◇ p has no derivation in L.  This is a THEOREM,
--- not a computation -- the certificate is the two-state lasso of LTL.Lasso, and
+-- not a computation -- the certificate is the lasso of LTL.Lasso, and
 -- the proof is Hintikka's lemma at stage 0 against soundness.
 
 ◇P_consistent : ⊢ ¬ ◇P -> Empty

@@ -14,13 +14,14 @@ module LTL.Temporal where
 open import LTL.PropList public
 
 ------------------------------------------------------------------------
--- Projecting the two biconditional axioms
+-- Projecting the two biconditional axioms: linFwd and linBwd are the forward
+-- and backward halves of (Lin).
 
-linF : {A : Formula} -> ⊢ ○ ¬ A ⇒ ¬ ○ A
-linF = mp ∧Fst lin
+linFwd : {A : Formula} -> ⊢ ○ ¬ A ⇒ ¬ ○ A
+linFwd = mp ∧Fst lin
 
-linB : {A : Formula} -> ⊢ ¬ ○ A ⇒ ○ ¬ A
-linB = mp ∧Snd lin
+linBwd : {A : Formula} -> ⊢ ¬ ○ A ⇒ ○ ¬ A
+linBwd = mp ∧Snd lin
 
 □Elim : {A : Formula} -> ⊢ □ A ⇒ A
 □Elim = ⇒Trans exp ∧Fst
@@ -50,7 +51,7 @@ linB = mp ∧Snd lin
 ○⊤ = ○Gen deriv⊤
 
 ○⊥ : ⊢ ○ ⊥ ⇒ ⊥
-○⊥ = mpU (mpU (liftP (exf {○ ⊤} {⊥})) (liftP ○⊤)) linF
+○⊥ = mpU (mpU (liftP (explode {○ ⊤} {⊥})) (liftP ○⊤)) linFwd
 
 ------------------------------------------------------------------------
 -- (D4) for disjunction, binary.
@@ -60,11 +61,11 @@ linB = mp ∧Snd lin
 
 ○∨1 : {A B : Formula}
        -> ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
-○∨1 = ⇒TransU (liftP linB) k○
+○∨1 = ⇒TransU (liftP linBwd) k○
 
 ○∨2 : {A B : Formula}
        -> ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
-○∨2 = caseU (liftP (○Mono exf)) (⇒TransU identP (liftP (○Mono p1)))
+○∨2 = caseU (liftP (○Mono explode)) (⇒TransU identP (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
 -- Monotonicity of ∨ in its second argument
@@ -97,9 +98,9 @@ linB = mp ∧Snd lin
 -- ○ ¬ X with X = A ⇒ ¬ B, which by (Lin) is ¬ ○ X, and
 -- ○ X together with ○ A gives ○ ¬ B, hence ¬ ○ B.
 
-○∧2 : {A B : Formula}
-       -> ⊢ ○ A ∧ ○ B ⇒ ○ (A ∧ B)
-○∧2 {A} {B} = ⇒Trans (¬IntroU hB hNB) linB
+○∧Intro : {A B : Formula}
+           -> ⊢ ○ A ∧ ○ B ⇒ ○ (A ∧ B)
+○∧Intro {A} {B} = ⇒Trans (¬IntroU hB hNB) linBwd
   where
     P : Formula
     P = ○ A ∧ ○ B
@@ -111,7 +112,7 @@ linB = mp ∧Snd lin
     hB = ⇒Trans ∧Snd p1
 
     hNB : ⊢ P ⇒ ○ X ⇒ ¬ ○ B
-    hNB = ⇒TransU (mpU2 (liftP k○) (⇒Trans ∧Fst p1)) (liftP linF)
+    hNB = ⇒TransU (mpU2 (liftP k○) (⇒Trans ∧Fst p1)) (liftP linFwd)
 
 ------------------------------------------------------------------------
 -- G15 : (D5) and (D6)
@@ -127,7 +128,7 @@ expConv {A} = ⇒Trans (indRule cTo○C) (□Mono ∧Fst)
     cTo○C : ⊢ A ∧ ○ □ A ⇒ ○ (A ∧ ○ □ A)
     cTo○C = ⇒Trans (∧Pair (⇒Trans ∧Snd (○Mono □Elim))
                                 (⇒Trans ∧Snd (○Mono □○□)))
-                       ○∧2
+                       ○∧Intro
 
 ------------------------------------------------------------------------
 -- The (S2) case of Lemma 2.5, now available.
@@ -136,4 +137,4 @@ expConv {A} = ⇒Trans (indRule cTo○C) (□Mono ∧Fst)
 -- completes the list of shapes begun in LTL.Prop.
 
 □Case : {A C : Formula} -> ⊢ □ A ⇒ ¬ A ⇒ C
-□Case = ⇒Trans □Elim exf
+□Case = ⇒Trans □Elim explode

@@ -59,20 +59,23 @@ open import LTL.Taut     public
 -- construction.  allVecs_complete says the row is enumerated -- it has the
 -- right length, by map_length -- and chiRowTrue that its chi holds.
 
-splitFml : List Formula -> Formula
-splitFml As = ⋁ (map (chiOf As) (allVecs (length As)))
+-- The case split over As: the disjunction of chi over all 2^|As| rows, i.e.
+-- the formula of allComplete.
 
-tautAll : (As : List Formula) -> isTaut (splitFml As) ≡ true
+caseSplitFml : List Formula -> Formula
+caseSplitFml As = ⋁ (map (chiOf As) (allVecs (length As)))
+
+tautAll : (As : List Formula) -> isTaut (caseSplitFml As) ≡ true
 tautAll As =
-  allB_intro (λ a -> valFrom (atomsOf (splitFml As)) a (splitFml As))
-             (allVecs (length (atomsOf (splitFml As))))
-             row
+  all_intro (λ a -> valFrom (atomsOf (caseSplitFml As)) a (caseSplitFml As))
+            (allVecs (length (atomsOf (caseSplitFml As))))
+            row
   where
     Ats : List Formula
-    Ats = atomsOf (splitFml As)
+    Ats = atomsOf (caseSplitFml As)
 
     row : {a : Val} -> a ∈ allVecs (length Ats)
-       -> valFrom Ats a (splitFml As) ≡ true
+       -> valFrom Ats a (caseSplitFml As) ≡ true
     row {a} m =
       ⋁True Ats a (map (chiOf As) (allVecs (length As)))
                (memMap (chiOf As)
@@ -128,14 +131,17 @@ mpChain (A ∷ As) d = mpChain As (mp d □Elim)
 -- section 4g's closing remark, that the idea which made the search tractable is
 -- the one that makes the certificate tractable, with the two now in one file.
 
+-- The G32 tautology: the (S2) premises of s2List imply beta P (St P), i.e.
+-- that some state of St P holds.
+
 stateFml : Formula -> Formula
 stateFml P = ⇒List (s2List P) (beta P (St P))
 
 tautState : (P : Formula) -> isTaut (stateFml P) ≡ true
 tautState P =
-  allB_intro (λ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
-             (allVecs (length (atomsOf (stateFml P))))
-             row
+  all_intro (λ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
+            (allVecs (length (atomsOf (stateFml P))))
+            row
   where
     Ats : List Formula
     Ats = atomsOf (stateFml P)
@@ -169,14 +175,14 @@ stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 -- cannot reach.  Same reason as mpChain above.
 
 ⋁⇒Fml : List Formula -> Formula -> Formula
-⋁⇒Fml Cs C = ⇒List (map (⇒To C) Cs) (⋁ Cs ⇒ C)
+⋁⇒Fml Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
 
 taut⋁Elim : (Cs : List Formula) (C : Formula)
             -> isTaut (⋁⇒Fml Cs C) ≡ true
 taut⋁Elim Cs C =
-  allB_intro (λ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
-             (allVecs (length (atomsOf (⋁⇒Fml Cs C))))
-             row
+  all_intro (λ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
+            (allVecs (length (atomsOf (⋁⇒Fml Cs C))))
+            row
   where
     Ats : List Formula
     Ats = atomsOf (⋁⇒Fml Cs C)
@@ -184,12 +190,12 @@ taut⋁Elim Cs C =
     row : {a : Val} -> a ∈ allVecs (length Ats)
        -> valFrom Ats a (⋁⇒Fml Cs C) ≡ true
     row {a} m =
-      ⇒Chain Ats a (map (⇒To C) Cs) (⋁ Cs ⇒ C)
-               (λ g -> ⋁ElimTrue Ats a Cs C (λ mD -> g (memMap (⇒To C) mD)))
+      ⇒Chain Ats a (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
+               (λ g -> ⋁ElimTrue Ats a Cs C (λ mD -> g (memMap (C ⇐_) mD)))
 
 mpVals : (P : Formula) {C : Formula} (ws : List Val) {Z : Formula}
       -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
-      -> ⊢ ⇒List (map (⇒To C) (map (chi P) ws)) Z -> ⊢ Z
+      -> ⊢ ⇒List (map (C ⇐_) (map (chi P) ws)) Z -> ⊢ Z
 mpVals P []       h d = d
 mpVals P (w ∷ ws) h d =
   mpVals P ws (λ z m -> h z (there m)) (mp d (h w here))
