@@ -104,7 +104,8 @@ satisfying $f_i$.
 
 Indexing a trail by its endpoint rather than computing the endpoint with a
 $\mathrm{last}$ function is what keeps every concatenation below free of
-equational bookkeeping; this is the device of~\cite[\S4c]{m4} again.
+equational bookkeeping; the formalisation of~\cite{m4} represents its paths
+the same way.
 
 \begin{definition}[Certificate]\label{def:cert}
 The certificates $\mathrm{Cert}(W)$, indexed by the list $W$ of vertices
@@ -146,7 +147,7 @@ outside $W\setminus\{x\}$ is outside $W$ or is $x$.  Case (C2) is the same with
 
 Lemma~\ref{lem:certall} is the whole reason the certificate is defined as it
 is: (H1) and (H2) are, on the nose, cases (R1) and (R2)
-of~\cite[Def.~4.1]{m4}, with the formulas removed.  That is made precise in
+of~\cite[Def.~3.1]{m4}, with the formulas removed.  That is made precise in
 Section~\ref{sec:extract}.
 
 \subsection*{Computing one}
@@ -163,8 +164,10 @@ adds nothing the accumulator contains $v$ and is closed under successors in
 $W$, and an induction along a trail then shows it contains everything reachable.
 There is no fuel and no claim that $|W|$ rounds suffice.  Termination is by the
 inductive finiteness of vertices: one cannot go on choosing distinct vertices
-from a fixed finite list.  This is the device of~\cite[\S4g]{m4}, applied to the
-one computation that note deliberately avoided.
+from a fixed finite list.  This is how the formalisation of~\cite{m4}
+terminates all of its searches, applied here to the one computation that note
+deliberately avoided: \cite[Rem.~3.2]{m4} reads (R2) as a greatest fixed point
+precisely so as not to compute reachability.
 
 \begin{definition}
 $\mathrm{scc}_W(r):=\{w\in\Reach_W(r): r\in\Reach_W(w)\}$, and $r$ is
@@ -309,7 +312,7 @@ block is exactly the pair of hypotheses of case (R2).
 
 \section{The lasso branch}\label{sec:lasso}
 
-A trail in the state graph \emph{is} a path in the sense of~\cite[\S6]{m4}; the
+A trail in the state graph \emph{is} a path in the sense of~\cite[\S5]{m4}; the
 only work is the cycle-fulfilment property that
 Proposition~\ref{prop:lasso5.3} below requires.
 
@@ -489,7 +492,7 @@ Lemma~\ref{lem:certall} with $R(v):=\ \proves\neg\chi_v$ and
 Section~\ref{sec:extract}; the hypothesis outside $\Ust(\neg\varphi)$ is
 vacuous.  Every state of $\Ust(\neg\varphi)$ is then refutable, and a state
 outside it cannot contain $\neg\varphi$, so $\proves\chi_v\to\varphi$ for all
-of them by (L2); conclude by~\cite[Lem.~2.5]{m4} and (L3),(L5).  Observe that
+of them by (L2); conclude by~\cite[Lem.~2.6]{m4} and (L3),(L5).  Observe that
 the elimination of~\cite{m4} is not run at all on this branch.
 
 If it returns a fair component at $r$, take by Lemma~\ref{lem:seeded} a state
@@ -568,8 +571,8 @@ and the refutation of a whole component by one invariant.
 No infinite path is constructed; nothing is coinductive; there is no pigeonhole
 lemma; there is no rank function and no topological sort; there is no component
 object, no quotient and no equality of components; and the condensation is
-never built.  Definition~\ref{def:reach} is the one computation
-\cite[\S4c]{m4} declined to do, and it is done without cardinality theory.
+never built.  Definition~\ref{def:reach} is the one computation that
+\cite[Rem.~3.2]{m4} sidesteps, and it is done without cardinality theory.
 \end{remark}
 
 \begin{remark}[A worked example, and a correction]\label{rem:lecture}
@@ -590,12 +593,13 @@ define, and the loop promises $b$ forever without delivering it.  In the
 notation of Definition~\ref{def:evpred} this is the checked equation
 $f_{\Event b}(s_7)=0$.  The path presumably intended is
 $s_3\to s_5\to s_7\to s_5\to\cdots$, alternating so that $b$ recurs at $s_5$ and
-$a$ at $s_7$; both edges exist.  The procedure of
-Theorem~\ref{thm:sccmain} returns instead $s_7\to s_4\to s_0\to s_0\to\cdots$:
-$a$ at stage $0$, $b$ at stage $1$, and everything false from stage $2$ on.  It
-ends in a state where nothing is pending at all, which the hand analysis never
-considers because it is looking for a loop that \emph{keeps} the eventualities
-alive.
+$a$ at $s_7$; both edges exist.  The elimination procedure of~\cite{m4}
+returns instead $s_7\to s_4\to s_0\to s_0\to\cdots$: $a$ at stage $0$, $b$ at
+stage $1$, and everything false from stage $2$ on.  It ends in a state where
+nothing is pending at all, which the hand analysis never considers because it
+is looking for a loop that \emph{keeps} the eventualities alive.  The procedure
+of Theorem~\ref{thm:sccmain} also answers this formula with a countermodel;
+the formalisation checks that it does, but not which lasso it returns.
 \end{remark}
 
 \begin{remark}[Formalisation]
