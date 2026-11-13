@@ -90,7 +90,7 @@ closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
 -- Invariants: cur is reachable from v0 by the walk ps; bs lists the boundaries
 -- already passed, each with its Seen record relative to the current position;
 -- and every state of U_inf that is not yet a boundary still satisfies E, the
--- Bar's predicate.  That last one is  Avail E (Uinf P) bs  (LTL.Bar), and it
+-- Bar's predicate.  That last one is  Avail E (Uinf P) bs  (LTL.Nodes), and it
 -- is the pigeonhole.
 
 -- Giving cur up: a state of U_inf outside cur ∷ bs is outside bs, hence

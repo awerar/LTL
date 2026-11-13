@@ -1,18 +1,21 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Sets -- the list and set infrastructure the searches of Phases 5, 6 and
--- 8 run on.  It was the first half of LTL.Gfp until Phase 8; LTL.Bar has to sit
--- between the infrastructure and the greatest fixed point, since Bar needs
--- filter and ∈ᵛ while the shrinking iteration of LTL.Gfp is now defined by
--- recursion on a Bar.
+-- LTL.Sets -- lists as finite sets, over any element type: the infrastructure
+-- the searches of Phases 5, 6 and 8 run on.  It was the first half of LTL.Gfp
+-- until Phase 8, and it mentioned valuations until the graph layer (LTL.Graph)
+-- was made generic over its node type.  Now it imports only the prelude: the
+-- searching, filtering and counting lemmas below never needed more than an
+-- element type.  The part that needs an equality TEST on the elements -- ∈ᵛ and
+-- the hypothesis names Closed, NoneSat, HoldsOutside -- is LTL.Nodes, which is
+-- parameterised by one.
 --
--- _≤_ survives only inside barOfList, which is the bridge from a Kuratowski
--- finite list to an inductively finite predicate (LTL.Bar).  Nothing else in
--- the development counts any more.
+-- _≤_ survives only inside barOfList (LTL.Nodes), which is the bridge from a
+-- Kuratowski finite list to an inductively finite predicate (LTL.Bar).
+-- Nothing else in the development counts any more.
 
 module LTL.Sets where
 
-open import LTL.Reach public
+open import LTL.Prelude public
 
 ------------------------------------------------------------------------
 -- Order on Nat.
@@ -199,73 +202,13 @@ null_false []       ()
 null_false (y ∷ ys) e = y , here
 
 ------------------------------------------------------------------------
--- Reading a successor list
+-- map against membership
 
-succsMem : (P : Formula) (us : List Val) (v : Val) {w : Val}
-        -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
-succsMem P us v m =
-  filter_sub (step P v) us m , filter_prop (step P v) us m
-
-succsIn : (P : Formula) (us : List Val) (v : Val) {w : Val}
-       -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
-succsIn P us v mw st = filter_true (step P v) us mw st
-
-------------------------------------------------------------------------
--- Valuations as a set
-
-eqCons : {b c : Bool} {v w : Val} -> b ≡ c -> v ≡ w -> b ∷ v ≡ c ∷ w
-eqCons refl refl = refl
-
-≡ᵛ-sound : (v w : Val) -> v ≡ᵛ w ≡ true -> v ≡ w
-≡ᵛ-sound []      []      e = refl
-≡ᵛ-sound []      (c ∷ w) ()
-≡ᵛ-sound (b ∷ v) []      ()
-≡ᵛ-sound (b ∷ v) (c ∷ w) e =
-  eqCons (⇔ᵇ-sound b c (andTrueL (b ⇔ᵇ c) (v ≡ᵛ w) e))
-         (≡ᵛ-sound v w (andTrueR (b ⇔ᵇ c) (v ≡ᵛ w) e))
-
-∈ᵛ-sound : (v : Val) (us : List Val) -> v ∈ᵛ us ≡ true -> v ∈ us
-∈ᵛ-sound v []       ()
-∈ᵛ-sound v (u ∷ us) e =
-  sumElim (λ e1 -> subst (λ z -> v ∈ z ∷ us) (≡ᵛ-sound v u e1) here)
-          (λ e2 -> there (∈ᵛ-sound v us e2))
-          (orTrue (v ≡ᵛ u) (any (v ≡ᵛ_) us) e)
-
-∈ᵛ-complete : (v : Val) (us : List Val) -> v ∈ us -> v ∈ᵛ us ≡ true
-∈ᵛ-complete v []       ()
-∈ᵛ-complete v (u ∷ us) here     =
-  orL (v ≡ᵛ v) (any (v ≡ᵛ_) us) (≡ᵛ-refl v)
-∈ᵛ-complete v (u ∷ us) (there m) =
-  orR (v ≡ᵛ u) (any (v ≡ᵛ_) us) (∈ᵛ-complete v us m)
-
-∈ᵛ-false : (v : Val) (us : List Val) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
-∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
-
-------------------------------------------------------------------------
--- Names for the hypotheses the graph searches keep repeating.
---
--- Each is only an abbreviation, definitionally equal to the Pi-type it names,
--- so a proof of the long form is a proof of the short one and no body changes.
---
---   Pred          a predicate on valuations: a fairness condition, or the
---                 predicate a Bar search runs on;
---   Edges         a graph on valuations, given as its edge test;
---   Closed ws G C   C is closed under G-successors that lie inside ws;
---   NoneSat f C     f is false at every member of C;
---   HoldsOutside R ws   R holds at every valuation outside ws -- the
---                 induction hypothesis of a removing iteration.
-
-Pred : Set
-Pred = Val -> Bool
-
-Edges : Set
-Edges = Val -> Val -> Bool
-
-Closed : List Val -> Edges -> List Val -> Set
-Closed ws G C = (z y : Val) -> z ∈ C -> y ∈ ws -> G z y ≡ true -> y ∈ C
-
-NoneSat : Pred -> List Val -> Set
-NoneSat f C = (z : Val) -> z ∈ C -> f z ≡ false
-
-HoldsOutside : (Val -> Set) -> List Val -> Set
-HoldsOutside R ws = (z : Val) -> z ∈ᵛ ws ≡ false -> R z
+map_mem_inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
+           -> y ∈ map f xs -> Σ[ x ∈ A ] x ∈ xs × y ≡ f x
+map_mem_inv f []       ()
+map_mem_inv f (x ∷ xs) here      = x , here , refl
+map_mem_inv f (x ∷ xs) (there m) = shift (map_mem_inv f xs m)
+  where
+    shift : (Σ[ z ∈ _ ] z ∈ xs × _) -> Σ[ z ∈ _ ] z ∈ x ∷ xs × _
+    shift (z , mz , ez) = z , there mz , ez

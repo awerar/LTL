@@ -610,7 +610,7 @@ development of~\cite{m4} and sharing its step lemma, its case (R1), its notion
 of run and its soundness.  The new modules are
 \begin{center}
 \begin{tabular}{llrr}
-\texttt{LTL.Graph}      & Section~\ref{sec:graph}     & 1225 & 0.60 s\\
+\texttt{LTL.Graph}      & Section~\ref{sec:graph}     & 1077 & 0.60 s\\
 \texttt{LTL.SccLasso}   & Sections~\ref{sec:evpred}, \ref{sec:lasso}
                                                       &  372 & 0.34 s\\
 \texttt{LTL.SccExtract} & Section~\ref{sec:extract}   &  380 & 0.32 s\\
@@ -622,7 +622,10 @@ of run and its soundness.  The new modules are
 \end{center}
 lines and cold check time; the last two are benchmarks, being forty-seven
 decision problems and one worked example respectively.  \texttt{LTL.Graph}
-contains no occurrence of the type of formulas.
+is parameterised by the type of vertices and a sound, reflexive equality test
+on it, and imports nothing about formulas or valuations; \texttt{LTL.SccLasso}
+instantiates it at valuations, and \texttt{LTL.GraphExamples} runs its checks
+on natural numbers.
 
 Three places where formalising changed the argument rather than transcribing
 it.  Lemma~\ref{lem:persistto}, which the informal argument does not

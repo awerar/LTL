@@ -324,8 +324,8 @@ proofFrom : {A : Set} {Q : Formula}
 proofFrom (inl a) ()
 proofFrom (inr d) e = d
 
--- and the shape of the certificate, as in cert_P of LTL.Graph: 2 for cBlock,
--- 1 for cSink, 0 for cNil.
+-- and the shape of the certificate, as in cert_P of LTL.GraphExamples: 2 for
+-- cBlock, 1 for cSink, 0 for cNil.
 
 sccShape : (Q : Formula) -> List Nat
 sccShape Q = sumElim (λ fi -> []) certShape (sccGraph (¬ Q))

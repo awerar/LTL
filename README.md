@@ -31,6 +31,7 @@ root:
 
 ```sh
 agda -i . LTL/DecideSCC.agda
+agda -i . LTL/GraphExamples.agda
 agda -i . LTL/ShortPC.agda
 agda -i . LTL/Compare.agda
 agda -i . LTL/Lecture.agda

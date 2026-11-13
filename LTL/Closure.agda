@@ -49,7 +49,7 @@
 
 module LTL.Closure where
 
-open import LTL.Bar public
+open import LTL.VecBar public
 
 ------------------------------------------------------------------------
 -- Extensionality for bit vectors, and the assignment a state induces.

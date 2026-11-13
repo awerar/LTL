@@ -171,8 +171,8 @@ stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 -- constant of one.
 --
 -- mpVals walks the VALUATIONS rather than the disjuncts, so that no inversion
--- of  map (chi P)  is needed -- map_mem_inv lives in LTL.Bar, which LTL.Complete
--- cannot reach.  Same reason as mpChain above.
+-- of  map (chi P)  is needed -- map_mem_inv lives in LTL.Sets, which
+-- LTL.Complete does not import.  Same reason as mpChain above.
 
 ⋁⇒Fml : List Formula -> Formula -> Formula
 ⋁⇒Fml Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)

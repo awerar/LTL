@@ -73,32 +73,6 @@ indexOf []       A = zero
 indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
 
 ------------------------------------------------------------------------
--- Conjunction over a list
-
-all : {A : Set} -> (A -> Bool) -> List A -> Bool
-all p []       = true
-all p (x ∷ xs) = p x ∧ᵇ all p xs
-
-all_at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-      -> x ∈ xs -> all p xs ≡ true -> p x ≡ true
-all_at p []       ()        e
-all_at p (y ∷ ys) here      e = andTrueL (p y) (all p ys) e
-all_at p (y ∷ ys) (there m) e = all_at p ys m (andTrueR (p y) (all p ys) e)
-
-all_atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-           -> x ∈ xs -> p x ≡ false -> all p xs ≡ false
-all_atFalse p []       ()        e
-all_atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
-all_atFalse p (y ∷ ys) (there m) e =
-  andFalseIntroR (p y) (all p ys) (all_atFalse p ys m e)
-
-all_intro : {A : Set} (p : A -> Bool) (xs : List A)
-         -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true
-all_intro p []       f = refl
-all_intro p (y ∷ ys) f =
-  andIntro (p y) (all p ys) (f here) (all_intro p ys (λ m -> f (there m)))
-
-------------------------------------------------------------------------
 -- Small list infrastructure
 
 cong₂ : {A B C : Set} (f : A -> B -> C) {x x' : A} {y y' : B}

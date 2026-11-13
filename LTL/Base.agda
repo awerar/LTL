@@ -17,9 +17,10 @@
 -- names: ⊥ and ⊤ are the LTL constants of LTL.Formula.
 --
 -- Boolean-valued tests carry a superscript naming the type they compare:
--- ≡ⁿ here on Nat, ≡ᵛ ∈ᵛ ≢ᵛ on valuations (LTL.Reach, LTL.Bar), ≡ᶠ ∈ᶠ on
--- formulas (LTL.Formula, LTL.Skel), just as ∧ᵇ etc. (LTL.Prelude) act on
--- Bool.  They are infix 4.5: tighter than ≡, looser than ∷ and ++.
+-- ≡ⁿ here on Nat, ≡ᵛ ∈ᵛ ≢ᵛ on nodes (LTL.Nodes; valuations at the instance
+-- LTL.Reach makes), ≡ᶠ ∈ᶠ on formulas (LTL.Formula, LTL.Skel), just as ∧ᵇ
+-- etc. (LTL.Prelude) act on Bool.  They are infix 4.5: tighter than ≡, looser
+-- than ∷ and ++.
 
 module LTL.Base where
 

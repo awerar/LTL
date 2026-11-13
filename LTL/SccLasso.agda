@@ -89,7 +89,7 @@
 module LTL.SccLasso where
 
 open import LTL.Run   public
-open import LTL.Graph public
+open import LTL.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
 
 ------------------------------------------------------------------------
 -- Trails are walks, and walks are trails.

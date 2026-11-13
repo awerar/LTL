@@ -26,23 +26,24 @@ derivation or a certified finite lasso countermodel.
   Boolean-valued operators carry a superscript naming their domain:
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,
-  `v ∈ᵛ us` on valuations, `A ≡ᶠ B`, `A ∈ᶠ As` on formulas (all `infix 4.5`,
+  `v ∈ᵛ us` on nodes (`LTL/Nodes.agda`; valuations at the `Val` instance made in
+  `LTL/Reach.agda`), `A ≡ᶠ B`, `A ∈ᶠ As` on formulas (all `infix 4.5`,
   so `v ∈ᵛ us ≡ true` needs no parentheses). Lemmas about a symbol use the
   stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`). `⊢ A` (`data ⊢_` in
   `LTL/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
   `⊥`/`⊤` are formulas. Function types and lambdas stay ASCII (`->`) apart from
   `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
-  `Pred`/`Edges` (`Val -> Bool`, `Val -> Val -> Bool`), `xs ⊆ ys`,
-  `Closed ws G C`, `NoneSat f C`, `HoldsOutside R ws` (`LTL/Sets.agda`),
-  `AllSat`/`Avail` (`LTL/Bar.agda`), `FulfilledAt`/`AllFulfilled`
+  `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
+  `Closed ws G C`, `NoneSat f C`, `HoldsOutside R ws`, `AllSat`/`Avail`
+  (all `LTL/Nodes.agda`), `FulfilledAt`/`AllFulfilled`
   (`LTL/Walk.agda`). A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `Uinf`, `r1`/`r2`, `gfpW`, `wZero`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
-  `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/Bar.agda`.
+  `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/Nodes.agda`.
 - Module headers cite goals G1–G40 of `FORMALISATION-PLAN.md` /
   `PHASE11-PLAN.md` (gitignored, not in the repo) and the lemma/theorem numbers
   of `m4.tex` / `m5.tex`. Keep that comment style: long header comments that
@@ -61,6 +62,12 @@ derivation or a certified finite lasso countermodel.
 
 1. **Foundations** — `Base` (Nat, Bool, Empty, Unit, `≡`); `Prelude` (`⊎`,
    `Σ`, `×`, List, `∈`, `⊆`, `<`, index/nth, Boolean connectives and lemmas).
+   Generic set layer, importing only `Prelude` and used by the graph layer at
+   any node type: `Sets` (`≤`, `FindResult`, filter/any/all lemmas); `Bar`
+   (inductively finite sets after Coquand–Siles, closure lemmas; all searches
+   recurse on a Bar); `Nodes` (parameterised by a node type and a sound,
+   reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the
+   hypothesis names).
 2. **Syntax and proof system** — `Formula` (datatype, abbreviations, decidable
    `≡ᶠ`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
    `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`).
@@ -71,17 +78,20 @@ derivation or a certified finite lasso countermodel.
    `State` (`isState`, `St P`); `Step` (`step`, `succs`, T1–T3); `Taut`
    (Boolean facts about chi/beta for (PC)); `Proj`, `NonState`, `Complete`
    (`stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas 2.7–2.8).
-5. **Finite search infrastructure** — `Reach`, `Sets` (set ops,
-   reachability); `Bar` (inductively finite sets after Coquand–Siles; all
-   searches recurse on a Bar); `Closure` (`Ust`, the explored state set).
+5. **Finite search infrastructure** — `Reach` (`≡ᵛ` on valuations and the
+   `Val` instance of `Nodes`, reachability); `VecBar` (valuations of a given
+   length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
+   explored state set).
 6. **Elimination / provable branch (m4 §3–4)** — `Gfp` (set W, `Path`);
    `Elim` (R1/R2, `Uinf`, `satB`); `Trace` (removal reasons); `Extract`
    (`extract`, `provable`, Thm 4.1).
 7. **Lasso countermodel branch (m4 §5)** — `Walk`; `Fix` (Lemma 5.1); `Round`;
    `Lasso` (Prop 5.3); `Run`; `Global` (Lemma 5.4); `Eval`; `Sound`; `Hintikka`.
-8. **Decision procedures** — `Decide` (`decide`, Thm 6.1); `Graph` (generic
-   `fairGraph` certificate theorem, largest module); `SccLasso`, `SccExtract`,
-   `SccTrap` (graph ↔ logic translation); `DecideSCC` (`decideSCC`);
+8. **Decision procedures** — `Decide` (`decide`, Thm 6.1); `Graph` (the
+   `fairGraph` certificate theorem, largest module; parameterised like `Nodes`,
+   imports only the generic layer, instantiated at `Val` in `SccLasso`);
+   `GraphExamples` (Graph's computational checks, at `Node = Nat`);
+   `SccLasso`, `SccExtract`, `SccTrap` (graph ↔ logic translation); `DecideSCC` (`decideSCC`);
    `CompletePC`, `ShortPC` (`decidePC`, short certificates via (PC)).
 9. **Examples and benchmarks** — `Examples` (46 formulas, Schmitt &
    Goubault-Larrecq Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`); `Compare`

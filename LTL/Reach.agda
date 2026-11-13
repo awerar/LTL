@@ -20,15 +20,24 @@
 -- is free, and shows in gfpSound/gfpComplete that the resulting condition (R2)
 -- is the note's, with Reach_U(v) taken in its exact sense rather than
 -- approximated from below by a fuel bound.
+--
+-- It is also where the generic set layer meets valuations.  LTL.Sets and
+-- LTL.Bar are stated for any element type, and LTL.Nodes for any node type with
+-- an equality test; below,  _≡ᵛ_  is defined, proved sound and reflexive, and
+-- LTL.Nodes is instantiated at Val with it.  That instance supplies ∈ᵛ ≢ᵛ, the
+-- hypothesis names (Closed, AllSat, ...) and listBar to the whole development,
+-- under the names it has always used.  LTL.SccLasso instantiates LTL.Graph with
+-- the same three arguments.
 
 module LTL.Reach where
 
 open import LTL.Step public
+open import LTL.Bar  public
 
 ------------------------------------------------------------------------
 -- Valuations as a set
 
-infix 4.5 _≡ᵛ_ _∈ᵛ_
+infix 4.5 _≡ᵛ_
 
 _≡ᵛ_ : Val -> Val -> Bool
 []      ≡ᵛ []      = true
@@ -41,8 +50,20 @@ _≡ᵛ_ : Val -> Val -> Bool
 ≡ᵛ-refl (true  ∷ v) = ≡ᵛ-refl v
 ≡ᵛ-refl (false ∷ v) = ≡ᵛ-refl v
 
-_∈ᵛ_ : Val -> List Val -> Bool
-v ∈ᵛ us = any (v ≡ᵛ_) us
+eqCons : {b c : Bool} {v w : Val} -> b ≡ c -> v ≡ w -> b ∷ v ≡ c ∷ w
+eqCons refl refl = refl
+
+≡ᵛ-sound : (v w : Val) -> v ≡ᵛ w ≡ true -> v ≡ w
+≡ᵛ-sound []      []      e = refl
+≡ᵛ-sound []      (c ∷ w) ()
+≡ᵛ-sound (b ∷ v) []      ()
+≡ᵛ-sound (b ∷ v) (c ∷ w) e =
+  eqCons (⇔ᵇ-sound b c (andTrueL (b ⇔ᵇ c) (v ≡ᵛ w) e))
+         (≡ᵛ-sound v w (andTrueR (b ⇔ᵇ c) (v ≡ᵛ w) e))
+
+-- The set layer, at Val.  ∈ᵛ comes from here:  v ∈ᵛ us = any (v ≡ᵛ_) us .
+
+open import LTL.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
 
 insertV : Val -> List Val -> List Val
 insertV v us = filterCons (¬ᵇ (v ∈ᵛ us)) v us
@@ -63,6 +84,18 @@ reachIter P (suc n) us acc = reachIter P n us (reachStep P us acc)
 
 reach : Formula -> List Val -> Val -> List Val
 reach P us v = reachIter P (length us) us (v ∷ [])
+
+------------------------------------------------------------------------
+-- Reading a successor list
+
+succsMem : (P : Formula) (us : List Val) (v : Val) {w : Val}
+        -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
+succsMem P us v m =
+  filter_sub (step P v) us m , filter_prop (step P v) us m
+
+succsIn : (P : Formula) (us : List Val) (v : Val) {w : Val}
+       -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
+succsIn P us v mw st = filter_true (step P v) us mw st
 
 ------------------------------------------------------------------------
 -- Computational checks.

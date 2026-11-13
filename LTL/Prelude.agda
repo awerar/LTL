@@ -206,7 +206,7 @@ notFalse false ()
 -- Disjunction, read in both directions.
 --
 -- These four sat in LTL.Sets until LTL.Skel needed them: the tautology test of
--- (PC) is below Deriv, and Sets is far above it.
+-- (PC) is below Deriv, and Sets was then far above it.
 
 orTrue : (a b : Bool) -> a ∨ᵇ b ≡ true -> a ≡ true ⊎ b ≡ true
 orTrue true  b e = inl refl
@@ -374,3 +374,30 @@ ltSucCase zero    (suc n)  lt        = inr ltZero
 ltSucCase (suc j) zero     (ltSuc ())
 ltSucCase (suc j) (suc n)  (ltSuc l) =
   sumElim (λ e -> inl (cong suc e)) (λ l' -> inr (ltSuc l')) (ltSucCase j n l)
+
+------------------------------------------------------------------------
+-- Conjunction over a list.  It sat in LTL.Skel; LTL.Sets needs it and imports
+-- only the prelude.
+
+all : {A : Set} -> (A -> Bool) -> List A -> Bool
+all p []       = true
+all p (x ∷ xs) = p x ∧ᵇ all p xs
+
+all_at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+      -> x ∈ xs -> all p xs ≡ true -> p x ≡ true
+all_at p []       ()        e
+all_at p (y ∷ ys) here      e = andTrueL (p y) (all p ys) e
+all_at p (y ∷ ys) (there m) e = all_at p ys m (andTrueR (p y) (all p ys) e)
+
+all_atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+           -> x ∈ xs -> p x ≡ false -> all p xs ≡ false
+all_atFalse p []       ()        e
+all_atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
+all_atFalse p (y ∷ ys) (there m) e =
+  andFalseIntroR (p y) (all p ys) (all_atFalse p ys m e)
+
+all_intro : {A : Set} (p : A -> Bool) (xs : List A)
+         -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true
+all_intro p []       f = refl
+all_intro p (y ∷ ys) f =
+  andIntro (p y) (all p ys) (f here) (all_intro p ys (λ m -> f (there m)))
