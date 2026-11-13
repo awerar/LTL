@@ -65,16 +65,16 @@ open import LTL.SccExtract public
 ------------------------------------------------------------------------
 -- Two list facts, in the shape the two lemmas want.
 
-mem_notNull : {A : Set} (xs : List A) {x : A} -> x ∈ xs -> null xs ≡ false
-mem_notNull []       ()
-mem_notNull (y ∷ ys) m = refl
+mem-notNull : {A : Set} (xs : List A) {x : A} -> x ∈ xs -> null xs ≡ false
+mem-notNull []       ()
+mem-notNull (y ∷ ys) m = refl
 
-any_none : {A : Set} (p : A -> Bool) (xs : List A)
+any-none : {A : Set} (p : A -> Bool) (xs : List A)
         -> ((y : A) -> y ∈ xs -> p y ≡ false) -> any p xs ≡ false
-any_none p []       h = refl
-any_none p (y ∷ ys) h =
+any-none p []       h = refl
+any-none p (y ∷ ys) h =
   subst (λ b -> b ∨ᵇ any p ys ≡ false) (sym (h y here))
-        (any_none p ys (λ z m -> h z (there m)))
+        (any-none p ys (λ z m -> h z (there m)))
 
 orBothFalse : (a b : Bool) -> a ≡ false -> b ≡ false -> a ∨ᵇ b ≡ false
 orBothFalse a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
@@ -105,17 +105,17 @@ addSeeded P acc sd z m =
               (orTrue (valOf P z P) (any (λ u -> step P u z) acc) want)
       where
         mzs : z ∈ StCand P
-        mzs = filter_sub (missing P acc) (StCand P) m1
+        mzs = filter-sub (missing P acc) (StCand P) m1
 
         want : wanted P acc z ≡ true
         want = andTrueL (wanted P acc z) (¬ᵇ (z ∈ᵛ acc))
-                        (filter_prop (missing P acc) (StCand P) m1)
+                        (filter-prop (missing P acc) (StCand P) m1)
 
         isSeed : valOf P z P ≡ true -> Seeded P z
         isSeed e = seeded z [] mzs e tNil
 
         viaU : any (λ u -> step P u z) acc ≡ true -> Seeded P z
-        viaU ea = pick (any_true (λ u -> step P u z) acc ea)
+        viaU ea = pick (any-true (λ u -> step P u z) acc ea)
           where
             pick : (Σ[ u ∈ Val ] u ∈ acc × step P u z ≡ true)
                 -> Seeded P z
@@ -214,16 +214,16 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
         onS : (Σ[ y ∈ Val ] y ∈ C × step P z y ≡ true)
            -> null (succs P us z) ≡ false
         onS (y , my , st) =
-          mem_notNull (succs P us z) (succsIn P us z (sb y my) st)
+          mem-notNull (succs P us z) (succsIn P us z (sb y my) st)
 
     e2 : r2 P (evList P us) z ≡ false
-    e2 = any_none (badEv P z) (evList P us) each
+    e2 = any-none (badEv P z) (evList P us) each
       where
         each : (g : Ev) -> g ∈ evList P us -> badEv P z g ≡ false
         each (A , W) mg = onPend (valOf P z (□ A)) refl
           where
             pr : A ∈ □Args (sub P) × W ≡ gfpW P us A
-            pr = evList_of P us mg
+            pr = evList-of P us mg
 
             notInW : valOf P z (□ A) ≡ false -> z ∈ᵛ W ≡ false
             notInW ep = onM (z ∈ᵛ W) refl
@@ -278,7 +278,7 @@ elimFindTrap P us sb (cBar h) (found x m q) C tr inc z mz =
              C tr inc' z mz
   where
     inc' : (y : Val) -> y ∈ C -> y ∈ elimRound P us
-    inc' y my = filter_true (keep P us (evList P us)) us (inc y my)
+    inc' y my = filter-true (keep P us (evList P us)) us (inc y my)
                             (trapKeep P us C tr inc y my)
 
 uinfTrap : (P : Formula) (C : List Val) -> Trap P C

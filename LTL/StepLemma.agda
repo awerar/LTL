@@ -7,7 +7,7 @@
 --
 -- Following the note: state completeness and (D1) give |- ○ (beta St),
 -- hence a disjunction of ○ chi_w by (D4); the w with v not-> w are dropped;
--- (D4) carries the survivors back under a single nxt.
+-- (D4) carries the survivors back under a single ○.
 --
 -- The four refutation cases are done with the CONJUNCTION as antecedent,
 --   R = (chi P v) ∧ ○ (chi P w) ,
@@ -25,13 +25,13 @@ open import LTL.Step     public
 ------------------------------------------------------------------------
 -- Searching a false allStep
 
-allStep_false : (P : Formula) (v w : Val) (As : List Formula)
+allStep-false : (P : Formula) (v w : Val) (As : List Formula)
              -> allStep P v w As ≡ false
              -> Σ[ A ∈ Formula ] A ∈ As × stepAt P v w A ≡ false
-allStep_false P v w []       ()
-allStep_false P v w (B ∷ Bs) e =
+allStep-false P v w []       ()
+allStep-false P v w (B ∷ Bs) e =
   sumElim (λ e1 -> B , here , e1)
-          (λ e2 -> shift (allStep_false P v w Bs e2))
+          (λ e2 -> shift (allStep-false P v w Bs e2))
           (andFalse (stepAt P v w B) (allStep P v w Bs) e)
   where
     shift : (Σ[ A ∈ Formula ] A ∈ Bs × stepAt P v w A ≡ false)
@@ -42,9 +42,9 @@ allStep_false P v w (B ∷ Bs) e =
 -- Closing the (T1) case, uniformly in the bit
 
 refute○ : {R B : Formula} (c : Bool)
-         -> ⊢ R ⇒ (lit (○ B) (¬ᵇ c))
-         -> ⊢ R ⇒ ○ (lit B c)
-         -> ⊢ ¬ R
+       -> ⊢ R ⇒ (lit (○ B) (¬ᵇ c))
+       -> ⊢ R ⇒ ○ (lit B c)
+       -> ⊢ ¬ R
 refute○ true  f g = refute g f
 refute○ false f g = refute f (⇒Trans g linFwd)
 
@@ -56,7 +56,7 @@ notSucc : (P : Formula) (v w : Val)
        -> length w ≡ length (sub P)
        -> step P v w ≡ false
        -> ⊢ ¬ ((chi P v) ∧ ○ (chi P w))
-notSucc P v w lenv lenw e = sigElim (allStep_false P v w (sub P) e)
+notSucc P v w lenv lenw e = sigElim (allStep-false P v w (sub P) e)
   where
     R : Formula
     R = (chi P v) ∧ ○ (chi P w)
@@ -79,21 +79,21 @@ notSucc P v w lenv lenw e = sigElim (allStep_false P v w (sub P) e)
     -- (T1)
 
     case○ : {B : Formula} -> ○ B ∈ sub P
-           -> valOf P v (○ B) ⇔ᵇ valOf P w B ≡ false
-           -> ⊢ ¬ R
+         -> valOf P v (○ B) ⇔ᵇ valOf P w B ≡ false
+         -> ⊢ ¬ R
     case○ {B} m q =
       refute○ (valOf P w B)
                 (pvAt m (¬ᵇ valOf P w B)
                       (⇔ᵇ-false (valOf P v (○ B)) (valOf P w B) q))
-                (pwAt (sub_○ P m) (valOf P w B) refl)
+                (pwAt (sub-○ P m) (valOf P w B) refl)
 
     ----------------------------------------------------------------
     -- (T2) and (T3)
 
     case□ : {B : Formula} -> □ B ∈ sub P
-           -> (valOf P v (□ B) ⇒ᵇ valOf P w (□ B)) ∧ᵇ
-              (¬ᵇ valOf P v (□ B) ∧ᵇ valOf P v B ⇒ᵇ ¬ᵇ valOf P w (□ B)) ≡ false
-           -> ⊢ ¬ R
+         -> (valOf P v (□ B) ⇒ᵇ valOf P w (□ B)) ∧ᵇ
+            (¬ᵇ valOf P v (□ B) ∧ᵇ valOf P v B ⇒ᵇ ¬ᵇ valOf P w (□ B)) ≡ false
+         -> ⊢ ¬ R
     case□ {B} m q = sumElim t2 t3 (andFalse _ _ q)
       where
         -- (T2): □ B holds at v, so it must hold at w; it does not.
@@ -109,7 +109,7 @@ notSucc P v w lenv lenw e = sigElim (allStep_false P v w (sub P) e)
         -- it holds, and (D6) turns B with ○ □ B back into □ B.
         t3 : ¬ᵇ valOf P v (□ B) ∧ᵇ valOf P v B ⇒ᵇ ¬ᵇ valOf P w (□ B) ≡ false
           -> ⊢ ¬ R
-        t3 q3 = refute (⇒Trans (∧Pair (pvAt (sub_□ P m) true eB)
+        t3 q3 = refute (⇒Trans (∧Pair (pvAt (sub-□ P m) true eB)
                                           (pwAt m true eW))
                                  expConv)
                        (pvAt m false eV)
@@ -154,33 +154,33 @@ badSucc P v w lenv lenw e = mp dne (notSucc P v w lenv lenw e)
 ------------------------------------------------------------------------
 -- Dropping the non-successors under the antecedent chi P v
 
-allLen_filter : {n : Nat} (p : Val -> Bool) {vs : List Val}
+allLen-filter : {n : Nat} (p : Val -> Bool) {vs : List Val}
              -> AllLen n vs -> AllLen n (filter p vs)
-allLen_filter p alNil                 = alNil
-allLen_filter p {v ∷ vs} (alCons e al) = aux (p v)
+allLen-filter p alNil                 = alNil
+allLen-filter p {v ∷ vs} (alCons e al) = aux (p v)
   where
     aux : (b : Bool) -> AllLen _ (filterCons b v (filter p vs))
-    aux true  = alCons e (allLen_filter p al)
-    aux false = allLen_filter p al
+    aux true  = alCons e (allLen-filter p al)
+    aux false = allLen-filter p al
 
-map_filterCons2 : (P : Formula) (b : Bool) (w : Val) (L : List Val)
+map-filterCons2 : (P : Formula) (b : Bool) (w : Val) (L : List Val)
                -> map ○_ (map (chi P) (filterCons b w L)) ≡
                   filterCons b (○ (chi P w)) (map ○_ (map (chi P) L))
-map_filterCons2 P true  w L = refl
-map_filterCons2 P false w L = refl
+map-filterCons2 P true  w L = refl
+map-filterCons2 P false w L = refl
 
 filter⇒ : (P : Formula) (v : Val) (Q : Formula) (ws : List Val)
-         -> AllLen (length (sub P)) ws
-         -> ((w : Val) -> length w ≡ length (sub P) -> step P v w ≡ false
-               -> ⊢ Q ⇒ ¬ ○ (chi P w))
-         -> ⊢ Q ⇒ ⋁ (map ○_ (map (chi P) ws))
-                  ⇒ ⋁ (map ○_ (map (chi P)
-                           (filter (step P v) ws)))
+       -> AllLen (length (sub P)) ws
+       -> ((w : Val) -> length w ≡ length (sub P) -> step P v w ≡ false
+             -> ⊢ Q ⇒ ¬ ○ (chi P w))
+       -> ⊢ Q ⇒ ⋁ (map ○_ (map (chi P) ws))
+                ⇒ ⋁ (map ○_ (map (chi P)
+                         (filter (step P v) ws)))
 filter⇒ P v Q []       alNil           bad = liftP ⇒Refl
 filter⇒ P v Q (w ∷ ws) (alCons lenw al) bad =
   subst (λ L -> ⊢ Q ⇒ ⋁ (○ (chi P w) ∷ map ○_ (map (chi P) ws))
                       ⇒ ⋁ L)
-        (sym (map_filterCons2 P (step P v w) w (filter (step P v) ws)))
+        (sym (map-filterCons2 P (step P v w) w (filter (step P v) ws)))
         (onStep (step P v w) refl)
   where
     ih : ⊢ Q ⇒ ⋁ (map ○_ (map (chi P) ws))
@@ -212,7 +212,7 @@ stepLemma P v lenv =
            (○⋁L2 (map (chi P) (succs P (St P) v)))
   where
     stLen : AllLen (length (sub P)) (St P)
-    stLen = allLen_filter (isState P) (allVecs_allLen (length (sub P)))
+    stLen = allLen-filter (isState P) (allVecs-allLen (length (sub P)))
 
     bad : (w : Val) -> length w ≡ length (sub P) -> step P v w ≡ false
        -> ⊢ (chi P v) ⇒ ¬ ○ (chi P w)

@@ -79,11 +79,11 @@ provableEachPC Q e w m = outer (w ∈ᵛ Ust R) refl
 
         go : (b : Bool) -> w ∈ᵛ Uinf R ≡ b -> ⊢ (chi R w) ⇒ Q
         go true  eb =
-          fromR (any_false (λ z -> valOf R z R) (Uinf R) e
+          fromR (any-false (λ z -> valOf R z R) (Uinf R) e
                            (∈ᵛ-sound w (Uinf R) eb))
         go false eb =
           mp ¬Elim
-             (extract R (filter_true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R))
+             (extract R (filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R))
                                      (Ust R) mu (cong ¬ᵇ_ eb)))
 
 -- G34's certificate, kept as a named term so that LTL.Proofs can put the whole
@@ -154,7 +154,7 @@ removedFml Q = ⇒List (s2List (¬ Q))
 
 tautRemoved : (Q : Formula) -> satB (¬ Q) ≡ false -> isTaut (removedFml Q) ≡ true
 tautRemoved Q e =
-  all_intro (λ a -> valFrom Ats a (removedFml Q))
+  all-intro (λ a -> valFrom Ats a (removedFml Q))
             (allVecs (length Ats)) row
   where
     R : Formula
@@ -174,7 +174,7 @@ tautRemoved Q e =
         outer s2 = ⇒Chain Ats a (map (¬Chi R) (removed R)) Q inner
           where
             boxOk : □Ok Ats a R
-            boxOk B mb = s2 B (□Args_of (sub R) mb)
+            boxOk B mb = s2 B (□Args-of (sub R) mb)
 
             -- the state the row induces
             w : Val
@@ -195,7 +195,7 @@ tautRemoved Q e =
                   where
                     -- so the row makes ¬ Q true, and w contains ¬ Q
                     ev : valOf R w R ≡ true
-                    ev = trans (valOfSkelVec R Ats a R (sub_self R)) (cong ¬ᵇ_ eq)
+                    ev = trans (valOfSkelVec R Ats a R (sub-self R)) (cong ¬ᵇ_ eq)
 
                     -- w joined the search, by ustSeed
                     mUst : w ∈ Ust R
@@ -210,11 +210,11 @@ tautRemoved Q e =
                         onU false eu = eu
                         onU true  eu =
                           emptyElim (true≢false (trans (sym ev)
-                            (any_false (λ z -> valOf R z R) (Uinf R) e
+                            (any-false (λ z -> valOf R z R) (Uinf R) e
                                        (∈ᵛ-sound w (Uinf R) eu))))
 
                     mRem : w ∈ removed R
-                    mRem = filter_true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
+                    mRem = filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
                                        mUst (cong ¬ᵇ_ notUinf)
 
                     -- but then its own premise denies the chi of the row that
@@ -255,7 +255,7 @@ decidePC Q = onSat (satB (¬ Q)) refl
          -> ⊢ Q ⊎ LassoCountermodel Q
     onSat false e = inl (provablePC Q e)
     onSat true  e =
-      fromSig (any_true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
+      fromSig (any-true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Counting it.
@@ -265,14 +265,14 @@ decidePC Q = onSat (satB (¬ Q)) refl
 -- one more that only the new system can have: how many nodes are (PC).
 
 derivPC : {A : Formula} -> ⊢ A -> Nat
-derivPC p1       = 0
-derivPC p2       = 0
-derivPC p3       = 0
-derivPC k□     = 0
-derivPC k○     = 0
-derivPC exp      = 0
-derivPC ind      = 0
-derivPC lin      = 0
+derivPC p1  = 0
+derivPC p2  = 0
+derivPC p3  = 0
+derivPC k□  = 0
+derivPC k○  = 0
+derivPC exp = 0
+derivPC ind = 0
+derivPC lin = 0
 derivPC (pc e)   = 1
 derivPC (mp d e) = derivPC d + derivPC e
 derivPC (gen d)  = derivPC d
@@ -299,20 +299,20 @@ pcCountOf Q = onDec (decidePC Q)
 -- The two formulas of C4 are still decided in the affirmative, and by the same
 -- boolean: what changed is the size of the answer, not the answer.
 
-decidePC_benAri : isProof (decidePC benAri) ≡ true
-decidePC_benAri = refl
+decidePC-benAri : isProof (decidePC benAri) ≡ true
+decidePC-benAri = refl
 
-decidePC_bnb : isProof (decidePC bnb) ≡ true
-decidePC_bnb = refl
+decidePC-bnb : isProof (decidePC bnb) ≡ true
+decidePC-bnb = refl
 
-decidePC_◇P : isProof (decidePC ◇P) ≡ false
-decidePC_◇P = refl
+decidePC-◇P : isProof (decidePC ◇P) ≡ false
+decidePC-◇P = refl
 
 ------------------------------------------------------------------------
 -- G35 of PHASE10-PLAN.md: chi over atoms.
 --
 -- chi P v lists a literal for every position of Sub P, but (S1) determines the
--- bits at neg and imp from the bits at the atoms, so the non-atomic literals
+-- bits at ¬ and ⇒ from the bits at the atoms, so the non-atomic literals
 -- are redundant: for ¬ axK5fwd that is 22 conjuncts where 8 would do.  chiA
 -- keeps only the atomic ones.
 --
@@ -347,7 +347,7 @@ chiABridge : (P : Formula) (v : Val) -> isState P v ≡ true
           -> valFrom Ats a (chiA P v) ≡ true
           -> valFrom Ats a (chi P v) ≡ true
 chiABridge P v st len Ats a ec =
-  subst (λ u -> valFrom Ats a (chi P u) ≡ true) (mkV_id P v st len) full
+  subst (λ u -> valFrom Ats a (chi P u) ≡ true) (mkV-id P v st len) full
   where
     ok : allOk P v (sub P) ≡ true
     ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
@@ -373,7 +373,7 @@ tautBridge : (P : Formula) (v : Val) -> isState P v ≡ true
           -> length v ≡ length (sub P)
           -> isTaut (¬ (chi P v) ⇒ (¬ChiA P v)) ≡ true
 tautBridge P v st len =
-  all_intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
+  all-intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
   where
     F : Formula
     F = ¬ (chi P v) ⇒ (¬ChiA P v)
@@ -395,7 +395,7 @@ removedFmlA Q = ⇒List (s2List (¬ Q))
 tautRemovedA : (Q : Formula) -> satB (¬ Q) ≡ false
             -> isTaut (removedFmlA Q) ≡ true
 tautRemovedA Q e =
-  all_intro (λ a -> valFrom Ats a (removedFmlA Q)) (allVecs (length Ats)) row
+  all-intro (λ a -> valFrom Ats a (removedFmlA Q)) (allVecs (length Ats)) row
   where
     R : Formula
     R = ¬ Q
@@ -414,7 +414,7 @@ tautRemovedA Q e =
         outer s2 = ⇒Chain Ats a (map (¬ChiA R) (removed R)) Q inner
           where
             boxOk : □Ok Ats a R
-            boxOk B mb = s2 B (□Args_of (sub R) mb)
+            boxOk B mb = s2 B (□Args-of (sub R) mb)
 
             w : Val
             w = skelVec Ats a R
@@ -441,7 +441,7 @@ tautRemovedA Q e =
                 onQ false eq = emptyElim bad
                   where
                     ev : valOf R w R ≡ true
-                    ev = trans (valOfSkelVec R Ats a R (sub_self R)) (cong ¬ᵇ_ eq)
+                    ev = trans (valOfSkelVec R Ats a R (sub-self R)) (cong ¬ᵇ_ eq)
 
                     mUst : w ∈ Ust R
                     mUst = ustSeed R mSt ev
@@ -454,11 +454,11 @@ tautRemovedA Q e =
                         onU false eu = eu
                         onU true  eu =
                           emptyElim (true≢false (trans (sym ev)
-                            (any_false (λ z -> valOf R z R) (Uinf R) e
+                            (any-false (λ z -> valOf R z R) (Uinf R) e
                                        (∈ᵛ-sound w (Uinf R) eu))))
 
                     mRem : w ∈ removed R
-                    mRem = filter_true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
+                    mRem = filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
                                        mUst (cong ¬ᵇ_ notUinf)
 
                     bad : Empty
@@ -486,4 +486,4 @@ provablePCA Q e =
                   (extract R m)
       where
         mSt : w ∈ St R
-        mSt = ustSt R (filter_sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R) m)
+        mSt = ustSt R (filter-sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R) m)

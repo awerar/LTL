@@ -103,7 +103,7 @@ closedOfAll : (P : Formula) (us W : List Val)
 closedOfAll P us W f w w' mw mw' st =
   ∈ᵛ-sound w' W
     (⇒TrueB (step P w w') (w' ∈ᵛ W)
-              (all_at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
+              (all-at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
               st)
 
 shrinkGoClosed   : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
@@ -140,7 +140,7 @@ shrinkGoSub P us W sb bar =
 
 shrinkFindSub P us W sb bar      (allTrue f)   mz = mz
 shrinkFindSub P us W sb (cBar h) (found x m q) mz =
-  filter_sub (succsInside P us W) W
+  filter-sub (succsInside P us W) W
              (shrinkGoSub P us (shrink P us W)
                           (dropAllSat (succsInside P us W) W sb x q) (h x (sb x m)) mz)
 
@@ -152,11 +152,11 @@ gfpWZero P us A =
 
 gfpIn : (P : Formula) (us : List Val) (A : Formula) {w : Val}
      -> w ∈ gfpW P us A -> w ∈ us
-gfpIn P us A m = filter_sub (holdsAt P A) us (gfpWZero P us A m)
+gfpIn P us A m = filter-sub (holdsAt P A) us (gfpWZero P us A m)
 
 gfpHolds : (P : Formula) (us : List Val) (A : Formula) {w : Val}
         -> w ∈ gfpW P us A -> valOf P w A ≡ true
-gfpHolds P us A m = filter_prop (holdsAt P A) us (gfpWZero P us A m)
+gfpHolds P us A m = filter-prop (holdsAt P A) us (gfpWZero P us A m)
 
 ------------------------------------------------------------------------
 -- Greatest: any closed family of states at which A holds is inside gfpW.
@@ -186,8 +186,8 @@ module _ (P : Formula) (us : List Val) where
     where
       inW' : (z : Val) -> X z -> z ∈ shrink P us W
       inW' z xz =
-        filter_true (succsInside P us W) W (inW z xz)
-                    (all_intro (λ w' -> step P z w' ⇒ᵇ (w' ∈ᵛ W)) us inner)
+        filter-true (succsInside P us W) W (inW z xz)
+                    (all-intro (λ w' -> step P z w' ⇒ᵇ (w' ∈ᵛ W)) us inner)
         where
           inner : {w' : Val} -> w' ∈ us
                -> step P z w' ⇒ᵇ (w' ∈ᵛ W) ≡ true
@@ -203,7 +203,7 @@ gfpGreatest : (P : Formula) (us : List Val) (A : Formula) (X : Val -> Set)
 gfpGreatest P us A X inUs hol cl =
   shrinkGoGreatest P us (wZero P us A) (memAllSat (wZero P us A))
                    (listBar (wZero P us A)) X
-                   (λ w x -> filter_true (holdsAt P A) us (inUs w x) (hol w x)) cl
+                   (λ w x -> filter-true (holdsAt P A) us (inUs w x) (hol w x)) cl
 
 ------------------------------------------------------------------------
 -- Reach_U(v) of m4.tex section 3, as an inductive type of ->-paths inside U.

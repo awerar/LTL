@@ -455,13 +455,13 @@ proveTree n Q = go (decidePC Q)
 
 ------------------------------------------------------------------------
 -- Checks: the printer on the identity (L1), the abbreviations, and a
--- countermodel.  The first is ⇒Refl_full of LTL.Proofs, as text.
+-- countermodel.  The first is ⇒Refl-full of LTL.Proofs, as text.
 
-pretty_identity : renderDeriv (⇒Refl {var zero}) ≡
+pretty-identity : renderDeriv (⇒Refl {var zero}) ≡
   "⊢ p ⇒ p\n\n1  P2       (p ⇒ (p ⇒ p) ⇒ p) ⇒ (p ⇒ p ⇒ p) ⇒ p ⇒ p\n2  P1       p ⇒ (p ⇒ p) ⇒ p\n3  MP 1, 2  (p ⇒ p ⇒ p) ⇒ p ⇒ p\n4  P1       p ⇒ p ⇒ p\n5  MP 3, 4  p ⇒ p\n"
-pretty_identity = refl
+pretty-identity = refl
 
-pretty_sugar :
+pretty-sugar :
   showFormula (□ var 0 ⇒ var 0 ∧ ○ var 0 ∧ ○ □ var 0)
    ∷ showFormula (◇ var 0 ∧ ◇ var 1 ⇒ ◇ (var 0 ∧ var 1))
    ∷ showFormula (○ ¬ var 0 ⇔ ¬ ○ var 0)
@@ -476,8 +476,8 @@ pretty_sugar :
    ∷ "¬ (p ⇒ q)"
    ∷ "¬ □ ¬ p"
    ∷ []
-pretty_sugar = refl
+pretty-sugar = refl
 
-pretty_countermodel : prove (var 0 ⇒ □ var 0) ≡
+pretty-countermodel : prove (var 0 ⇒ □ var 0) ≡
   "⊬ p ⇒ □ p\n\nCountermodel: the formula is false at time 0.  Variables true at each time:\n    0  {p}\n    1  {}\n    2  {p}\n    3  {p}\nthen repeating forever:\n    4  {p}\n  (back to time 4)\n"
-pretty_countermodel = refl
+pretty-countermodel = refl

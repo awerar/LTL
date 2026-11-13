@@ -78,7 +78,7 @@ data SuccInUinf (P : Formula) (v : Val) : Set where
   succInUinf : (w : Val) -> w ∈ Uinf P -> step P v w ≡ true -> SuccInUinf P v
 
 uinfSucc : (P : Formula) (v : Val) -> v ∈ Uinf P -> SuccInUinf P v
-uinfSucc P v m = fromSig (null_false (succs P (Uinf P) v) (uinfNotR1 P m))
+uinfSucc P v m = fromSig (null-false (succs P (Uinf P) v) (uinfNotR1 P m))
   where
     fromSig : (Σ[ w ∈ Val ] w ∈ succs P (Uinf P) v) -> SuccInUinf P v
     fromSig (w , mw) = succInUinf w (fst (succsMem P (Uinf P) v mw))
@@ -105,7 +105,7 @@ escBase P us A z mz e = onHolds (valOf P z A) refl
     onHolds false eh = esc [] z wnil mz eh
     onHolds true  eh =
       emptyElim (∈ᵛ-false z (wZero P us A) e
-                          (filter_true (holdsAt P A) us mz eh))
+                          (filter-true (holdsAt P A) us mz eh))
 
 escStep : (P : Formula) (us : List Val) (A : Formula) (W : List Val)
        -> Escapes P us A W -> Escapes P us A (shrink P us W)
@@ -113,7 +113,7 @@ escStep P us A W h z mz e = onIn (z ∈ᵛ W) refl
   where
     onIn : (b : Bool) -> z ∈ᵛ W ≡ b -> Escape P us A z
     onIn false eb = h z mz eb
-    onIn true  eb = fromSig (all_false (λ w -> step P z w ⇒ᵇ (w ∈ᵛ W))
+    onIn true  eb = fromSig (all-false (λ w -> step P z w ⇒ᵇ (w ∈ᵛ W))
                                         us (notIn (succsInside P us W z) refl))
       where
         -- z survived into W but not into shrink P us W, so it has a successor
@@ -122,7 +122,7 @@ escStep P us A W h z mz e = onIn (z ∈ᵛ W) refl
         notIn false ec = ec
         notIn true  ec =
           emptyElim (∈ᵛ-false z (shrink P us W) e
-                      (filter_true (succsInside P us W) W (∈ᵛ-sound z W eb) ec))
+                      (filter-true (succsInside P us W) W (∈ᵛ-sound z W eb) ec))
 
         fromSig : (Σ[ w ∈ Val ] w ∈ us ×
                                   step P z w ⇒ᵇ (w ∈ᵛ W) ≡ false)
@@ -167,8 +167,8 @@ uinfFulfil : (P : Formula) (v : Val) -> v ∈ Uinf P
 uinfFulfil P v m A mA pend =
   gfpEscape P (Uinf P) A v m
     (andFalseTrueL (pending P v A) (v ∈ᵛ gfpW P (Uinf P) A)
-                   (any_false (badEv P v) (evList P (Uinf P)) (uinfNotR2 P m)
-                              (evList_mem P (Uinf P) mA))
+                   (any-false (badEv P v) (evList P (Uinf P)) (uinfNotR2 P m)
+                              (evList-mem P (Uinf P) mA))
                    (cong ¬ᵇ_ pend))
 
 ------------------------------------------------------------------------
@@ -190,7 +190,7 @@ elimGoSub P us sb bar =
 
 elimFindSub P us sb bar      (allTrue f)    m = m
 elimFindSub P us sb (cBar h) (found x mx q) m =
-  filter_sub (keep P us (evList P us)) us
+  filter-sub (keep P us (evList P us)) us
              (elimGoSub P (elimRound P us)
                         (dropAllSat (keep P us (evList P us)) us sb x q)
                         (h x (sb x mx)) m)
@@ -201,12 +201,12 @@ uinfUst P x m = elimGoSub P (Ust P) (ustAllSat P) (ustBar P) m
 uinfSub : (P : Formula) (x : Val) -> x ∈ Uinf P -> x ∈ St P
 uinfSub P x m = ustSt P (uinfUst P x m)
 
--- The projection is named rather than applied inline: giving filter_prop its
+-- The projection is named rather than applied inline: giving filter-prop its
 -- list argument against the folded  St P  is what keeps the elaborator from
 -- unfolding Uinf while it solves the implicit.
 
 stIsState : (P : Formula) {x : Val} -> x ∈ St P -> isState P x ≡ true
-stIsState P m = filter_prop (isState P) (allVecs (length (sub P))) m
+stIsState P m = filter-prop (isState P) (allVecs (length (sub P))) m
 
 uinfState : (P : Formula) (x : Val) -> x ∈ Uinf P -> isState P x ≡ true
 uinfState P x m = stIsState P (uinfSub P x m)

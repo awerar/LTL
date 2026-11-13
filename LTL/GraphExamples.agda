@@ -40,28 +40,28 @@ gVs = gA ∷ gB ∷ []
 gE : Edges
 gE v w = w ≡ⁿ gB
 
-reach_gA : reachSet gVs gE gA ≡ gB ∷ gA ∷ []
-reach_gA = refl
+reach-gA : reachSet gVs gE gA ≡ gB ∷ gA ∷ []
+reach-gA = refl
 
-term_gA : isTerminal gVs gE gA ≡ false
-term_gA = refl
+term-gA : isTerminal gVs gE gA ≡ false
+term-gA = refl
 
-term_gB : isTerminal gVs gE gB ≡ true
-term_gB = refl
+term-gB : isTerminal gVs gE gB ≡ true
+term-gB = refl
 
-scc_gB : sccOf gVs gE gB ≡ gB ∷ []
-scc_gB = refl
+scc-gB : sccOf gVs gE gB ≡ gB ∷ []
+scc-gB = refl
 
 -- Asking for b is fair: the cycle b -> b meets it.
 
-fair_gB : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gB) ∷ []) gA here) ≡ true
-fair_gB = refl
+fair-gB : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gB) ∷ []) gA here) ≡ true
+fair-gB = refl
 
 -- Asking for a is not: a is transient, so the only recurrent component misses
 -- the predicate and the certificate branch is taken.
 
-fair_gA : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gA) ∷ []) gA here) ≡ false
-fair_gA = refl
+fair-gA : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gA) ∷ []) gA here) ≡ false
+fair-gA = refl
 
 ------------------------------------------------------------------------
 -- A second graph, which exercises everything the first does not.
@@ -92,14 +92,14 @@ gE2 v w = (v ≡ⁿ gP) ∧ᵇ (w ≡ⁿ gQ) ∨ᵇ
           (v ≡ⁿ gQ) ∧ᵇ (w ≡ⁿ gS) ∨ᵇ
           (v ≡ⁿ gS) ∧ᵇ (w ≡ⁿ gQ)
 
-term_gP : isTerminal gVs2 gE2 gP ≡ false
-term_gP = refl
+term-gP : isTerminal gVs2 gE2 gP ≡ false
+term-gP = refl
 
-term_gQ : isTerminal gVs2 gE2 gQ ≡ true
-term_gQ = refl
+term-gQ : isTerminal gVs2 gE2 gQ ≡ true
+term-gQ = refl
 
-scc_gQ : map (λ z -> z ∈ᵛ sccOf gVs2 gE2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
-scc_gQ = refl
+scc-gQ : map (λ z -> z ∈ᵛ sccOf gVs2 gE2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
+scc-gQ = refl
 
 -- The lasso the fair branch returns, read off in full.
 --
@@ -136,19 +136,19 @@ fairQS : FairLoop gVs2 gE2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ 
               (reachSet gVs2 gE2 gP)
 fairQS = fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ []) gP here
 
-fair_QS : isInl fairQS ≡ true
-fair_QS = refl
+fair-QS : isInl fairQS ≡ true
+fair-QS = refl
 
-stem_QS : stemOf fairQS ≡ gQ ∷ gS ∷ []
-stem_QS = refl
+stem-QS : stemOf fairQS ≡ gQ ∷ gS ∷ []
+stem-QS = refl
 
-cycle_QS : cycleOf fairQS ≡ gQ ∷ gS ∷ gQ ∷ gS ∷ gQ ∷ gS ∷ gQ ∷ gS ∷ []
-cycle_QS = refl
+cycle-QS : cycleOf fairQS ≡ gQ ∷ gS ∷ gQ ∷ gS ∷ gQ ∷ gS ∷ gQ ∷ gS ∷ []
+cycle-QS = refl
 
 -- And the unfair side: nothing recurrent meets "is p".
 
-fair_P : isInl (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
-fair_P = refl
+fair-P : isInl (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
+fair-P = refl
 
 -- The certificate it returns instead, as the list of its steps: 2 for cBlock,
 -- 1 for cSink, 0 for cNil.  It is  cBlock, cSink, cNil  -- the component {q,s}
@@ -159,10 +159,10 @@ fair_P = refl
 -- way.
 
 certSteps : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
-       -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
+         -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
 certSteps (inl l) = []
 certSteps (inr c) = certShape c
 
-cert_P : certSteps (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡
+cert-P : certSteps (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡
          2 ∷ 1 ∷ 0 ∷ []
-cert_P = refl
+cert-P = refl

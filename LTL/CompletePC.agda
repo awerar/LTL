@@ -56,8 +56,8 @@ open import LTL.Taut     public
 -- splitting on the members of As one at a time with (L6).  As a boolean it is
 -- immediate: read the atoms by a, read each member of As by the skeleton, and
 -- the row so obtained is one of the disjuncts and its literals are true by
--- construction.  allVecs_complete says the row is enumerated -- it has the
--- right length, by map_length -- and chiRowTrue that its chi holds.
+-- construction.  allVecs-complete says the row is enumerated -- it has the
+-- right length, by map-length -- and chiRowTrue that its chi holds.
 
 -- The case split over As: the disjunction of chi over all 2^|As| rows, i.e.
 -- the formula of allComplete.
@@ -67,7 +67,7 @@ caseSplitFml As = ⋁ (map (chiOf As) (allVecs (length As)))
 
 tautAll : (As : List Formula) -> isTaut (caseSplitFml As) ≡ true
 tautAll As =
-  all_intro (λ a -> valFrom (atomsOf (caseSplitFml As)) a (caseSplitFml As))
+  all-intro (λ a -> valFrom (atomsOf (caseSplitFml As)) a (caseSplitFml As))
             (allVecs (length (atomsOf (caseSplitFml As))))
             row
   where
@@ -79,8 +79,8 @@ tautAll As =
     row {a} m =
       ⋁True Ats a (map (chiOf As) (allVecs (length As)))
                (memMap (chiOf As)
-                       (allVecs_complete (length As) (map (valFrom Ats a) As)
-                                         (map_length (valFrom Ats a) As)))
+                       (allVecs-complete (length As) (map (valFrom Ats a) As)
+                                         (map-length (valFrom Ats a) As)))
                (chiRowTrue Ats a As)
 
 allCompletePC : (As : List Formula)
@@ -99,7 +99,7 @@ allCompletePC As = pc (tautAll As)
 -- It is needed because it is the one clause of Definition 2.2 that a
 -- truth-table row does not satisfy for free: the skeleton reads □ A and A as
 -- two unrelated atoms, which is exactly why  □ p ⇒ p  is not a skeleton
--- tautology (LTL.Proofs, □Elim_not_taut).  (S1) and coherence, by contrast,
+-- tautology (LTL.Proofs, □Elim-not-taut).  (S1) and coherence, by contrast,
 -- cost nothing at all -- see LTL.Taut.
 
 s2List : Formula -> List Formula
@@ -139,7 +139,7 @@ stateFml P = ⇒List (s2List P) (beta P (St P))
 
 tautState : (P : Formula) -> isTaut (stateFml P) ≡ true
 tautState P =
-  all_intro (λ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
+  all-intro (λ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
             (allVecs (length (atomsOf (stateFml P))))
             row
   where
@@ -150,7 +150,7 @@ tautState P =
        -> valFrom Ats a (stateFml P) ≡ true
     row {a} m =
       □Chain Ats a (□Args (sub P)) (beta P (St P))
-               (λ g -> betaSkel Ats a P (λ B mb -> g B (□Args_of (sub P) mb)))
+               (λ g -> betaSkel Ats a P (λ B mb -> g B (□Args-of (sub P) mb)))
 
 stateCompletePC : (P : Formula) -> ⊢ beta P (St P)
 stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
@@ -171,16 +171,16 @@ stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 -- constant of one.
 --
 -- mpVals walks the VALUATIONS rather than the disjuncts, so that no inversion
--- of  map (chi P)  is needed -- map_mem_inv lives in LTL.Sets, which
+-- of  map (chi P)  is needed -- map-mem-inv lives in LTL.Sets, which
 -- LTL.Complete does not import.  Same reason as mpChain above.
 
 ⋁⇒Fml : List Formula -> Formula -> Formula
 ⋁⇒Fml Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
 
 taut⋁Elim : (Cs : List Formula) (C : Formula)
-            -> isTaut (⋁⇒Fml Cs C) ≡ true
+         -> isTaut (⋁⇒Fml Cs C) ≡ true
 taut⋁Elim Cs C =
-  all_intro (λ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
+  all-intro (λ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
             (allVecs (length (atomsOf (⋁⇒Fml Cs C))))
             row
   where

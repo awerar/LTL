@@ -32,7 +32,7 @@
 -- 1. The candidates.  A state is not an arbitrary vector: (S1) determines the
 --    bit at  ¬ A  and at  A ⇒ B  from the bits at A and at B, and coherence
 --    makes the bit depend on the formula rather than on the position.  So a
---    state is determined by its bits at the ATOMS of Sub P -- the var, nxt and
+--    state is determined by its bits at the ATOMS of Sub P -- the var, ○ and
 --    box entries -- and mkV builds the whole vector from such an assignment.
 --    That replaces 2^|Sub P| candidates by 2^|atoms|; for the C5 formula, 8192
 --    by 128.  stCandSt and stStCand show the resulting StCand P (St P built
@@ -94,14 +94,14 @@ valFromEq P v ok =
   skelEval (valOf P v) (atoms (sub P)) P
            (λ X mX aX -> atomMem (sub P) mX aX)
            (λ X mX -> ⇔ᵇ-sound (valOf P v (¬ X)) (¬ᵇ valOf P v X)
-                               (allOk_at P v (sub P) mX ok))
+                               (allOk-at P v (sub P) mX ok))
            (λ X Y mX -> ⇔ᵇ-sound (valOf P v (X ⇒ Y))
                                  (valOf P v X ⇒ᵇ valOf P v Y)
-                                 (allOk_at P v (sub P) mX ok))
+                                 (allOk-at P v (sub P) mX ok))
 
-mkV_id : (P : Formula) (v : Val) -> isState P v ≡ true
+mkV-id : (P : Formula) (v : Val) -> isState P v ≡ true
       -> length v ≡ length (sub P) -> mkV P (atomBits P v) ≡ v
-mkV_id P v st len = valExt (mkV P (atomBits P v)) v lenEq pointwise
+mkV-id P v st len = valExt (mkV P (atomBits P v)) v lenEq pointwise
   where
     ok : allOk P v (sub P) ≡ true
     ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
@@ -110,7 +110,7 @@ mkV_id P v st len = valExt (mkV P (atomBits P v)) v lenEq pointwise
     coh = andTrueR (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
     lenEq : length (mkV P (atomBits P v)) ≡ length v
-    lenEq = trans (map_length (valFrom (atoms (sub P)) (atomBits P v)) (sub P))
+    lenEq = trans (map-length (valFrom (atoms (sub P)) (atomBits P v)) (sub P))
                   (sym len)
 
     pointwise : (i : Nat) -> i < length (mkV P (atomBits P v))
@@ -120,18 +120,18 @@ mkV_id P v st len = valExt (mkV P (atomBits P v)) v lenEq pointwise
       where
         lI : i < length (sub P)
         lI = subst (λ k -> i < k)
-                   (map_length (valFrom (atoms (sub P)) (atomBits P v)) (sub P)) l
+                   (map-length (valFrom (atoms (sub P)) (atomBits P v)) (sub P)) l
 
         mI : nth (sub P) i ⊥ ∈ sub P
-        mI = nth_mem (sub P) i lI ⊥
+        mI = nth-mem (sub P) i lI ⊥
 
         atI : bitAt (mkV P (atomBits P v)) i ≡
               valFrom (atoms (sub P)) (atomBits P v) (nth (sub P) i ⊥)
-        atI = nth_map (valFrom (atoms (sub P)) (atomBits P v)) (sub P) i lI ⊥ false
+        atI = nth-map (valFrom (atoms (sub P)) (atomBits P v)) (sub P) i lI ⊥ false
 
         cohI : bitAt v i ≡ valOf P v (nth (sub P) i ⊥)
         cohI = ⇔ᵇ-sound (bitAt v i) (valOf P v (nth (sub P) i ⊥))
-                        (allCoh_at P v (length (sub P)) i lI coh)
+                        (allCoh-at P v (length (sub P)) i lI coh)
 
 ------------------------------------------------------------------------
 -- The candidates, and the state list they give
@@ -142,14 +142,14 @@ cands P = map (mkV P) (allVecs (length (atoms (sub P))))
 candsLen : (P : Formula) {v : Val} -> v ∈ cands P
         -> length v ≡ length (sub P)
 candsLen P {v} m =
-  fromSig (map_mem_inv (mkV P) (allVecs (length (atoms (sub P)))) m)
+  fromSig (map-mem-inv (mkV P) (allVecs (length (atoms (sub P)))) m)
   where
     fromSig : (Σ[ a ∈ Val ] a ∈ allVecs (length (atoms (sub P))) ×
                                 v ≡ mkV P a)
            -> length v ≡ length (sub P)
     fromSig (a , ma , ea) =
       trans (cong length ea)
-            (map_length (valFrom (atoms (sub P)) a) (sub P))
+            (map-length (valFrom (atoms (sub P)) a) (sub P))
 
 -- St P, computed from the candidates rather than from all of allVecs.
 
@@ -158,30 +158,30 @@ StCand P = filter (isState P) (cands P)
 
 stCandSt : (P : Formula) {v : Val} -> v ∈ StCand P -> v ∈ St P
 stCandSt P {v} m =
-  filter_true (isState P) (allVecs (length (sub P)))
-              (allVecs_complete (length (sub P)) v
-                                (candsLen P (filter_sub (isState P) (cands P) m)))
-              (filter_prop (isState P) (cands P) m)
+  filter-true (isState P) (allVecs (length (sub P)))
+              (allVecs-complete (length (sub P)) v
+                                (candsLen P (filter-sub (isState P) (cands P) m)))
+              (filter-prop (isState P) (cands P) m)
 
 stStCand : (P : Formula) {v : Val} -> v ∈ St P -> v ∈ StCand P
-stStCand P {v} m = filter_true (isState P) (cands P) inCands st
+stStCand P {v} m = filter-true (isState P) (cands P) inCands st
   where
     st : isState P v ≡ true
-    st = filter_prop (isState P) (allVecs (length (sub P))) m
+    st = filter-prop (isState P) (allVecs (length (sub P))) m
 
     len : length v ≡ length (sub P)
-    len = allVecs_len' (length (sub P)) v
-                       (filter_sub (isState P) (allVecs (length (sub P))) m)
+    len = allVecs-len' (length (sub P)) v
+                       (filter-sub (isState P) (allVecs (length (sub P))) m)
       where
-        allVecs_len' : (n : Nat) (w : Val) -> w ∈ allVecs n -> length w ≡ n
-        allVecs_len' n w mw = ≡ⁿ-sound (length w) n (allVecs_len n mw)
+        allVecs-len' : (n : Nat) (w : Val) -> w ∈ allVecs n -> length w ≡ n
+        allVecs-len' n w mw = ≡ⁿ-sound (length w) n (allVecs-len n mw)
 
     inCands : v ∈ cands P
     inCands =
-      subst (λ z -> z ∈ cands P) (mkV_id P v st len)
+      subst (λ z -> z ∈ cands P) (mkV-id P v st len)
             (memMap (mkV P)
-                    (allVecs_complete (length (atoms (sub P))) (atomBits P v)
-                                      (map_length (valOf P v) (atoms (sub P)))))
+                    (allVecs-complete (length (atoms (sub P))) (atomBits P v)
+                                      (map-length (valOf P v) (atoms (sub P)))))
 
 ------------------------------------------------------------------------
 -- The ->-closure of the states containing P.
@@ -234,7 +234,7 @@ inAddAll : (P : Formula) (acc : List Val) (x : Val) -> x ∈ StCand P
         -> settled P acc x ≡ false -> x ∈ addAll P acc
 inAddAll P acc x m q =
   memAppL (filter (missing P acc) (StCand P)) acc
-          (filter_true (missing P acc) (StCand P) m (missingOf P acc x q))
+          (filter-true (missing P acc) (StCand P) m (missingOf P acc x q))
 
 ------------------------------------------------------------------------
 -- The search
@@ -295,7 +295,7 @@ closeFindSt P acc av (cBar h) (found x mx q) sb       m =
   closeGoSt P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q))) sb' m
   where
     sb' : (z : Val) -> z ∈ addAll P acc -> z ∈ StCand P
-    sb' z mz = sumElim (λ m1 -> filter_sub (missing P acc) (StCand P) m1)
+    sb' z mz = sumElim (λ m1 -> filter-sub (missing P acc) (StCand P) m1)
                        (λ m2 -> sb z m2)
                        (memAppCase (filter (missing P acc) (StCand P)) acc mz)
 
@@ -340,7 +340,7 @@ closeFindClosed P acc av bar      (allTrue f)       {u} {w} mu mw st =
     (notFalse (w ∈ᵛ acc)
               (nandTrueL (wanted P acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
                          (orR (valOf P w P) (any (λ u' -> step P u' w) acc)
-                              (any_intro (λ u' -> step P u' w) acc mu st))))
+                              (any-intro (λ u' -> step P u' w) acc mu st))))
 closeFindClosed P acc av (cBar h) (found x mx q)      mu mw st =
   closeGoClosed P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q))) mu mw st
 

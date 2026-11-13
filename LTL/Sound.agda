@@ -7,11 +7,11 @@
 --
 -- Ten constructors.  Six are Boolean tautologies of at most three variables,
 -- written out by cases; (K ○) and (Lin) reduce to  z ⇒ᵇ z  because
--- evalAt commutes with nxt definitionally, both sides of (Lin) being
+-- evalAt commutes with ○ definitionally, both sides of (Lin) being
 -- ¬ᵇ evalAt A (nextPos pos) on the nose.  That leaves four.
 --
 --   (K □)  is all pointwise: the SAME orbit on both sides, so it is
---            all_at then ⇒TrueB then all_intro.
+--            all-at then ⇒TrueB then all-intro.
 --
 --   (Exp)    needs the orbit of pos to contain pos, its successor, and the
 --            whole orbit of its successor.  All three are orbitIter, since
@@ -22,7 +22,7 @@
 --            A holds at posIter t pos by induction on t -- the hypothesis is
 --            available at posIter t pos because orbitIter puts it in the orbit
 --            -- and every member of the orbit is a posIter t pos by
---            orbitOf_iter.  Twenty lines, no arithmetic.
+--            orbitOf-iter.  Twenty lines, no arithmetic.
 --
 --   (gen)    needs every position of an orbit to be VALID, so that the
 --            induction hypothesis applies there.  That is orbitValid.
@@ -65,8 +65,8 @@ tautId false = refl
 -- Conjunction, as (Exp) and (Lin) need it
 
 ∧True : (P : Formula) (c0 : Val) (c1 : List Val) (X Y : Formula) (pos : Pos)
-       -> evalAt P c0 c1 X pos ≡ true -> evalAt P c0 c1 Y pos ≡ true
-       -> evalAt P c0 c1 (X ∧ Y) pos ≡ true
+     -> evalAt P c0 c1 X pos ≡ true -> evalAt P c0 c1 Y pos ≡ true
+     -> evalAt P c0 c1 (X ∧ Y) pos ≡ true
 ∧True P c0 c1 X Y pos ex ey =
   aux (evalAt P c0 c1 X pos) (evalAt P c0 c1 Y pos) ex ey
   where
@@ -80,14 +80,14 @@ tautId false = refl
 -- (K □)
 
 k□Sound : (P : Formula) (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
-         -> evalAt P c0 c1 (□ (A ⇒ B)) pos ≡ true
-         -> evalAt P c0 c1 (□ A) pos ≡ true
-         -> evalAt P c0 c1 (□ B) pos ≡ true
+       -> evalAt P c0 c1 (□ (A ⇒ B)) pos ≡ true
+       -> evalAt P c0 c1 (□ A) pos ≡ true
+       -> evalAt P c0 c1 (□ B) pos ≡ true
 k□Sound P c0 c1 A B pos e1 e2 =
-  all_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
+  all-intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
     (λ {q} m -> ⇒TrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
-                         (all_at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
-                         (all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
+                         (all-at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
+                         (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
 
 ------------------------------------------------------------------------
 -- (Exp)
@@ -103,15 +103,15 @@ expSound P c0 c1 A pos =
         -> evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos ≡ true
     body eb =
       ∧True P c0 c1 A (○ A ∧ ○ □ A) pos
-              (all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+              (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
                       (orbitIter c0 c1 zero pos) eb)
               (∧True P c0 c1 (○ A) (○ □ A) pos
-                       (all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                       (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
                                (orbitIter c0 c1 (suc zero) pos) eb)
-                       (all_intro (evalAt P c0 c1 A)
+                       (all-intro (evalAt P c0 c1 A)
                                   (orbitOf c0 c1 (nextPos c0 c1 pos))
                                   (λ {q} m ->
-                                     all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                                     all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
                                             (orbitSub c0 c1 pos q m) eb)))
 
 ------------------------------------------------------------------------
@@ -133,18 +133,18 @@ indSound P c0 c1 A pos =
         -> evalAt P c0 c1 A pos ≡ true
         -> evalAt P c0 c1 (□ A) pos ≡ true
     body e1 e2 =
-      all_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                (λ {q} m -> fromIter q (orbitOf_iter c0 c1 pos q m))
+      all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                (λ {q} m -> fromIter q (orbitOf-iter c0 c1 pos q m))
       where
         along : (t : Nat) -> evalAt P c0 c1 A (posIter c0 c1 t pos) ≡ true
         along zero    = e2
         along (suc t) =
           subst (λ r -> evalAt P c0 c1 A r ≡ true)
-                (sym (posIter_suc c0 c1 t pos))
+                (sym (posIter-suc c0 c1 t pos))
                 (⇒TrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
                           (evalAt P c0 c1 A
                                   (nextPos c0 c1 (posIter c0 c1 t pos)))
-                          (all_at (evalAt P c0 c1 (A ⇒ ○ A))
+                          (all-at (evalAt P c0 c1 (A ⇒ ○ A))
                                   (orbitOf c0 c1 pos)
                                   (orbitIter c0 c1 t pos) e1)
                           (along t))
@@ -196,7 +196,7 @@ sound P b c0 c1 mc0 wc stb (lin {A}) pos vp =
           (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
           (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
 
--- (PC).  evalAt is DEFINED by ¬ᵇ at neg and by ⇒ᵇ at imp, so the two
+-- (PC).  evalAt is DEFINED by ¬ᵇ at ¬ and by ⇒ᵇ at ⇒, so the two
 -- compositionality hypotheses of tautSound are refl and the case is one line.
 -- This is the whole of Ben-Ari's Axiom 0, and it is where the substitution
 -- lemma that Remark 6.4 feared would have gone.
@@ -209,7 +209,7 @@ sound P b c0 c1 mc0 wc stb (mp {A} {B} d e) pos vp =
            (sound P b c0 c1 mc0 wc stb e pos vp)
 
 sound P b c0 c1 mc0 wc stb (gen {A} d) pos vp =
-  all_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+  all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
             (λ {q} m -> sound P b c0 c1 mc0 wc stb d q
                               (orbitValid P b c0 c1 mc0 wc stb pos q vp m))
 

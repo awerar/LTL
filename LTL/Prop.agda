@@ -31,7 +31,7 @@ weaken : {A B : Formula} -> ⊢ B -> ⊢ A ⇒ B
 weaken d = mp p1 d
 
 ⇒Trans : {A B C : Formula}
-        -> ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C
+      -> ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C
 ⇒Trans f g = mp (mp p2 (weaken g)) f
 
 ------------------------------------------------------------------------
@@ -52,12 +52,12 @@ mpU : {P A B : Formula}
 mpU f g = mp (mp p2 f) g
 
 ⇒TransU : {P A B C : Formula}
-         -> ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ B ⇒ C
-         -> ⊢ P ⇒ A ⇒ C
+       -> ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ B ⇒ C
+       -> ⊢ P ⇒ A ⇒ C
 ⇒TransU f g = mpU (mpU (liftP p2) (⇒Trans g p1)) f
 
 ⇒Swap : {A B C : Formula}
-       -> ⊢ A ⇒ B ⇒ C -> ⊢ B ⇒ A ⇒ C
+     -> ⊢ A ⇒ B ⇒ C -> ⊢ B ⇒ A ⇒ C
 ⇒Swap {A} {B} {C} f = mpU (weaken (mp p2 f)) (p1 {B} {A})
 
 ------------------------------------------------------------------------
@@ -123,7 +123,7 @@ contra {A} {B} = ⇒Trans dnMono (p3 {¬ B} {¬ A})
 -- combinators really do replace the deduction theorem.
 
 ⇒Comp : {A B C : Formula}
-       -> ⊢ (A ⇒ B) ⇒ (B ⇒ C) ⇒ A ⇒ C
+     -> ⊢ (A ⇒ B) ⇒ (B ⇒ C) ⇒ A ⇒ C
 ⇒Comp = ⇒Swap (⇒Trans p1 p2)
 
 ------------------------------------------------------------------------
@@ -149,13 +149,13 @@ contra {A} {B} = ⇒Trans dnMono (p3 {¬ B} {¬ A})
 ¬Case0 {A} {C} = ¬Elim {¬ A} {C}
 
 ⇒Case1 : {A B C : Formula}
-        -> ⊢ (A ⇒ B) ⇒ A ⇒ ¬ B ⇒ C
+      -> ⊢ (A ⇒ B) ⇒ A ⇒ ¬ B ⇒ C
 ⇒Case1 = ⇒TransU identP (liftP explode)
 
 ⇒Case0L : {A B C : Formula}
-         -> ⊢ ¬ A ⇒ ¬ (A ⇒ B) ⇒ C
+       -> ⊢ ¬ A ⇒ ¬ (A ⇒ B) ⇒ C
 ⇒Case0L = ⇒Trans ¬Elim explode
 
 ⇒Case0R : {A B C : Formula}
-         -> ⊢ B ⇒ ¬ (A ⇒ B) ⇒ C
+       -> ⊢ B ⇒ ¬ (A ⇒ B) ⇒ C
 ⇒Case0R = ⇒Trans p1 explode

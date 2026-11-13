@@ -15,9 +15,9 @@
 -- The five cases are the note's, one apparatus each:
 --
 --   var       nothing to do -- evalAt reads the state through valOf.
---   neg, imp  (S1), through okAt at a state of U_inf.
---   ○ (T1), through allStep_at at the transition posStep supplies.
---   box       both halves.  If □ A is in the state, (T2) carries it along the
+--   ¬, ⇒      (S1), through okAt at a state of U_inf.
+--   ○         (T1), through allStep-at at the transition posStep supplies.
+--   □         both halves.  If □ A is in the state, (T2) carries it along the
 --             run -- □Along -- and (S2) turns it into A at each stage, and
 --             every position of the orbit is such a stage.  If □ A is not in
 --             the state, Lemma 5.4 hands over a position of the orbit at which
@@ -37,18 +37,18 @@ open import LTL.Extract public
 stateOk : (P : Formula) (s : Val) -> s ∈ Uinf P -> {A : Formula}
        -> A ∈ sub P -> okAt P s A ≡ true
 stateOk P s m mA =
-  allOk_at P s (sub P) mA
+  allOk-at P s (sub P) mA
            (andTrueL (allOk P s (sub P)) (allCoh P s (length (sub P)))
                      (uinfState P s m))
 
 -- (S2)
 □S2 : (P : Formula) (s : Val) -> s ∈ Uinf P -> (B : Formula)
-     -> □ B ∈ sub P -> valOf P s (□ B) ≡ true -> valOf P s B ≡ true
+   -> □ B ∈ sub P -> valOf P s (□ B) ≡ true -> valOf P s B ≡ true
 □S2 P s m B mb e =
   ⇒TrueB (valOf P s (□ B)) (valOf P s B) (stateOk P s m mb) e
 
 ⇒Cong : {a a' b b' : Bool} -> a ≡ a' -> b ≡ b'
-       -> a ⇒ᵇ b ≡ a' ⇒ᵇ b'
+     -> a ⇒ᵇ b ≡ a' ⇒ᵇ b'
 ⇒Cong refl refl = refl
 
 ------------------------------------------------------------------------
@@ -62,9 +62,9 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
          where
 
   □Along : (B : Formula) -> □ B ∈ sub P
-          -> (t : Nat) (pos : Pos) -> ValidPos P b pos
-          -> valOf P (posState pos) (□ B) ≡ true
-          -> valOf P (posState (posIter c0 c1 t pos)) (□ B) ≡ true
+        -> (t : Nat) (pos : Pos) -> ValidPos P b pos
+        -> valOf P (posState pos) (□ B) ≡ true
+        -> valOf P (posState (posIter c0 c1 t pos)) (□ B) ≡ true
   □Along B mb zero    pos vp e = e
   □Along B mb (suc t) pos vp e =
     □Along B mb t (nextPos c0 c1 pos)
@@ -73,11 +73,11 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
                     (snd (posStep P b c0 c1 mc0 wc stb vp)) e)
 
   □True : (B : Formula) -> □ B ∈ sub P
-         -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbitOf c0 c1 pos
-         -> valOf P (posState pos) (□ B) ≡ true
-         -> valOf P (posState q) B ≡ true
+       -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbitOf c0 c1 pos
+       -> valOf P (posState pos) (□ B) ≡ true
+       -> valOf P (posState q) B ≡ true
   □True B mb pos q vp m e =
-    fromIter (orbitOf_iter c0 c1 pos q m)
+    fromIter (orbitOf-iter c0 c1 pos q m)
     where
       fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
               -> valOf P (posState q) B ≡ true
@@ -102,22 +102,22 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
                     (¬ᵇ valOf P (posState pos) B)
                         (stateOk P (posState pos) (posIn P b vp) mA))
           (cong ¬ᵇ_
-                (hintikka mbc cyc B (sub_¬ P mA) pos vp))
+                (hintikka mbc cyc B (sub-¬ P mA) pos vp))
 
   hintikka mbc cyc (B ⇒ C) mA pos vp =
     trans (⇔ᵇ-sound (valOf P (posState pos) (B ⇒ C))
                     (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
                     (stateOk P (posState pos) (posIn P b vp) mA))
-          (⇒Cong (hintikka mbc cyc B (sub_⇒L P mA) pos vp)
-                   (hintikka mbc cyc C (sub_⇒R P mA) pos vp))
+          (⇒Cong (hintikka mbc cyc B (sub-⇒L P mA) pos vp)
+                   (hintikka mbc cyc C (sub-⇒R P mA) pos vp))
 
   hintikka mbc cyc (○ B) mA pos vp =
     trans (⇔ᵇ-sound (valOf P (posState pos) (○ B))
                     (valOf P (posState (nextPos c0 c1 pos)) B)
-                    (allStep_at P (posState pos)
+                    (allStep-at P (posState pos)
                                 (posState (nextPos c0 c1 pos)) (sub P) mA
                                 (snd (posStep P b c0 c1 mc0 wc stb vp))))
-          (hintikka mbc cyc B (sub_○ P mA)
+          (hintikka mbc cyc B (sub-○ P mA)
                     (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
 
   hintikka mbc cyc (□ B) mA pos vp =
@@ -125,13 +125,13 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
     where
       ih : (q : Pos) -> ValidPos P b q
         -> valOf P (posState q) B ≡ evalAt P c0 c1 B q
-      ih q vq = hintikka mbc cyc B (sub_□ P mA) q vq
+      ih q vq = hintikka mbc cyc B (sub-□ P mA) q vq
 
       -- □ B holds: (T2) carries it, (S2) delivers B at every stage
       □Holds : valOf P (posState pos) (□ B) ≡ true
-             -> evalAt P c0 c1 (□ B) pos ≡ true
+            -> evalAt P c0 c1 (□ B) pos ≡ true
       □Holds e =
-        all_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
+        all-intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
         where
           atQ : (q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 B q ≡ true
           atQ q m =
@@ -142,18 +142,18 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
       allFalse : valOf P (posState pos) (□ B) ≡ false
               -> evalAt P c0 c1 (□ B) pos ≡ false
       allFalse e =
-        fromGF (globalFulfil P b c0 c1 mbc cyc vp B (□Args_of (sub P) mA) e)
+        fromGF (globalFulfil P b c0 c1 mbc cyc vp B (□Args-of (sub P) mA) e)
         where
           fromGF : (Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 pos ×
                                      valOf P (posState q) B ≡ false)
                 -> evalAt P c0 c1 (□ B) pos ≡ false
           fromGF (q , mq , eq) =
-            eval□_false P c0 c1 B pos q mq
+            eval□-false P c0 c1 B pos q mq
               (trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
                      eq)
 
       on□ : (x : Bool) -> valOf P (posState pos) (□ B) ≡ x
-           -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
+         -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
       on□ true  e = trans e (sym (□Holds e))
       on□ false e = trans e (sym (allFalse e))
 
@@ -193,7 +193,7 @@ notRefutable P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) e d =
     r = mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr
 
     holds : evalAt P c0 c1 P (v0 , rest) ≡ true
-    holds = trans (sym (hintStart P v0 r P (sub_self P))) e
+    holds = trans (sym (hintStart P v0 r P (sub-self P))) e
 
     negated : ¬ᵇ evalAt P c0 c1 P (v0 , rest) ≡ true
     negated = soundRun P v0 r d 0
@@ -204,7 +204,7 @@ notRefutable P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) e d =
 -- that state is the certificate.
 
 notRefutableSat : (P : Formula) -> satB P ≡ true -> ⊢ ¬ P -> Empty
-notRefutableSat P e d = go (any_true (λ v -> valOf P v P) (Uinf P) e)
+notRefutableSat P e d = go (any-true (λ v -> valOf P v P) (Uinf P) e)
   where
     go : (Σ[ v ∈ Val ] v ∈ Uinf P × valOf P v P ≡ true) -> Empty
     go (v , m , ev) = notRefutable P v (runOf P v m (lasso P v m)) ev d
@@ -216,5 +216,5 @@ notRefutableSat P e d = go (any_true (λ v -> valOf P v P) (Uinf P) e)
 -- not a computation -- the certificate is the lasso of LTL.Lasso, and
 -- the proof is Hintikka's lemma at stage 0 against soundness.
 
-◇P_consistent : ⊢ ¬ ◇P -> Empty
-◇P_consistent = notRefutableSat ◇P satB_◇P
+◇P-consistent : ⊢ ¬ ◇P -> Empty
+◇P-consistent = notRefutableSat ◇P satB-◇P

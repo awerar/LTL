@@ -24,15 +24,15 @@ open import LTL.Elim public
 ------------------------------------------------------------------------
 -- The eventualities really are box-subformulas
 
-□Args_mem : (As : List Formula) {A : Formula}
-           -> A ∈ □Args As -> □ A ∈ As
-□Args_mem []             ()
-□Args_mem (var n   ∷ As) m         = there (□Args_mem As m)
-□Args_mem (¬ B   ∷ As) m         = there (□Args_mem As m)
-□Args_mem (B ⇒ C ∷ As) m         = there (□Args_mem As m)
-□Args_mem (○ B   ∷ As) m         = there (□Args_mem As m)
-□Args_mem (□ B   ∷ As) here      = here
-□Args_mem (□ B   ∷ As) (there m) = there (□Args_mem As m)
+□Args-mem : (As : List Formula) {A : Formula}
+         -> A ∈ □Args As -> □ A ∈ As
+□Args-mem []           ()
+□Args-mem (var n ∷ As) m         = there (□Args-mem As m)
+□Args-mem (¬ B   ∷ As) m         = there (□Args-mem As m)
+□Args-mem (B ⇒ C ∷ As) m         = there (□Args-mem As m)
+□Args-mem (○ B   ∷ As) m         = there (□Args-mem As m)
+□Args-mem (□ B   ∷ As) here      = here
+□Args-mem (□ B   ∷ As) (there m) = there (□Args-mem As m)
 
 ------------------------------------------------------------------------
 -- The reason a state is dropped
@@ -44,8 +44,8 @@ data Reason (P : Formula) (us : List Val) (v : Val) : Set where
       -> v ∈ gfpW P us A
       -> Reason P us v
 
--- Inverting r2 now goes through evList_of: the disjunct that fired names a
--- PAIR, and evList_of says the pair is an eventuality of P together with its
+-- Inverting r2 now goes through evList-of: the disjunct that fired names a
+-- PAIR, and evList-of says the pair is an eventuality of P together with its
 -- own gfp set.  That is the only trace of the hoisting of LTL.Elim in the
 -- proofs.
 
@@ -59,9 +59,9 @@ dropped P us v e =
     fromPair : (g : Ev) -> g ∈ evList P us -> badEv P v g ≡ true
             -> Reason P us v
     fromPair (A , W) mg q =
-      byR2 A (□Args_mem (sub P) (fst (evList_of P us mg)))
+      byR2 A (□Args-mem (sub P) (fst (evList-of P us mg)))
            (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (v ∈ᵛ W) q))
-           (subst (λ Z -> v ∈ Z) (snd (evList_of P us mg))
+           (subst (λ Z -> v ∈ Z) (snd (evList-of P us mg))
                   (∈ᵛ-sound v W (andTrueR (pending P v A) (v ∈ᵛ W) q)))
 
     fromSig : (Σ[ g ∈ Ev ] g ∈ evList P us × badEv P v g ≡ true)
@@ -69,7 +69,7 @@ dropped P us v e =
     fromSig (g , m , q) = fromPair g m q
 
     fromR2 : r2 P (evList P us) v ≡ true -> Reason P us v
-    fromR2 e2 = fromSig (any_true (badEv P v) (evList P us) e2)
+    fromR2 e2 = fromSig (any-true (badEv P v) (evList P us) e2)
 
 ------------------------------------------------------------------------
 -- The printed form.
@@ -97,18 +97,18 @@ reasons P us = map snd (elimTrace P us)
 -- so the closure stops there and the single round removes it by (R1).  Ben-Ari's
 -- own example therefore never exercises (R2) in this formulation.
 
-trace_¬BenAri : reasons ¬BenAri (Ust ¬BenAri) ≡ true ∷ []
-trace_¬BenAri = refl
+trace-¬BenAri : reasons ¬BenAri (Ust ¬BenAri) ≡ true ∷ []
+trace-¬BenAri = refl
 
 -- and the second round removes nothing, so the procedure has converged.
 
-trace_¬BenAri2 : reasons ¬BenAri (elimRound ¬BenAri (Ust ¬BenAri)) ≡ []
-trace_¬BenAri2 = refl
+trace-¬BenAri2 : reasons ¬BenAri (elimRound ¬BenAri (Ust ¬BenAri)) ≡ []
+trace-¬BenAri2 = refl
 
 -- ◇ p loses no state at all.
 
-trace_◇P : reasons ◇P (Ust ◇P) ≡ []
-trace_◇P = refl
+trace-◇P : reasons ◇P (Ust ◇P) ≡ []
+trace-◇P = refl
 
 ------------------------------------------------------------------------
 -- A small example that does exercise (R2).
@@ -131,7 +131,7 @@ trace_◇P = refl
 -- Nothing survives, and in particular no survivor contains ¬ bnb.
 --
 -- The (R2) round is the one that matters: extractR2 -- the loop invariant,
--- (Ind) and all -- is on the path from satB_¬Bnb to bnbProof in LTL.Extract.
+-- (Ind) and all -- is on the path from satB-¬Bnb to bnbProof in LTL.Extract.
 
 bnb : Formula
 bnb = □ (var zero) ⇒ □ ○ (var zero)
@@ -139,21 +139,21 @@ bnb = □ (var zero) ⇒ □ ○ (var zero)
 ¬Bnb : Formula
 ¬Bnb = ¬ bnb
 
-Ust_¬Bnb : length (Ust ¬Bnb) ≡ 2
-Ust_¬Bnb = refl
+Ust-¬Bnb : length (Ust ¬Bnb) ≡ 2
+Ust-¬Bnb = refl
 
-trace_¬Bnb : reasons ¬Bnb (Ust ¬Bnb) ≡ true ∷ []
-trace_¬Bnb = refl
+trace-¬Bnb : reasons ¬Bnb (Ust ¬Bnb) ≡ true ∷ []
+trace-¬Bnb = refl
 
-trace_¬Bnb2 : reasons ¬Bnb (elimRound ¬Bnb (Ust ¬Bnb)) ≡ false ∷ []
-trace_¬Bnb2 = refl
+trace-¬Bnb2 : reasons ¬Bnb (elimRound ¬Bnb (Ust ¬Bnb)) ≡ false ∷ []
+trace-¬Bnb2 = refl
 
-Uinf_¬Bnb : length (Uinf ¬Bnb) ≡ 0
-Uinf_¬Bnb = refl
+Uinf-¬Bnb : length (Uinf ¬Bnb) ≡ 0
+Uinf-¬Bnb = refl
 
-satB_¬Bnb : satB ¬Bnb ≡ false
-satB_¬Bnb = refl
+satB-¬Bnb : satB ¬Bnb ≡ false
+satB-¬Bnb = refl
 
 -- and the converse, which Hintikka's lemma needs: a box-subformula names an
--- eventuality.  That is □Args_of, and it followed □Args down to LTL.Skel
+-- eventuality.  That is □Args-of, and it followed □Args down to LTL.Skel
 -- in Phase 9, where the (S2) premise of LTL.CompletePC needs it.

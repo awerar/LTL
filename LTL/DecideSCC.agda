@@ -98,8 +98,8 @@ trapFail P C A mbx z w (reachesBy as t) pd atW =
 
 data TrapLoop (P : Formula) (v0 : Val) : Set where
   trapLoop : (C : List Val) -> v0 ∈ C
-         -> C ⊆ Ust P
-         -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> TrapLoop P v0
+          -> C ⊆ Ust P
+          -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> TrapLoop P v0
 
 fairTrapLoop : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
             -> FairLoop (Ust P) (step P) (evPreds P) v0 -> TrapLoop P v0
@@ -165,7 +165,7 @@ fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
         onW : (Σ[ w ∈ Val ] w ∈ cy × evPred P A w ≡ true)
            -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
         onW (w , mw , ew) =
-          trapFail P C A (□Args_mem (sub P) mA) z w (reachW z mz w mw) pd
+          trapFail P C A (□Args-mem (sub P) mA) z w (reachW z mz w mw) pd
                    (evWitness P A w ew)
 
 -- and then the trap survives the elimination, so G38 applies.
@@ -199,12 +199,12 @@ buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
       notTrue (valOf (¬ Q) v0 Q)
         (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
                               (¬ᵇ valOf (¬ Q) v0 Q)
-                                  (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
+                                  (stateOk (¬ Q) v0 m (sub-self (¬ Q)))))
                ev)
 
     evalFalse : eval (¬ Q) v0 r Q 0 ≡ false
     evalFalse =
-      trans (sym (hintStart (¬ Q) v0 r Q (there (sub_self Q)))) valQ
+      trans (sym (hintStart (¬ Q) v0 r Q (there (sub-self Q)))) valQ
 
     noDeriv : ⊢ Q -> Empty
     noDeriv d = true≢false (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
@@ -246,11 +246,11 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
 -- forty-six statements of LTL.Examples, is checkpoint C8 and lives in
 -- LTL.Compare, so that it is clear which side of the timing rule it is on.
 
-decideSCC_benAri : isProof (decideSCC benAri) ≡ true
-decideSCC_benAri = refl
+decideSCC-benAri : isProof (decideSCC benAri) ≡ true
+decideSCC-benAri = refl
 
-decideSCC_bnb : isProof (decideSCC bnb) ≡ true
-decideSCC_bnb = refl
+decideSCC-bnb : isProof (decideSCC bnb) ≡ true
+decideSCC-bnb = refl
 
-decideSCC_◇P : isProof (decideSCC ◇P) ≡ false
-decideSCC_◇P = refl
+decideSCC-◇P : isProof (decideSCC ◇P) ≡ false
+decideSCC-◇P = refl

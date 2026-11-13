@@ -84,27 +84,27 @@ vecIFin (suc m) =
 -- (length (sub P)), so the length-n predicate is a correct E for it, and then
 -- the search never touches the enumeration.
 
-allVecs_len : (n : Nat) {v : Val} -> v ∈ allVecs n -> hasLength n v ≡ true
-allVecs_len zero    here      = refl
-allVecs_len zero    (there ())
-allVecs_len (suc n) m =
+allVecs-len : (n : Nat) {v : Val} -> v ∈ allVecs n -> hasLength n v ≡ true
+allVecs-len zero    here      = refl
+allVecs-len zero    (there ())
+allVecs-len (suc n) m =
   sumElim (fromHalf true) (fromHalf false)
           (memAppCase (map (λ bs -> true  ∷ bs) (allVecs n))
                       (map (λ bs -> false ∷ bs) (allVecs n)) m)
   where
     fromHalf : {v : Val} (b : Bool) -> v ∈ map (λ bs -> b ∷ bs) (allVecs n)
             -> hasLength (suc n) v ≡ true
-    fromHalf {v} b mv = fromSig (map_mem_inv (λ bs -> b ∷ bs) (allVecs n) mv)
+    fromHalf {v} b mv = fromSig (map-mem-inv (λ bs -> b ∷ bs) (allVecs n) mv)
       where
         fromSig : (Σ[ w ∈ Val ] w ∈ allVecs n × v ≡ b ∷ w)
                -> hasLength (suc n) v ≡ true
         fromSig (w , mw , ew) =
-          subst (λ u -> hasLength (suc n) u ≡ true) (sym ew) (allVecs_len n mw)
+          subst (λ u -> hasLength (suc n) u ≡ true) (sym ew) (allVecs-len n mw)
 
 stAllSat : (P : Formula) -> AllSat (hasLength (length (sub P))) (St P)
 stAllSat P x m =
-  allVecs_len (length (sub P))
-              (filter_sub (isState P) (allVecs (length (sub P))) m)
+  allVecs-len (length (sub P))
+              (filter-sub (isState P) (allVecs (length (sub P))) m)
 
 ------------------------------------------------------------------------
 -- The guard of Barras, refined by Gonthier (siles.pdf, section 5).

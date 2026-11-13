@@ -29,18 +29,18 @@ open import LTL.StepLemma public
 ------------------------------------------------------------------------
 -- Every state has the length chi expects
 
-allLen_mem : {n : Nat} {vs : List Val} -> AllLen n vs -> {v : Val}
+allLen-mem : {n : Nat} {vs : List Val} -> AllLen n vs -> {v : Val}
           -> v ∈ vs -> length v ≡ n
-allLen_mem alNil         ()
-allLen_mem (alCons e al) here      = e
-allLen_mem (alCons e al) (there m) = allLen_mem al m
+allLen-mem alNil         ()
+allLen-mem (alCons e al) here      = e
+allLen-mem (alCons e al) (there m) = allLen-mem al m
 
 stAllLen : (P : Formula) -> AllLen (length (sub P)) (St P)
-stAllLen P = allLen_filter (isState P) (allVecs_allLen (length (sub P)))
+stAllLen P = allLen-filter (isState P) (allVecs-allLen (length (sub P)))
 
 stLen : (P : Formula) {v : Val} -> v ∈ St P
      -> length v ≡ length (sub P)
-stLen P m = allLen_mem (stAllLen P) m
+stLen P m = allLen-mem (stAllLen P) m
 
 ------------------------------------------------------------------------
 -- beta_U as a disjunction indexed by states.
@@ -67,8 +67,8 @@ betaIntro : (P : Formula) (ws : List Val) {w : Val}
 betaIntro P ws m = ⋁Intro (map (chi P) ws) (memMap (chi P) m)
 
 ¬Beta : (P : Formula) (ws : List Val)
-       -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
-       -> ⊢ ¬ (beta P ws)
+     -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
+     -> ⊢ ¬ (beta P ws)
 ¬Beta P ws h =
   refute {beta P ws} {⊤}
          (liftP deriv⊤)
@@ -94,7 +94,7 @@ Refuted P us =
 -- stepLemma gives the successors of u inside St P, while (R1) speaks of U_k;
 -- but a successor lying in U_k would be a member of succs P us u, which (R1)
 -- says is empty.  So every disjunct of beta_S is refuted by the hypothesis,
--- (D1) puts the refutation under nxt, and (Lin) brings the negation out.
+-- (D1) puts the refutation under ○, and (Lin) brings the negation out.
 
 extractR1 : (P : Formula) (us : List Val) (u : Val)
          -> u ∈ Ust P -> Refuted P us -> r1 P us u ≡ true
@@ -109,7 +109,7 @@ extractR1 P us u mu ih e1 =
         go : (b : Bool) -> w ∈ᵛ us ≡ b -> w ∈ᵛ us ≡ false
         go false eb = eb
         go true  eb =
-          emptyElim (null_mem (succs P us u) e1
+          emptyElim (null-mem (succs P us u) e1
                       (succsIn P us u (∈ᵛ-sound w us eb)
                                (snd (succsMem P (St P) u m))))
 
@@ -149,7 +149,7 @@ extractR2 P us u mu sb ih A mbox pend mgfp = refute chi□ chi¬□
         eachA : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ A
         eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b))
                           (gfpHolds P us A m)
-                          (chiProjVal P w (lenW w m) (sub_□ P mbox))
+                          (chiProjVal P w (lenW w m) (sub-□ P mbox))
 
     -- (ii)
     toW : (w : Val) -> w ∈ W
@@ -208,7 +208,7 @@ roundRefuted P us sb ih u mu e = onMem (u ∈ᵛ us) refl
         kf : (b : Bool) -> keep P us gs u ≡ b -> keep P us gs u ≡ false
         kf false ek = ek
         kf true  ek = emptyElim (∈ᵛ-false u (elimRound P us) e
-                                          (filter_true (keep P us gs) us mus ek))
+                                          (filter-true (keep P us gs) us mus ek))
 
         byReason : Reason P us u -> ⊢ ¬ (chi P u)
         byReason (byR1 e1)                = extractR1 P us u mu ih e1
@@ -220,7 +220,7 @@ roundRefuted P us sb ih u mu e = onMem (u ∈ᵛ us) refl
 
 elimRoundSub : (P : Formula) (us : List Val)
             -> us ⊆ Ust P -> elimRound P us ⊆ Ust P
-elimRoundSub P us sb x m = sb x (filter_sub (keep P us (evList P us)) us m)
+elimRoundSub P us sb x m = sb x (filter-sub (keep P us (evList P us)) us m)
 
 ustRefuted : (P : Formula) -> Refuted P (Ust P)
 ustRefuted P u mu e = emptyElim (∈ᵛ-false u (Ust P) e mu)
@@ -254,9 +254,9 @@ uinfRefuted P =
 extract : (P : Formula) {v : Val} -> v ∈ removed P -> ⊢ ¬ (chi P v)
 extract P {v} m =
   uinfRefuted P v
-              (filter_sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m)
+              (filter-sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m)
               (notTrue (v ∈ᵛ Uinf P)
-                       (filter_prop (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m))
+                       (filter-prop (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m))
 
 ------------------------------------------------------------------------
 -- The provable branch of Theorem 6.1.
@@ -287,7 +287,7 @@ provableEach Q e w m = outer (w ∈ᵛ Ust R) refl
     fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
     fromR ev =
       ⇒Trans (subst (λ c -> ⊢ (chi R w) ⇒ (lit R c)) ev
-                        (chiProjVal R w (stLen R m) (sub_self R)))
+                        (chiProjVal R w (stLen R m) (sub-self R)))
                dne
 
     -- w never joined the search, so by ustSeed it does not contain R
@@ -306,12 +306,12 @@ provableEach Q e w m = outer (w ∈ᵛ Ust R) refl
         -- w survived, so satB says it does not contain R either
         go : (b : Bool) -> w ∈ᵛ Uinf R ≡ b -> ⊢ (chi R w) ⇒ Q
         go true  eb =
-          fromR (any_false (λ z -> valOf R z R) (Uinf R) e
+          fromR (any-false (λ z -> valOf R z R) (Uinf R) e
                            (∈ᵛ-sound w (Uinf R) eb))
         -- w was removed, so chi_w is refutable
         go false eb =
           mp ¬Elim
-             (extract R (filter_true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R))
+             (extract R (filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R))
                                      (Ust R) mu (cong ¬ᵇ_ eb)))
 
 provable : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
@@ -327,12 +327,12 @@ provable Q e =
 -- refutation branch of Theorem 6.1 is complete on its own.
 
 benAriProof : ⊢ benAri
-benAriProof = provable benAri satB_¬BenAri
+benAriProof = provable benAri satB-¬BenAri
 
 -- The same for  □ p ⇒ □ ○ p .  This is the example that matters as a
--- test: by trace_¬Bnb of LTL.Trace its refutation passes through case (R2),
+-- test: by trace-¬Bnb of LTL.Trace its refutation passes through case (R2),
 -- so extractR2 -- the loop invariant, (Ind) and all -- is on the path from
--- satB_¬Bnb to this derivation, where for benAri only extractR1 is.
+-- satB-¬Bnb to this derivation, where for benAri only extractR1 is.
 
 bnbProof : ⊢ bnb
-bnbProof = provable bnb satB_¬Bnb
+bnbProof = provable bnb satB-¬Bnb

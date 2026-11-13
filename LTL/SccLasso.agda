@@ -137,7 +137,7 @@ evPredsMem P m = memMap (evPred P) m
 
 evPredsInv : (P : Formula) {g : Pred} -> g ∈ evPreds P
           -> Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred P A
-evPredsInv P m = map_mem_inv (evPred P) (□Args (sub P)) m
+evPredsInv P m = map-mem-inv (evPred P) (□Args (sub P)) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
 -- pending there, so the first disjunct is out and the second says A fails.
@@ -214,7 +214,7 @@ sccLasso P vs sb v0 (fairLoop r st cy ts tc nn wit) =
     cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
       where
         mbx : □ A ∈ sub P
-        mbx = □Args_mem (sub P) mA
+        mbx = □Args-mem (sub P) mA
 
         -- Still pending at the base point: go out to the witness the graph
         -- layer chose for evPred P A.
@@ -363,6 +363,6 @@ lasso□P = refl
 -- The run, unwound, to show that runOf accepts the result unchanged: the stem
 -- of ◇ p walked out, then the cycle forever.
 
-scc◇P_run : map (sccState ◇P sPending refl) (0 ∷ 1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ≡
+scc◇P-run : map (sccState ◇P sPending refl) (0 ∷ 1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ≡
                  sPending ∷ sFulfil ∷ sSink ∷ sSink ∷ sSink ∷ sSink ∷ []
-scc◇P_run = refl
+scc◇P-run = refl

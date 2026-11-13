@@ -18,7 +18,7 @@
 -- and nothing is ever moved from one atom list to another.
 --
 -- NOT mkV.  LTL.Closure does the same construction with Ats := atoms (sub P) --
--- mkV, atomBits, valFromEq, mkV_id -- and those are the wrong lemmas here: the
+-- mkV, atomBits, valFromEq, mkV-id -- and those are the wrong lemmas here: the
 -- atom list of a (PC) formula is a different, larger list, if only because
 -- ⋀ [] is ⊤ and so contributes var 0.  They would appear to typecheck and
 -- then fail on an indexOf.  valOfSkelVec below is the bridge that is actually
@@ -29,8 +29,8 @@
 --     skelVec Ats a P  =  map (valFrom Ats a) (sub P)
 --
 -- is a STATE of P as soon as the (S2) instances hold under the same reading:
--- (S1) and coherence come for free, because valFrom is compositional on neg and
--- imp BY DEFINITION and because valOfSkelVec makes the bit at a position depend
+-- (S1) and coherence come for free, because valFrom is compositional on ¬ and
+-- ⇒ BY DEFINITION and because valOfSkelVec makes the bit at a position depend
 -- on the formula there rather than on the position.  That is the whole content
 -- of the short Lemma 2.6, and the (S2) proviso is exactly the premise -- the E
 -- P of section 7 -- that LTL.CompletePC discharges with |□Args| instances of
@@ -41,7 +41,7 @@ module LTL.Taut where
 open import LTL.State public
 
 ------------------------------------------------------------------------
--- Booleans.  (⇒IntroB, ⇒TrueB, notTrue and filter_true live in LTL.Prelude,
+-- Booleans.  (⇒IntroB, ⇒TrueB, notTrue and filter-true live in LTL.Prelude,
 -- which both branches of the import graph see.)
 
 boolSelf : (b : Bool) -> b ⇒ᵇ b ≡ true
@@ -100,8 +100,8 @@ skel∧Intro false y     () e2
 -- true by boolSelf whatever the atom list makes of var 0.
 
 ⋁True : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
-        -> C ∈ Cs -> valFrom Ats a C ≡ true
-        -> valFrom Ats a (⋁ Cs) ≡ true
+     -> C ∈ Cs -> valFrom Ats a C ≡ true
+     -> valFrom Ats a (⋁ Cs) ≡ true
 ⋁True Ats a []       ()       e
 ⋁True Ats a (D ∷ Cs) here     e =
   skel∨Inl (valFrom Ats a D) (valFrom Ats a (⋁ Cs)) e
@@ -110,8 +110,8 @@ skel∧Intro false y     () e2
            (⋁True Ats a Cs m e)
 
 ⋀True : (Ats : List Formula) (a : Val) (Cs : List Formula)
-        -> ({C : Formula} -> C ∈ Cs -> valFrom Ats a C ≡ true)
-        -> valFrom Ats a (⋀ Cs) ≡ true
+     -> ({C : Formula} -> C ∈ Cs -> valFrom Ats a C ≡ true)
+     -> valFrom Ats a (⋀ Cs) ≡ true
 ⋀True Ats a []       h = boolSelf (valFrom Ats a (var zero))
 ⋀True Ats a (D ∷ Cs) h =
   skel∧Intro (valFrom Ats a D) (valFrom Ats a (⋀ Cs))
@@ -122,7 +122,7 @@ skel∧Intro false y     () e2
 --
 -- Read the atoms by a, read every formula of As by the skeleton, and collect
 -- the answers: the literals of the resulting chi are true one by one, since
--- lit A true is A and lit A false is ¬ A and valFrom is ¬ᵇ at neg.  So
+-- lit A true is A and lit A false is ¬ A and valFrom is ¬ᵇ at ¬.  So
 -- chi of that row is true -- which is the witness disjunct for both of the
 -- tautologies of LTL.CompletePC.
 
@@ -169,9 +169,9 @@ valOfSkelVec P Ats a A m =
 ------------------------------------------------------------------------
 -- skelVec is a state, given (S2).
 --
--- (S1) at neg and at imp, and coherence at every position, hold for no reason
+-- (S1) at ¬ and at ⇒, and coherence at every position, hold for no reason
 -- at all: valOfSkelVec says the bit at A is valFrom's reading of A, and valFrom
--- IS ¬ᵇ at neg and ⇒ᵇ at imp.  This is the same observation that makes the
+-- IS ¬ᵇ at ¬ and ⇒ᵇ at ⇒.  This is the same observation that makes the
 -- (PC) case of soundness one line (LTL.Sound) -- there against evalAt, here
 -- against the vector's own valOf.
 --
@@ -191,24 +191,24 @@ s2Fml A = □ A ⇒ A
 okAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (A : Formula)
         -> A ∈ sub P -> □Ok Ats a P
         -> okAt P (skelVec Ats a P) A ≡ true
-okAtSkel Ats a P (var n)   m boxOk = refl
+okAtSkel Ats a P (var n) m boxOk = refl
 okAtSkel Ats a P (○ B)   m boxOk = refl
 okAtSkel Ats a P (¬ B)   m boxOk =
   boolEqOf (valOf P (skelVec Ats a P) (¬ B))
            (¬ᵇ valOf P (skelVec Ats a P) B)
            (trans (valOfSkelVec P Ats a (¬ B) m)
                   (cong ¬ᵇ_
-                        (sym (valOfSkelVec P Ats a B (sub_¬ P m)))))
+                        (sym (valOfSkelVec P Ats a B (sub-¬ P m)))))
 okAtSkel Ats a P (B ⇒ C) m boxOk =
   boolEqOf (valOf P (skelVec Ats a P) (B ⇒ C))
            (valOf P (skelVec Ats a P) B ⇒ᵇ valOf P (skelVec Ats a P) C)
            (trans (valOfSkelVec P Ats a (B ⇒ C) m)
                   (cong₂ _⇒ᵇ_
-                         (sym (valOfSkelVec P Ats a B (sub_⇒L P m)))
-                         (sym (valOfSkelVec P Ats a C (sub_⇒R P m)))))
+                         (sym (valOfSkelVec P Ats a B (sub-⇒L P m)))
+                         (sym (valOfSkelVec P Ats a C (sub-⇒R P m)))))
 okAtSkel Ats a P (□ B)   m boxOk =
   trans (cong₂ _⇒ᵇ_ (valOfSkelVec P Ats a (□ B) m)
-                    (valOfSkelVec P Ats a B (sub_□ P m)))
+                    (valOfSkelVec P Ats a B (sub-□ P m)))
         (boxOk B m)
 
 allOkSkel : (Ats : List Formula) (a : Val) (P : Formula) (As : List Formula)
@@ -221,7 +221,7 @@ allOkSkel Ats a P (A ∷ As) sb boxOk =
            (allOkSkel Ats a P As (λ m -> sb (there m)) boxOk)
 
 -- Coherence.  The bit at position i is the skeleton's reading of the formula
--- AT position i, by nth_map, and the bit at the first occurrence of that same
+-- AT position i, by nth-map, and the bit at the first occurrence of that same
 -- formula is the same reading, by valOfSkelVec.  So the two agree, which is
 -- what cohAt asks; the vector represents a function on the SET Sub(P), which is
 -- the clause of FORMALISATION-PLAN.md section 0.
@@ -232,9 +232,9 @@ cohAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (i : Nat)
 cohAtSkel Ats a P i l =
   boolEqOf (bitAt (skelVec Ats a P) i)
            (valOf P (skelVec Ats a P) (nth (sub P) i ⊥))
-           (trans (nth_map (valFrom Ats a) (sub P) i l ⊥ false)
+           (trans (nth-map (valFrom Ats a) (sub P) i l ⊥ false)
                   (sym (valOfSkelVec P Ats a (nth (sub P) i ⊥)
-                                     (nth_mem (sub P) i l ⊥))))
+                                     (nth-mem (sub P) i l ⊥))))
 
 allCohSkel : (Ats : List Formula) (a : Val) (P : Formula) (n : Nat)
           -> ((i : Nat) -> i < n -> i < length (sub P))
@@ -256,9 +256,9 @@ isStateSkel Ats a P boxOk =
 memStSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
          -> skelVec Ats a P ∈ St P
 memStSkel Ats a P boxOk =
-  filter_true (isState P) (allVecs (length (sub P)))
-              (allVecs_complete (length (sub P)) (skelVec Ats a P)
-                                (map_length (valFrom Ats a) (sub P)))
+  filter-true (isState P) (allVecs (length (sub P)))
+              (allVecs-complete (length (sub P)) (skelVec Ats a P)
+                                (map-length (valFrom Ats a) (sub P)))
               (isStateSkel Ats a P boxOk)
 
 ------------------------------------------------------------------------
@@ -295,16 +295,16 @@ betaSkel Ats a P boxOk =
 -- ⇒Chain is the boolean half, and it says the only thing an implication
 -- chain ever says: reading it as true is the same as assuming its premises.
 -- □Chain is that at As := map s2Fml (□Args (sub P)), where the premises are
--- (S2); the caller turns a box-subformula into a member with □Args_of.
+-- (S2); the caller turns a box-subformula into a member with □Args-of.
 
 ⇒List : List Formula -> Formula -> Formula
 ⇒List []       C = C
 ⇒List (A ∷ As) C = A ⇒ (⇒List As C)
 
 ⇒Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
-        -> ((({A : Formula} -> A ∈ As -> valFrom Ats a A ≡ true)
-              -> valFrom Ats a C ≡ true))
-        -> valFrom Ats a (⇒List As C) ≡ true
+      -> ((({A : Formula} -> A ∈ As -> valFrom Ats a A ≡ true)
+            -> valFrom Ats a C ≡ true))
+      -> valFrom Ats a (⇒List As C) ≡ true
 ⇒Chain Ats a []       C h = h (λ ())
 ⇒Chain Ats a (A ∷ As) C h =
   ⇒IntroB (valFrom Ats a A) (valFrom Ats a (⇒List As C))
@@ -324,8 +324,8 @@ S2At Ats a As = (B : Formula) -> B ∈ As
              -> valFrom Ats a (□ B) ⇒ᵇ valFrom Ats a B ≡ true
 
 □Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
-        -> (S2At Ats a As -> valFrom Ats a C ≡ true)
-        -> valFrom Ats a (⇒List (map s2Fml As) C) ≡ true
+      -> (S2At Ats a As -> valFrom Ats a C ≡ true)
+      -> valFrom Ats a (⇒List (map s2Fml As) C) ≡ true
 □Chain Ats a As C h =
   ⇒Chain Ats a (map s2Fml As) C (λ g -> h (λ B mB -> g (memMap s2Fml mB)))
 
@@ -353,9 +353,9 @@ _⇐_ : Formula -> Formula -> Formula
 C ⇐ D = D ⇒ C
 
 ⋁ElimTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) (C : Formula)
-            -> ({D : Formula} -> D ∈ Cs
-                  -> valFrom Ats a (C ⇐ D) ≡ true)
-            -> valFrom Ats a (⋁ Cs ⇒ C) ≡ true
+         -> ({D : Formula} -> D ∈ Cs
+               -> valFrom Ats a (C ⇐ D) ≡ true)
+         -> valFrom Ats a (⋁ Cs ⇒ C) ≡ true
 ⋁ElimTrue Ats a Cs C h =
   ⇒IntroB (valFrom Ats a (⋁ Cs)) (valFrom Ats a C) (go Cs h)
   where
@@ -388,7 +388,7 @@ C ⇐ D = D ⇒ C
 -- conjunction one of whose conjuncts is  lit (¬ Q) (valOf (¬ Q) w (¬ Q))
 -- -- and the hypothesis says that bit is false, so the conjunct is
 -- ¬ ¬ Q.  A conjunction implies its conjuncts, and valFrom is ¬ᵇ at
--- neg by definition, so a row making chi_w true makes  not not Q  true and
+-- ¬ by definition, so a row making chi_w true makes  not not Q  true and
 -- hence Q.  Nothing about Q's own structure is used; Q is read by the skeleton
 -- like anything else.
 --
@@ -417,8 +417,8 @@ boolNotNot false ()
 -- the converse of ⋀True: a true conjunction has true conjuncts
 
 ⋀ProjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
-            -> C ∈ Cs -> valFrom Ats a (⋀ Cs) ≡ true
-            -> valFrom Ats a C ≡ true
+         -> C ∈ Cs -> valFrom Ats a (⋀ Cs) ≡ true
+         -> valFrom Ats a C ≡ true
 ⋀ProjTrue Ats a []       ()       e
 ⋀ProjTrue Ats a (D ∷ Cs) here     e =
   skel∧Fst (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e
@@ -430,12 +430,12 @@ boolNotNot false ()
 -- The literal of P itself inside chi P w.
 --
 -- sub P begins with P (LTL.Sub) and P ≡ᶠ P is true, so indexOf finds it at
--- position zero, which is also where sub_self points.  The five clauses are
--- the five clauses of sub_self, and each is the same one line: nothing is
+-- position zero, which is also where sub-self points.  The five clauses are
+-- the five clauses of sub-self, and each is the same one line: nothing is
 -- proved by induction, only that the head of sub P is P.
 
-idxSelf : (P : Formula) -> indexOf (sub P) P ≡ index (sub_self P)
-idxSelf (var n)   = cong (λ b -> indexOfCons b (indexOf [] (var n))) (≡ᶠ-refl (var n))
+idxSelf : (P : Formula) -> indexOf (sub P) P ≡ index (sub-self P)
+idxSelf (var n) = cong (λ b -> indexOfCons b (indexOf [] (var n))) (≡ᶠ-refl (var n))
 idxSelf (¬ A)   = cong (λ b -> indexOfCons b (indexOf (sub A) (¬ A))) (≡ᶠ-refl (¬ A))
 idxSelf (A ⇒ B) =
   cong (λ b -> indexOfCons b (indexOf (sub A ++ sub B) (A ⇒ B)))
@@ -448,7 +448,7 @@ litSelf : (P : Formula) (w : Val) -> length w ≡ length (sub P)
 litSelf P w len =
   subst (λ n -> lit P (bitAt w n) ∈ litList (sub P) w)
         (sym (idxSelf P))
-        (litList_mem (sub P) w len (sub_self P))
+        (litList-mem (sub P) w len (sub-self P))
 
 ------------------------------------------------------------------------
 -- G34.
@@ -461,7 +461,7 @@ tautChi : (Q : Formula) (w : Val) -> length w ≡ length (sub (¬ Q))
        -> valOf (¬ Q) w (¬ Q) ≡ false
        -> isTaut ((chi (¬ Q) w) ⇒ Q) ≡ true
 tautChi Q w len ev =
-  all_intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
+  all-intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
   where
     R : Formula
     R = ¬ Q
@@ -528,12 +528,12 @@ insFIn A Bs {X} m = go (A ∈ᶠ Bs) refl
         onM (there k) = inr k
 
 atomsIn : (As : List Formula) {X : Formula} -> X ∈ atoms As -> X ∈ As
-atomsIn []             ()
-atomsIn (var n   ∷ As) {X} m =
+atomsIn []           ()
+atomsIn (var n ∷ As) {X} m =
   sumElim (λ e -> subst (λ Y -> Y ∈ var n ∷ As) (sym e) here)
           (λ k -> there (atomsIn As k)) (insFIn (var n) (atoms As) m)
-atomsIn (¬ B   ∷ As)     m = there (atomsIn As m)
-atomsIn (B ⇒ C ∷ As)     m = there (atomsIn As m)
+atomsIn (¬ B   ∷ As) m = there (atomsIn As m)
+atomsIn (B ⇒ C ∷ As) m = there (atomsIn As m)
 atomsIn (○ B   ∷ As) {X} m =
   sumElim (λ e -> subst (λ Y -> Y ∈ ○ B ∷ As) (sym e) here)
           (λ k -> there (atomsIn As k)) (insFIn (○ B) (atoms As) m)
@@ -583,16 +583,16 @@ skelAgree : (Ats : List Formula) (a : Val) (P : Formula) (v : Val)
                -> valFrom Ats a X ≡ valOf P v X)
          -> (A : Formula) -> A ∈ sub P
          -> valFrom Ats a A ≡ valOf P v A
-skelAgree Ats a P v ok at (var n)   m = at (var n) m refl
+skelAgree Ats a P v ok at (var n) m = at (var n) m refl
 skelAgree Ats a P v ok at (○ A)   m = at (○ A) m refl
 skelAgree Ats a P v ok at (□ A)   m = at (□ A) m refl
 skelAgree Ats a P v ok at (¬ A)   m =
-  trans (cong ¬ᵇ_ (skelAgree Ats a P v ok at A (sub_¬ P m)))
+  trans (cong ¬ᵇ_ (skelAgree Ats a P v ok at A (sub-¬ P m)))
         (sym (⇔ᵇ-sound (valOf P v (¬ A)) (¬ᵇ valOf P v A)
-                       (allOk_at P v (sub P) m ok)))
+                       (allOk-at P v (sub P) m ok)))
 skelAgree Ats a P v ok at (A ⇒ B) m =
-  trans (cong₂ _⇒ᵇ_ (skelAgree Ats a P v ok at A (sub_⇒L P m))
-                    (skelAgree Ats a P v ok at B (sub_⇒R P m)))
+  trans (cong₂ _⇒ᵇ_ (skelAgree Ats a P v ok at A (sub-⇒L P m))
+                    (skelAgree Ats a P v ok at B (sub-⇒R P m)))
         (sym (⇔ᵇ-sound (valOf P v (A ⇒ B))
                        (valOf P v A ⇒ᵇ valOf P v B)
-                       (allOk_at P v (sub P) m ok)))
+                       (allOk-at P v (sub P) m ok)))

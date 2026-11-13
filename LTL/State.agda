@@ -8,7 +8,7 @@
 -- To these the formalisation adds a third clause, coherence on duplicates.
 -- It has no counterpart in the note because there a state IS a function on the
 -- set Sub(phi); here a valuation is a List Bool read positionally against a
--- list that repeats (LTL.Sub, subBenAri_dup).  The clause is exactly what makes
+-- list that repeats (LTL.Sub, subBenAri-dup).  The clause is exactly what makes
 -- the vector represent a function on the set, so isState is the faithful
 -- encoding of Definition 2.2 rather than a strengthening of it.
 
@@ -30,11 +30,11 @@ valOf P v A = bitAt v (indexOf (sub P) A)
 ------------------------------------------------------------------------
 -- (S1) and (S2), imposed at each member of sub P.
 --
--- var and nxt carry no local condition: the behaviour of nxt lives entirely in
+-- var and ○ carry no local condition: the behaviour of ○ lives entirely in
 -- the transition relation (LTL.Step), which is the point of Remark 2.1.
 
 okAt : Formula -> Val -> Formula -> Bool
-okAt P v (var n)   = true
+okAt P v (var n) = true
 okAt P v (¬ A)   = valOf P v (¬ A) ⇔ᵇ ¬ᵇ valOf P v A
 okAt P v (A ⇒ B) = valOf P v (A ⇒ B) ⇔ᵇ valOf P v A ⇒ᵇ valOf P v B
 okAt P v (○ A)   = true
@@ -71,20 +71,20 @@ St P = filter (isState P) (allVecs (length (sub P)))
 ------------------------------------------------------------------------
 -- Searching allOk
 
-allOk_at : (P : Formula) (v : Val) (As : List Formula) {A : Formula}
+allOk-at : (P : Formula) (v : Val) (As : List Formula) {A : Formula}
         -> A ∈ As -> allOk P v As ≡ true -> okAt P v A ≡ true
-allOk_at P v []       ()        e
-allOk_at P v (B ∷ Bs) here      e = andTrueL (okAt P v B) (allOk P v Bs) e
-allOk_at P v (B ∷ Bs) (there m) e =
-  allOk_at P v Bs m (andTrueR (okAt P v B) (allOk P v Bs) e)
+allOk-at P v []       ()        e
+allOk-at P v (B ∷ Bs) here      e = andTrueL (okAt P v B) (allOk P v Bs) e
+allOk-at P v (B ∷ Bs) (there m) e =
+  allOk-at P v Bs m (andTrueR (okAt P v B) (allOk P v Bs) e)
 
-allOk_false : (P : Formula) (v : Val) (As : List Formula)
+allOk-false : (P : Formula) (v : Val) (As : List Formula)
            -> allOk P v As ≡ false
            -> Σ[ A ∈ Formula ] A ∈ As × okAt P v A ≡ false
-allOk_false P v []       ()
-allOk_false P v (B ∷ Bs) e =
+allOk-false P v []       ()
+allOk-false P v (B ∷ Bs) e =
   sumElim (λ e1 -> B , here , e1)
-          (λ e2 -> shift (allOk_false P v Bs e2))
+          (λ e2 -> shift (allOk-false P v Bs e2))
           (andFalse (okAt P v B) (allOk P v Bs) e)
   where
     shift : (Σ[ A ∈ Formula ] A ∈ Bs × okAt P v A ≡ false)
@@ -94,22 +94,22 @@ allOk_false P v (B ∷ Bs) e =
 ------------------------------------------------------------------------
 -- Searching allCoh
 
-allCoh_at : (P : Formula) (v : Val) (n i : Nat) -> i < n
+allCoh-at : (P : Formula) (v : Val) (n i : Nat) -> i < n
          -> allCoh P v n ≡ true -> cohAt P v i ≡ true
-allCoh_at P v zero    i ()  e
-allCoh_at P v (suc n) i lt  e =
+allCoh-at P v zero    i ()  e
+allCoh-at P v (suc n) i lt  e =
   sumElim (λ eq -> subst (λ k -> cohAt P v k ≡ true) (sym eq)
                          (andTrueL (cohAt P v n) (allCoh P v n) e))
-          (λ l  -> allCoh_at P v n i l (andTrueR (cohAt P v n) (allCoh P v n) e))
+          (λ l  -> allCoh-at P v n i l (andTrueR (cohAt P v n) (allCoh P v n) e))
           (ltSucCase i n lt)
 
-allCoh_false : (P : Formula) (v : Val) (n : Nat)
+allCoh-false : (P : Formula) (v : Val) (n : Nat)
             -> allCoh P v n ≡ false
             -> Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false
-allCoh_false P v zero    ()
-allCoh_false P v (suc n) e =
+allCoh-false P v zero    ()
+allCoh-false P v (suc n) e =
   sumElim (λ e1 -> n , ltNSucN n , e1)
-          (λ e2 -> shift (allCoh_false P v n e2))
+          (λ e2 -> shift (allCoh-false P v n e2))
           (andFalse (cohAt P v n) (allCoh P v n) e)
   where
     shift : (Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false)
@@ -129,8 +129,8 @@ allCoh_false P v (suc n) e =
 ◇P : Formula
 ◇P = ◇ (var zero)
 
-St_◇P : length (St ◇P) ≡ 3
-St_◇P = refl
+St-◇P : length (St ◇P) ≡ 3
+St-◇P = refl
 
 -- The negation of Ben-Ari's formula, the input the decision procedure is
 -- actually run on.  Here sub has length 7 with □ p and p each duplicated,
@@ -139,13 +139,13 @@ St_◇P = refl
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St_¬BenAri : length (allVecs (length (sub ¬BenAri))) ≡ 128
-St_¬BenAri = refl
+St-¬BenAri : length (allVecs (length (sub ¬BenAri))) ≡ 128
+St-¬BenAri = refl
 
-St_¬BenAri_count : length (St ¬BenAri) ≡ 6
-St_¬BenAri_count = refl
+St-¬BenAri-count : length (St ¬BenAri) ≡ 6
+St-¬BenAri-count = refl
 
 -- The duplicate-incoherent valuation of LTL.Val is rejected, as intended.
 
-badVal_rejected : isState benAri badVal ≡ false
-badVal_rejected = refl
+badVal-rejected : isState benAri badVal ≡ false
+badVal-rejected = refl

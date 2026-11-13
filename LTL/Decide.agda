@@ -59,12 +59,12 @@ buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
       notTrue (valOf (¬ Q) v0 Q)
         (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
                               (¬ᵇ valOf (¬ Q) v0 Q)
-                                  (stateOk (¬ Q) v0 m (sub_self (¬ Q)))))
+                                  (stateOk (¬ Q) v0 m (sub-self (¬ Q)))))
                ev)
 
     evalFalse : eval (¬ Q) v0 r Q 0 ≡ false
     evalFalse =
-      trans (sym (hintStart (¬ Q) v0 r Q (there (sub_self Q)))) valQ
+      trans (sym (hintStart (¬ Q) v0 r Q (there (sub-self Q)))) valQ
 
     noDeriv : ⊢ Q -> Empty
     noDeriv d = true≢false (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
@@ -84,7 +84,7 @@ decide Q = onSat (satB (¬ Q)) refl
          -> ⊢ Q ⊎ LassoCountermodel Q
     onSat false e = inl (provable Q e)
     onSat true  e =
-      fromSig (any_true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
+      fromSig (any-true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Reading the answer
@@ -122,40 +122,40 @@ lassoOfDecide Q (inr c) = cmStart Q c , cmRest Q c , cmCycle Q c
 -- is provable but the proof, and this is how one looks at it.
 
 derivSize : {A : Formula} -> ⊢ A -> Nat
-derivSize p1       = 1
-derivSize p2       = 1
-derivSize p3       = 1
-derivSize k□     = 1
-derivSize k○     = 1
-derivSize exp      = 1
-derivSize ind      = 1
-derivSize lin      = 1
+derivSize p1  = 1
+derivSize p2  = 1
+derivSize p3  = 1
+derivSize k□  = 1
+derivSize k○  = 1
+derivSize exp = 1
+derivSize ind = 1
+derivSize lin = 1
 derivSize (pc e)   = 1
 derivSize (mp d e) = suc (derivSize d + derivSize e)
 derivSize (gen d)  = suc (derivSize d)
 
 derivMP : {A : Formula} -> ⊢ A -> Nat
-derivMP p1       = 0
-derivMP p2       = 0
-derivMP p3       = 0
-derivMP k□     = 0
-derivMP k○     = 0
-derivMP exp      = 0
-derivMP ind      = 0
-derivMP lin      = 0
+derivMP p1  = 0
+derivMP p2  = 0
+derivMP p3  = 0
+derivMP k□  = 0
+derivMP k○  = 0
+derivMP exp = 0
+derivMP ind = 0
+derivMP lin = 0
 derivMP (pc e)   = 0
 derivMP (mp d e) = suc (derivMP d + derivMP e)
 derivMP (gen d)  = derivMP d
 
 derivGen : {A : Formula} -> ⊢ A -> Nat
-derivGen p1       = 0
-derivGen p2       = 0
-derivGen p3       = 0
-derivGen k□     = 0
-derivGen k○     = 0
-derivGen exp      = 0
-derivGen ind      = 0
-derivGen lin      = 0
+derivGen p1  = 0
+derivGen p2  = 0
+derivGen p3  = 0
+derivGen k□  = 0
+derivGen k○  = 0
+derivGen exp = 0
+derivGen ind = 0
+derivGen lin = 0
 derivGen (pc e)   = 0
 derivGen (mp d e) = derivGen d + derivGen e
 derivGen (gen d)  = suc (derivGen d)
@@ -165,14 +165,14 @@ derivGen (gen d)  = suc (derivGen d)
 -- whether the refutation went through extractR2 at all.
 
 derivInd : {A : Formula} -> ⊢ A -> Nat
-derivInd p1       = 0
-derivInd p2       = 0
-derivInd p3       = 0
-derivInd k□     = 0
-derivInd k○     = 0
-derivInd exp      = 0
-derivInd ind      = 1
-derivInd lin      = 0
+derivInd p1  = 0
+derivInd p2  = 0
+derivInd p3  = 0
+derivInd k□  = 0
+derivInd k○  = 0
+derivInd exp = 0
+derivInd ind = 1
+derivInd lin = 0
 derivInd (pc e)   = 0
 derivInd (mp d e) = derivInd d + derivInd e
 derivInd (gen d)  = derivInd d
@@ -237,11 +237,11 @@ shapeOf Q = onDec (decide Q)
 -- same for  □ p ⇒ □ ○ p , whose derivation goes through case (R2) of
 -- Theorem 4.1 -- see bnbProof in LTL.Extract.
 
-decide_benAri : isProof (decide benAri) ≡ true
-decide_benAri = refl
+decide-benAri : isProof (decide benAri) ≡ true
+decide-benAri = refl
 
-decide_bnb : isProof (decide bnb) ≡ true
-decide_bnb = refl
+decide-bnb : isProof (decide bnb) ≡ true
+decide-bnb = refl
 
 -- ◇ p is decided in the negative, and the certificate is a lasso.
 --
@@ -256,15 +256,15 @@ decide_bnb = refl
 -- one, p false forever, and by the ⊢ Q -> Empty field of the record,
 -- ◇ p has no derivation in L.
 
-◇P_cmState : Val
-◇P_cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
+◇P-cmState : Val
+◇P-cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
 
-decide_◇P : isProof (decide ◇P) ≡ false
-decide_◇P = refl
+decide-◇P : isProof (decide ◇P) ≡ false
+decide-◇P = refl
 
-decide_◇P_lasso : lassoOfDecide ◇P (decide ◇P) ≡
-                       (◇P_cmState , ◇P_cmState ∷ [] , ◇P_cmState ∷ [])
-decide_◇P_lasso = refl
+decide-◇P-lasso : lassoOfDecide ◇P (decide ◇P) ≡
+                       (◇P-cmState , ◇P-cmState ∷ [] , ◇P-cmState ∷ [])
+decide-◇P-lasso = refl
 
 ------------------------------------------------------------------------
 -- Checkpoint C5, the target of Phase 8.
@@ -319,10 +319,10 @@ c5pqForever : Val
 c5pqForever = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
     ∷ true  ∷ false ∷ true ∷ true ∷ true  ∷ true ∷ []
 
-decide_c5 : isProof (decide c5) ≡ false
-decide_c5 = refl
+decide-c5 : isProof (decide c5) ≡ false
+decide-c5 = refl
 
-decide_c5_lasso : lassoOfDecide c5 (decide c5) ≡
+decide-c5-lasso : lassoOfDecide c5 (decide c5) ≡
                   (c5pqNow , c5q ∷ c5p ∷ c5pqForever ∷ c5pqForever ∷ [] ,
                              c5pqForever ∷ [])
-decide_c5_lasso = refl
+decide-c5-lasso = refl

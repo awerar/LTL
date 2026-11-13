@@ -5,9 +5,9 @@
 -- Sub(phi) of m4.tex section 2: a plain structural recursion, no closure
 -- operation (see Remark 2.1 of the note).
 --
--- The six membership lemmas the development needs are all consequences of a
--- single transitivity lemma sub_mono together with sub_self, so they are
--- two-liners rather than six separate inductions.
+-- The five membership lemmas the development needs are all consequences of a
+-- single transitivity lemma sub-mono together with sub-self, so they are
+-- two-liners rather than five separate inductions.
 
 module LTL.Sub where
 
@@ -17,7 +17,7 @@ open import LTL.Formula public
 -- Subformulas
 
 sub : Formula -> List Formula
-sub (var n)   = var n ∷ []
+sub (var n) = var n ∷ []
 sub (¬ A)   = ¬ A ∷ sub A
 sub (A ⇒ B) = A ⇒ B ∷ sub A ++ sub B
 sub (○ A)   = ○ A ∷ sub A
@@ -26,51 +26,51 @@ sub (□ A)   = □ A ∷ sub A
 ------------------------------------------------------------------------
 -- sub P always begins with P
 
-sub_self : (A : Formula) -> A ∈ sub A
-sub_self (var n)   = here
-sub_self (¬ A)   = here
-sub_self (A ⇒ B) = here
-sub_self (○ A)   = here
-sub_self (□ A)   = here
+sub-self : (A : Formula) -> A ∈ sub A
+sub-self (var n) = here
+sub-self (¬ A)   = here
+sub-self (A ⇒ B) = here
+sub-self (○ A)   = here
+sub-self (□ A)   = here
 
 ------------------------------------------------------------------------
 -- Transitivity: sub is closed under passing to subformulas of its members.
 --
 -- The here cases are all  k  itself, since there Q is P.
 
-sub_mono : (P : Formula) {Q : Formula} -> Q ∈ sub P
+sub-mono : (P : Formula) {Q : Formula} -> Q ∈ sub P
         -> {X : Formula} -> X ∈ sub Q -> X ∈ sub P
-sub_mono (var n)   here       k = k
-sub_mono (var n)   (there ()) k
-sub_mono (¬ A)   here       k = k
-sub_mono (¬ A)   (there h)  k = there (sub_mono A h k)
-sub_mono (A ⇒ B) here       k = k
-sub_mono (A ⇒ B) (there h)  k =
-  there (sumElim (λ h1 -> memAppL (sub A) (sub B) (sub_mono A h1 k))
-                 (λ h2 -> memAppR (sub A) (sub B) (sub_mono B h2 k))
+sub-mono (var n) here       k = k
+sub-mono (var n) (there ()) k
+sub-mono (¬ A)   here       k = k
+sub-mono (¬ A)   (there h)  k = there (sub-mono A h k)
+sub-mono (A ⇒ B) here       k = k
+sub-mono (A ⇒ B) (there h)  k =
+  there (sumElim (λ h1 -> memAppL (sub A) (sub B) (sub-mono A h1 k))
+                 (λ h2 -> memAppR (sub A) (sub B) (sub-mono B h2 k))
                  (memAppCase (sub A) (sub B) h))
-sub_mono (○ A)   here       k = k
-sub_mono (○ A)   (there h)  k = there (sub_mono A h k)
-sub_mono (□ A)   here       k = k
-sub_mono (□ A)   (there h)  k = there (sub_mono A h k)
+sub-mono (○ A)   here       k = k
+sub-mono (○ A)   (there h)  k = there (sub-mono A h k)
+sub-mono (□ A)   here       k = k
+sub-mono (□ A)   (there h)  k = there (sub-mono A h k)
 
 ------------------------------------------------------------------------
--- The six membership lemmas
+-- The five membership lemmas
 
-sub_¬ : (P : Formula) {A : Formula} -> ¬ A ∈ sub P -> A ∈ sub P
-sub_¬ P {A} h = sub_mono P h (there (sub_self A))
+sub-¬ : (P : Formula) {A : Formula} -> ¬ A ∈ sub P -> A ∈ sub P
+sub-¬ P {A} h = sub-mono P h (there (sub-self A))
 
-sub_⇒L : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> A ∈ sub P
-sub_⇒L P {A} {B} h = sub_mono P h (there (memAppL (sub A) (sub B) (sub_self A)))
+sub-⇒L : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> A ∈ sub P
+sub-⇒L P {A} {B} h = sub-mono P h (there (memAppL (sub A) (sub B) (sub-self A)))
 
-sub_⇒R : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> B ∈ sub P
-sub_⇒R P {A} {B} h = sub_mono P h (there (memAppR (sub A) (sub B) (sub_self B)))
+sub-⇒R : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> B ∈ sub P
+sub-⇒R P {A} {B} h = sub-mono P h (there (memAppR (sub A) (sub B) (sub-self B)))
 
-sub_○ : (P : Formula) {A : Formula} -> ○ A ∈ sub P -> A ∈ sub P
-sub_○ P {A} h = sub_mono P h (there (sub_self A))
+sub-○ : (P : Formula) {A : Formula} -> ○ A ∈ sub P -> A ∈ sub P
+sub-○ P {A} h = sub-mono P h (there (sub-self A))
 
-sub_□ : (P : Formula) {A : Formula} -> □ A ∈ sub P -> A ∈ sub P
-sub_□ P {A} h = sub_mono P h (there (sub_self A))
+sub-□ : (P : Formula) {A : Formula} -> □ A ∈ sub P -> A ∈ sub P
+sub-□ P {A} h = sub-mono P h (there (sub-self A))
 
 ------------------------------------------------------------------------
 -- sub produces duplicates.
@@ -87,8 +87,8 @@ sub_□ P {A} h = sub_mono P h (there (sub_self A))
 benAri : Formula
 benAri = □ (var zero) ⇒ ○ □ (var zero)
 
-subBenAri_length : length (sub benAri) ≡ 6
-subBenAri_length = refl
+subBenAri-length : length (sub benAri) ≡ 6
+subBenAri-length = refl
 
-subBenAri_dup : nth (sub benAri) 1 ⊥ ≡ nth (sub benAri) 4 ⊥
-subBenAri_dup = refl
+subBenAri-dup : nth (sub benAri) 1 ⊥ ≡ nth (sub benAri) 4 ⊥
+subBenAri-dup = refl

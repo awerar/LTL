@@ -139,7 +139,7 @@ extractBlock P ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬�
       where
         eachA : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ A
         eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b)) (cHold w m)
-                          (chiProjVal P w (lenC w m) (sub_□ P mbox))
+                          (chiProjVal P w (lenC w m) (sub-□ P mbox))
 
     -- (ii)
     toC : (w : Val) -> w ∈ C
@@ -197,7 +197,7 @@ blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
     onA : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × f ≡ evPred P A)
        -> ⊢ ¬ (chi P z)
     onA (A , mA , ef) =
-      extractBlock P ws D z mzU (refutedOf P ws ih) A (□Args_mem (sub P) mA)
+      extractBlock P ws D z mzU (refutedOf P ws ih) A (□Args-mem (sub P) mA)
                    dUst dCl dHold pend mzD
       where
         missA : (y : Val) -> y ∈ C -> evPred P A y ≡ false
@@ -208,14 +208,14 @@ blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
         D = filter (λ y -> y ∈ᵛ Ust P) C
 
         dC : (y : Val) -> y ∈ D -> y ∈ C
-        dC y m = filter_sub (λ t -> t ∈ᵛ Ust P) C m
+        dC y m = filter-sub (λ t -> t ∈ᵛ Ust P) C m
 
         dUst : (y : Val) -> y ∈ D -> y ∈ Ust P
-        dUst y m = ∈ᵛ-sound y (Ust P) (filter_prop (λ t -> t ∈ᵛ Ust P) C m)
+        dUst y m = ∈ᵛ-sound y (Ust P) (filter-prop (λ t -> t ∈ᵛ Ust P) C m)
 
         into : (y : Val) -> y ∈ C -> y ∈ Ust P -> y ∈ D
         into y my mu =
-          filter_true (λ t -> t ∈ᵛ Ust P) C my (∈ᵛ-complete y (Ust P) mu)
+          filter-true (λ t -> t ∈ᵛ Ust P) C my (∈ᵛ-complete y (Ust P) mu)
 
         -- still closed: C's closure puts the successor in C, ustClosed puts it
         -- in Ust P, and D is the intersection
@@ -287,7 +287,7 @@ provableEachSCC Q c w m = outer (w ∈ᵛ Ust R) refl
     fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
     fromR ev =
       ⇒Trans (subst (λ d -> ⊢ (chi R w) ⇒ (lit R d)) ev
-                        (chiProjVal R w (stLen R m) (sub_self R)))
+                        (chiProjVal R w (stLen R m) (sub-self R)))
                dne
 
     outer : (b : Bool) -> w ∈ᵛ Ust R ≡ b -> ⊢ (chi R w) ⇒ Q
@@ -324,7 +324,7 @@ proofFrom : {A : Set} {Q : Formula}
 proofFrom (inl a) ()
 proofFrom (inr d) e = d
 
--- and the shape of the certificate, as in cert_P of LTL.GraphExamples: 2 for
+-- and the shape of the certificate, as in cert-P of LTL.GraphExamples: 2 for
 -- cBlock, 1 for cSink, 0 for cNil.
 
 sccShape : (Q : Formula) -> List Nat
@@ -338,14 +338,14 @@ sccShape Q = sumElim (λ fi -> []) certShape (sccGraph (¬ Q))
 -- derivations are produced, so the graph search, certAll, extractR1 and
 -- extractBlock all run, and the answers agree with benAriProof and bnbProof.
 
-scc_benAri : isInl (sccProof benAri) ≡ false
-scc_benAri = refl
+scc-benAri : isInl (sccProof benAri) ≡ false
+scc-benAri = refl
 
 benAriProofSCC : ⊢ benAri
 benAriProofSCC = proofFrom (sccProof benAri) refl
 
-scc_bnb : isInl (sccProof bnb) ≡ false
-scc_bnb = refl
+scc-bnb : isInl (sccProof bnb) ≡ false
+scc-bnb = refl
 
 bnbProofSCC : ⊢ bnb
 bnbProofSCC = proofFrom (sccProof bnb) refl
@@ -364,14 +364,14 @@ bnbProofSCC = proofFrom (sccProof bnb) refl
 -- route, and it is why bnb is the example that matters: extractBlock, the copy
 -- of (R2), is on the path from here to bnbProofSCC.
 
-shape_benAri : sccShape benAri ≡ 1 ∷ 0 ∷ []
-shape_benAri = refl
+shape-benAri : sccShape benAri ≡ 1 ∷ 0 ∷ []
+shape-benAri = refl
 
-shape_bnb : sccShape bnb ≡ 1 ∷ 2 ∷ 0 ∷ []
-shape_bnb = refl
+shape-bnb : sccShape bnb ≡ 1 ∷ 2 ∷ 0 ∷ []
+shape-bnb = refl
 
 -- and the positive side, to show the search is not simply always certifying:
 -- ◇ p is satisfiable, so its state set has a fair component.
 
-scc_◇P : isInl (sccGraph ◇P) ≡ true
-scc_◇P = refl
+scc-◇P : isInl (sccGraph ◇P) ≡ true
+scc-◇P = refl

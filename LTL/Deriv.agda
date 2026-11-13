@@ -9,9 +9,10 @@
 --
 -- Phase 8 adds (PC) back as an ELEVENTH constructor, with a decidable side
 -- condition on the formula itself and no substitution relation -- see below and
--- LTL.Skel.  Nothing in Phases 1-7 uses it, so the ten-constructor system is
--- still what every lemma of this development is proved in; pc is there because
--- it is what makes a certificate short, and LTL.Proofs measures the difference.
+-- LTL.Skel.  Only LTL.CompletePC and LTL.ShortPC build pc nodes, so the
+-- ten-constructor system is still what every lemma below them is proved in; pc
+-- is there because it is what makes a certificate short, and LTL.Proofs
+-- measures the difference.
 
 module LTL.Deriv where
 
@@ -38,11 +39,11 @@ data ⊢_ : Formula -> Set where
 
   -- (K □)  □ (A ⇒ B) ⇒ (□ A ⇒ □ B)
   k□ : {A B : Formula}
-      -> ⊢ □ (A ⇒ B) ⇒ □ A ⇒ □ B
+    -> ⊢ □ (A ⇒ B) ⇒ □ A ⇒ □ B
 
   -- (K ○)  ○ (A ⇒ B) ⇒ (○ A ⇒ ○ B)
   k○ : {A B : Formula}
-      -> ⊢ ○ (A ⇒ B) ⇒ ○ A ⇒ ○ B
+    -> ⊢ ○ (A ⇒ B) ⇒ ○ A ⇒ ○ B
 
   -- (Exp)  □ A ⇒ (A ∧ ○ A ∧ ○ □ A)
   exp : {A : Formula}
@@ -63,13 +64,14 @@ data ⊢_ : Formula -> Set where
   -- tautology checker AND a substitution relation to say what a derivation is,
   -- and then a substitution lemma for soundness.  Only the first half is
   -- unavoidable: asking that A be a tautology OF ITS OWN SKELETON -- its var,
-  -- nxt and box subformulas taken as atoms -- picks out the same formulas, is a
+  -- ○ and □ subformulas taken as atoms -- picks out the same formulas, is a
   -- decidable condition on A alone, and keeps ⊢_ a plain inductive family.
   -- isTaut is that test (LTL.Skel), and soundness is tautSound.
   --
-  -- Nothing in Phases 1-8 uses it: (L0)-(L7) and everything above them are
-  -- derived from (P1)-(P3) exactly as before, so the eleventh constructor is
-  -- additive.  What it buys is the length of a certificate; see LTL.Proofs.
+  -- Only LTL.CompletePC and LTL.ShortPC use it: (L0)-(L7) and everything above
+  -- them are derived from (P1)-(P3) exactly as before, so the eleventh
+  -- constructor is additive.  What it buys is the length of a certificate; see
+  -- LTL.Proofs.
   pc : {A : Formula} -> isTaut A ≡ true -> ⊢ A
 
   -- modus ponens

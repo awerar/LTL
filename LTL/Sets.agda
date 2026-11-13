@@ -88,127 +88,127 @@ findFalse p (y ∷ ys) = findCons (p y) refl (findFalse p ys)
 ------------------------------------------------------------------------
 -- filter against membership
 
-filterCons_case : {A : Set} {x y : A} (b : Bool) (ys : List A)
+filterCons-case : {A : Set} {x y : A} (b : Bool) (ys : List A)
                -> x ∈ filterCons b y ys -> x ≡ y ⊎ x ∈ ys
-filterCons_case true  ys here      = inl refl
-filterCons_case true  ys (there m) = inr m
-filterCons_case false ys m         = inr m
+filterCons-case true  ys here      = inl refl
+filterCons-case true  ys (there m) = inr m
+filterCons-case false ys m         = inr m
 
-filter_sub : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+filter-sub : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
           -> x ∈ filter p xs -> x ∈ xs
-filter_sub p []       ()
-filter_sub p (y ∷ ys) m =
+filter-sub p []       ()
+filter-sub p (y ∷ ys) m =
   sumElim (λ e  -> subst (λ z -> z ∈ y ∷ ys) (sym e) here)
-          (λ m' -> there (filter_sub p ys m'))
-          (filterCons_case (p y) (filter p ys) m)
+          (λ m' -> there (filter-sub p ys m'))
+          (filterCons-case (p y) (filter p ys) m)
 
-filterCons_prop : {A : Set} {p : A -> Bool} {x y : A} (b : Bool) -> p y ≡ b
+filterCons-prop : {A : Set} {p : A -> Bool} {x y : A} (b : Bool) -> p y ≡ b
                -> (ys : List A) -> x ∈ filterCons b y ys
                -> (x ∈ ys -> p x ≡ true) -> p x ≡ true
-filterCons_prop true  e ys here      k = e
-filterCons_prop true  e ys (there m) k = k m
-filterCons_prop false e ys m         k = k m
+filterCons-prop true  e ys here      k = e
+filterCons-prop true  e ys (there m) k = k m
+filterCons-prop false e ys m         k = k m
 
-filter_prop : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+filter-prop : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
            -> x ∈ filter p xs -> p x ≡ true
-filter_prop p []       ()
-filter_prop p (y ∷ ys) m =
-  filterCons_prop (p y) refl (filter p ys) m (filter_prop p ys)
+filter-prop p []       ()
+filter-prop p (y ∷ ys) m =
+  filterCons-prop (p y) refl (filter p ys) m (filter-prop p ys)
 
 ------------------------------------------------------------------------
 -- filter against length.  This is the whole termination argument.
 
-filter_le : {A : Set} (p : A -> Bool) (xs : List A)
+filter-le : {A : Set} (p : A -> Bool) (xs : List A)
          -> length (filter p xs) ≤ length xs
-filter_le p []       = leZero
-filter_le p (y ∷ ys) = aux (p y)
+filter-le p []       = leZero
+filter-le p (y ∷ ys) = aux (p y)
   where
     aux : (b : Bool)
        -> length (filterCons b y (filter p ys)) ≤ suc (length ys)
-    aux true  = leSuc  (filter_le p ys)
-    aux false = leStep (filter_le p ys)
+    aux true  = leSuc  (filter-le p ys)
+    aux false = leStep (filter-le p ys)
 
-filter_lt : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+filter-lt : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ false
          -> suc (length (filter p xs)) ≤ length xs
-filter_lt p []       ()       e
-filter_lt p (y ∷ ys) here     e =
+filter-lt p []       ()       e
+filter-lt p (y ∷ ys) here     e =
   subst (λ b -> suc (length (filterCons b y (filter p ys))) ≤
                 suc (length ys))
-        (sym e) (leSuc (filter_le p ys))
-filter_lt p (y ∷ ys) (there m) e = aux (p y)
+        (sym e) (leSuc (filter-le p ys))
+filter-lt p (y ∷ ys) (there m) e = aux (p y)
   where
     aux : (b : Bool)
        -> suc (length (filterCons b y (filter p ys))) ≤ suc (length ys)
-    aux true  = leSuc  (filter_lt p ys m e)
-    aux false = leStep (filter_lt p ys m e)
+    aux true  = leSuc  (filter-lt p ys m e)
+    aux false = leStep (filter-lt p ys m e)
 
 leZeroNil : {A : Set} (xs : List A) {x : A}
          -> length xs ≤ zero -> x ∈ xs -> Empty
 leZeroNil []       l  ()
 leZeroNil (y ∷ ys) () m
 
-null_mem : {A : Set} (xs : List A) {x : A}
+null-mem : {A : Set} (xs : List A) {x : A}
         -> null xs ≡ true -> x ∈ xs -> Empty
-null_mem []       e  ()
-null_mem (y ∷ ys) () m
+null-mem []       e  ()
+null-mem (y ∷ ys) () m
 
 ------------------------------------------------------------------------
 -- any
 
-any_true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
+any-true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
         -> Σ[ x ∈ A ] x ∈ xs × p x ≡ true
-any_true {A} p []       ()
-any_true {A} p (y ∷ ys) e =
+any-true {A} p []       ()
+any-true {A} p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> shift (any_true p ys e2))
+          (λ e2 -> shift (any-true p ys e2))
           (orTrue (p y) (any p ys) e)
   where
     shift : (Σ[ x ∈ A ] x ∈ ys × p x ≡ true)
          -> Σ[ x ∈ A ] x ∈ y ∷ ys × p x ≡ true
     shift (x , m , q) = x , there m , q
 
-any_intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> any p xs ≡ true
-any_intro p []       ()        e
-any_intro p (y ∷ ys) here      e = orL (p y) (any p ys) e
-any_intro p (y ∷ ys) (there m) e = orR (p y) (any p ys) (any_intro p ys m e)
+any-intro p []       ()        e
+any-intro p (y ∷ ys) here      e = orL (p y) (any p ys) e
+any-intro p (y ∷ ys) (there m) e = orR (p y) (any p ys) (any-intro p ys m e)
 
-any_false : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ false
+any-false : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ false
          -> {x : A} -> x ∈ xs -> p x ≡ false
-any_false p []       e  ()
-any_false p (y ∷ ys) e here      = orFalseL (p y) (any p ys) e
-any_false p (y ∷ ys) e (there m) =
-  any_false p ys (orFalseR (p y) (any p ys) e) m
+any-false p []       e  ()
+any-false p (y ∷ ys) e here      = orFalseL (p y) (any p ys) e
+any-false p (y ∷ ys) e (there m) =
+  any-false p ys (orFalseR (p y) (any p ys) e) m
 
 ------------------------------------------------------------------------
 -- all
 
-all_false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
+all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
          -> Σ[ x ∈ A ] x ∈ xs × p x ≡ false
-all_false {A} p []       ()
-all_false {A} p (y ∷ ys) e =
+all-false {A} p []       ()
+all-false {A} p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> shift (all_false p ys e2))
+          (λ e2 -> shift (all-false p ys e2))
           (andFalse (p y) (all p ys) e)
   where
     shift : (Σ[ x ∈ A ] x ∈ ys × p x ≡ false)
          -> Σ[ x ∈ A ] x ∈ y ∷ ys × p x ≡ false
     shift (x , m , q) = x , there m , q
 
-null_false : {A : Set} (xs : List A) -> null xs ≡ false
+null-false : {A : Set} (xs : List A) -> null xs ≡ false
           -> Σ[ x ∈ A ] x ∈ xs
-null_false []       ()
-null_false (y ∷ ys) e = y , here
+null-false []       ()
+null-false (y ∷ ys) e = y , here
 
 ------------------------------------------------------------------------
 -- map against membership
 
-map_mem_inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
+map-mem-inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
            -> y ∈ map f xs -> Σ[ x ∈ A ] x ∈ xs × y ≡ f x
-map_mem_inv f []       ()
-map_mem_inv f (x ∷ xs) here      = x , here , refl
-map_mem_inv f (x ∷ xs) (there m) = shift (map_mem_inv f xs m)
+map-mem-inv f []       ()
+map-mem-inv f (x ∷ xs) here      = x , here , refl
+map-mem-inv f (x ∷ xs) (there m) = shift (map-mem-inv f xs m)
   where
     shift : (Σ[ z ∈ _ ] z ∈ xs × _) -> Σ[ z ∈ _ ] z ∈ x ∷ xs × _
     shift (z , mz , ez) = z , there mz , ez

@@ -23,7 +23,7 @@ open import LTL.State public
 -- The three conditions, imposed at each member of sub P
 
 stepAt : Formula -> Val -> Val -> Formula -> Bool
-stepAt P v w (var n)   = true
+stepAt P v w (var n) = true
 stepAt P v w (¬ A)   = true
 stepAt P v w (A ⇒ B) = true
 stepAt P v w (○ B)   = valOf P v (○ B) ⇔ᵇ valOf P w B
@@ -47,13 +47,13 @@ succs P us v = filter (step P v) us
 ------------------------------------------------------------------------
 -- Reading one conjunct out of a true step
 
-allStep_at : (P : Formula) (v w : Val) (As : List Formula) {X : Formula}
+allStep-at : (P : Formula) (v w : Val) (As : List Formula) {X : Formula}
           -> X ∈ As -> allStep P v w As ≡ true -> stepAt P v w X ≡ true
-allStep_at P v w []       ()       e
-allStep_at P v w (B ∷ Bs) here     e =
+allStep-at P v w []       ()       e
+allStep-at P v w (B ∷ Bs) here     e =
   andTrueL (stepAt P v w B) (allStep P v w Bs) e
-allStep_at P v w (B ∷ Bs) (there m) e =
-  allStep_at P v w Bs m (andTrueR (stepAt P v w B) (allStep P v w Bs) e)
+allStep-at P v w (B ∷ Bs) (there m) e =
+  allStep-at P v w Bs m (andTrueR (stepAt P v w B) (allStep P v w Bs) e)
 
 ------------------------------------------------------------------------
 -- Persistence, Lemma 2.8 of m4.tex.
@@ -68,7 +68,7 @@ persist : (P : Formula) (v w : Val) (A : Formula)
        -> valOf P w (□ A) ≡ false
 persist P v w A h st bx a =
   t3aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
-        (allStep_at P v w (sub P) h st) bx a
+        (allStep-at P v w (sub P) h st) bx a
   where
     -- x = □ A at v,  z = A at v,  y = □ A at w
     t3aux : (x z y : Bool)
@@ -92,7 +92,7 @@ carry : (P : Formula) (v w : Val) (A : Formula)
      -> valOf P w (□ A) ≡ true
 carry P v w A h st bx =
   t2aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
-        (allStep_at P v w (sub P) h st) bx
+        (allStep-at P v w (sub P) h st) bx
   where
     t2aux : (x z y : Bool)
          -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
@@ -115,9 +115,9 @@ carry P v w A h st bx =
 --
 -- Every state has at least one successor, so no state is removed by (R1).
 
-◇P_succ_counts : map (λ v -> length (succs ◇P (St ◇P) v)) (St ◇P) ≡
+◇P-succ-counts : map (λ v -> length (succs ◇P (St ◇P) v)) (St ◇P) ≡
                       2 ∷ 3 ∷ 1 ∷ []
-◇P_succ_counts = refl
+◇P-succ-counts = refl
 
 -- For ¬ benAri the six states are, in the order allVecs produces them
 -- (true first, so lexicographic with 1 before 0), writing the bits of
@@ -133,7 +133,7 @@ carry P v w A h st bx =
 --
 -- E and D have NO successor, so both are removed by (R1) alone.
 
-¬BenAri_succ_counts
+¬BenAri-succ-counts
   : map (λ v -> length (succs ¬BenAri (St ¬BenAri) v)) (St ¬BenAri) ≡
     0 ∷ 2 ∷ 0 ∷ 4 ∷ 2 ∷ 4 ∷ []
-¬BenAri_succ_counts = refl
+¬BenAri-succ-counts = refl

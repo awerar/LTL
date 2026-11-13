@@ -91,11 +91,11 @@ reach P us v = reachIter P (length us) us (v ∷ [])
 succsMem : (P : Formula) (us : List Val) (v : Val) {w : Val}
         -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
 succsMem P us v m =
-  filter_sub (step P v) us m , filter_prop (step P v) us m
+  filter-sub (step P v) us m , filter-prop (step P v) us m
 
 succsIn : (P : Formula) (us : List Val) (v : Val) {w : Val}
        -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
-succsIn P us v mw st = filter_true (step P v) us mw st
+succsIn P us v mw st = filter-true (step P v) us mw st
 
 ------------------------------------------------------------------------
 -- Computational checks.
@@ -104,6 +104,6 @@ succsIn P us v mw st = filter_true (step P v) us mw st
 -- sSink = 0110 (see LTL.Step).  sPending and sFulfil reach everything; sSink
 -- reaches only itself.
 
-reach_◇P : map (λ v -> length (reach ◇P (St ◇P) v)) (St ◇P) ≡
+reach-◇P : map (λ v -> length (reach ◇P (St ◇P) v)) (St ◇P) ≡
                 3 ∷ 3 ∷ 1 ∷ []
-reach_◇P = refl
+reach-◇P = refl

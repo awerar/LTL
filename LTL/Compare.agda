@@ -12,10 +12,10 @@
 -- C8 asks three things.
 --
 -- 1. AGREEMENT.  isProof (decideSCC X) = isProof (decide X) for every statement
---    of LTL.Examples.  Each agree_X below is that equation, and it is a theorem
+--    of LTL.Examples.  Each agree-X below is that equation, and it is a theorem
 --    about the two PROCEDURES, not a comparison of two printouts: both sides
---    are closed booleans and refl checks them.  It is proved as scc_X composed
---    with LTL.Examples' own check_X rather than by one refl on the pair, so
+--    are closed booleans and refl checks them.  It is proved as scc-X composed
+--    with LTL.Examples' own check-X rather than by one refl on the pair, so
 --    that decide is not run a second time -- agreeOn is the composition and it
 --    is the only inference in the file.
 --
@@ -89,290 +89,290 @@ agreeOn X b e1 e2 = trans e1 (sym e2)
 ------------------------------------------------------------------------
 -- 1a. The forty-seven answers of decideSCC
 
-scc_T : isProof (decideSCC axT) ≡ true
-scc_T = refl
+scc-T : isProof (decideSCC axT) ≡ true
+scc-T = refl
 
-scc_pb2 : isProof (decideSCC pb2) ≡ false
-scc_pb2 = refl
+scc-pb2 : isProof (decideSCC pb2) ≡ false
+scc-pb2 = refl
 
-scc_G : isProof (decideSCC axG) ≡ true
-scc_G = refl
+scc-G : isProof (decideSCC axG) ≡ true
+scc-G = refl
 
-scc_M : isProof (decideSCC axM) ≡ false
-scc_M = refl
+scc-M : isProof (decideSCC axM) ≡ false
+scc-M = refl
 
-scc_M2 : isProof (decideSCC axM2) ≡ false
-scc_M2 = refl
+scc-M2 : isProof (decideSCC axM2) ≡ false
+scc-M2 = refl
 
-scc_M3 : isProof (decideSCC axM3) ≡ false
-scc_M3 = refl
+scc-M3 : isProof (decideSCC axM3) ≡ false
+scc-M3 = refl
 
-scc_pb5 : isProof (decideSCC pb5) ≡ true
-scc_pb5 = refl
+scc-pb5 : isProof (decideSCC pb5) ≡ true
+scc-pb5 = refl
 
-scc_lin1 : isProof (decideSCC lin1) ≡ true
-scc_lin1 = refl
+scc-lin1 : isProof (decideSCC lin1) ≡ true
+scc-lin1 = refl
 
-scc_Dum : isProof (decideSCC axDum) ≡ true
-scc_Dum = refl
+scc-Dum : isProof (decideSCC axDum) ≡ true
+scc-Dum = refl
 
-scc_Dum1 : isProof (decideSCC axDum1) ≡ true
-scc_Dum1 = refl
+scc-Dum1 : isProof (decideSCC axDum1) ≡ true
+scc-Dum1 = refl
 
-scc_Dum2 : isProof (decideSCC axDum2) ≡ true
-scc_Dum2 = refl
+scc-Dum2 : isProof (decideSCC axDum2) ≡ true
+scc-Dum2 = refl
 
-scc_Dum3 : isProof (decideSCC axDum3) ≡ true
-scc_Dum3 = refl
+scc-Dum3 : isProof (decideSCC axDum3) ≡ true
+scc-Dum3 = refl
 
-scc_Dum4 : isProof (decideSCC axDum4) ≡ true
-scc_Dum4 = refl
+scc-Dum4 : isProof (decideSCC axDum4) ≡ true
+scc-Dum4 = refl
 
-scc_D : isProof (decideSCC axD) ≡ true
-scc_D = refl
+scc-D : isProof (decideSCC axD) ≡ true
+scc-D = refl
 
-scc_ax4 : isProof (decideSCC ax4) ≡ true
-scc_ax4 = refl
+scc-ax4 : isProof (decideSCC ax4) ≡ true
+scc-ax4 = refl
 
-scc_ax4M : isProof (decideSCC ax4M) ≡ true
-scc_ax4M = refl
+scc-ax4M : isProof (decideSCC ax4M) ≡ true
+scc-ax4M = refl
 
-scc_ax5 : isProof (decideSCC ax5) ≡ false
-scc_ax5 = refl
+scc-ax5 : isProof (decideSCC ax5) ≡ false
+scc-ax5 = refl
 
-scc_ax5M : isProof (decideSCC ax5M) ≡ false
-scc_ax5M = refl
+scc-ax5M : isProof (decideSCC ax5M) ≡ false
+scc-ax5M = refl
 
-scc_B : isProof (decideSCC axB) ≡ false
-scc_B = refl
+scc-B : isProof (decideSCC axB) ≡ false
+scc-B = refl
 
-scc_BM : isProof (decideSCC axBM) ≡ false
-scc_BM = refl
+scc-BM : isProof (decideSCC axBM) ≡ false
+scc-BM = refl
 
-scc_G0 : isProof (decideSCC axG0) ≡ true
-scc_G0 = refl
+scc-G0 : isProof (decideSCC axG0) ≡ true
+scc-G0 = refl
 
-scc_H : isProof (decideSCC axH) ≡ true
-scc_H = refl
+scc-H : isProof (decideSCC axH) ≡ true
+scc-H = refl
 
-scc_Hplus : isProof (decideSCC axHplus) ≡ true
-scc_Hplus = refl
+scc-Hplus : isProof (decideSCC axHplus) ≡ true
+scc-Hplus = refl
 
-scc_L : isProof (decideSCC axL) ≡ true
-scc_L = refl
+scc-L : isProof (decideSCC axL) ≡ true
+scc-L = refl
 
-scc_Lplus : isProof (decideSCC axLplus) ≡ true
-scc_Lplus = refl
+scc-Lplus : isProof (decideSCC axLplus) ≡ true
+scc-Lplus = refl
 
-scc_Lplusplus : isProof (decideSCC axLplusplus) ≡ true
-scc_Lplusplus = refl
+scc-Lplusplus : isProof (decideSCC axLplusplus) ≡ true
+scc-Lplusplus = refl
 
-scc_Pt : isProof (decideSCC axPt) ≡ false
-scc_Pt = refl
+scc-Pt : isProof (decideSCC axPt) ≡ false
+scc-Pt = refl
 
-scc_W : isProof (decideSCC axW) ≡ false
-scc_W = refl
+scc-W : isProof (decideSCC axW) ≡ false
+scc-W = refl
 
-scc_Z : isProof (decideSCC axZ) ≡ false
-scc_Z = refl
+scc-Z : isProof (decideSCC axZ) ≡ false
+scc-Z = refl
 
-scc_Grz : isProof (decideSCC axGrz) ≡ false
-scc_Grz = refl
+scc-Grz : isProof (decideSCC axGrz) ≡ false
+scc-Grz = refl
 
-scc_Grz1 : isProof (decideSCC axGrz1) ≡ false
-scc_Grz1 = refl
+scc-Grz1 : isProof (decideSCC axGrz1) ≡ false
+scc-Grz1 = refl
 
-scc_Grz2 : isProof (decideSCC axGrz2) ≡ false
-scc_Grz2 = refl
+scc-Grz2 : isProof (decideSCC axGrz2) ≡ false
+scc-Grz2 = refl
 
-scc_Grz3 : isProof (decideSCC axGrz3) ≡ false
-scc_Grz3 = refl
+scc-Grz3 : isProof (decideSCC axGrz3) ≡ false
+scc-Grz3 = refl
 
-scc_Grz4 : isProof (decideSCC axGrz4) ≡ false
-scc_Grz4 = refl
+scc-Grz4 : isProof (decideSCC axGrz4) ≡ false
+scc-Grz4 = refl
 
-scc_Grz5 : isProof (decideSCC axGrz5) ≡ false
-scc_Grz5 = refl
+scc-Grz5 : isProof (decideSCC axGrz5) ≡ false
+scc-Grz5 = refl
 
-scc_F : isProof (decideSCC axF) ≡ false
-scc_F = refl
+scc-F : isProof (decideSCC axF) ≡ false
+scc-F = refl
 
-scc_Hs : isProof (decideSCC axHs) ≡ false
-scc_Hs = refl
+scc-Hs : isProof (decideSCC axHs) ≡ false
+scc-Hs = refl
 
-scc_P : isProof (decideSCC axP) ≡ false
-scc_P = refl
+scc-P : isProof (decideSCC axP) ≡ false
+scc-P = refl
 
-scc_R : isProof (decideSCC axR) ≡ false
-scc_R = refl
+scc-R : isProof (decideSCC axR) ≡ false
+scc-R = refl
 
-scc_X : isProof (decideSCC axX) ≡ true
-scc_X = refl
+scc-X : isProof (decideSCC axX) ≡ true
+scc-X = refl
 
-scc_Zem : isProof (decideSCC axZem) ≡ false
-scc_Zem = refl
+scc-Zem : isProof (decideSCC axZem) ≡ false
+scc-Zem = refl
 
-scc_K1 : isProof (decideSCC axK1) ≡ false
-scc_K1 = refl
+scc-K1 : isProof (decideSCC axK1) ≡ false
+scc-K1 = refl
 
-scc_K2 : isProof (decideSCC axK2) ≡ false
-scc_K2 = refl
+scc-K2 : isProof (decideSCC axK2) ≡ false
+scc-K2 = refl
 
-scc_K3 : isProof (decideSCC axK3) ≡ true
-scc_K3 = refl
+scc-K3 : isProof (decideSCC axK3) ≡ true
+scc-K3 = refl
 
-scc_K4 : isProof (decideSCC axK4) ≡ true
-scc_K4 = refl
+scc-K4 : isProof (decideSCC axK4) ≡ true
+scc-K4 = refl
 
-scc_K5 : isProof (decideSCC axK5) ≡ true
-scc_K5 = refl
+scc-K5 : isProof (decideSCC axK5) ≡ true
+scc-K5 = refl
 
-scc_K5fwd : isProof (decideSCC axK5fwd) ≡ true
-scc_K5fwd = refl
+scc-K5fwd : isProof (decideSCC axK5fwd) ≡ true
+scc-K5fwd = refl
 
 ------------------------------------------------------------------------
 -- 1b. and that they are the answers of decide
 
-agree_T : isProof (decideSCC axT) ≡ isProof (decide axT)
-agree_T = agreeOn axT true scc_T check_T
+agree-T : isProof (decideSCC axT) ≡ isProof (decide axT)
+agree-T = agreeOn axT true scc-T check-T
 
-agree_pb2 : isProof (decideSCC pb2) ≡ isProof (decide pb2)
-agree_pb2 = agreeOn pb2 false scc_pb2 check_pb2
+agree-pb2 : isProof (decideSCC pb2) ≡ isProof (decide pb2)
+agree-pb2 = agreeOn pb2 false scc-pb2 check-pb2
 
-agree_G : isProof (decideSCC axG) ≡ isProof (decide axG)
-agree_G = agreeOn axG true scc_G check_G
+agree-G : isProof (decideSCC axG) ≡ isProof (decide axG)
+agree-G = agreeOn axG true scc-G check-G
 
-agree_M : isProof (decideSCC axM) ≡ isProof (decide axM)
-agree_M = agreeOn axM false scc_M check_M
+agree-M : isProof (decideSCC axM) ≡ isProof (decide axM)
+agree-M = agreeOn axM false scc-M check-M
 
-agree_M2 : isProof (decideSCC axM2) ≡ isProof (decide axM2)
-agree_M2 = agreeOn axM2 false scc_M2 check_M2
+agree-M2 : isProof (decideSCC axM2) ≡ isProof (decide axM2)
+agree-M2 = agreeOn axM2 false scc-M2 check-M2
 
-agree_M3 : isProof (decideSCC axM3) ≡ isProof (decide axM3)
-agree_M3 = agreeOn axM3 false scc_M3 check_M3
+agree-M3 : isProof (decideSCC axM3) ≡ isProof (decide axM3)
+agree-M3 = agreeOn axM3 false scc-M3 check-M3
 
-agree_pb5 : isProof (decideSCC pb5) ≡ isProof (decide pb5)
-agree_pb5 = agreeOn pb5 true scc_pb5 check_pb5
+agree-pb5 : isProof (decideSCC pb5) ≡ isProof (decide pb5)
+agree-pb5 = agreeOn pb5 true scc-pb5 check-pb5
 
-agree_lin1 : isProof (decideSCC lin1) ≡ isProof (decide lin1)
-agree_lin1 = agreeOn lin1 true scc_lin1 check_lin1
+agree-lin1 : isProof (decideSCC lin1) ≡ isProof (decide lin1)
+agree-lin1 = agreeOn lin1 true scc-lin1 check-lin1
 
-agree_Dum : isProof (decideSCC axDum) ≡ isProof (decide axDum)
-agree_Dum = agreeOn axDum true scc_Dum check_Dum
+agree-Dum : isProof (decideSCC axDum) ≡ isProof (decide axDum)
+agree-Dum = agreeOn axDum true scc-Dum check-Dum
 
-agree_Dum1 : isProof (decideSCC axDum1) ≡ isProof (decide axDum1)
-agree_Dum1 = agreeOn axDum1 true scc_Dum1 check_Dum1
+agree-Dum1 : isProof (decideSCC axDum1) ≡ isProof (decide axDum1)
+agree-Dum1 = agreeOn axDum1 true scc-Dum1 check-Dum1
 
-agree_Dum2 : isProof (decideSCC axDum2) ≡ isProof (decide axDum2)
-agree_Dum2 = agreeOn axDum2 true scc_Dum2 check_Dum2
+agree-Dum2 : isProof (decideSCC axDum2) ≡ isProof (decide axDum2)
+agree-Dum2 = agreeOn axDum2 true scc-Dum2 check-Dum2
 
-agree_Dum3 : isProof (decideSCC axDum3) ≡ isProof (decide axDum3)
-agree_Dum3 = agreeOn axDum3 true scc_Dum3 check_Dum3
+agree-Dum3 : isProof (decideSCC axDum3) ≡ isProof (decide axDum3)
+agree-Dum3 = agreeOn axDum3 true scc-Dum3 check-Dum3
 
-agree_Dum4 : isProof (decideSCC axDum4) ≡ isProof (decide axDum4)
-agree_Dum4 = agreeOn axDum4 true scc_Dum4 check_Dum4
+agree-Dum4 : isProof (decideSCC axDum4) ≡ isProof (decide axDum4)
+agree-Dum4 = agreeOn axDum4 true scc-Dum4 check-Dum4
 
-agree_D : isProof (decideSCC axD) ≡ isProof (decide axD)
-agree_D = agreeOn axD true scc_D check_D
+agree-D : isProof (decideSCC axD) ≡ isProof (decide axD)
+agree-D = agreeOn axD true scc-D check-D
 
-agree_ax4 : isProof (decideSCC ax4) ≡ isProof (decide ax4)
-agree_ax4 = agreeOn ax4 true scc_ax4 check_ax4
+agree-ax4 : isProof (decideSCC ax4) ≡ isProof (decide ax4)
+agree-ax4 = agreeOn ax4 true scc-ax4 check-ax4
 
-agree_ax4M : isProof (decideSCC ax4M) ≡ isProof (decide ax4M)
-agree_ax4M = agreeOn ax4M true scc_ax4M check_ax4M
+agree-ax4M : isProof (decideSCC ax4M) ≡ isProof (decide ax4M)
+agree-ax4M = agreeOn ax4M true scc-ax4M check-ax4M
 
-agree_ax5 : isProof (decideSCC ax5) ≡ isProof (decide ax5)
-agree_ax5 = agreeOn ax5 false scc_ax5 check_ax5
+agree-ax5 : isProof (decideSCC ax5) ≡ isProof (decide ax5)
+agree-ax5 = agreeOn ax5 false scc-ax5 check-ax5
 
-agree_ax5M : isProof (decideSCC ax5M) ≡ isProof (decide ax5M)
-agree_ax5M = agreeOn ax5M false scc_ax5M check_ax5M
+agree-ax5M : isProof (decideSCC ax5M) ≡ isProof (decide ax5M)
+agree-ax5M = agreeOn ax5M false scc-ax5M check-ax5M
 
-agree_B : isProof (decideSCC axB) ≡ isProof (decide axB)
-agree_B = agreeOn axB false scc_B check_B
+agree-B : isProof (decideSCC axB) ≡ isProof (decide axB)
+agree-B = agreeOn axB false scc-B check-B
 
-agree_BM : isProof (decideSCC axBM) ≡ isProof (decide axBM)
-agree_BM = agreeOn axBM false scc_BM check_BM
+agree-BM : isProof (decideSCC axBM) ≡ isProof (decide axBM)
+agree-BM = agreeOn axBM false scc-BM check-BM
 
-agree_G0 : isProof (decideSCC axG0) ≡ isProof (decide axG0)
-agree_G0 = agreeOn axG0 true scc_G0 check_G0
+agree-G0 : isProof (decideSCC axG0) ≡ isProof (decide axG0)
+agree-G0 = agreeOn axG0 true scc-G0 check-G0
 
-agree_H : isProof (decideSCC axH) ≡ isProof (decide axH)
-agree_H = agreeOn axH true scc_H check_H
+agree-H : isProof (decideSCC axH) ≡ isProof (decide axH)
+agree-H = agreeOn axH true scc-H check-H
 
-agree_Hplus : isProof (decideSCC axHplus) ≡ isProof (decide axHplus)
-agree_Hplus = agreeOn axHplus true scc_Hplus check_Hplus
+agree-Hplus : isProof (decideSCC axHplus) ≡ isProof (decide axHplus)
+agree-Hplus = agreeOn axHplus true scc-Hplus check-Hplus
 
-agree_L : isProof (decideSCC axL) ≡ isProof (decide axL)
-agree_L = agreeOn axL true scc_L check_L
+agree-L : isProof (decideSCC axL) ≡ isProof (decide axL)
+agree-L = agreeOn axL true scc-L check-L
 
-agree_Lplus : isProof (decideSCC axLplus) ≡ isProof (decide axLplus)
-agree_Lplus = agreeOn axLplus true scc_Lplus check_Lplus
+agree-Lplus : isProof (decideSCC axLplus) ≡ isProof (decide axLplus)
+agree-Lplus = agreeOn axLplus true scc-Lplus check-Lplus
 
-agree_Lplusplus : isProof (decideSCC axLplusplus) ≡ isProof (decide axLplusplus)
-agree_Lplusplus = agreeOn axLplusplus true scc_Lplusplus check_Lplusplus
+agree-Lplusplus : isProof (decideSCC axLplusplus) ≡ isProof (decide axLplusplus)
+agree-Lplusplus = agreeOn axLplusplus true scc-Lplusplus check-Lplusplus
 
-agree_Pt : isProof (decideSCC axPt) ≡ isProof (decide axPt)
-agree_Pt = agreeOn axPt false scc_Pt check_Pt
+agree-Pt : isProof (decideSCC axPt) ≡ isProof (decide axPt)
+agree-Pt = agreeOn axPt false scc-Pt check-Pt
 
-agree_W : isProof (decideSCC axW) ≡ isProof (decide axW)
-agree_W = agreeOn axW false scc_W check_W
+agree-W : isProof (decideSCC axW) ≡ isProof (decide axW)
+agree-W = agreeOn axW false scc-W check-W
 
-agree_Z : isProof (decideSCC axZ) ≡ isProof (decide axZ)
-agree_Z = agreeOn axZ false scc_Z check_Z
+agree-Z : isProof (decideSCC axZ) ≡ isProof (decide axZ)
+agree-Z = agreeOn axZ false scc-Z check-Z
 
-agree_Grz : isProof (decideSCC axGrz) ≡ isProof (decide axGrz)
-agree_Grz = agreeOn axGrz false scc_Grz check_Grz
+agree-Grz : isProof (decideSCC axGrz) ≡ isProof (decide axGrz)
+agree-Grz = agreeOn axGrz false scc-Grz check-Grz
 
-agree_Grz1 : isProof (decideSCC axGrz1) ≡ isProof (decide axGrz1)
-agree_Grz1 = agreeOn axGrz1 false scc_Grz1 check_Grz1
+agree-Grz1 : isProof (decideSCC axGrz1) ≡ isProof (decide axGrz1)
+agree-Grz1 = agreeOn axGrz1 false scc-Grz1 check-Grz1
 
-agree_Grz2 : isProof (decideSCC axGrz2) ≡ isProof (decide axGrz2)
-agree_Grz2 = agreeOn axGrz2 false scc_Grz2 check_Grz2
+agree-Grz2 : isProof (decideSCC axGrz2) ≡ isProof (decide axGrz2)
+agree-Grz2 = agreeOn axGrz2 false scc-Grz2 check-Grz2
 
-agree_Grz3 : isProof (decideSCC axGrz3) ≡ isProof (decide axGrz3)
-agree_Grz3 = agreeOn axGrz3 false scc_Grz3 check_Grz3
+agree-Grz3 : isProof (decideSCC axGrz3) ≡ isProof (decide axGrz3)
+agree-Grz3 = agreeOn axGrz3 false scc-Grz3 check-Grz3
 
-agree_Grz4 : isProof (decideSCC axGrz4) ≡ isProof (decide axGrz4)
-agree_Grz4 = agreeOn axGrz4 false scc_Grz4 check_Grz4
+agree-Grz4 : isProof (decideSCC axGrz4) ≡ isProof (decide axGrz4)
+agree-Grz4 = agreeOn axGrz4 false scc-Grz4 check-Grz4
 
-agree_Grz5 : isProof (decideSCC axGrz5) ≡ isProof (decide axGrz5)
-agree_Grz5 = agreeOn axGrz5 false scc_Grz5 check_Grz5
+agree-Grz5 : isProof (decideSCC axGrz5) ≡ isProof (decide axGrz5)
+agree-Grz5 = agreeOn axGrz5 false scc-Grz5 check-Grz5
 
-agree_F : isProof (decideSCC axF) ≡ isProof (decide axF)
-agree_F = agreeOn axF false scc_F check_F
+agree-F : isProof (decideSCC axF) ≡ isProof (decide axF)
+agree-F = agreeOn axF false scc-F check-F
 
-agree_Hs : isProof (decideSCC axHs) ≡ isProof (decide axHs)
-agree_Hs = agreeOn axHs false scc_Hs check_Hs
+agree-Hs : isProof (decideSCC axHs) ≡ isProof (decide axHs)
+agree-Hs = agreeOn axHs false scc-Hs check-Hs
 
-agree_P : isProof (decideSCC axP) ≡ isProof (decide axP)
-agree_P = agreeOn axP false scc_P check_P
+agree-P : isProof (decideSCC axP) ≡ isProof (decide axP)
+agree-P = agreeOn axP false scc-P check-P
 
-agree_R : isProof (decideSCC axR) ≡ isProof (decide axR)
-agree_R = agreeOn axR false scc_R check_R
+agree-R : isProof (decideSCC axR) ≡ isProof (decide axR)
+agree-R = agreeOn axR false scc-R check-R
 
-agree_X : isProof (decideSCC axX) ≡ isProof (decide axX)
-agree_X = agreeOn axX true scc_X check_X
+agree-X : isProof (decideSCC axX) ≡ isProof (decide axX)
+agree-X = agreeOn axX true scc-X check-X
 
-agree_Zem : isProof (decideSCC axZem) ≡ isProof (decide axZem)
-agree_Zem = agreeOn axZem false scc_Zem check_Zem
+agree-Zem : isProof (decideSCC axZem) ≡ isProof (decide axZem)
+agree-Zem = agreeOn axZem false scc-Zem check-Zem
 
-agree_K1 : isProof (decideSCC axK1) ≡ isProof (decide axK1)
-agree_K1 = agreeOn axK1 false scc_K1 check_K1
+agree-K1 : isProof (decideSCC axK1) ≡ isProof (decide axK1)
+agree-K1 = agreeOn axK1 false scc-K1 check-K1
 
-agree_K2 : isProof (decideSCC axK2) ≡ isProof (decide axK2)
-agree_K2 = agreeOn axK2 false scc_K2 check_K2
+agree-K2 : isProof (decideSCC axK2) ≡ isProof (decide axK2)
+agree-K2 = agreeOn axK2 false scc-K2 check-K2
 
-agree_K3 : isProof (decideSCC axK3) ≡ isProof (decide axK3)
-agree_K3 = agreeOn axK3 true scc_K3 check_K3
+agree-K3 : isProof (decideSCC axK3) ≡ isProof (decide axK3)
+agree-K3 = agreeOn axK3 true scc-K3 check-K3
 
-agree_K4 : isProof (decideSCC axK4) ≡ isProof (decide axK4)
-agree_K4 = agreeOn axK4 true scc_K4 check_K4
+agree-K4 : isProof (decideSCC axK4) ≡ isProof (decide axK4)
+agree-K4 = agreeOn axK4 true scc-K4 check-K4
 
-agree_K5 : isProof (decideSCC axK5) ≡ isProof (decide axK5)
-agree_K5 = agreeOn axK5 true scc_K5 check_K5
+agree-K5 : isProof (decideSCC axK5) ≡ isProof (decide axK5)
+agree-K5 = agreeOn axK5 true scc-K5 check-K5
 
-agree_K5fwd : isProof (decideSCC axK5fwd) ≡ isProof (decide axK5fwd)
-agree_K5fwd = agreeOn axK5fwd true scc_K5fwd check_K5fwd
+agree-K5fwd : isProof (decideSCC axK5fwd) ≡ isProof (decide axK5fwd)
+agree-K5fwd = agreeOn axK5fwd true scc-K5fwd check-K5fwd
 
 ------------------------------------------------------------------------
 -- 2. The two lassos on the C5 formula.
@@ -389,20 +389,20 @@ c5Decide = lassoOfDecide c5 (decide c5)
 c5Scc : Val × List Val × List Val
 c5Scc = lassoOfDecide c5 (decideSCC c5)
 
-c5_decide_start : fst c5Decide ≡ᵛ c5pqNow ≡ true
-c5_decide_start = refl
+c5-decide-start : fst c5Decide ≡ᵛ c5pqNow ≡ true
+c5-decide-start = refl
 
-c5_scc_start : fst c5Scc ≡ᵛ c5q ≡ true
-c5_scc_start = refl
+c5-scc-start : fst c5Scc ≡ᵛ c5q ≡ true
+c5-scc-start = refl
 
-c5_decide_len : lassoLen c5Decide ≡ (4 , 1)
-c5_decide_len = refl
+c5-decide-len : lassoLen c5Decide ≡ (4 , 1)
+c5-decide-len = refl
 
-c5_scc_len : lassoLen c5Scc ≡ (6 , 4)
-c5_scc_len = refl
+c5-scc-len : lassoLen c5Scc ≡ (6 , 4)
+c5-scc-len = refl
 
 -- and the observation itself: the two countermodels do not even start at the
 -- same state.
 
-c5_differ : fst c5Decide ≡ᵛ fst c5Scc ≡ false
-c5_differ = refl
+c5-differ : fst c5Decide ≡ᵛ fst c5Scc ≡ false
+c5-differ = refl

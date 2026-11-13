@@ -21,7 +21,7 @@
 --     smaller formula A.  Eventually needs no clause of its own; ◇ A is
 --     ¬ □ ¬ A, so it comes out as the disjunction the note describes.
 --
--- The evaluation is by POSITION, not by index into a sequence: nxt is one step
+-- The evaluation is by POSITION, not by index into a sequence: ○ is one step
 -- of nextPos and box is a conjunction over orbitOf, both of which are functions
 -- of the position alone.  eval then indexes by a Nat, as the plan asks, by
 -- iterating the successor that many times from the start of the run.
@@ -34,7 +34,7 @@ open import LTL.Global public
 -- The Boolean evaluation at a position
 
 evalAt : (P : Formula) (c0 : Val) (c1 : List Val) -> Formula -> Pos -> Bool
-evalAt P c0 c1 (var n)   pos = valOf P (posState pos) (var n)
+evalAt P c0 c1 (var n) pos = valOf P (posState pos) (var n)
 evalAt P c0 c1 (¬ A)   pos = ¬ᵇ evalAt P c0 c1 A pos
 evalAt P c0 c1 (A ⇒ B) pos = evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 B pos
 evalAt P c0 c1 (○ A)   pos = evalAt P c0 c1 A (nextPos c0 c1 pos)
@@ -43,23 +43,23 @@ evalAt P c0 c1 (□ A)   pos = all (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
 ------------------------------------------------------------------------
 -- The two ways of using it, and the shapes G26 and G27 will want
 
-eval□_at : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
-          -> evalAt P c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
-          -> evalAt P c0 c1 A q ≡ true
-eval□_at P c0 c1 A pos q e m =
-  all_at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
+eval□-at : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
+        -> evalAt P c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
+        -> evalAt P c0 c1 A q ≡ true
+eval□-at P c0 c1 A pos q e m =
+  all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
 
-eval□_intro : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-             -> ((q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ true)
-             -> evalAt P c0 c1 (□ A) pos ≡ true
-eval□_intro P c0 c1 A pos f =
-  all_intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos) (λ {q} m -> f q m)
+eval□-intro : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
+           -> ((q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ true)
+           -> evalAt P c0 c1 (□ A) pos ≡ true
+eval□-intro P c0 c1 A pos f =
+  all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos) (λ {q} m -> f q m)
 
-eval□_false : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
-             -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ false
-             -> evalAt P c0 c1 (□ A) pos ≡ false
-eval□_false P c0 c1 A pos q m e =
-  all_atFalse (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
+eval□-false : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
+           -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ false
+           -> evalAt P c0 c1 (□ A) pos ≡ false
+eval□-false P c0 c1 A pos q m e =
+  all-atFalse (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
 
 ------------------------------------------------------------------------
 -- The evaluation on a run, indexed as in the note's unwinding
@@ -99,35 +99,35 @@ evalOn P v e A i = eval P v (runOf P v m (lasso P v m)) A i
 --   ◇ p    holds at stages 0 and 1, so this is a genuine countermodel to
 --            ¬ ◇ p, which is what Theorem 6.1 will read off.
 
-eval_◇ : evalOn ◇P sPending refl ◇P 0 ≡ true
-eval_◇ = refl
+eval-◇ : evalOn ◇P sPending refl ◇P 0 ≡ true
+eval-◇ = refl
 
-eval_p0 : evalOn ◇P sPending refl (var zero) 0 ≡ false
-eval_p0 = refl
+eval-p0 : evalOn ◇P sPending refl (var zero) 0 ≡ false
+eval-p0 = refl
 
-eval_p1 : evalOn ◇P sPending refl (var zero) 1 ≡ true
-eval_p1 = refl
+eval-p1 : evalOn ◇P sPending refl (var zero) 1 ≡ true
+eval-p1 = refl
 
-eval_p2 : evalOn ◇P sPending refl (var zero) 2 ≡ false
-eval_p2 = refl
+eval-p2 : evalOn ◇P sPending refl (var zero) 2 ≡ false
+eval-p2 = refl
 
-eval_○_p : evalOn ◇P sPending refl (○ (var zero)) 0 ≡ true
-eval_○_p = refl
+eval-○-p : evalOn ◇P sPending refl (○ (var zero)) 0 ≡ true
+eval-○-p = refl
 
-eval_□_p : evalOn ◇P sPending refl (□ (var zero)) 0 ≡ false
-eval_□_p = refl
+eval-□-p : evalOn ◇P sPending refl (□ (var zero)) 0 ≡ false
+eval-□-p = refl
 
-eval_◇1 : evalOn ◇P sPending refl ◇P 1 ≡ true
-eval_◇1 = refl
+eval-◇1 : evalOn ◇P sPending refl ◇P 1 ≡ true
+eval-◇1 = refl
 
 -- and the formula the procedure was run on holds at stage 0, as Hintikka's
 -- lemma (G27) will say in general
 
-eval_input : evalOn ◇P sPending refl ◇P 0 ≡ true
-eval_input = refl
+eval-input : evalOn ◇P sPending refl ◇P 0 ≡ true
+eval-input = refl
 
-eval_□_○_p : evalOn ◇P sPending refl (□ ○ (var zero)) 0 ≡ false
-eval_□_○_p = refl
+eval-□-○-p : evalOn ◇P sPending refl (□ ○ (var zero)) 0 ≡ false
+eval-□-○-p = refl
 
 -- The contrast, in the two forms G30 gives it.
 --
@@ -135,17 +135,17 @@ eval_□_○_p = refl
 -- forever, so □ p is TRUE there and the lasso IS a countermodel to
 -- ¬ □ p.
 
-eval_□P_p : evalOn □P s□ refl (var zero) 3 ≡ true
-eval_□P_p = refl
+eval-□P-p : evalOn □P s□ refl (var zero) 3 ≡ true
+eval-□P-p = refl
 
-eval_□P_input : evalOn □P s□ refl □P 0 ≡ true
-eval_□P_input = refl
+eval-□P-input : evalOn □P s□ refl □P 0 ≡ true
+eval-□P-input = refl
 
 -- For ¬ bnb there is no lasso at all: nothing containing ¬ bnb survives,
 -- and since G30 explores only the closure of the states that do contain it,
--- U_infinity is empty rather than merely free of them (Uinf_¬Bnb in
+-- U_infinity is empty rather than merely free of them (Uinf-¬Bnb in
 -- LTL.Trace).  That is the branch where the certificate is a derivation, and
 -- provable supplies it -- see bnbProof in LTL.Extract.
 
-eval_¬Bnb_empty : null (Uinf ¬Bnb) ≡ true
-eval_¬Bnb_empty = refl
+eval-¬Bnb-empty : null (Uinf ¬Bnb) ≡ true
+eval-¬Bnb-empty = refl

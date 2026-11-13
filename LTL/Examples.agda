@@ -4,7 +4,7 @@
 -- "Linear Temporal Logic", page 14) run through decide.
 --
 -- Forty-six named modal and temporal statements, in the box/diamond fragment
--- -- no nxt occurs in any of them.  The figure's last column marks the ones its
+-- -- no ○ occurs in any of them.  The figure's last column marks the ones its
 -- procedure reports valid; here each is a checked equation instead, and the
 -- checkmark is the BRANCH decide takes:
 --
@@ -197,143 +197,143 @@ axK5 = □ ◇ (pv ∨ qv) ⇔ □ ◇ pv ∨ □ ◇ qv
 ------------------------------------------------------------------------
 -- The results
 
-check_T : isProof (decide axT) ≡ true
-check_T = refl
+check-T : isProof (decide axT) ≡ true
+check-T = refl
 
-check_pb2 : isProof (decide pb2) ≡ false
-check_pb2 = refl
+check-pb2 : isProof (decide pb2) ≡ false
+check-pb2 = refl
 
-check_G : isProof (decide axG) ≡ true
-check_G = refl
+check-G : isProof (decide axG) ≡ true
+check-G = refl
 
-check_M : isProof (decide axM) ≡ false
-check_M = refl
+check-M : isProof (decide axM) ≡ false
+check-M = refl
 
-check_M2 : isProof (decide axM2) ≡ false
-check_M2 = refl
+check-M2 : isProof (decide axM2) ≡ false
+check-M2 = refl
 
-check_M3 : isProof (decide axM3) ≡ false
-check_M3 = refl
+check-M3 : isProof (decide axM3) ≡ false
+check-M3 = refl
 
-check_pb5 : isProof (decide pb5) ≡ true
-check_pb5 = refl
+check-pb5 : isProof (decide pb5) ≡ true
+check-pb5 = refl
 
-check_lin1 : isProof (decide lin1) ≡ true
-check_lin1 = refl
+check-lin1 : isProof (decide lin1) ≡ true
+check-lin1 = refl
 
-check_Dum : isProof (decide axDum) ≡ true
-check_Dum = refl
+check-Dum : isProof (decide axDum) ≡ true
+check-Dum = refl
 
-check_Dum1 : isProof (decide axDum1) ≡ true
-check_Dum1 = refl
+check-Dum1 : isProof (decide axDum1) ≡ true
+check-Dum1 = refl
 
-check_Dum2 : isProof (decide axDum2) ≡ true
-check_Dum2 = refl
+check-Dum2 : isProof (decide axDum2) ≡ true
+check-Dum2 = refl
 
-check_Dum3 : isProof (decide axDum3) ≡ true
-check_Dum3 = refl
+check-Dum3 : isProof (decide axDum3) ≡ true
+check-Dum3 = refl
 
-check_Dum4 : isProof (decide axDum4) ≡ true
-check_Dum4 = refl
+check-Dum4 : isProof (decide axDum4) ≡ true
+check-Dum4 = refl
 
-check_D : isProof (decide axD) ≡ true
-check_D = refl
+check-D : isProof (decide axD) ≡ true
+check-D = refl
 
-check_ax4 : isProof (decide ax4) ≡ true
-check_ax4 = refl
+check-ax4 : isProof (decide ax4) ≡ true
+check-ax4 = refl
 
-check_ax4M : isProof (decide ax4M) ≡ true
-check_ax4M = refl
+check-ax4M : isProof (decide ax4M) ≡ true
+check-ax4M = refl
 
-check_ax5 : isProof (decide ax5) ≡ false
-check_ax5 = refl
+check-ax5 : isProof (decide ax5) ≡ false
+check-ax5 = refl
 
-check_ax5M : isProof (decide ax5M) ≡ false
-check_ax5M = refl
+check-ax5M : isProof (decide ax5M) ≡ false
+check-ax5M = refl
 
-check_B : isProof (decide axB) ≡ false
-check_B = refl
+check-B : isProof (decide axB) ≡ false
+check-B = refl
 
-check_BM : isProof (decide axBM) ≡ false
-check_BM = refl
+check-BM : isProof (decide axBM) ≡ false
+check-BM = refl
 
-check_G0 : isProof (decide axG0) ≡ true
-check_G0 = refl
+check-G0 : isProof (decide axG0) ≡ true
+check-G0 = refl
 
-check_H : isProof (decide axH) ≡ true
-check_H = refl
+check-H : isProof (decide axH) ≡ true
+check-H = refl
 
-check_Hplus : isProof (decide axHplus) ≡ true
-check_Hplus = refl
+check-Hplus : isProof (decide axHplus) ≡ true
+check-Hplus = refl
 
-check_L : isProof (decide axL) ≡ true
-check_L = refl
+check-L : isProof (decide axL) ≡ true
+check-L = refl
 
-check_Lplus : isProof (decide axLplus) ≡ true
-check_Lplus = refl
+check-Lplus : isProof (decide axLplus) ≡ true
+check-Lplus = refl
 
-check_Lplusplus : isProof (decide axLplusplus) ≡ true
-check_Lplusplus = refl
+check-Lplusplus : isProof (decide axLplusplus) ≡ true
+check-Lplusplus = refl
 
-check_Pt : isProof (decide axPt) ≡ false
-check_Pt = refl
+check-Pt : isProof (decide axPt) ≡ false
+check-Pt = refl
 
-check_W : isProof (decide axW) ≡ false
-check_W = refl
+check-W : isProof (decide axW) ≡ false
+check-W = refl
 
-check_Z : isProof (decide axZ) ≡ false
-check_Z = refl
+check-Z : isProof (decide axZ) ≡ false
+check-Z = refl
 
-check_Grz : isProof (decide axGrz) ≡ false
-check_Grz = refl
+check-Grz : isProof (decide axGrz) ≡ false
+check-Grz = refl
 
-check_Grz1 : isProof (decide axGrz1) ≡ false
-check_Grz1 = refl
+check-Grz1 : isProof (decide axGrz1) ≡ false
+check-Grz1 = refl
 
-check_Grz2 : isProof (decide axGrz2) ≡ false
-check_Grz2 = refl
+check-Grz2 : isProof (decide axGrz2) ≡ false
+check-Grz2 = refl
 
-check_Grz3 : isProof (decide axGrz3) ≡ false
-check_Grz3 = refl
+check-Grz3 : isProof (decide axGrz3) ≡ false
+check-Grz3 = refl
 
-check_Grz4 : isProof (decide axGrz4) ≡ false
-check_Grz4 = refl
+check-Grz4 : isProof (decide axGrz4) ≡ false
+check-Grz4 = refl
 
-check_Grz5 : isProof (decide axGrz5) ≡ false
-check_Grz5 = refl
+check-Grz5 : isProof (decide axGrz5) ≡ false
+check-Grz5 = refl
 
-check_F : isProof (decide axF) ≡ false
-check_F = refl
+check-F : isProof (decide axF) ≡ false
+check-F = refl
 
-check_Hs : isProof (decide axHs) ≡ false
-check_Hs = refl
+check-Hs : isProof (decide axHs) ≡ false
+check-Hs = refl
 
-check_P : isProof (decide axP) ≡ false
-check_P = refl
+check-P : isProof (decide axP) ≡ false
+check-P = refl
 
-check_R : isProof (decide axR) ≡ false
-check_R = refl
+check-R : isProof (decide axR) ≡ false
+check-R = refl
 
-check_X : isProof (decide axX) ≡ true
-check_X = refl
+check-X : isProof (decide axX) ≡ true
+check-X = refl
 
-check_Zem : isProof (decide axZem) ≡ false
-check_Zem = refl
+check-Zem : isProof (decide axZem) ≡ false
+check-Zem = refl
 
-check_K1 : isProof (decide axK1) ≡ false
-check_K1 = refl
+check-K1 : isProof (decide axK1) ≡ false
+check-K1 = refl
 
-check_K2 : isProof (decide axK2) ≡ false
-check_K2 = refl
+check-K2 : isProof (decide axK2) ≡ false
+check-K2 = refl
 
-check_K3 : isProof (decide axK3) ≡ true
-check_K3 = refl
+check-K3 : isProof (decide axK3) ≡ true
+check-K3 = refl
 
-check_K4 : isProof (decide axK4) ≡ true
-check_K4 = refl
+check-K4 : isProof (decide axK4) ≡ true
+check-K4 = refl
 
-check_K5 : isProof (decide axK5) ≡ true
-check_K5 = refl
+check-K5 : isProof (decide axK5) ≡ true
+check-K5 = refl
 
 ------------------------------------------------------------------------
 -- Two of the countermodels, read off.
@@ -366,18 +366,18 @@ check_K5 = refl
 -- stage 2 on p holds forever, so □ p holds and pb2 holds at every stage but
 -- the first.  That single false at stage 0 is the countermodel.
 
-pb2_shape : shapeOf pb2 ≡ (3 , 1)
-pb2_shape = refl
+pb2-shape : shapeOf pb2 ≡ (3 , 1)
+pb2-shape = refl
 
-pb2_p : traceOf pb2 pv 8 ≡
+pb2-p : traceOf pb2 pv 8 ≡
         true ∷ false ∷ true ∷ true ∷ true ∷ true ∷ true ∷ true ∷ []
-pb2_p = refl
+pb2-p = refl
 
-pb2_□ : traceOf pb2 (□ pv) 4 ≡ false ∷ false ∷ true ∷ true ∷ []
-pb2_□ = refl
+pb2-□ : traceOf pb2 (□ pv) 4 ≡ false ∷ false ∷ true ∷ true ∷ []
+pb2-□ = refl
 
-pb2_input : traceOf pb2 pb2 4 ≡ false ∷ true ∷ true ∷ true ∷ []
-pb2_input = refl
+pb2-input : traceOf pb2 pb2 4 ≡ false ∷ true ∷ true ∷ true ∷ []
+pb2-input = refl
 
 ------------------------------------------------------------------------
 -- axM2 = ◇ □ (p ⇒ □ p).
@@ -395,19 +395,19 @@ pb2_input = refl
 -- alternating run refutes axM2 not just at stage 0 but everywhere, which is
 -- what an eventuality being unfulfillable on a cycle looks like.
 
-axM2_shape : shapeOf axM2 ≡ (2 , 2)
-axM2_shape = refl
+axM2-shape : shapeOf axM2 ≡ (2 , 2)
+axM2-shape = refl
 
-axM2_p : traceOf axM2 pv 8 ≡
+axM2-p : traceOf axM2 pv 8 ≡
          true ∷ false ∷ true ∷ false ∷ true ∷ false ∷ true ∷ false ∷ []
-axM2_p = refl
+axM2-p = refl
 
-axM2_step : traceOf axM2 (pv ⇒ □ pv) 8 ≡
+axM2-step : traceOf axM2 (pv ⇒ □ pv) 8 ≡
             false ∷ true ∷ false ∷ true ∷ false ∷ true ∷ false ∷ true ∷ []
-axM2_step = refl
+axM2-step = refl
 
-axM2_input : traceOf axM2 axM2 4 ≡ false ∷ false ∷ false ∷ false ∷ []
-axM2_input = refl
+axM2-input : traceOf axM2 axM2 4 ≡ false ∷ false ∷ false ∷ false ∷ []
+axM2-input = refl
 
 ------------------------------------------------------------------------
 -- The half of K5 that carries the content.
@@ -446,28 +446,28 @@ axM2_input = refl
 axK5fwd : Formula
 axK5fwd = □ ◇ (pv ∨ qv) ⇒ □ ◇ pv ∨ □ ◇ qv
 
-K5fwd_sub : length (sub (¬ axK5fwd)) ≡ 22
-K5fwd_sub = refl
+K5fwd-sub : length (sub (¬ axK5fwd)) ≡ 22
+K5fwd-sub = refl
 
-K5fwd_atoms : length (atoms (sub (¬ axK5fwd))) ≡ 8
-K5fwd_atoms = refl
+K5fwd-atoms : length (atoms (sub (¬ axK5fwd))) ≡ 8
+K5fwd-atoms = refl
 
-K5fwd_cands : length (cands (¬ axK5fwd)) ≡ 256
-K5fwd_cands = refl
+K5fwd-cands : length (cands (¬ axK5fwd)) ≡ 256
+K5fwd-cands = refl
 
-K5fwd_states : length (StCand (¬ axK5fwd)) ≡ 59
-K5fwd_states = refl
+K5fwd-states : length (StCand (¬ axK5fwd)) ≡ 59
+K5fwd-states = refl
 
-K5fwd_closure : length (Ust (¬ axK5fwd)) ≡ 9
-K5fwd_closure = refl
+K5fwd-closure : length (Ust (¬ axK5fwd)) ≡ 9
+K5fwd-closure = refl
 
 -- the first round removes one state, and by (R2)
 
-K5fwd_round1 : reasons (¬ axK5fwd) (Ust (¬ axK5fwd)) ≡ false ∷ []
-K5fwd_round1 = refl
+K5fwd-round1 : reasons (¬ axK5fwd) (Ust (¬ axK5fwd)) ≡ false ∷ []
+K5fwd-round1 = refl
 
-K5fwd_uinf : length (Uinf (¬ axK5fwd)) ≡ 0
-K5fwd_uinf = refl
+K5fwd-uinf : length (Uinf (¬ axK5fwd)) ≡ 0
+K5fwd-uinf = refl
 
-check_K5fwd : isProof (decide axK5fwd) ≡ true
-check_K5fwd = refl
+check-K5fwd : isProof (decide axK5fwd) ≡ true
+check-K5fwd = refl

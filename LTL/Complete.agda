@@ -34,20 +34,20 @@ appCong refl refl = refl
 chiOfTrue : (A : Formula) (As : List Formula) (V : List Val)
          -> map (chiOf (A ∷ As)) (map (λ w -> true ∷ w) V) ≡
             map (A ∧_) (map (chiOf As) V)
-chiOfTrue A As V = trans (map_map (chiOf (A ∷ As)) (λ w -> true ∷ w) V)
-                         (sym (map_map (A ∧_) (chiOf As) V))
+chiOfTrue A As V = trans (map-map (chiOf (A ∷ As)) (λ w -> true ∷ w) V)
+                         (sym (map-map (A ∧_) (chiOf As) V))
 
 chiOfFalse : (A : Formula) (As : List Formula) (V : List Val)
           -> map (chiOf (A ∷ As)) (map (λ w -> false ∷ w) V) ≡
              map (¬ A ∧_) (map (chiOf As) V)
-chiOfFalse A As V = trans (map_map (chiOf (A ∷ As)) (λ w -> false ∷ w) V)
-                          (sym (map_map (¬ A ∧_) (chiOf As) V))
+chiOfFalse A As V = trans (map-map (chiOf (A ∷ As)) (λ w -> false ∷ w) V)
+                          (sym (map-map (¬ A ∧_) (chiOf As) V))
 
 stepEq : (A : Formula) (As : List Formula)
       -> map (chiOf (A ∷ As)) (allVecs (suc (length As))) ≡
          splitOn A (map (chiOf As) (allVecs (length As)))
 stepEq A As =
-  trans (map_append (chiOf (A ∷ As))
+  trans (map-append (chiOf (A ∷ As))
                     (map (λ w -> true  ∷ w) (allVecs (length As)))
                     (map (λ w -> false ∷ w) (allVecs (length As))))
         (appCong (chiOfTrue  A As (allVecs (length As)))
@@ -71,39 +71,39 @@ data AllLen (n : Nat) : List Val -> Set where
   alCons : {v : Val} {vs : List Val}
         -> length v ≡ n -> AllLen n vs -> AllLen n (v ∷ vs)
 
-allLen_append : {n : Nat} {xs ys : List Val}
+allLen-append : {n : Nat} {xs ys : List Val}
              -> AllLen n xs -> AllLen n ys -> AllLen n (xs ++ ys)
-allLen_append alNil          ay = ay
-allLen_append (alCons e ax)  ay = alCons e (allLen_append ax ay)
+allLen-append alNil          ay = ay
+allLen-append (alCons e ax)  ay = alCons e (allLen-append ax ay)
 
-allLen_cons : (b : Bool) {n : Nat} {V : List Val}
+allLen-cons : (b : Bool) {n : Nat} {V : List Val}
            -> AllLen n V -> AllLen (suc n) (map (λ w -> b ∷ w) V)
-allLen_cons b alNil         = alNil
-allLen_cons b (alCons e ax) = alCons (cong suc e) (allLen_cons b ax)
+allLen-cons b alNil         = alNil
+allLen-cons b (alCons e ax) = alCons (cong suc e) (allLen-cons b ax)
 
-allVecs_allLen : (n : Nat) -> AllLen n (allVecs n)
-allVecs_allLen zero    = alCons refl alNil
-allVecs_allLen (suc n) =
-  allLen_append (allLen_cons true  (allVecs_allLen n))
-                (allLen_cons false (allVecs_allLen n))
+allVecs-allLen : (n : Nat) -> AllLen n (allVecs n)
+allVecs-allLen zero    = alCons refl alNil
+allVecs-allLen (suc n) =
+  allLen-append (allLen-cons true  (allVecs-allLen n))
+                (allLen-cons false (allVecs-allLen n))
 
 ------------------------------------------------------------------------
 -- Dropping the non-states
 
-map_filterCons : (P : Formula) (b : Bool) (v : Val) (L : List Val)
+map-filterCons : (P : Formula) (b : Bool) (v : Val) (L : List Val)
               -> map (chi P) (filterCons b v L) ≡
                  filterCons b (chi P v) (map (chi P) L)
-map_filterCons P true  v L = refl
-map_filterCons P false v L = refl
+map-filterCons P true  v L = refl
+map-filterCons P false v L = refl
 
 ⋁Filter : (P : Formula) (vs : List Val)
-          -> AllLen (length (sub P)) vs
-          -> ⊢ ⋁ (map (chi P) vs)
-               ⇒ ⋁ (map (chi P) (filter (isState P) vs))
+       -> AllLen (length (sub P)) vs
+       -> ⊢ ⋁ (map (chi P) vs)
+            ⇒ ⋁ (map (chi P) (filter (isState P) vs))
 ⋁Filter P []       alNil          = ⇒Refl
 ⋁Filter P (v ∷ vs) (alCons len al) =
   subst (λ L -> ⊢ ⋁ (chi P v ∷ map (chi P) vs) ⇒ ⋁ L)
-        (sym (map_filterCons P (isState P v) v (filter (isState P) vs)))
+        (sym (map-filterCons P (isState P v) v (filter (isState P) vs)))
         (onState (isState P v) refl)
   where
     ih : ⊢ ⋁ (map (chi P) vs) ⇒ ⋁ (map (chi P) (filter (isState P) vs))
@@ -123,5 +123,5 @@ map_filterCons P false v L = refl
 stateComplete : (P : Formula) -> ⊢ beta P (St P)
 stateComplete P =
   mp (⋁Filter P (allVecs (length (sub P)))
-                 (allVecs_allLen (length (sub P))))
+                 (allVecs-allLen (length (sub P))))
      (allComplete (sub P))

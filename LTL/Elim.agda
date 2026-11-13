@@ -68,15 +68,15 @@ Ev = Formula × List Val
 evList : Formula -> List Val -> List Ev
 evList P us = map (λ A -> A , gfpW P us A) (□Args (sub P))
 
-evList_mem : (P : Formula) (us : List Val) {A : Formula}
+evList-mem : (P : Formula) (us : List Val) {A : Formula}
           -> A ∈ □Args (sub P) -> (A , gfpW P us A) ∈ evList P us
-evList_mem P us m = memMap (λ A -> A , gfpW P us A) m
+evList-mem P us m = memMap (λ A -> A , gfpW P us A) m
 
-evList_of : (P : Formula) (us : List Val) {A : Formula} {W : List Val}
+evList-of : (P : Formula) (us : List Val) {A : Formula} {W : List Val}
          -> (A , W) ∈ evList P us
          -> A ∈ □Args (sub P) × W ≡ gfpW P us A
-evList_of P us {A} {W} m =
-  fromSig (map_mem_inv (λ B -> B , gfpW P us B) (□Args (sub P)) m)
+evList-of P us {A} {W} m =
+  fromSig (map-mem-inv (λ B -> B , gfpW P us B) (□Args (sub P)) m)
   where
     fromSig : (Σ[ B ∈ Formula ] B ∈ □Args (sub P) ×
                                 (A , W) ≡ (B , gfpW P us B))
@@ -163,11 +163,11 @@ satB P = any (λ v -> valOf P v P) (Uinf P)
 -- ◇ p is satisfiable: all three states survive, and one of them makes
 -- ◇ p true.
 
-Uinf_◇P : length (Uinf ◇P) ≡ 3
-Uinf_◇P = refl
+Uinf-◇P : length (Uinf ◇P) ≡ 3
+Uinf-◇P = refl
 
-satB_◇P : satB ◇P ≡ true
-satB_◇P = refl
+satB-◇P : satB ◇P ≡ true
+satB-◇P = refl
 
 -- ¬ benAri is unsatisfiable, so □ p ⇒ ○ □ p is provable.
 --
@@ -178,14 +178,14 @@ satB_◇P = refl
 -- in a single step, where his tableau needed the loop invariant because it
 -- carried  ○ □ p  as an explicit member of the closure.
 
-Uinf_¬BenAri : length (Uinf ¬BenAri) ≡ 0
-Uinf_¬BenAri = refl
+Uinf-¬BenAri : length (Uinf ¬BenAri) ≡ 0
+Uinf-¬BenAri = refl
 
-removed_¬BenAri : length (removed ¬BenAri) ≡ 1
-removed_¬BenAri = refl
+removed-¬BenAri : length (removed ¬BenAri) ≡ 1
+removed-¬BenAri = refl
 
-satB_¬BenAri : satB ¬BenAri ≡ false
-satB_¬BenAri = refl
+satB-¬BenAri : satB ¬BenAri ≡ false
+satB-¬BenAri = refl
 
 ------------------------------------------------------------------------
 -- An example that does exercise (R2), recorded but not checked here.

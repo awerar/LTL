@@ -67,7 +67,7 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
             prop B (there m) pd =
               sumElim (λ f   -> fulfilPrefix ws1 ws2 f)
                       (λ pd2 -> fulfilSuffix ws1 ws2 (walkEnd P (Uinf P) wk1) (h2 B m pd2))
-                      (walkPersist P (Uinf P) B (□Args_mem (sub P) (sbA (there m)))
+                      (walkPersist P (Uinf P) B (□Args-mem (sub P) (sbA (there m)))
                                    wk1 pd)
 
     onPend : (b : Bool) -> valOf P u (□ A) ≡ b -> RoundB P (A ∷ As) u
@@ -101,7 +101,7 @@ roundOf P u mu = fromBody (roundBody P (□Args (sub P)) (λ m -> m) u mu)
         fromSucc (succInUinf y my st) =
           mkRound (ws ++ y ∷ []) y
                   (walkApp P (Uinf P) wk (wcons my st wnil)) my
-                  (null_appR ws y [])
+                  (null-appR ws y [])
                   (λ A mA pd -> fulfilPrefix ws (y ∷ []) (h A mA pd))
 
 ------------------------------------------------------------------------

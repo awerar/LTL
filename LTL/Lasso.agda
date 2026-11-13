@@ -54,7 +54,7 @@ seenExt : (P : Formula) (v0 cur nx b : Val) (rs : List Val)
        -> Walk P (Uinf P) cur rs nx -> Seen P v0 cur b -> Seen P v0 nx b
 seenExt P v0 cur nx b rs wr (mkSeen mb ps wp qs wq nn h) =
   mkSeen mb ps wp (qs ++ rs) (walkApp P (Uinf P) wq wr)
-         (null_appL qs rs nn)
+         (null-appL qs rs nn)
          (λ A mA pd -> fulfilPrefix qs rs (h A mA pd))
 
 ------------------------------------------------------------------------
@@ -79,7 +79,7 @@ closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
         fromSub : SubWalk P (Uinf P) s cur cur qs -> Fulfil P A cur qs
         fromSub (subWalk zs wz f) =
           sumElim mapFul (λ pd2 -> h A mA pd2)
-                  (walkPersist P (Uinf P) A (□Args_mem (sub P) mA) wz pd)
+                  (walkPersist P (Uinf P) A (□Args-mem (sub P) mA) wz pd)
           where
             mapFul : Fulfil P A s zs -> Fulfil P A cur qs
             mapFul (ful z m q) = ful z (f m) q
@@ -210,8 +210,8 @@ sFulfil = true ∷ false ∷ false ∷ true ∷ []
 sSink : Val
 sSink = false ∷ true ∷ true ∷ false ∷ []
 
-◇P_lasso : lassoAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ [])
-◇P_lasso = refl
+◇P-lasso : lassoAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ [])
+◇P-lasso = refl
 
 
 -- A degenerate but instructive second case.  For  □ p  the demand-driven
@@ -228,5 +228,5 @@ sSink = false ∷ true ∷ true ∷ false ∷ []
 s□ : Val
 s□ = true ∷ true ∷ []
 
-□P_lasso : lassoAt □P s□ refl ≡ ([] , s□ ∷ [])
-□P_lasso = refl
+□P-lasso : lassoAt □P s□ refl ≡ ([] , s□ ∷ [])
+□P-lasso = refl

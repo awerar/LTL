@@ -16,9 +16,6 @@ module LTL.Val where
 open import LTL.Deriv public
 
 ------------------------------------------------------------------------
--- Valuations
-
-------------------------------------------------------------------------
 -- Signed occurrences, conjunction and disjunction over a list
 
 lit : Formula -> Bool -> Formula
@@ -57,15 +54,15 @@ beta P vs = ⋁ (map (chi P) vs)
 -- bit that v gives at that position.  Every conjunct projection of Phase 4
 -- goes through it.
 
-litList_mem : {A : Formula} (As : List Formula) (v : Val)
+litList-mem : {A : Formula} (As : List Formula) (v : Val)
            -> length v ≡ length As
            -> (h : A ∈ As)
            -> lit A (bitAt v (index h)) ∈ litList As v
-litList_mem []       v       e ()
-litList_mem (A ∷ As) []      () h
-litList_mem (A ∷ As) (b ∷ v) e here      = here
-litList_mem (A ∷ As) (b ∷ v) e (there h) =
-  there (litList_mem As v (sucInj e) h)
+litList-mem []       v       e ()
+litList-mem (A ∷ As) []      () h
+litList-mem (A ∷ As) (b ∷ v) e here      = here
+litList-mem (A ∷ As) (b ∷ v) e (there h) =
+  there (litList-mem As v (sucInj e) h)
 
 ------------------------------------------------------------------------
 -- Sanity checks by computation.
@@ -73,11 +70,11 @@ litList_mem (A ∷ As) (b ∷ v) e (there h) =
 -- sub benAri has length 6 (LTL.Sub), so there are 2^6 = 64 valuations to
 -- filter in G5.
 
-allVecs_three : length (allVecs 3) ≡ 8
-allVecs_three = refl
+allVecs-three : length (allVecs 3) ≡ 8
+allVecs-three = refl
 
-allVecs_benAri : length (allVecs (length (sub benAri))) ≡ 64
-allVecs_benAri = refl
+allVecs-benAri : length (allVecs (length (sub benAri))) ≡ 64
+allVecs-benAri = refl
 
 -- Positions 1 and 4 of sub benAri are the same formula (□ p), so a valuation
 -- disagreeing there yields a chi containing both □ p and ¬ □ p.  This
@@ -86,5 +83,5 @@ allVecs_benAri = refl
 badVal : Val
 badVal = true ∷ true ∷ true ∷ true ∷ false ∷ true ∷ []
 
-badVal_length : length badVal ≡ length (sub benAri)
-badVal_length = refl
+badVal-length : length badVal ≡ length (sub benAri)
+badVal-length = refl

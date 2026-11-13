@@ -89,6 +89,7 @@ NoneSat f C = (z : Node) -> z ∈ C -> f z ≡ false
 
 HoldsOutside : (Node -> Set) -> List Node -> Set
 HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
+
 ------------------------------------------------------------------------
 -- Inductive finiteness for nodes
 
@@ -96,7 +97,7 @@ HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
 -- nodes that satisfy E forever, so a search that always picks a new one
 -- stops.
 
-IFin : (Node -> Bool) -> Set
+IFin : Pred -> Set
 IFin E = Bar _≢ᵛ_ E
 
 ------------------------------------------------------------------------
@@ -111,9 +112,9 @@ barOfList         zero    xs le sb =
   cBar (λ x ex -> emptyElim (leZeroNil xs le (sb x ex)))
 barOfList {E = E} (suc n) xs le sb =
   cBar (λ x ex -> barOfList n (filter (x ≢ᵛ_) xs)
-                    (lePred (leTrans (filter_lt (x ≢ᵛ_) xs (sb x ex)
+                    (lePred (leTrans (filter-lt (x ≢ᵛ_) xs (sb x ex)
                                                 (≢ᵛ-self x)) le))
-                    (λ z ez -> filter_true (x ≢ᵛ_) xs
+                    (λ z ez -> filter-true (x ≢ᵛ_) xs
                                  (sb z (andTrueL (E z) (x ≢ᵛ z) ez))
                                  (andTrueR (E z) (x ≢ᵛ z) ez)))
 
@@ -158,7 +159,7 @@ dropAllSat : {E : Pred} (p : Pred) (xs : List Node) -> AllSat E xs
           -> AllSat (λ y -> E y ∧ᵇ (x ≢ᵛ y)) (filter p xs)
 dropAllSat {E} p xs sb x q z mz =
   andIntro (E z) (x ≢ᵛ z)
-           (sb z (filter_sub p xs mz))
+           (sb z (filter-sub p xs mz))
            (cong ¬ᵇ_ (onEq (x ≡ᵛ z) refl))
   where
     onEq : (b : Bool) -> x ≡ᵛ z ≡ b -> x ≡ᵛ z ≡ false
@@ -166,5 +167,5 @@ dropAllSat {E} p xs sb x q z mz =
     onEq true  e =
       emptyElim (true≢false (trans (sym (subst (λ u -> p u ≡ true)
                                                (sym (≡ᵛ-sound x z e))
-                                               (filter_prop p xs mz)))
+                                               (filter-prop p xs mz)))
                                    q))

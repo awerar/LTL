@@ -298,37 +298,37 @@ memAppR : {A : Set} {x : A} (xs ys : List A) -> x ∈ ys -> x ∈ xs ++ ys
 memAppR []       ys h = h
 memAppR (z ∷ xs) ys h = there (memAppR xs ys h)
 
-filterCons_mem : {A : Set} {x : A} (b : Bool) (y : A) (ys : List A)
+filterCons-mem : {A : Set} {x : A} (b : Bool) (y : A) (ys : List A)
               -> x ∈ ys -> x ∈ filterCons b y ys
-filterCons_mem true  y ys h = there h
-filterCons_mem false y ys h = h
+filterCons-mem true  y ys h = there h
+filterCons-mem false y ys h = h
 
-filterCons_hd : {A : Set} (b : Bool) (y : A) (ys : List A)
+filterCons-hd : {A : Set} (b : Bool) (y : A) (ys : List A)
              -> b ≡ true -> y ∈ filterCons b y ys
-filterCons_hd true  y ys e = here
-filterCons_hd false y ys ()
+filterCons-hd true  y ys e = here
+filterCons-hd false y ys ()
 
-filter_true : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+filter-true : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
            -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
-filter_true p []       ()        e
-filter_true p (y ∷ ys) here      e = filterCons_hd (p y) y (filter p ys) e
-filter_true p (y ∷ ys) (there m) e =
-  filterCons_mem (p y) y (filter p ys) (filter_true p ys m e)
+filter-true p []       ()        e
+filter-true p (y ∷ ys) here      e = filterCons-hd (p y) y (filter p ys) e
+filter-true p (y ∷ ys) (there m) e =
+  filterCons-mem (p y) y (filter p ys) (filter-true p ys m e)
 
 memMap : {A B : Set} (f : A -> B) {x : A} {xs : List A}
       -> x ∈ xs -> f x ∈ map f xs
 memMap f here      = here
 memMap f (there h) = there (memMap f h)
 
-map_append : {A B : Set} (f : A -> B) (xs ys : List A)
+map-append : {A B : Set} (f : A -> B) (xs ys : List A)
           -> map f (xs ++ ys) ≡ map f xs ++ map f ys
-map_append f []       ys = refl
-map_append f (x ∷ xs) ys = cong (λ zs -> f x ∷ zs) (map_append f xs ys)
+map-append f []       ys = refl
+map-append f (x ∷ xs) ys = cong (λ zs -> f x ∷ zs) (map-append f xs ys)
 
-map_map : {A B C : Set} (f : B -> C) (g : A -> B) (xs : List A)
+map-map : {A B C : Set} (f : B -> C) (g : A -> B) (xs : List A)
        -> map f (map g xs) ≡ map (λ x -> f (g x)) xs
-map_map f g []       = refl
-map_map f g (x ∷ xs) = cong (λ zs -> f (g x) ∷ zs) (map_map f g xs)
+map-map f g []       = refl
+map-map f g (x ∷ xs) = cong (λ zs -> f (g x) ∷ zs) (map-map f g xs)
 
 memAppCase : {A : Set} {x : A} (xs ys : List A)
           -> x ∈ xs ++ ys -> x ∈ xs ⊎ x ∈ ys
@@ -352,21 +352,21 @@ nth []       n       d = d
 nth (x ∷ xs) zero    d = x
 nth (x ∷ xs) (suc n) d = nth xs n d
 
-index_nth : {A : Set} {x : A} {xs : List A} (h : x ∈ xs) (d : A)
+index-nth : {A : Set} {x : A} {xs : List A} (h : x ∈ xs) (d : A)
          -> nth xs (index h) d ≡ x
-index_nth here      d = refl
-index_nth (there h) d = index_nth h d
+index-nth here      d = refl
+index-nth (there h) d = index-nth h d
 
-index_length : {A : Set} {x : A} {xs : List A} (h : x ∈ xs)
+index-length : {A : Set} {x : A} {xs : List A} (h : x ∈ xs)
             -> index h < length xs
-index_length here      = ltZero
-index_length (there h) = ltSuc (index_length h)
+index-length here      = ltZero
+index-length (there h) = ltSuc (index-length h)
 
-nth_mem : {A : Set} (xs : List A) (i : Nat) -> i < length xs -> (d : A)
+nth-mem : {A : Set} (xs : List A) (i : Nat) -> i < length xs -> (d : A)
        -> nth xs i d ∈ xs
-nth_mem []       i       ()        d
-nth_mem (x ∷ xs) zero    lt        d = here
-nth_mem (x ∷ xs) (suc i) (ltSuc l) d = there (nth_mem xs i l d)
+nth-mem []       i       ()        d
+nth-mem (x ∷ xs) zero    lt        d = here
+nth-mem (x ∷ xs) (suc i) (ltSuc l) d = there (nth-mem xs i l d)
 
 ltSucCase : (i n : Nat) -> i < suc n -> i ≡ n ⊎ i < n
 ltSucCase zero    zero     lt        = inl refl
@@ -383,21 +383,21 @@ all : {A : Set} -> (A -> Bool) -> List A -> Bool
 all p []       = true
 all p (x ∷ xs) = p x ∧ᵇ all p xs
 
-all_at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+all-at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
       -> x ∈ xs -> all p xs ≡ true -> p x ≡ true
-all_at p []       ()        e
-all_at p (y ∷ ys) here      e = andTrueL (p y) (all p ys) e
-all_at p (y ∷ ys) (there m) e = all_at p ys m (andTrueR (p y) (all p ys) e)
+all-at p []       ()        e
+all-at p (y ∷ ys) here      e = andTrueL (p y) (all p ys) e
+all-at p (y ∷ ys) (there m) e = all-at p ys m (andTrueR (p y) (all p ys) e)
 
-all_atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+all-atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
            -> x ∈ xs -> p x ≡ false -> all p xs ≡ false
-all_atFalse p []       ()        e
-all_atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
-all_atFalse p (y ∷ ys) (there m) e =
-  andFalseIntroR (p y) (all p ys) (all_atFalse p ys m e)
+all-atFalse p []       ()        e
+all-atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
+all-atFalse p (y ∷ ys) (there m) e =
+  andFalseIntroR (p y) (all p ys) (all-atFalse p ys m e)
 
-all_intro : {A : Set} (p : A -> Bool) (xs : List A)
+all-intro : {A : Set} (p : A -> Bool) (xs : List A)
          -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true
-all_intro p []       f = refl
-all_intro p (y ∷ ys) f =
-  andIntro (p y) (all p ys) (f here) (all_intro p ys (λ m -> f (there m)))
+all-intro p []       f = refl
+all-intro p (y ∷ ys) f =
+  andIntro (p y) (all p ys) (f here) (all-intro p ys (λ m -> f (there m)))

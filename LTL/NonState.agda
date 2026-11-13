@@ -25,8 +25,8 @@ refuteLit true  f g = refute f g
 refuteLit false f g = refute g f
 
 refute¬ : {C B : Formula} (b : Bool)
-         -> ⊢ C ⇒ (lit B b) -> ⊢ C ⇒ (lit (¬ B) b)
-         -> ⊢ ¬ C
+       -> ⊢ C ⇒ (lit B b) -> ⊢ C ⇒ (lit (¬ B) b)
+       -> ⊢ ¬ C
 refute¬ true  f g = refute f g
 refute¬ false f g = refute f g
 
@@ -58,7 +58,7 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
         X = nth (sub P) i ⊥
 
         m : X ∈ sub P
-        m = nth_mem (sub P) i lt ⊥
+        m = nth-mem (sub P) i lt ⊥
 
         flip : bitAt v i ≡ ¬ᵇ valOf P v X
         flip = ⇔ᵇ-false (bitAt v i) (valOf P v X) cf
@@ -77,7 +77,7 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
           -> ⊢ ¬ C
     okFail ch {var n}   m ()
     okFail ch {○ B}   m ()
-    okFail ch {¬ B}   m e = refute¬ b (prAt ch (sub_¬ P m) b refl)
+    okFail ch {¬ B}   m e = refute¬ b (prAt ch (sub-¬ P m) b refl)
                                       (prAt ch m b eq¬B)
       where
         b : Bool
@@ -91,10 +91,10 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
     okFail ch {B ⇒ D} m e = aux (valOf P v B) (valOf P v D) refl refl eqI
       where
         mB : B ∈ sub P
-        mB = sub_⇒L P m
+        mB = sub-⇒L P m
 
         mD : D ∈ sub P
-        mD = sub_⇒R P m
+        mD = sub-⇒R P m
 
         eqI : valOf P v (B ⇒ D) ≡
               ¬ᵇ (valOf P v B ⇒ᵇ valOf P v D)
@@ -115,7 +115,7 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
           refute (⇒Trans (prAt ch mB false eB) ¬Elim) (prAt ch m false eI)
 
     okFail ch {□ B}   m e = refute (⇒Trans (prAt ch m true e□) □Elim)
-                                   (prAt ch (sub_□ P m) false eB)
+                                   (prAt ch (sub-□ P m) false eB)
       where
         pr2 : valOf P v (□ B) ≡ true × valOf P v B ≡ false
         pr2 = ⇒ᵇ-false (valOf P v (□ B)) (valOf P v B) e
@@ -131,14 +131,14 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
     onCoh : (c : Bool) -> allCoh P v (length (sub P)) ≡ c
          -> isState P v ≡ false -> ⊢ ¬ C
     onCoh false ce e =
-      sigElim (allCoh_false P v (length (sub P)) ce)
+      sigElim (allCoh-false P v (length (sub P)) ce)
       where
         sigElim : (Σ[ i ∈ Nat ] i < length (sub P) ×
                                     cohAt P v i ≡ false)
                -> ⊢ ¬ C
         sigElim (i , lt , cf) = cohFail i lt cf
     onCoh true  ce e =
-      sumElim (λ ef -> sigElim (allOk_false P v (sub P) ef))
+      sumElim (λ ef -> sigElim (allOk-false P v (sub P) ef))
               (λ bad -> emptyElim (true≢false (trans (sym ce) bad)))
               (andFalse (allOk P v (sub P)) (allCoh P v (length (sub P))) e)
       where

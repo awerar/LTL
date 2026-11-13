@@ -60,18 +60,18 @@ linBwd = mp ∧Snd lin
 -- the backward half of (Lin); the second is a case analysis on ○ A.
 
 ○∨1 : {A B : Formula}
-       -> ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
+   -> ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
 ○∨1 = ⇒TransU (liftP linBwd) k○
 
 ○∨2 : {A B : Formula}
-       -> ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
+   -> ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
 ○∨2 = caseU (liftP (○Mono explode)) (⇒TransU identP (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
 -- Monotonicity of ∨ in its second argument
 
 ∨MonoR : {X Y Z : Formula}
-        -> ⊢ X ⇒ Y -> ⊢ Z ∨ X ⇒ Z ∨ Y
+      -> ⊢ X ⇒ Y -> ⊢ Z ∨ X ⇒ Z ∨ Y
 ∨MonoR d = mp p2 (liftP d)
 
 ------------------------------------------------------------------------
@@ -82,12 +82,12 @@ linBwd = mp ∧Snd lin
 -- back to |- chi v ⇒ ○ (beta (succs v)).
 
 ○⋁L1 : (As : List Formula)
-         -> ⊢ ○ ⋁ As ⇒ ⋁ (map ○_ As)
+    -> ⊢ ○ ⋁ As ⇒ ⋁ (map ○_ As)
 ○⋁L1 []       = ○⊥
 ○⋁L1 (A ∷ As) = ⇒Trans ○∨1 (∨MonoR (○⋁L1 As))
 
 ○⋁L2 : (As : List Formula)
-         -> ⊢ ⋁ (map ○_ As) ⇒ ○ ⋁ As
+    -> ⊢ ⋁ (map ○_ As) ⇒ ○ ⋁ As
 ○⋁L2 []       = exFalso
 ○⋁L2 (A ∷ As) = ⇒Trans (∨MonoR (○⋁L2 As)) ○∨2
 
@@ -99,7 +99,7 @@ linBwd = mp ∧Snd lin
 -- ○ X together with ○ A gives ○ ¬ B, hence ¬ ○ B.
 
 ○∧Intro : {A B : Formula}
-           -> ⊢ ○ A ∧ ○ B ⇒ ○ (A ∧ B)
+       -> ⊢ ○ A ∧ ○ B ⇒ ○ (A ∧ B)
 ○∧Intro {A} {B} = ⇒Trans (¬IntroU hB hNB) linBwd
   where
     P : Formula

@@ -65,15 +65,15 @@ memConsApp2 : {z v x : Val} (ws zs : List Val)
 memConsApp2 ws zs mx here      = memConsApp ws zs mx
 memConsApp2 ws zs mx (there m) = there (memAppR ws zs m)
 
-null_appR : (ws : List Val) (y : Val) (zs : List Val)
+null-appR : (ws : List Val) (y : Val) (zs : List Val)
          -> null (ws ++ y ∷ zs) ≡ false
-null_appR []       y zs = refl
-null_appR (w ∷ ws) y zs = refl
+null-appR []       y zs = refl
+null-appR (w ∷ ws) y zs = refl
 
-null_appL : (ws zs : List Val)
+null-appL : (ws zs : List Val)
          -> null ws ≡ false -> null (ws ++ zs) ≡ false
-null_appL []       zs ()
-null_appL (w ∷ ws) zs e = refl
+null-appL []       zs ()
+null-appL (w ∷ ws) zs e = refl
 
 ------------------------------------------------------------------------
 -- The tail of a walk starting at any state it visits.

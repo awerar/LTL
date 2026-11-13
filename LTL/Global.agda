@@ -49,7 +49,7 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
                                   valOf P (posState q) A ≡ false
   globalFulfil (vpos s rest ms wk) A mA pend =
     sumElim onStem onCycle
-            (walkPersist P (Uinf P) A (□Args_mem (sub P) mA) wk pend)
+            (walkPersist P (Uinf P) A (□Args-mem (sub P) mA) wk pend)
     where
       place : (q : Pos) -> q ∈ orbitOf c0 c1 (s , rest) -> {z : Val}
            -> posState q ≡ z -> valOf P z A ≡ false
@@ -62,7 +62,7 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
       onStem : Fulfil P A s rest
             -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
                                 valOf P (posState q) A ≡ false
-      onStem (ful z mz ez) = fromPL (posList_mem s rest mz)
+      onStem (ful z mz ez) = fromPL (posList-mem s rest mz)
         where
           fromPL : (Σ[ q ∈ Pos ] q ∈ posList s rest × posState q ≡ z)
                 -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
@@ -79,7 +79,7 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
           fromFul : Fulfil P A b (c0 ∷ c1)
                  -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
                                      valOf P (posState q) A ≡ false
-          fromFul (ful z mz ez) = fromPL (posList_mem c0 c1 (cycMem mbc mz))
+          fromFul (ful z mz ez) = fromPL (posList-mem c0 c1 (cycMem mbc mz))
             where
               fromPL : (Σ[ q ∈ Pos ] q ∈ posList c0 c1 ×
                                          posState q ≡ z)
@@ -107,12 +107,12 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
                -> Σ[ t ∈ Nat ]
                     valOf P (posState (posIter c0 c1 (i + t) start)) A ≡ false
       fromOrbit (q , mq , eq) =
-        fromIter (orbitOf_iter c0 c1 (posIter c0 c1 i start) q mq)
+        fromIter (orbitOf-iter c0 c1 (posIter c0 c1 i start) q mq)
         where
           fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t (posIter c0 c1 i start) ≡ q)
                   -> Σ[ t ∈ Nat ]
                        valOf P (posState (posIter c0 c1 (i + t) start)) A ≡ false
           fromIter (t , et) =
             t , subst (λ r -> valOf P (posState r) A ≡ false)
-                      (sym (trans (posIter_plus c0 c1 i t start) et))
+                      (sym (trans (posIter-plus c0 c1 i t start) et))
                       eq
