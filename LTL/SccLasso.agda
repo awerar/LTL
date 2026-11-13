@@ -128,14 +128,14 @@ walkLast P us wk nn = trailLast us (step P) (walkTrail P us wk) nn
 evPred : Formula -> Formula -> Val -> Bool
 evPred P A z = valOf P z (□ A) ∨ᵇ ¬ᵇ valOf P z A
 
-evPreds : Formula -> List (Val -> Bool)
+evPreds : Formula -> List Pred
 evPreds P = map (evPred P) (□Args (sub P))
 
 evPredsMem : (P : Formula) {A : Formula} -> A ∈ □Args (sub P)
           -> evPred P A ∈ evPreds P
 evPredsMem P m = memMap (evPred P) m
 
-evPredsInv : (P : Formula) {g : Val -> Bool} -> g ∈ evPreds P
+evPredsInv : (P : Formula) {g : Pred} -> g ∈ evPreds P
           -> Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred P A
 evPredsInv P m = map_mem_inv (evPred P) (□Args (sub P)) m
 
@@ -194,7 +194,7 @@ persistTo P us A mb (wcons {v} {w} {ws} {x} mw st wk) e {z} mz =
 -- Lasso of Proposition 5.3.
 
 sccLasso : (P : Formula) (vs : List Val)
-        -> ((z : Val) -> z ∈ vs -> z ∈ Uinf P)
+        -> vs ⊆ Uinf P
         -> (v0 : Val) -> FairLoop vs (step P) (evPreds P) v0 -> Lasso P v0
 sccLasso P vs sb v0 (fairLoop r st cy ts tc nn wit) =
   mkLasso r mr st wst cy wcy nn cyc
@@ -210,9 +210,7 @@ sccLasso P vs sb v0 (fairLoop r st cy ts tc nn wit) =
     wcy : Walk P (Uinf P) r cy r
     wcy = trailWalk P (Uinf P) (trailMono vs (Uinf P) (step P) sb tc)
 
-    cyc : (s : Val) -> s ∈ r ∷ cy
-       -> (A : Formula) -> A ∈ □Args (sub P)
-       -> valOf P s (□ A) ≡ false -> Fulfil P A r cy
+    cyc : AllFulfilled P r cy (r ∷ cy)
     cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
       where
         mbx : □ A ∈ sub P
@@ -241,7 +239,7 @@ sccLasso P vs sb v0 (fairLoop r st cy ts tc nn wit) =
 -- and hence a Run: the existing positive tail, unchanged.
 
 sccRun : (P : Formula) (vs : List Val)
-      -> ((z : Val) -> z ∈ vs -> z ∈ Uinf P)
+      -> vs ⊆ Uinf P
       -> (v0 : Val) -> v0 ∈ Uinf P
       -> FairLoop vs (step P) (evPreds P) v0 -> Run P v0
 sccRun P vs sb v0 mv0 fl = runOf P v0 mv0 (sccLasso P vs sb v0 fl)
@@ -281,7 +279,7 @@ lassoFair P v0 (mkLasso b mb ps wp qs wq nn cyc) =
                 onMem here      = mbq
                 onMem (there k) = k
 
-    each : (g : Val -> Bool) -> g ∈ evPreds P
+    each : (g : Pred) -> g ∈ evPreds P
         -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
     each g mg = onInv (evPredsInv P mg)
       where

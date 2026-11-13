@@ -230,10 +230,10 @@ ustRefuted P u mu e = emptyElim (∈ᵛ-false u (Ust P) e mu)
 -- carried across one round by roundRefuted in the branch where a round removes
 -- something, and returned unchanged in the branch where none does.
 
-goRefuted   : (P : Formula) {E : Val -> Bool} (us : List Val)
+goRefuted   : (P : Formula) {E : Pred} (us : List Val)
            -> (sb : AllSat E us) (bar : IFin E)
            -> us ⊆ Ust P -> Refuted P us -> Refuted P (elimGo P us sb bar)
-findRefuted : (P : Formula) {E : Val -> Bool} (us : List Val)
+findRefuted : (P : Formula) {E : Pred} (us : List Val)
            -> (sb : AllSat E us) (bar : IFin E)
            -> (fr : FindResult (keep P us (evList P us)) us)
            -> us ⊆ Ust P -> Refuted P us -> Refuted P (elimFind P us sb bar fr)

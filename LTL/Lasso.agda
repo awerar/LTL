@@ -47,9 +47,7 @@ data Seen (P : Formula) (v0 cur b : Val) : Set where
   mkSeen : b ∈ Uinf P
         -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
         -> (qs : List Val) -> Walk P (Uinf P) b qs cur
-        -> null qs ≡ false
-        -> ((A : Formula) -> A ∈ □Args (sub P)
-              -> valOf P b (□ A) ≡ false -> Fulfil P A b qs)
+        -> null qs ≡ false -> FulfilledAt P b qs b
         -> Seen P v0 cur b
 
 seenExt : (P : Formula) (v0 cur nx b : Val) (rs : List Val)
@@ -66,10 +64,7 @@ data Lasso (P : Formula) (v0 : Val) : Set where
   mkLasso : (b : Val) -> b ∈ Uinf P
          -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
          -> (qs : List Val) -> Walk P (Uinf P) b qs b
-         -> null qs ≡ false
-         -> ((s : Val) -> s ∈ b ∷ qs
-               -> (A : Formula) -> A ∈ □Args (sub P)
-               -> valOf P s (□ A) ≡ false -> Fulfil P A b qs)
+         -> null qs ≡ false -> AllFulfilled P b qs (b ∷ qs)
          -> Lasso P v0
 
 -- Closing the loop.  This is where the cycle-fulfilment property is proved.
@@ -78,9 +73,7 @@ closeLasso : (P : Formula) (v0 cur : Val) -> Seen P v0 cur cur -> Lasso P v0
 closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
   mkLasso cur mb ps wp qs wq nn cyc
   where
-    cyc : (s : Val) -> s ∈ cur ∷ qs
-       -> (A : Formula) -> A ∈ □Args (sub P)
-       -> valOf P s (□ A) ≡ false -> Fulfil P A cur qs
+    cyc : AllFulfilled P cur qs (cur ∷ qs)
     cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wq ms)
       where
         fromSub : SubWalk P (Uinf P) s cur cur qs -> Fulfil P A cur qs
@@ -97,17 +90,15 @@ closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
 -- Invariants: cur is reachable from v0 by the walk ps; bs lists the boundaries
 -- already passed, each with its Seen record relative to the current position;
 -- and every state of U_inf that is not yet a boundary still satisfies E, the
--- Bar's predicate.  That last one is Avail below, and it is the pigeonhole.
-
-Avail : (Val -> Bool) -> Formula -> List Val -> Set
-Avail E P bs = (z : Val) -> z ∈ Uinf P -> z ∈ᵛ bs ≡ false -> E z ≡ true
+-- Bar's predicate.  That last one is  Avail E (Uinf P) bs  (LTL.Bar), and it
+-- is the pigeonhole.
 
 -- Giving cur up: a state of U_inf outside cur ∷ bs is outside bs, hence
 -- satisfies E, and is distinct from cur, hence survives the intersection with
 -- (cur ≢ᵛ_).
 
-availCons : (P : Formula) {E : Val -> Bool} (bs : List Val) -> Avail E P bs
-         -> (cur : Val) -> Avail (λ y -> E y ∧ᵇ (cur ≢ᵛ y)) P (cur ∷ bs)
+availCons : (P : Formula) {E : Pred} (bs : List Val) -> Avail E (Uinf P) bs
+         -> (cur : Val) -> Avail (λ y -> E y ∧ᵇ (cur ≢ᵛ y)) (Uinf P) (cur ∷ bs)
 availCons P {E} bs av cur z mz e =
   andIntro (E z) (cur ≢ᵛ z)
            (av z mz (orFalseR (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
@@ -121,41 +112,41 @@ availCons P {E} bs av cur z mz e =
                                                (≡ᵛ-refl cur)))
                                    (orFalseL (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e)))
 
-lassoSearch : (P : Formula) (v0 : Val) {E : Val -> Bool} -> IFin E
-           -> (cur : Val) -> cur ∈ Uinf P
-           -> (ps : List Val) -> Walk P (Uinf P) v0 ps cur
-           -> (bs : List Val)
-           -> ((b : Val) -> b ∈ bs -> Seen P v0 cur b)
-           -> Avail E P bs
-           -> Lasso P v0
--- lassoSearch, after the case split on whether cur is already in bs.
+module _ (P : Formula) (v0 : Val) where
 
-lassoOn : (P : Formula) (v0 : Val) {E : Val -> Bool} -> IFin E
-       -> (cur : Val) -> cur ∈ Uinf P
-       -> (ps : List Val) -> Walk P (Uinf P) v0 ps cur
-       -> (bs : List Val)
-       -> ((b : Val) -> b ∈ bs -> Seen P v0 cur b)
-       -> Avail E P bs
-       -> (c : Bool) -> cur ∈ᵛ bs ≡ c
-       -> Lasso P v0
+  lassoSearch : {E : Pred} -> IFin E
+             -> (cur : Val) -> cur ∈ Uinf P
+             -> (ps : List Val) -> Walk P (Uinf P) v0 ps cur
+             -> (bs : List Val) -> ((b : Val) -> b ∈ bs -> Seen P v0 cur b)
+             -> Avail E (Uinf P) bs
+             -> Lasso P v0
+  -- lassoSearch, after the case split on whether cur is already in bs.
 
-lassoSearch P v0 bar cur mcur ps wps bs seenf av =
-  lassoOn P v0 bar cur mcur ps wps bs seenf av (cur ∈ᵛ bs) refl
+  lassoOn : {E : Pred} -> IFin E
+         -> (cur : Val) -> cur ∈ Uinf P
+         -> (ps : List Val) -> Walk P (Uinf P) v0 ps cur
+         -> (bs : List Val) -> ((b : Val) -> b ∈ bs -> Seen P v0 cur b)
+         -> Avail E (Uinf P) bs
+         -> (c : Bool) -> cur ∈ᵛ bs ≡ c
+         -> Lasso P v0
 
-lassoOn P v0 bar cur mcur ps wps bs seenf av true  ec =
-  closeLasso P v0 cur (seenf cur (∈ᵛ-sound cur bs ec))
-lassoOn P v0 (cBar h) cur mcur ps wps bs seenf av false ec =
-  fromRound (roundOf P cur mcur)
-  where
-    fromRound : Round P cur -> Lasso P v0
-    fromRound (mkRound rs nx wr mnx nn hf) =
-      lassoSearch P v0 (h cur (av cur mcur ec))
-                  nx mnx (ps ++ rs) (walkApp P (Uinf P) wps wr)
-                  (cur ∷ bs) seenf' (availCons P bs av cur)
-      where
-        seenf' : (b : Val) -> b ∈ cur ∷ bs -> Seen P v0 nx b
-        seenf' b here      = mkSeen mcur ps wps rs wr nn hf
-        seenf' b (there m) = seenExt P v0 cur nx b rs wr (seenf b m)
+  lassoSearch bar cur mcur ps wps bs seenf av =
+    lassoOn bar cur mcur ps wps bs seenf av (cur ∈ᵛ bs) refl
+
+  lassoOn bar cur mcur ps wps bs seenf av true  ec =
+    closeLasso P v0 cur (seenf cur (∈ᵛ-sound cur bs ec))
+  lassoOn (cBar h) cur mcur ps wps bs seenf av false ec =
+    fromRound (roundOf P cur mcur)
+    where
+      fromRound : Round P cur -> Lasso P v0
+      fromRound (mkRound rs nx wr mnx nn hf) =
+        lassoSearch (h cur (av cur mcur ec))
+                    nx mnx (ps ++ rs) (walkApp P (Uinf P) wps wr)
+                    (cur ∷ bs) seenf' (availCons P bs av cur)
+        where
+          seenf' : (b : Val) -> b ∈ cur ∷ bs -> Seen P v0 nx b
+          seenf' b here      = mkSeen mcur ps wps rs wr nn hf
+          seenf' b (there m) = seenExt P v0 cur nx b rs wr (seenf b m)
 
 ------------------------------------------------------------------------
 -- Proposition 5.3

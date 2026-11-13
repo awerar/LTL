@@ -69,9 +69,9 @@ shrink P us W = filter (succsInside P us W) W
 -- predicate with it, which is what dropAllSat says and what makes the recursive
 -- call structurally smaller.
 
-shrinkGo   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
+shrinkGo   : (P : Formula) (us : List Val) {E : Pred} (W : List Val)
           -> AllSat E W -> IFin E -> List Val
-shrinkFind : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
+shrinkFind : (P : Formula) (us : List Val) {E : Pred} (W : List Val)
           -> AllSat E W -> IFin E -> FindResult (succsInside P us W) W -> List Val
 
 shrinkGo P us W sb bar = shrinkFind P us W sb bar (findFalse (succsInside P us W) W)
@@ -91,6 +91,12 @@ ClosedIn : Formula -> List Val -> List Val -> Set
 ClosedIn P us W =
   (w w' : Val) -> w ∈ W -> w' ∈ us -> step P w w' ≡ true -> w' ∈ W
 
+-- The same for a family X : Val -> Set in place of the list W.
+
+ClosedFam : Formula -> List Val -> (Val -> Set) -> Set
+ClosedFam P us X =
+  (w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w'
+
 closedOfAll : (P : Formula) (us W : List Val)
            -> ({x : Val} -> x ∈ W -> succsInside P us W x ≡ true)
            -> ClosedIn P us W
@@ -100,11 +106,9 @@ closedOfAll P us W f w w' mw mw' st =
               (all_at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
               st)
 
-shrinkGoClosed   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                -> (sb : AllSat E W) (bar : IFin E)
+shrinkGoClosed   : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
                 -> ClosedIn P us (shrinkGo P us W sb bar)
-shrinkFindClosed : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                -> (sb : AllSat E W) (bar : IFin E)
+shrinkFindClosed : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
                 -> (fr : FindResult (succsInside P us W) W)
                 -> ClosedIn P us (shrinkFind P us W sb bar fr)
 
@@ -125,11 +129,9 @@ gfpClosed P us A =
 ------------------------------------------------------------------------
 -- The other two properties: W sits inside U_k, and A holds throughout it
 
-shrinkGoSub   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-             -> (sb : AllSat E W) (bar : IFin E) {z : Val}
+shrinkGoSub   : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E) {z : Val}
              -> z ∈ shrinkGo P us W sb bar -> z ∈ W
-shrinkFindSub : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-             -> (sb : AllSat E W) (bar : IFin E)
+shrinkFindSub : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
              -> (fr : FindResult (succsInside P us W) W) {z : Val}
              -> z ∈ shrinkFind P us W sb bar fr -> z ∈ W
 
@@ -162,41 +164,41 @@ gfpHolds P us A m = filter_prop (holdsAt P A) us (gfpWZero P us A m)
 -- Stated for a family X : Val -> Set rather than a list, which is what lets
 -- gfpComplete below instantiate it at Path.
 
-shrinkGoGreatest   : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                  -> (sb : AllSat E W) (bar : IFin E) (X : Val -> Set)
-                  -> ((w : Val) -> X w -> w ∈ W)
-                  -> ((w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w')
-                  -> (w : Val) -> X w -> w ∈ shrinkGo P us W sb bar
-shrinkFindGreatest : (P : Formula) (us : List Val) {E : Val -> Bool} (W : List Val)
-                  -> (sb : AllSat E W) (bar : IFin E)
-                  -> (fr : FindResult (succsInside P us W) W) (X : Val -> Set)
-                  -> ((w : Val) -> X w -> w ∈ W)
-                  -> ((w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w')
-                  -> (w : Val) -> X w -> w ∈ shrinkFind P us W sb bar fr
+module _ (P : Formula) (us : List Val) where
 
-shrinkGoGreatest P us W sb bar =
-  shrinkFindGreatest P us W sb bar (findFalse (succsInside P us W) W)
+  shrinkGoGreatest   : {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E) (X : Val -> Set)
+                    -> ((w : Val) -> X w -> w ∈ W)
+                    -> ClosedFam P us X
+                    -> (w : Val) -> X w -> w ∈ shrinkGo P us W sb bar
+  shrinkFindGreatest : {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
+                    -> (fr : FindResult (succsInside P us W) W) (X : Val -> Set)
+                    -> ((w : Val) -> X w -> w ∈ W)
+                    -> ClosedFam P us X
+                    -> (w : Val) -> X w -> w ∈ shrinkFind P us W sb bar fr
 
-shrinkFindGreatest P us W sb bar      (allTrue f)      X inW cl w x = inW w x
-shrinkFindGreatest P us W sb (cBar h) (found x0 m q) X inW cl w x =
-  shrinkGoGreatest P us (shrink P us W) (dropAllSat (succsInside P us W) W sb x0 q)
-                   (h x0 (sb x0 m)) X inW' cl w x
-  where
-    inW' : (z : Val) -> X z -> z ∈ shrink P us W
-    inW' z xz =
-      filter_true (succsInside P us W) W (inW z xz)
-                  (all_intro (λ w' -> step P z w' ⇒ᵇ (w' ∈ᵛ W)) us inner)
-      where
-        inner : {w' : Val} -> w' ∈ us
-             -> step P z w' ⇒ᵇ (w' ∈ᵛ W) ≡ true
-        inner {w'} mw' =
-          ⇒IntroB (step P z w') (w' ∈ᵛ W)
-                    (λ st -> ∈ᵛ-complete w' W (inW w' (cl z w' xz mw' st)))
+  shrinkGoGreatest W sb bar =
+    shrinkFindGreatest W sb bar (findFalse (succsInside P us W) W)
+
+  shrinkFindGreatest W sb bar      (allTrue f)      X inW cl w x = inW w x
+  shrinkFindGreatest W sb (cBar h) (found x0 m q) X inW cl w x =
+    shrinkGoGreatest (shrink P us W) (dropAllSat (succsInside P us W) W sb x0 q)
+                     (h x0 (sb x0 m)) X inW' cl w x
+    where
+      inW' : (z : Val) -> X z -> z ∈ shrink P us W
+      inW' z xz =
+        filter_true (succsInside P us W) W (inW z xz)
+                    (all_intro (λ w' -> step P z w' ⇒ᵇ (w' ∈ᵛ W)) us inner)
+        where
+          inner : {w' : Val} -> w' ∈ us
+               -> step P z w' ⇒ᵇ (w' ∈ᵛ W) ≡ true
+          inner {w'} mw' =
+            ⇒IntroB (step P z w') (w' ∈ᵛ W)
+                      (λ st -> ∈ᵛ-complete w' W (inW w' (cl z w' xz mw' st)))
 
 gfpGreatest : (P : Formula) (us : List Val) (A : Formula) (X : Val -> Set)
            -> ((w : Val) -> X w -> w ∈ us)
            -> ((w : Val) -> X w -> valOf P w A ≡ true)
-           -> ((w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w')
+           -> ClosedFam P us X
            -> (w : Val) -> X w -> w ∈ gfpW P us A
 gfpGreatest P us A X inUs hol cl =
   shrinkGoGreatest P us (wZero P us A) (memAllSat (wZero P us A))

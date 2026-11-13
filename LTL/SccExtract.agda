@@ -104,7 +104,7 @@ UstRef : Formula -> Val -> Set
 UstRef P z = z ∈ Ust P -> ⊢ ¬ (chi P z)
 
 refutedOf : (P : Formula) (ws : List Val)
-         -> ((z : Val) -> z ∈ᵛ ws ≡ false -> UstRef P z) -> Refuted P ws
+         -> HoldsOutside (UstRef P) ws -> Refuted P ws
 refutedOf P ws ih u mu e = ih u e mu
 
 ------------------------------------------------------------------------
@@ -122,7 +122,7 @@ refutedOf P ws ih u mu e = ih u e mu
 extractBlock : (P : Formula) (ws C : List Val) (u : Val)
             -> u ∈ Ust P -> Refuted P ws
             -> (A : Formula) -> □ A ∈ sub P
-            -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
+            -> C ⊆ Ust P
             -> ((z y : Val) -> z ∈ C -> y ∈ St P -> y ∈ᵛ ws ≡ true
                   -> step P z y ≡ true -> y ∈ C)
             -> ((z : Val) -> z ∈ C -> valOf P z A ≡ true)
@@ -180,7 +180,7 @@ extractBlock P ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬�
 
 sinkStep : (P : Formula) (ws : List Val) (x : Val) -> x ∈ ws
         -> null (outs ws (step P) x) ≡ true
-        -> ((z : Val) -> z ∈ᵛ ws ≡ false -> UstRef P z)
+        -> HoldsOutside (UstRef P) ws
         -> UstRef P x
 sinkStep P ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf P ws ih) e1
 
@@ -188,11 +188,9 @@ sinkStep P ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf P ws ih) e1
 -- evPredsInv, its falsity on C is split into the two hypotheses of (R2), and
 -- the component is intersected with Ust P.
 
-blockStep : (P : Formula) (ws C : List Val) (f : Val -> Bool) -> f ∈ evPreds P
-         -> ((z : Val) -> z ∈ C -> z ∈ ws)
-         -> ((z y : Val) -> z ∈ C -> y ∈ ws -> step P z y ≡ true -> y ∈ C)
-         -> ((z : Val) -> z ∈ C -> f z ≡ false)
-         -> ((z : Val) -> z ∈ᵛ ws ≡ false -> UstRef P z)
+blockStep : (P : Formula) (ws C : List Val) (f : Pred) -> f ∈ evPreds P
+         -> C ⊆ ws -> Closed ws (step P) C -> NoneSat f C
+         -> HoldsOutside (UstRef P) ws
          -> (z : Val) -> z ∈ C -> UstRef P z
 blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
   where

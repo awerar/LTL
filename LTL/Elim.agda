@@ -112,9 +112,9 @@ elimRound P us = filter (keep P us (evList P us)) us
 -- the Bar's predicate along with the round, which is what makes the recursive
 -- call structurally smaller.
 
-elimGo   : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimGo   : (P : Formula) {E : Pred} (us : List Val)
         -> AllSat E us -> IFin E -> List Val
-elimFind : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimFind : (P : Formula) {E : Pred} (us : List Val)
         -> AllSat E us -> IFin E
         -> FindResult (keep P us (evList P us)) us -> List Val
 

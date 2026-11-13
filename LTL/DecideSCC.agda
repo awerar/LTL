@@ -98,7 +98,7 @@ trapFail P C A mbx z w (reachesBy as t) pd atW =
 
 data TrapLoop (P : Formula) (v0 : Val) : Set where
   trapLoop : (C : List Val) -> v0 ∈ C
-         -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
+         -> C ⊆ Ust P
          -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> TrapLoop P v0
 
 fairTrapLoop : (P : Formula) (v0 : Val) -> v0 ∈ Ust P

@@ -32,6 +32,13 @@ derivation or a certified finite lasso countermodel.
   `LTL/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
   `⊥`/`⊤` are formulas. Function types and lambdas stay ASCII (`->`) apart from
   `λ`.
+- Signatures: use the named hypotheses instead of spelling them out:
+  `Pred`/`Edges` (`Val -> Bool`, `Val -> Val -> Bool`), `xs ⊆ ys`,
+  `Closed ws G C`, `NoneSat f C`, `HoldsOutside R ws` (`LTL/Sets.agda`),
+  `AllSat`/`Avail` (`LTL/Bar.agda`), `FulfilledAt`/`AllFulfilled`
+  (`LTL/Walk.agda`). A run of lemmas that share leading arguments, passed on
+  unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
+  callers outside see the same arguments.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `Uinf`, `r1`/`r2`, `gfpW`, `wZero`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the

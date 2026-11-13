@@ -239,11 +239,11 @@ inAddAll P acc x m q =
 ------------------------------------------------------------------------
 -- The search
 
-closeGo   : (P : Formula) {E : Val -> Bool} (acc : List Val)
-         -> ((z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false -> E z ≡ true)
+closeGo   : (P : Formula) {E : Pred} (acc : List Val)
+         -> Avail E (StCand P) acc
          -> IFin E -> List Val
-closeFind : (P : Formula) {E : Val -> Bool} (acc : List Val)
-         -> ((z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false -> E z ≡ true)
+closeFind : (P : Formula) {E : Pred} (acc : List Val)
+         -> Avail E (StCand P) acc
          -> IFin E -> FindResult (settled P acc) (StCand P) -> List Val
 
 closeGo P acc av bar = closeFind P acc av bar (findFalse (settled P acc) (StCand P))
@@ -276,17 +276,15 @@ closeFind P {E} acc av (cBar h) (found x m q) =
 ------------------------------------------------------------------------
 -- Its three properties, each by the same recursion
 
-closeGoSt   : (P : Formula) {E : Val -> Bool} (acc : List Val)
-           -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                  -> E z ≡ true)
+closeGoSt   : (P : Formula) {E : Pred} (acc : List Val)
+           -> (av : Avail E (StCand P) acc)
            -> (bar : IFin E)
-           -> ((z : Val) -> z ∈ acc -> z ∈ StCand P)
+           -> acc ⊆ StCand P
            -> {z : Val} -> z ∈ closeGo P acc av bar -> z ∈ StCand P
-closeFindSt : (P : Formula) {E : Val -> Bool} (acc : List Val)
-           -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                  -> E z ≡ true)
+closeFindSt : (P : Formula) {E : Pred} (acc : List Val)
+           -> (av : Avail E (StCand P) acc)
            -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P))
-           -> ((z : Val) -> z ∈ acc -> z ∈ StCand P)
+           -> acc ⊆ StCand P
            -> {z : Val} -> z ∈ closeFind P acc av bar fr -> z ∈ StCand P
 
 closeGoSt P acc av bar =
@@ -301,15 +299,13 @@ closeFindSt P acc av (cBar h) (found x mx q) sb       m =
                        (λ m2 -> sb z m2)
                        (memAppCase (filter (missing P acc) (StCand P)) acc mz)
 
-closeGoSeed   : (P : Formula) {E : Val -> Bool} (acc : List Val)
-             -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                    -> E z ≡ true)
+closeGoSeed   : (P : Formula) {E : Pred} (acc : List Val)
+             -> (av : Avail E (StCand P) acc)
              -> (bar : IFin E) {z : Val}
              -> z ∈ StCand P -> valOf P z P ≡ true
              -> z ∈ closeGo P acc av bar
-closeFindSeed : (P : Formula) {E : Val -> Bool} (acc : List Val)
-             -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                    -> E z ≡ true)
+closeFindSeed : (P : Formula) {E : Pred} (acc : List Val)
+             -> (av : Avail E (StCand P) acc)
              -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P)) {z : Val}
              -> z ∈ StCand P -> valOf P z P ≡ true
              -> z ∈ closeFind P acc av bar fr
@@ -325,15 +321,13 @@ closeFindSeed P acc av bar      (allTrue f)       {z} mz e =
 closeFindSeed P acc av (cBar h) (found x mx q)     mz e =
   closeGoSeed P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q))) mz e
 
-closeGoClosed   : (P : Formula) {E : Val -> Bool} (acc : List Val)
-               -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                      -> E z ≡ true)
+closeGoClosed   : (P : Formula) {E : Pred} (acc : List Val)
+               -> (av : Avail E (StCand P) acc)
                -> (bar : IFin E) {u w : Val}
                -> u ∈ closeGo P acc av bar -> w ∈ StCand P
                -> step P u w ≡ true -> w ∈ closeGo P acc av bar
-closeFindClosed : (P : Formula) {E : Val -> Bool} (acc : List Val)
-               -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                      -> E z ≡ true)
+closeFindClosed : (P : Formula) {E : Pred} (acc : List Val)
+               -> (av : Avail E (StCand P) acc)
                -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P)) {u w : Val}
                -> u ∈ closeFind P acc av bar fr -> w ∈ StCand P
                -> step P u w ≡ true -> w ∈ closeFind P acc av bar fr

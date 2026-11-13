@@ -93,7 +93,7 @@ IFin E = Bar _≢ᵛ_ E
 -- The ≤ measure of the development survives here and nowhere else: it is paid
 -- once, when the Bar is built, and no search counts anything afterwards.
 
-barOfList : {E : Val -> Bool} (n : Nat) (xs : List Val) -> length xs ≤ n
+barOfList : {E : Pred} (n : Nat) (xs : List Val) -> length xs ≤ n
          -> ((x : Val) -> E x ≡ true -> x ∈ xs) -> IFin E
 barOfList         zero    xs le sb =
   cBar (λ x ex -> emptyElim (leZeroNil xs le (sb x ex)))
@@ -329,16 +329,20 @@ vecIFin (suc m) =
 
 -- Naming convention for the searches built on this (Closure, Gfp, Elim, Fix,
 -- Graph, SccTrap):
---   sb    a subset proof: AllSat E xs, or xs ⊆ ys written out pointwise;
+--   sb    a subset proof: AllSat E xs, or xs ⊆ ys;
 --   bar   the IFin E the search recurses on;
---   av    the "available" invariant of a growing search: every candidate not
---         yet in the accumulator still satisfies the Bar's predicate E.
+--   av    the "available" invariant of a growing search, Avail E ws acc:
+--         every candidate in ws not yet in the accumulator acc still
+--         satisfies the Bar's predicate E.
 -- A search comes as a pair fooGo / fooFind: fooGo runs findFalse for one
 -- round, and fooFind cases on its FindResult -- allTrue stops, found x
 -- recurses on the smaller Bar that cBar hands over.
 
-AllSat : (Val -> Bool) -> List Val -> Set
+AllSat : Pred -> List Val -> Set
 AllSat E xs = (x : Val) -> x ∈ xs -> E x ≡ true
+
+Avail : Pred -> List Val -> List Val -> Set
+Avail E ws acc = (z : Val) -> z ∈ ws -> z ∈ᵛ acc ≡ false -> E z ≡ true
 
 memAllSat : (xs : List Val) -> AllSat (λ v -> v ∈ᵛ xs) xs
 memAllSat xs x m = ∈ᵛ-complete x xs m
@@ -350,7 +354,7 @@ listBar xs = barOfList (length xs) xs (leRefl (length xs))
 -- Dropping x from the list is dropping x from the predicate.  Both searches of
 -- G29 that remove a member of the list they are searching use this.
 
-dropAllSat : {E : Val -> Bool} (p : Val -> Bool) (xs : List Val) -> AllSat E xs
+dropAllSat : {E : Pred} (p : Pred) (xs : List Val) -> AllSat E xs
           -> (x : Val) -> p x ≡ false
           -> AllSat (λ y -> E y ∧ᵇ (x ≢ᵛ y)) (filter p xs)
 dropAllSat {E} p xs sb x q z mz =
@@ -423,7 +427,7 @@ stAllSat P x m =
 -- depth below 2^k never touches vecIFin at all.
 
 AllBar : Nat -> Set
-AllBar n = (E : Val -> Bool)
+AllBar n = (E : Pred)
         -> ((v : Val) -> E v ≡ true -> hasLength n v ≡ true) -> IFin E
 
 allVecBar : (n : Nat) -> AllBar n

@@ -193,10 +193,7 @@ data Run (P : Formula) (v0 : Val) : Set where
        -> c0 ∈ Uinf P
        -> Walk P (Uinf P) c0 c1 b
        -> step P b c0 ≡ true
-       -> b ∈ c0 ∷ c1
-       -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
-             -> (A : Formula) -> A ∈ □Args (sub P)
-             -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
+       -> b ∈ c0 ∷ c1 -> AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1)
        -> (rest : List Val) -> v0 ∈ Uinf P -> Walk P (Uinf P) v0 rest b
        -> Run P v0
 

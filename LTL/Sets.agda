@@ -240,3 +240,32 @@ eqCons refl refl = refl
 
 ∈ᵛ-false : (v : Val) (us : List Val) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
 ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
+
+------------------------------------------------------------------------
+-- Names for the hypotheses the graph searches keep repeating.
+--
+-- Each is only an abbreviation, definitionally equal to the Pi-type it names,
+-- so a proof of the long form is a proof of the short one and no body changes.
+--
+--   Pred          a predicate on valuations: a fairness condition, or the
+--                 predicate a Bar search runs on;
+--   Edges         a graph on valuations, given as its edge test;
+--   Closed ws G C   C is closed under G-successors that lie inside ws;
+--   NoneSat f C     f is false at every member of C;
+--   HoldsOutside R ws   R holds at every valuation outside ws -- the
+--                 induction hypothesis of a removing iteration.
+
+Pred : Set
+Pred = Val -> Bool
+
+Edges : Set
+Edges = Val -> Val -> Bool
+
+Closed : List Val -> Edges -> List Val -> Set
+Closed ws G C = (z y : Val) -> z ∈ C -> y ∈ ws -> G z y ≡ true -> y ∈ C
+
+NoneSat : Pred -> List Val -> Set
+NoneSat f C = (z : Val) -> z ∈ C -> f z ≡ false
+
+HoldsOutside : (Val -> Set) -> List Val -> Set
+HoldsOutside R ws = (z : Val) -> z ∈ᵛ ws ≡ false -> R z

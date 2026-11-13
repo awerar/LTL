@@ -88,9 +88,7 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
 data Round (P : Formula) (u : Val) : Set where
   mkRound : (rs : List Val) (x : Val)
          -> Walk P (Uinf P) u rs x -> x ∈ Uinf P
-         -> null rs ≡ false
-         -> ((A : Formula) -> A ∈ □Args (sub P)
-               -> valOf P u (□ A) ≡ false -> Fulfil P A u rs)
+         -> null rs ≡ false -> FulfilledAt P u rs u
          -> Round P u
 
 roundOf : (P : Formula) (u : Val) -> u ∈ Uinf P -> Round P u

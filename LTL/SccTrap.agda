@@ -126,15 +126,13 @@ addSeeded P acc sd z m =
                   seeded s (zs ++ z ∷ []) ms es
                          (trailApp (StCand P) (step P) t (tCons mzs su tNil))
 
-closeGoSeeded   : (P : Formula) {E : Val -> Bool} (acc : List Val)
-               -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                      -> E z ≡ true)
+closeGoSeeded   : (P : Formula) {E : Pred} (acc : List Val)
+               -> (av : Avail E (StCand P) acc)
                -> (bar : IFin E)
                -> ((z : Val) -> z ∈ acc -> Seeded P z)
                -> {z : Val} -> z ∈ closeGo P acc av bar -> Seeded P z
-closeFindSeeded : (P : Formula) {E : Val -> Bool} (acc : List Val)
-               -> (av : (z : Val) -> z ∈ StCand P -> z ∈ᵛ acc ≡ false
-                      -> E z ≡ true)
+closeFindSeeded : (P : Formula) {E : Pred} (acc : List Val)
+               -> (av : Avail E (StCand P) acc)
                -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P))
                -> ((z : Val) -> z ∈ acc -> Seeded P z)
                -> {z : Val} -> z ∈ closeFind P acc av bar fr -> Seeded P z
@@ -195,7 +193,7 @@ data Trap (P : Formula) (C : List Val) : Set where
         -> Trap P C
 
 pathMono : (P : Formula) (C us : List Val)
-        -> ((z : Val) -> z ∈ C -> z ∈ us)
+        -> C ⊆ us
         -> {v w : Val} -> Path P C v w -> Path P us v w
 pathMono P C us sb pnil                   = pnil
 pathMono P C us sb (pcons {w = y} m e p) = pcons (sb y m) e (pathMono P C us sb p)
@@ -205,7 +203,7 @@ pathMono P C us sb (pcons {w = y} m e p) = pcons (sb y m) e (pathMono P C us sb 
 -- trap's own path to a state where it fails.
 
 trapKeep : (P : Formula) (us C : List Val) -> Trap P C
-        -> ((z : Val) -> z ∈ C -> z ∈ us)
+        -> C ⊆ us
         -> (z : Val) -> z ∈ C -> keep P us (evList P us) z ≡ true
 trapKeep P us C (mkTrap hsucc hful) sb z mz =
   cong ¬ᵇ_ (orBothFalse (r1 P us z) (r2 P (evList P us) z) e1 e2)
@@ -260,14 +258,14 @@ trapKeep P us C (mkTrap hsucc hful) sb z mz =
 -- invariant added; this is the "carry a structure that already contains the
 -- proof" move of section 4f one more time.
 
-elimGoTrap   : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimGoTrap   : (P : Formula) {E : Pred} (us : List Val)
                (sb : AllSat E us) (bar : IFin E)
-            -> (C : List Val) -> Trap P C -> ((z : Val) -> z ∈ C -> z ∈ us)
+            -> (C : List Val) -> Trap P C -> C ⊆ us
             -> (z : Val) -> z ∈ C -> z ∈ elimGo P us sb bar
-elimFindTrap : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimFindTrap : (P : Formula) {E : Pred} (us : List Val)
                (sb : AllSat E us) (bar : IFin E)
                (fr : FindResult (keep P us (evList P us)) us)
-            -> (C : List Val) -> Trap P C -> ((z : Val) -> z ∈ C -> z ∈ us)
+            -> (C : List Val) -> Trap P C -> C ⊆ us
             -> (z : Val) -> z ∈ C -> z ∈ elimFind P us sb bar fr
 
 elimGoTrap P us sb bar =
@@ -284,6 +282,6 @@ elimFindTrap P us sb (cBar h) (found x m q) C tr inc z mz =
                             (trapKeep P us C tr inc y my)
 
 uinfTrap : (P : Formula) (C : List Val) -> Trap P C
-        -> ((z : Val) -> z ∈ C -> z ∈ Ust P)
+        -> C ⊆ Ust P
         -> (z : Val) -> z ∈ C -> z ∈ Uinf P
 uinfTrap P = elimGoTrap P (Ust P) (ustAllSat P) (ustBar P)

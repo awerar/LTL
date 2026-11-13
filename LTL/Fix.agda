@@ -31,12 +31,12 @@ open import LTL.Walk public
 ------------------------------------------------------------------------
 -- The elimination has stopped
 
-elimGoStable   : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimGoStable   : (P : Formula) {E : Pred} (us : List Val)
               -> (sb : AllSat E us) (bar : IFin E) {v : Val}
               -> v ∈ elimGo P us sb bar
               -> keep P (elimGo P us sb bar)
                         (evList P (elimGo P us sb bar)) v ≡ true
-elimFindStable : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimFindStable : (P : Formula) {E : Pred} (us : List Val)
               -> (sb : AllSat E us) (bar : IFin E)
               -> (fr : FindResult (keep P us (evList P us)) us) {v : Val}
               -> v ∈ elimFind P us sb bar fr
@@ -136,10 +136,10 @@ escStep P us A W h z mz e = onIn (z ∈ᵛ W) refl
                   (wcons mw (fst (⇒ᵇ-false (step P z w) (w ∈ᵛ W) q)) wk)
                   mx ex
 
-escGo   : (P : Formula) (us : List Val) (A : Formula) {E : Val -> Bool}
+escGo   : (P : Formula) (us : List Val) (A : Formula) {E : Pred}
        -> (W : List Val) (sb : AllSat E W) (bar : IFin E)
        -> Escapes P us A W -> Escapes P us A (shrinkGo P us W sb bar)
-escFind : (P : Formula) (us : List Val) (A : Formula) {E : Val -> Bool}
+escFind : (P : Formula) (us : List Val) (A : Formula) {E : Pred}
        -> (W : List Val) (sb : AllSat E W) (bar : IFin E)
        -> (fr : FindResult (succsInside P us W) W)
        -> Escapes P us A W -> Escapes P us A (shrinkFind P us W sb bar fr)
@@ -177,10 +177,10 @@ uinfFulfil P v m A mA pend =
 -- Each round only filters, so U_inf is contained in St P.  Hintikka's lemma
 -- needs this to read (S1) and (S2) off a state of the run.
 
-elimGoSub   : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimGoSub   : (P : Formula) {E : Pred} (us : List Val)
            -> (sb : AllSat E us) (bar : IFin E) {x : Val}
            -> x ∈ elimGo P us sb bar -> x ∈ us
-elimFindSub : (P : Formula) {E : Val -> Bool} (us : List Val)
+elimFindSub : (P : Formula) {E : Pred} (us : List Val)
            -> (sb : AllSat E us) (bar : IFin E)
            -> (fr : FindResult (keep P us (evList P us)) us) {x : Val}
            -> x ∈ elimFind P us sb bar fr -> x ∈ us

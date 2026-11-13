@@ -54,110 +54,108 @@ stateOk P s m mA =
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
 
-□Along : (P : Formula) (b c0 : Val) (c1 : List Val)
-        -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
-        -> (B : Formula) -> □ B ∈ sub P
-        -> (t : Nat) (pos : Pos) -> ValidPos P b pos
-        -> valOf P (posState pos) (□ B) ≡ true
-        -> valOf P (posState (posIter c0 c1 t pos)) (□ B) ≡ true
-□Along P b c0 c1 mc0 wc stb B mb zero    pos vp e = e
-□Along P b c0 c1 mc0 wc stb B mb (suc t) pos vp e =
-  □Along P b c0 c1 mc0 wc stb B mb t (nextPos c0 c1 pos)
-           (fst (posStep P b c0 c1 mc0 wc stb vp))
-           (carry P (posState pos) (posState (nextPos c0 c1 pos)) B mb
-                  (snd (posStep P b c0 c1 mc0 wc stb vp)) e)
+-- The lemmas below share the cycle of a run: c0 ∷ c1 is a walk in U_inf that
+-- ends at b, and b steps back to c0.
 
-□True : (P : Formula) (b c0 : Val) (c1 : List Val)
-       -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
-       -> (B : Formula) -> □ B ∈ sub P
-       -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbitOf c0 c1 pos
-       -> valOf P (posState pos) (□ B) ≡ true
-       -> valOf P (posState q) B ≡ true
-□True P b c0 c1 mc0 wc stb B mb pos q vp m e =
-  fromIter (orbitOf_iter c0 c1 pos q m)
-  where
-    fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
-            -> valOf P (posState q) B ≡ true
-    fromIter (t , et) =
-      subst (λ r -> valOf P (posState r) B ≡ true) et
-            (□S2 P (posState (posIter c0 c1 t pos))
-                   (posIn P b (posIterValid P b c0 c1 mc0 wc stb t pos vp))
-                   B mb (□Along P b c0 c1 mc0 wc stb B mb t pos vp e))
+module _ (P : Formula) (b c0 : Val) (c1 : List Val)
+         (mc0 : c0 ∈ Uinf P) (wc : Walk P (Uinf P) c0 c1 b) (stb : step P b c0 ≡ true)
+         where
 
-------------------------------------------------------------------------
--- Hintikka's lemma
+  □Along : (B : Formula) -> □ B ∈ sub P
+          -> (t : Nat) (pos : Pos) -> ValidPos P b pos
+          -> valOf P (posState pos) (□ B) ≡ true
+          -> valOf P (posState (posIter c0 c1 t pos)) (□ B) ≡ true
+  □Along B mb zero    pos vp e = e
+  □Along B mb (suc t) pos vp e =
+    □Along B mb t (nextPos c0 c1 pos)
+             (fst (posStep P b c0 c1 mc0 wc stb vp))
+             (carry P (posState pos) (posState (nextPos c0 c1 pos)) B mb
+                    (snd (posStep P b c0 c1 mc0 wc stb vp)) e)
 
-hintikka : (P : Formula) (b c0 : Val) (c1 : List Val)
-        -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
-        -> b ∈ c0 ∷ c1
-        -> ((s : Val) -> s ∈ b ∷ c0 ∷ c1
-              -> (A : Formula) -> A ∈ □Args (sub P)
-              -> valOf P s (□ A) ≡ false -> Fulfil P A b (c0 ∷ c1))
-        -> (A : Formula) -> A ∈ sub P
-        -> (pos : Pos) -> ValidPos P b pos
-        -> valOf P (posState pos) A ≡ evalAt P c0 c1 A pos
+  □True : (B : Formula) -> □ B ∈ sub P
+         -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbitOf c0 c1 pos
+         -> valOf P (posState pos) (□ B) ≡ true
+         -> valOf P (posState q) B ≡ true
+  □True B mb pos q vp m e =
+    fromIter (orbitOf_iter c0 c1 pos q m)
+    where
+      fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
+              -> valOf P (posState q) B ≡ true
+      fromIter (t , et) =
+        subst (λ r -> valOf P (posState r) B ≡ true) et
+              (□S2 P (posState (posIter c0 c1 t pos))
+                     (posIn P b (posIterValid P b c0 c1 mc0 wc stb t pos vp))
+                     B mb (□Along B mb t pos vp e))
 
-hintikka P b c0 c1 mc0 wc stb mbc cyc (var n) mA pos vp = refl
+  ------------------------------------------------------------------------
+  -- Hintikka's lemma
 
-hintikka P b c0 c1 mc0 wc stb mbc cyc (¬ B) mA pos vp =
-  trans (⇔ᵇ-sound (valOf P (posState pos) (¬ B))
-                  (¬ᵇ valOf P (posState pos) B)
-                      (stateOk P (posState pos) (posIn P b vp) mA))
-        (cong ¬ᵇ_
-              (hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_¬ P mA) pos vp))
+  hintikka : b ∈ c0 ∷ c1 -> AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1)
+          -> (A : Formula) -> A ∈ sub P
+          -> (pos : Pos) -> ValidPos P b pos
+          -> valOf P (posState pos) A ≡ evalAt P c0 c1 A pos
 
-hintikka P b c0 c1 mc0 wc stb mbc cyc (B ⇒ C) mA pos vp =
-  trans (⇔ᵇ-sound (valOf P (posState pos) (B ⇒ C))
-                  (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
-                  (stateOk P (posState pos) (posIn P b vp) mA))
-        (⇒Cong (hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_⇒L P mA) pos vp)
-                 (hintikka P b c0 c1 mc0 wc stb mbc cyc C (sub_⇒R P mA) pos vp))
+  hintikka mbc cyc (var n) mA pos vp = refl
 
-hintikka P b c0 c1 mc0 wc stb mbc cyc (○ B) mA pos vp =
-  trans (⇔ᵇ-sound (valOf P (posState pos) (○ B))
-                  (valOf P (posState (nextPos c0 c1 pos)) B)
-                  (allStep_at P (posState pos)
-                              (posState (nextPos c0 c1 pos)) (sub P) mA
-                              (snd (posStep P b c0 c1 mc0 wc stb vp))))
-        (hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_○ P mA)
-                  (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
+  hintikka mbc cyc (¬ B) mA pos vp =
+    trans (⇔ᵇ-sound (valOf P (posState pos) (¬ B))
+                    (¬ᵇ valOf P (posState pos) B)
+                        (stateOk P (posState pos) (posIn P b vp) mA))
+          (cong ¬ᵇ_
+                (hintikka mbc cyc B (sub_¬ P mA) pos vp))
 
-hintikka P b c0 c1 mc0 wc stb mbc cyc (□ B) mA pos vp =
-  on□ (valOf P (posState pos) (□ B)) refl
-  where
-    ih : (q : Pos) -> ValidPos P b q
-      -> valOf P (posState q) B ≡ evalAt P c0 c1 B q
-    ih q vq = hintikka P b c0 c1 mc0 wc stb mbc cyc B (sub_□ P mA) q vq
+  hintikka mbc cyc (B ⇒ C) mA pos vp =
+    trans (⇔ᵇ-sound (valOf P (posState pos) (B ⇒ C))
+                    (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
+                    (stateOk P (posState pos) (posIn P b vp) mA))
+          (⇒Cong (hintikka mbc cyc B (sub_⇒L P mA) pos vp)
+                   (hintikka mbc cyc C (sub_⇒R P mA) pos vp))
 
-    -- □ B holds: (T2) carries it, (S2) delivers B at every stage
-    □Holds : valOf P (posState pos) (□ B) ≡ true
-           -> evalAt P c0 c1 (□ B) pos ≡ true
-    □Holds e =
-      all_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
-      where
-        atQ : (q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 B q ≡ true
-        atQ q m =
-          trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp m)))
-                (□True P b c0 c1 mc0 wc stb B mA pos q vp m e)
+  hintikka mbc cyc (○ B) mA pos vp =
+    trans (⇔ᵇ-sound (valOf P (posState pos) (○ B))
+                    (valOf P (posState (nextPos c0 c1 pos)) B)
+                    (allStep_at P (posState pos)
+                                (posState (nextPos c0 c1 pos)) (sub P) mA
+                                (snd (posStep P b c0 c1 mc0 wc stb vp))))
+          (hintikka mbc cyc B (sub_○ P mA)
+                    (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
 
-    -- □ B fails: Lemma 5.4 supplies the false conjunct
-    allFalse : valOf P (posState pos) (□ B) ≡ false
-            -> evalAt P c0 c1 (□ B) pos ≡ false
-    allFalse e =
-      fromGF (globalFulfil P b c0 c1 mbc cyc vp B (□Args_of (sub P) mA) e)
-      where
-        fromGF : (Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 pos ×
-                                   valOf P (posState q) B ≡ false)
+  hintikka mbc cyc (□ B) mA pos vp =
+    on□ (valOf P (posState pos) (□ B)) refl
+    where
+      ih : (q : Pos) -> ValidPos P b q
+        -> valOf P (posState q) B ≡ evalAt P c0 c1 B q
+      ih q vq = hintikka mbc cyc B (sub_□ P mA) q vq
+
+      -- □ B holds: (T2) carries it, (S2) delivers B at every stage
+      □Holds : valOf P (posState pos) (□ B) ≡ true
+             -> evalAt P c0 c1 (□ B) pos ≡ true
+      □Holds e =
+        all_intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos) (λ {q} m -> atQ q m)
+        where
+          atQ : (q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 B q ≡ true
+          atQ q m =
+            trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp m)))
+                  (□True B mA pos q vp m e)
+
+      -- □ B fails: Lemma 5.4 supplies the false conjunct
+      allFalse : valOf P (posState pos) (□ B) ≡ false
               -> evalAt P c0 c1 (□ B) pos ≡ false
-        fromGF (q , mq , eq) =
-          eval□_false P c0 c1 B pos q mq
-            (trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
-                   eq)
+      allFalse e =
+        fromGF (globalFulfil P b c0 c1 mbc cyc vp B (□Args_of (sub P) mA) e)
+        where
+          fromGF : (Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 pos ×
+                                     valOf P (posState q) B ≡ false)
+                -> evalAt P c0 c1 (□ B) pos ≡ false
+          fromGF (q , mq , eq) =
+            eval□_false P c0 c1 B pos q mq
+              (trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
+                     eq)
 
-    on□ : (x : Bool) -> valOf P (posState pos) (□ B) ≡ x
-         -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
-    on□ true  e = trans e (sym (□Holds e))
-    on□ false e = trans e (sym (allFalse e))
+      on□ : (x : Bool) -> valOf P (posState pos) (□ B) ≡ x
+           -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
+      on□ true  e = trans e (sym (□Holds e))
+      on□ false e = trans e (sym (allFalse e))
 
 ------------------------------------------------------------------------
 -- Hintikka's lemma on a run, at every stage and at the start
