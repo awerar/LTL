@@ -65,8 +65,8 @@ eval□-false P c0 c1 A pos q m e =
 -- The evaluation on a run, indexed as in the note's unwinding
 
 eval : (P : Formula) (v0 : Val) -> Run P v0 -> Formula -> Nat -> Bool
-eval P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A i =
-  evalAt P c0 c1 A (posIter c0 c1 i (v0 , rest))
+eval P v0 r A i = evalAt P c0 c1 A (posIter c0 c1 i (v0 , rest))
+  where open Run r
 
 ------------------------------------------------------------------------
 -- Running it.

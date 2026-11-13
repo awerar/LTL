@@ -32,12 +32,14 @@ open import LTL.Hintikka public
 ------------------------------------------------------------------------
 -- What a countermodel is
 
-data LassoCountermodel (Q : Formula) : Set where
-  countermodel : (v0 : Val) (r : Run (¬ Q) v0)
-              -> v0 ∈ Uinf (¬ Q)
-              -> eval (¬ Q) v0 r Q 0 ≡ false
-              -> (⊢ Q -> Empty)
-              -> LassoCountermodel Q
+record LassoCountermodel (Q : Formula) : Set where
+  constructor countermodel
+  field
+    start        : Val
+    run          : Run (¬ Q) start
+    startIn      : start ∈ Uinf (¬ Q)
+    falseAtStart : eval (¬ Q) start run Q 0 ≡ false
+    underivable  : ⊢ Q -> Empty
 
 ------------------------------------------------------------------------
 -- Building one.  Names starting with cm (buildCM, cmEval, cmFrom, ...) are
@@ -97,15 +99,14 @@ isProof = isInl
 -- length (cmRest Q c) - length (cmCycle Q c), and is empty exactly when the two
 -- agree.
 cmRest : (Q : Formula) -> LassoCountermodel Q -> List Val
-cmRest Q (countermodel v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) m ef rf) =
-  rest
+cmRest Q c = Run.rest (LassoCountermodel.run c)
 
 cmCycle : (Q : Formula) -> LassoCountermodel Q -> List Val
-cmCycle Q (countermodel v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) m ef rf) =
-  c0 ∷ c1
+cmCycle Q c = Run.c0 r ∷ Run.c1 r
+  where r = LassoCountermodel.run c
 
 cmStart : (Q : Formula) -> LassoCountermodel Q -> Val
-cmStart Q (countermodel v0 r m ef rf) = v0
+cmStart Q c = LassoCountermodel.start c
 
 lassoOfDecide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
              -> Val × List Val × List Val
@@ -200,7 +201,8 @@ countOf Q = onDec (decide Q)
 -- so one may ask about a variable, about Q itself, or about anything else.
 
 cmEval : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Bool
-cmEval Q (countermodel v0 r m ef rf) A i = eval (¬ Q) v0 r A i
+cmEval Q c A i = eval (¬ Q) start run A i
+  where open LassoCountermodel c
 
 -- The values of A at the n stages i, i+1, ..., i+n-1.
 

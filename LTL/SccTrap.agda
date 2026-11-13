@@ -85,10 +85,14 @@ orBothFalse a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
 -- The trail is carried inside StCand P, the list closeGo filters; lifting it
 -- into Ust P is seedTrail below.
 
-data Seeded (P : Formula) (w : Val) : Set where
-  seeded : (s : Val) (zs : List Val)
-        -> s ∈ StCand P -> valOf P s P ≡ true
-        -> Trail (StCand P) (step P) s zs w -> Seeded P w
+record Seeded (P : Formula) (w : Val) : Set where
+  constructor seeded
+  field
+    seed      : Val
+    visited   : List Val
+    seedIn    : seed ∈ StCand P
+    seedHolds : valOf P seed P ≡ true
+    trail     : Trail (StCand P) (step P) seed visited w
 
 -- One round: a state it adds is a seed, or a successor of something already in.
 
@@ -163,10 +167,14 @@ seedTrail P ms (tCons {x = y} m e t) = tCons my e (seedTrail P my t)
     my : y ∈ Ust P
     my = ustClosed P ms (stCandSt P m) e
 
-data SeedTo (P : Formula) (w : Val) : Set where
-  seedTo : (s : Val) (zs : List Val)
-        -> s ∈ Ust P -> valOf P s P ≡ true
-        -> Trail (Ust P) (step P) s zs w -> SeedTo P w
+record SeedTo (P : Formula) (w : Val) : Set where
+  constructor seedTo
+  field
+    seed      : Val
+    visited   : List Val
+    seedIn    : seed ∈ Ust P
+    seedHolds : valOf P seed P ≡ true
+    trail     : Trail (Ust P) (step P) seed visited w
 
 ustSeedTo : (P : Formula) (w : Val) -> w ∈ Ust P -> SeedTo P w
 ustSeedTo P w m = conv (ustSeeded P m)
@@ -184,13 +192,16 @@ ustSeedTo P w m = conv (ustSeeded P m)
 -- successor inside C, and every eventuality pending at a state of C fails
 -- somewhere reachable inside C.
 
-data Trap (P : Formula) (C : List Val) : Set where
-  mkTrap : ((z : Val) -> z ∈ C
-              -> Σ[ y ∈ Val ] y ∈ C × step P z y ≡ true)
-        -> ((z : Val) -> z ∈ C -> (A : Formula) -> A ∈ □Args (sub P)
+record Trap (P : Formula) (C : List Val) : Set where
+  constructor mkTrap
+  field
+    -- not (R1): every state of C has a successor inside C
+    succInside : (z : Val) -> z ∈ C
+              -> Σ[ y ∈ Val ] y ∈ C × step P z y ≡ true
+    -- not (R2): an eventuality pending in C fails somewhere reachable in C
+    failInside : (z : Val) -> z ∈ C -> (A : Formula) -> A ∈ □Args (sub P)
               -> valOf P z (□ A) ≡ false
-              -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false)
-        -> Trap P C
+              -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
 
 pathMono : (P : Formula) (C us : List Val)
         -> C ⊆ us

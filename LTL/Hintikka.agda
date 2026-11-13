@@ -186,11 +186,10 @@ clash false () en
 
 notRefutable : (P : Formula) (v0 : Val) (r : Run P v0)
             -> valOf P v0 P ≡ true -> ⊢ ¬ P -> Empty
-notRefutable P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) e d =
+notRefutable P v0 r e d =
   clash (evalAt P c0 c1 P (v0 , rest)) holds negated
   where
-    r : Run P v0
-    r = mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr
+    open Run r
 
     holds : evalAt P c0 c1 P (v0 , rest) ≡ true
     holds = trans (sym (hintStart P v0 r P (sub-self P))) e

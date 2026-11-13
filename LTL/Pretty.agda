@@ -378,7 +378,7 @@ renderTree n d = unlines (treeLines n d)
 ------------------------------------------------------------------------
 -- Countermodels
 --
--- countermodel v0 r ... with r = mkRun b c0 c1 ... rest ... is the run
+-- A countermodel starting at v0 whose run has cycle c0 ∷ c1 and rest rest is
 --   v0, rest            (a walk from v0 ending at b)
 --   c0, c1, c0, c1, ... (a cycle from b back to b, repeated forever)
 -- and Q is false at time 0.  Each time point is shown as the set of
@@ -408,16 +408,16 @@ statesLines P i (v ∷ vs) =
   ("  " <> padL 3 (showNat i) <> "  " <> stateStr P v) ∷ statesLines P (suc i) vs
 
 cmLines : (Q : Formula) -> LassoCountermodel Q -> List String
-cmLines Q (countermodel v0 (mkRun b c0 c1 _ _ _ _ _ rest _ _) _ _ _) =
+cmLines Q c =
   ("⊬ " <> showFormula Q) ∷ ""
   ∷ "Countermodel: the formula is false at time 0.  Variables true at each time:"
-  ∷ statesLines (¬ Q) zero (v0 ∷ rest)
+  ∷ statesLines (¬ Q) zero (cmStart Q c ∷ cmRest Q c)
   ++ "then repeating forever:"
-  ∷ statesLines (¬ Q) loopStart (c0 ∷ c1)
+  ∷ statesLines (¬ Q) loopStart (cmCycle Q c)
   ++ ("  (back to time " <> showNat loopStart <> ")") ∷ []
   where
     loopStart : Nat
-    loopStart = suc (length rest)
+    loopStart = suc (length (cmRest Q c))
 
 renderCM : (Q : Formula) -> LassoCountermodel Q -> String
 renderCM Q c = unlines (cmLines Q c)

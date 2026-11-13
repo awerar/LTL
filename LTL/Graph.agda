@@ -583,12 +583,14 @@ module _ (ws : List Node) (G : Edges) where
 -- inside the component -- and it is done here rather than in G38, so that G38
 -- has only to reread a Trail as a Walk.
 
-data Circuit (ws : List Node) (G : Edges) (fs : List Pred)
-             (r : Node) : Set where
-  circuit : (cy : List Node) -> Trail ws G r cy r -> null cy ≡ false
-         -> ((f : Pred) -> f ∈ fs
-               -> Σ[ z ∈ Node ] z ∈ cy × f z ≡ true)
-         -> Circuit ws G fs r
+record Circuit (ws : List Node) (G : Edges) (fs : List Pred)
+               (r : Node) : Set where
+  constructor circuit
+  field
+    cycle    : List Node
+    trail    : Trail ws G r cycle r
+    nonEmpty : null cycle ≡ false
+    meets    : (f : Pred) -> f ∈ fs -> Σ[ z ∈ Node ] z ∈ cycle × f z ≡ true
 
 circMono : (ws vs : List Node) (G : Edges) (fs : List Pred)
            (r : Node) -> ws ⊆ vs
@@ -828,13 +830,17 @@ module _ (G : Edges) (fs : List Pred) where
 ------------------------------------------------------------------------
 -- The theorem
 
-data FairLoop (vs : List Node) (G : Edges) (fs : List Pred)
-              (v : Node) : Set where
-  fairLoop : (r : Node) (st cy : List Node)
-          -> Trail vs G v st r -> Trail vs G r cy r -> null cy ≡ false
-          -> ((f : Pred) -> f ∈ fs
-                -> Σ[ z ∈ Node ] z ∈ cy × f z ≡ true)
-          -> FairLoop vs G fs v
+record FairLoop (vs : List Node) (G : Edges) (fs : List Pred)
+                (v : Node) : Set where
+  constructor fairLoop
+  field
+    r          : Node   -- where the cycle starts and ends
+    stem       : List Node
+    cycle      : List Node
+    stemTrail  : Trail vs G v stem r
+    cycleTrail : Trail vs G r cycle r
+    nonEmpty   : null cycle ≡ false
+    meets      : (f : Pred) -> f ∈ fs -> Σ[ z ∈ Node ] z ∈ cycle × f z ≡ true
 
 fairGraph : (vs : List Node) (G : Edges) (fs : List Pred)
             (v : Node) -> v ∈ vs

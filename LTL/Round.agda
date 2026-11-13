@@ -31,12 +31,15 @@ open import LTL.Fix public
 ------------------------------------------------------------------------
 -- The body of a round: the eventualities of As dealt with, in order
 
-data RoundB (P : Formula) (As : List Formula) (u : Val) : Set where
-  mkRoundB : (ws : List Val) (x : Val)
-          -> Walk P (Uinf P) u ws x -> x ∈ Uinf P
-          -> ((A : Formula) -> A ∈ As -> valOf P u (□ A) ≡ false
-                -> Fulfil P A u ws)
-          -> RoundB P As u
+record RoundB (P : Formula) (As : List Formula) (u : Val) : Set where
+  constructor mkRoundB
+  field
+    visited : List Val
+    last    : Val
+    walk    : Walk P (Uinf P) u visited last
+    lastIn  : last ∈ Uinf P
+    fulfils : (A : Formula) -> A ∈ As -> valOf P u (□ A) ≡ false
+           -> Fulfil P A u visited
 
 nilFul : (P : Formula) (u : Val) (A : Formula)
       -> A ∈ [] {A = Formula} -> valOf P u (□ A) ≡ false -> Fulfil P A u []
@@ -85,11 +88,15 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
 ------------------------------------------------------------------------
 -- A round, with the extra step that makes it nonempty
 
-data Round (P : Formula) (u : Val) : Set where
-  mkRound : (rs : List Val) (x : Val)
-         -> Walk P (Uinf P) u rs x -> x ∈ Uinf P
-         -> null rs ≡ false -> FulfilledAt P u rs u
-         -> Round P u
+record Round (P : Formula) (u : Val) : Set where
+  constructor mkRound
+  field
+    visited   : List Val
+    last      : Val
+    walk      : Walk P (Uinf P) u visited last
+    lastIn    : last ∈ Uinf P
+    nonEmpty  : null visited ≡ false
+    fulfilled : FulfilledAt P u visited u
 
 roundOf : (P : Formula) (u : Val) -> u ∈ Uinf P -> Round P u
 roundOf P u mu = fromBody (roundBody P (□Args (sub P)) (λ m -> m) u mu)
@@ -108,7 +115,7 @@ roundOf P u mu = fromBody (roundBody P (□Args (sub P)) (λ m -> m) u mu)
 -- The list the note calls the round
 
 roundList : (P : Formula) (u : Val) -> Round P u -> List Val
-roundList P u (mkRound rs x wk mx nn h) = rs
+roundList P u r = Round.visited r
 
 round : (P : Formula) (u : Val) -> u ∈ Uinf P -> List Val
 round P u mu = roundList P u (roundOf P u mu)

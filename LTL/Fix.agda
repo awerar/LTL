@@ -90,9 +90,14 @@ uinfSucc P v m = fromSig (null-false (succs P (Uinf P) v) (uinfNotR1 P m))
 -- v ∈ us and v outside W give a walk inside us from v to a state at which A
 -- fails.  Induction along the shrinking iteration of LTL.Gfp.
 
-data Escape (P : Formula) (us : List Val) (A : Formula) (v : Val) : Set where
-  esc : (ws : List Val) (w : Val) -> Walk P us v ws w -> w ∈ us
-     -> valOf P w A ≡ false -> Escape P us A v
+record Escape (P : Formula) (us : List Val) (A : Formula) (v : Val) : Set where
+  constructor esc
+  field
+    visited  : List Val
+    target   : Val
+    walk     : Walk P us v visited target
+    targetIn : target ∈ us
+    fails    : valOf P target A ≡ false
 
 Escapes : Formula -> List Val -> Formula -> List Val -> Set
 Escapes P us A W =

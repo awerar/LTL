@@ -182,20 +182,24 @@ orbitOf-iter c0 c1 (s , rest) q m =
 -- what makes nextPos total; the lasso's null qs ≡ false is what licenses
 -- the split, and that in turn is what the extra step of roundOf bought.
 --
--- The fields of mkRun, as they are named where a Run is taken apart: b, the
--- last state of the cycle; c0, c1, its head and tail; mc0 : c0 ∈ Uinf P; wc,
--- the walk round the cycle; stb, the step from b back to c0; mbc : b is on the
--- cycle; cyc, every eventuality pending on the cycle is fulfilled on it; rest,
--- the stem; mv0 : v0 ∈ Uinf P; and wr, the walk along the stem.
+-- rest is everything after v0 up to the first return to b: the lasso's stem
+-- followed by one turn of its cycle.  Where a Run is taken apart whole, its
+-- fields are bound, in order, as  b c0 c1 mc0 wc stb mbc cyc rest mv0 wr .
 
-data Run (P : Formula) (v0 : Val) : Set where
-  mkRun : (b c0 : Val) (c1 : List Val)
-       -> c0 ∈ Uinf P
-       -> Walk P (Uinf P) c0 c1 b
-       -> step P b c0 ≡ true
-       -> b ∈ c0 ∷ c1 -> AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1)
-       -> (rest : List Val) -> v0 ∈ Uinf P -> Walk P (Uinf P) v0 rest b
-       -> Run P v0
+record Run (P : Formula) (v0 : Val) : Set where
+  constructor mkRun
+  field
+    b           : Val       -- the last state of the cycle
+    c0          : Val       -- the head of the cycle
+    c1          : List Val  -- the tail of the cycle, ending at b
+    headIn      : c0 ∈ Uinf P
+    cycleWalk   : Walk P (Uinf P) c0 c1 b
+    closingStep : step P b c0 ≡ true
+    endOnCycle  : b ∈ c0 ∷ c1
+    fulfilled   : AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1)
+    rest        : List Val
+    startIn     : v0 ∈ Uinf P
+    restWalk    : Walk P (Uinf P) v0 rest b
 
 runOf : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0 -> Run P v0
 runOf P v0 mv0 (mkLasso b mb ps wp []       wq () cyc)
@@ -313,5 +317,5 @@ orbitValid P b c0 c1 mc0 wc stb pos q vp m =
 
 -- the state of the run at stage i
 stateAt : (P : Formula) (v0 : Val) -> Run P v0 -> Nat -> Val
-stateAt P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) i =
-  posState (posIter c0 c1 i (v0 , rest))
+stateAt P v0 r i = posState (posIter c0 c1 i (v0 , rest))
+  where open Run r

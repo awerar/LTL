@@ -96,10 +96,14 @@ trapFail P C A mbx z w (reachesBy as t) pd atW =
 ------------------------------------------------------------------------
 -- A fair loop, cut down to the vertices it uses, with its Trap: a TrapLoop.
 
-data TrapLoop (P : Formula) (v0 : Val) : Set where
-  trapLoop : (C : List Val) -> v0 ∈ C
-          -> C ⊆ Ust P
-          -> Trap P C -> FairLoop C (step P) (evPreds P) v0 -> TrapLoop P v0
+record TrapLoop (P : Formula) (v0 : Val) : Set where
+  constructor trapLoop
+  field
+    C       : List Val
+    startIn : v0 ∈ C
+    inUst   : C ⊆ Ust P
+    trap    : Trap P C
+    loop    : FairLoop C (step P) (evPreds P) v0
 
 fairTrapLoop : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
             -> FairLoop (Ust P) (step P) (evPreds P) v0 -> TrapLoop P v0

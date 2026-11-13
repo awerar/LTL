@@ -43,12 +43,16 @@ open import LTL.Round public
 ------------------------------------------------------------------------
 -- A boundary already passed, with both halves of the eventual lasso
 
-data Seen (P : Formula) (v0 cur b : Val) : Set where
-  mkSeen : b ∈ Uinf P
-        -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
-        -> (qs : List Val) -> Walk P (Uinf P) b qs cur
-        -> null qs ≡ false -> FulfilledAt P b qs b
-        -> Seen P v0 cur b
+record Seen (P : Formula) (v0 cur b : Val) : Set where
+  constructor mkSeen
+  field
+    bIn          : b ∈ Uinf P
+    stem         : List Val
+    stemWalk     : Walk P (Uinf P) v0 stem b
+    loop         : List Val   -- from b to the current boundary
+    loopWalk     : Walk P (Uinf P) b loop cur
+    loopNonEmpty : null loop ≡ false
+    fulfilled    : FulfilledAt P b loop b
 
 seenExt : (P : Formula) (v0 cur nx b : Val) (rs : List Val)
        -> Walk P (Uinf P) cur rs nx -> Seen P v0 cur b -> Seen P v0 nx b
@@ -60,12 +64,17 @@ seenExt P v0 cur nx b rs wr (mkSeen mb ps wp qs wq nn h) =
 ------------------------------------------------------------------------
 -- The lasso
 
-data Lasso (P : Formula) (v0 : Val) : Set where
-  mkLasso : (b : Val) -> b ∈ Uinf P
-         -> (ps : List Val) -> Walk P (Uinf P) v0 ps b
-         -> (qs : List Val) -> Walk P (Uinf P) b qs b
-         -> null qs ≡ false -> AllFulfilled P b qs (b ∷ qs)
-         -> Lasso P v0
+record Lasso (P : Formula) (v0 : Val) : Set where
+  constructor mkLasso
+  field
+    b             : Val   -- where the cycle starts and ends
+    bIn           : b ∈ Uinf P
+    stem          : List Val
+    stemWalk      : Walk P (Uinf P) v0 stem b
+    cycle         : List Val
+    cycleWalk     : Walk P (Uinf P) b cycle b
+    cycleNonEmpty : null cycle ≡ false
+    fulfilled     : AllFulfilled P b cycle (b ∷ cycle)
 
 -- Closing the loop.  This is where the cycle-fulfilment property is proved.
 
@@ -163,10 +172,10 @@ lasso P v0 m =
 -- Projections, so that a lasso can be looked at
 
 lassoStem : (P : Formula) (v0 : Val) -> Lasso P v0 -> List Val
-lassoStem P v0 (mkLasso b mb ps wp qs wq nn cyc) = ps
+lassoStem P v0 l = Lasso.stem l
 
 lassoCycle : (P : Formula) (v0 : Val) -> Lasso P v0 -> List Val
-lassoCycle P v0 (mkLasso b mb ps wp qs wq nn cyc) = qs
+lassoCycle P v0 l = Lasso.cycle l
 
 -- The lasso from a NAMED surviving state.  Taking whichever state U_inf happens
 -- to list first is no use as an illustration once the state set is generated
