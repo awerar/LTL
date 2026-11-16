@@ -21,18 +21,17 @@
 -- to be closed under successors, and for a greatest fixed point that is free,
 -- where for the reachable set it is a pigeonhole argument.
 --
--- Two things are new in Phase 8, and both are G29.
+-- Two implementation choices (G29).
 --
--- The iteration stops when a round removes nothing, by recursion on a Bar,
--- instead of being run  length (St P)  times and shown afterwards to have
--- reached a fixed point.  There is no fuel and no ≤ measure here at all.
+-- The iteration stops when a round removes nothing, by recursion on a Bar.
+-- There is no fuel and no ≤ measure here at all.
 --
 -- The gfp sets are computed ONCE PER ROUND rather than once per state.  W_j
 -- does not depend on the state being tested, but written as  v ∈ᵛ gfpW P us A
--- under the binder for v it was rebuilt for every pending state of the
--- round, which is where most of the 34.6 s of checkpoint C5 was going.  evList
--- pairs each eventuality with its set, the pair list is the argument the round
--- filters against, and badEv reads the set out of the pair.  Laziness keeps the
+-- under the binder for v it would be rebuilt for every pending state of the
+-- round, which made checkpoint C5 several times slower.  evList pairs each
+-- eventuality with its set, the pair list is the argument the round filters
+-- against, and badEv reads the set out of the pair.  Laziness keeps the
 -- cost down further: the set in a pair is forced only if the eventuality is
 -- actually pending at the state being tested.
 
@@ -41,11 +40,7 @@ module LTL.Elim where
 open import LTL.Gfp public
 
 ------------------------------------------------------------------------
--- The eventualities.
---
--- □Args -- the A for which □ A occurs in sub P -- was defined here until
--- Phase 9 moved it to LTL.Skel, which is below Deriv and so reachable from
--- LTL.Complete as well; see the comment there.
+-- The eventualities are the A for which □ A occurs in sub P: □Args (LTL.Skel).
 
 ------------------------------------------------------------------------
 -- (R1)
@@ -136,9 +131,9 @@ module _ (P : Formula) where
   -- (G30).  Its Bar is guardedVecBar: the states have length |sub P|, and the
   -- vectors of a given length are inductively finite by induction on the
   -- length, so nothing here needs the enumeration allVecs -- nor even
-  -- length (Ust P) , which the fuel of the old elimIter forced.  guardBar
-  -- (siles.pdf section 5) is what keeps the finiteness proof from being forced
-  -- as the search runs.
+  -- length (Ust P) .  guardBar
+  -- (Coquand and Siles, section 5) is what keeps the finiteness proof from
+  -- being forced as the search runs.
 
   -- Uinf P is U_inf of m4.tex: what is left of Ust P when (R1) and (R2) no
   -- longer remove anything.
@@ -159,53 +154,3 @@ module _ (P : Formula) where
 
   satB : Bool
   satB = any (λ v -> valOf P v P) Uinf
-
-------------------------------------------------------------------------
--- Checkpoint C1.
---
--- ◇ p is satisfiable: all three states survive, and one of them makes
--- ◇ p true.
-
-Uinf-◇P : length (Uinf ◇P) ≡ 3
-Uinf-◇P = refl
-
-satB-◇P : satB ◇P ≡ true
-satB-◇P = refl
-
--- ¬ benAri is unsatisfiable, so □ p ⇒ ○ □ p is provable.
---
--- Of the six states, E and D are removed in the first round by (R1) alone --
--- neither has a successor -- and E is the only state containing ¬ benAri.
--- Ben-Ari's own worked example therefore never reaches (R2) in this
--- formulation: (T2) makes  □ p  together with  ¬ ○ □ p  contradict
--- in a single step, where his tableau needed the loop invariant because it
--- carried  ○ □ p  as an explicit member of the closure.
-
-Uinf-¬BenAri : length (Uinf ¬BenAri) ≡ 0
-Uinf-¬BenAri = refl
-
-removed-¬BenAri : length (removed ¬BenAri) ≡ 1
-removed-¬BenAri = refl
-
-satB-¬BenAri : satB ¬BenAri ≡ false
-satB-¬BenAri = refl
-
-------------------------------------------------------------------------
--- An example that does exercise (R2), recorded but not checked here.
---
--- Since benAri is settled by (R1) alone, it is not an adequate end-to-end test
--- of the extraction theorem.  The induction axiom is:
---
---   indAx  = □ (p ⇒ ○ p) ⇒ p ⇒ □ p
---
--- Running the procedure on  ¬ indAx  gives, measured:
---
---   length (sub negInd)   = 11        (so 2048 valuations to filter)
---   length (St negInd)    = 10
---   length (Uinf negInd)  =  7
---   satB negInd           = false     -- hence  indAx  is provable
---   (R1) fires on 1 state of U_0, (R2) fires on 1 state of U_0
---
--- So (R2) does fire, and the loop-invariant branch of Theorem 4.1 is genuinely
--- reached.  A smaller example with the same property is bnb in LTL.Trace, and
--- that is the one checkpoint C4 uses.

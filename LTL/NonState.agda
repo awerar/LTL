@@ -141,7 +141,7 @@ nonState P v len e0 = byCoh e0
     ... | true  =
       sumElim (λ ef -> sigElim (all-false (okAt P v) (sub P) ef))
               (λ bad -> emptyElim (true≢false bad))
-              (andFalse (allOk P v (sub P)) true e)
+              (∧ᵇ-false (allOk P v (sub P)) true e)
       where
         sigElim : (Σ[ A ∈ Formula ] A ∈ sub P ×
                                         okAt P v A ≡ false)

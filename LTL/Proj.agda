@@ -2,9 +2,9 @@
 
 -- LTL.Proj -- the bridge from the boolean world to the derivation world.
 --
--- Everything in Phase 4 has the same shape: a boolean condition fails, so some
--- conjunct of chi P v carries a particular literal, so chi P v is refutable.
--- The three ingredients are here:
+-- Every refutation of m4.tex section 2 has the same shape: a boolean condition
+-- fails, so some conjunct of chi P v carries a particular literal, so chi P v
+-- is refutable.  The three ingredients are here:
 --
 --   * searching a false conjunction for the offending index (all-false for
 --     allOk, allCoh-false in LTL.State), and the corresponding projections;

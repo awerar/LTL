@@ -101,7 +101,7 @@ var n    ≡ᶠ □ B     = false
 ≡ᶠ-refl : (A : Formula) -> A ≡ᶠ A ≡ true
 ≡ᶠ-refl (var n) = ≡ⁿ-refl n
 ≡ᶠ-refl (¬ A)   = ≡ᶠ-refl A
-≡ᶠ-refl (A ⇒ B) = andIntro (A ≡ᶠ A) (B ≡ᶠ B)
+≡ᶠ-refl (A ⇒ B) = ∧ᵇ-intro (A ≡ᶠ A) (B ≡ᶠ B)
                            (≡ᶠ-refl A) (≡ᶠ-refl B)
 ≡ᶠ-refl (○ A)   = ≡ᶠ-refl A
 ≡ᶠ-refl (□ A)   = ≡ᶠ-refl A
@@ -128,8 +128,8 @@ var n    ≡ᶠ □ B     = false
 ≡ᶠ-sound (A ⇒ A') (var m) ()
 ≡ᶠ-sound (A ⇒ A') (¬ B)   ()
 ≡ᶠ-sound (A ⇒ A') (B ⇒ C) p =
-  ⇒Cong (≡ᶠ-sound A B (andTrueL (A ≡ᶠ B) (A' ≡ᶠ C) p))
-        (≡ᶠ-sound A' C (andTrueR (A ≡ᶠ B) (A' ≡ᶠ C) p))
+  ⇒Cong (≡ᶠ-sound A B (∧ᵇ-trueˡ (A ≡ᶠ B) (A' ≡ᶠ C) p))
+        (≡ᶠ-sound A' C (∧ᵇ-trueʳ (A ≡ᶠ B) (A' ≡ᶠ C) p))
   where
     ⇒Cong : {X Y X' Y' : Formula} -> X ≡ Y -> X' ≡ Y' -> X ⇒ X' ≡ Y ⇒ Y'
     ⇒Cong refl refl = refl

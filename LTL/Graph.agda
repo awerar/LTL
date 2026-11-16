@@ -40,10 +40,9 @@
 -- pending meets it exactly by fulfilling it.  The graph layer therefore knows
 -- only "C meets every f in fs", and the LTL reading of fs is G38 and G39.
 --
--- The four things PHASE11-PLAN.md warns about, and what happened to each.
+-- Four design choices.
 --
--- 1. Mutual reachability is reachability COMPLETELY, which is what
---    LTL/Reach.agda abandoned.  It is paid the way G30 paid: reachGo is a
+-- 1. Mutual reachability needs the reachable set COMPLETELY.  reachGo is a
 --    GROWING search whose stopping condition is that a round adds nothing --
 --    closeGo of LTL.Closure with the seed changed from "contains P" to
 --    "is v" -- and completeness comes from the stopping condition (reachSeed,
@@ -64,7 +63,8 @@
 --    new representative avoids every representative already visited.  The
 --    invariant that says so is a single hypothesis, not a history list.
 --
--- 4. The guardBar heap trap of section 4g.  Every Bar here comes from listBar,
+-- 4. No guardBar, and no blow-up without it.  Every Bar here comes from
+-- listBar,
 --    i.e. from barOfList, which recurses on  length xs  and is blocked while
 --    the list is a variable; guardBar is not used at all, so the 2^k unfolding
 --    cannot happen.  Terminal and Block do mention reachSet and isTerminal in
@@ -86,19 +86,17 @@
 --     successor-closed block never leaves it.
 --
 -- So no infinite path is constructed, nothing is coinductive, and no pigeonhole
--- is used, which are the same three absences section 4f claims for the rest of
--- the development.  Both sides are inhabited and neither theorem is vacuous:
--- cycle-QS exhibits a Circuit and cert-P a Cert, in LTL.GraphExamples.
+-- is used, as in the rest of the development.  Both sides are inhabited and
+-- neither theorem is vacuous: cycle-QS exhibits a Circuit and cert-P a Cert, in
+-- LTL.GraphExamples.
 --
 -- What this still does NOT do.  It decides nothing about formulas and builds no
 -- derivation; the LTL reading of (b) is G39, where certAll's two hypotheses are
 -- extractR1's and extractR2's on the nose -- null (outs ws G x) ≡ true IS
 -- r1 P ws x ≡ true definitionally, and the block case supplies the closed set
 -- and the unfulfilled eventuality that (Ind) needs.  Nor does it claim to be
--- cheaper than gfpW.
---
--- It is, in short, the factoring the current development has nowhere: Gfp,
--- Elim, Trace, Round and Lasso all mention formulas, and this file does not.
+-- cheaper than gfpW.  Gfp, Elim, Trace, Round and Lasso all mention formulas;
+-- this file does not.
 
 open import LTL.Prelude
 
@@ -211,13 +209,13 @@ reachRound ws G v acc = filter (reachMissing G v acc) ws ++ acc
 
 reachMissingOf : (G : Edges) (v : Node) (acc : List Node) (x : Node)
               -> reachSettled G v acc x ≡ false -> reachMissing G v acc x ≡ true
-reachMissingOf G v acc x q = notFalse (reachMissing G v acc x) q
+reachMissingOf G v acc x q = ¬ᵇ-false (reachMissing G v acc x) q
 
 reachNotInAcc : (G : Edges) (v : Node) (acc : List Node) (x : Node)
              -> reachSettled G v acc x ≡ false -> x ∈ᵛ acc ≡ false
 reachNotInAcc G v acc x q =
-  notTrue (x ∈ᵛ acc)
-          (andTrueR (reachWanted G v acc x) (¬ᵇ (x ∈ᵛ acc))
+  ¬ᵇ-true (x ∈ᵛ acc)
+          (∧ᵇ-trueʳ (reachWanted G v acc x) (¬ᵇ (x ∈ᵛ acc))
                     (reachMissingOf G v acc x q))
 
 module _ (ws : List Node) (G : Edges) (v : Node) where
@@ -245,7 +243,7 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
     where
       av' : Avail (λ z -> E z ∧ᵇ (x ≢ᵛ z)) ws (reachRound ws G v acc)
       av' z mz e =
-        andIntro (E z) (x ≢ᵛ z)
+        ∧ᵇ-intro (E z) (x ≢ᵛ z)
                  (av z mz outAcc)
                  (cong ¬ᵇ_ outX)
         where
@@ -304,13 +302,13 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
     where
       fromNew : z ∈ filter (reachMissing G v acc) ws -> Reaches ws G v z
       fromNew m1 =
-        sumElim isV viaY (orTrue (v ≡ᵛ z) (any (λ y -> G y z) acc) want)
+        sumElim isV viaY (∨ᵇ-true (v ≡ᵛ z) (any (λ y -> G y z) acc) want)
         where
           mzw : z ∈ ws
           mzw = filter-sub (reachMissing G v acc) ws m1
 
           want : reachWanted G v acc z ≡ true
-          want = andTrueL (reachWanted G v acc z) (¬ᵇ (z ∈ᵛ acc))
+          want = ∧ᵇ-trueˡ (reachWanted G v acc z) (¬ᵇ (z ∈ᵛ acc))
                           (filter-prop (reachMissing G v acc) ws m1)
 
           isV : v ≡ᵛ z ≡ true -> Reaches ws G v z
@@ -359,9 +357,9 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
 
   reachFindSeed acc av bar          (allTrue f)      mv =
     ∈ᵛ-sound v acc
-      (notFalse (v ∈ᵛ acc)
-                (nandTrueL (reachWanted G v acc v) (¬ᵇ (v ∈ᵛ acc)) (f mv)
-                           (orL (v ≡ᵛ v) (any (λ y -> G y v) acc) (≡ᵛ-refl v))))
+      (¬ᵇ-false (v ∈ᵛ acc)
+                (¬ᵇ∧ᵇ-cancelˡ (reachWanted G v acc v) (¬ᵇ (v ∈ᵛ acc)) (f mv)
+                   (∨ᵇ-introˡ (v ≡ᵛ v) (any (λ y -> G y v) acc) (≡ᵛ-refl v))))
   reachFindSeed acc av (cBar h) (found x mx q) mv =
     reachGoSeed (reachRound ws G v acc) _
                 (h x (av x mx (reachNotInAcc G v acc x q))) mv
@@ -381,10 +379,10 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
 
   reachFindClosed acc av bar      (allTrue f)      {u} {w} mu mw st =
     ∈ᵛ-sound w acc
-      (notFalse (w ∈ᵛ acc)
-                (nandTrueL (reachWanted G v acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
-                           (orR (v ≡ᵛ w) (any (λ y -> G y w) acc)
-                                (any-intro (λ y -> G y w) acc mu st))))
+      (¬ᵇ-false (w ∈ᵛ acc)
+                (¬ᵇ∧ᵇ-cancelˡ (reachWanted G v acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
+                              (∨ᵇ-introʳ (v ≡ᵛ w) (any (λ y -> G y w) acc)
+                                         (any-intro (λ y -> G y w) acc mu st))))
   reachFindClosed acc av (cBar h) (found x mx q) mu mw st =
     reachGoClosed (reachRound ws G v acc) _
                   (h x (av x mx (reachNotInAcc G v acc x q)))
@@ -554,7 +552,7 @@ module _ (ws : List Node) (G : Edges) where
     where
       av' : (z : Node) -> z ∈ reachSet ws G w -> E z ∧ᵇ (r ≢ᵛ z) ≡ true
       av' z mz =
-        andIntro (E z) (r ≢ᵛ z)
+        ∧ᵇ-intro (E z) (r ≢ᵛ z)
                  (av z (reachTrans ws G r w z mw mz))
                  (cong ¬ᵇ_ notR)
         where
@@ -615,7 +613,7 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
   loopAt : r ∈ ws
         -> isTerminal ws G r ≡ true -> hasOut ws G r ≡ true -> Loop ws G r
   loopAt mr et ho =
-    pick (null-false (outs ws G r) (notTrue (null (outs ws G r)) ho))
+    pick (null-false (outs ws G r) (¬ᵇ-true (null (outs ws G r)) ho))
     where
       pick : (Σ[ x ∈ Node ] x ∈ outs ws G r) -> Loop ws G r
       pick (x , mx) = back (sccFrom ws G r x (termScc ws G r et inR))
@@ -688,11 +686,11 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
          -> Σ[ z ∈ Node ] z ∈ cy0 × f z ≡ true
       noF f ()
   mkCirc cy0 t0 nn C to from (f ∷ fs) e =
-    pick (any-true f C (andTrueL (any f C) (meetsAll fs C) e))
+    pick (any-true f C (∧ᵇ-trueˡ (any f C) (meetsAll fs C) e))
     where
       rest : Circuit ws G fs r
       rest = mkCirc cy0 t0 nn C to from fs
-                    (andTrueR (any f C) (meetsAll fs C) e)
+                    (∧ᵇ-trueʳ (any f C) (meetsAll fs C) e)
 
       pick : (Σ[ w ∈ Node ] w ∈ C × f w ≡ true)
           -> Circuit ws G (f ∷ fs) r
@@ -797,7 +795,7 @@ module _ (G : Edges) (fs : List Pred) where
   graphFind ws sb (cBar h) (found x mx q) =
     sumElim (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws G fs
                                      (λ z m -> filter-sub (x ≢ᵛ_) ws m) fi))
-            (λ c  -> inr (cSink ws x mx (notFalse (null (outs ws G x)) q) c))
+            (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws G x)) q) c))
             (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws sb x (≢ᵛ-self x))
                      (h x (sb x mx)))
 
@@ -1089,11 +1087,14 @@ fairComplete vs G fs v mv fl = onS (fairGraph vs G fs v mv) refl
 ------------------------------------------------------------------------
 -- Reading a certificate off.
 --
--- The removal order as a list of step kinds: 2 for cBlock, 1 for cSink, 0 for
--- cNil.  Used by the checks of LTL.GraphExamples and by LTL.SccExtract.
+-- The removal order as a list of step kinds, one per constructor of Cert.
+-- Used by the checks of LTL.GraphExamples and by LTL.SccExtract.
+
+data CertStep : Set where
+  removedSink removedBlock emptied : CertStep
 
 certShape : {G : Edges} {fs : List Pred} {ws : List Node}
-         -> Cert G fs ws -> List Nat
-certShape (cNil ws e)                    = 0 ∷ []
-certShape (cSink ws x mx e c)            = 1 ∷ certShape c
-certShape (cBlock ws C f mf sb cl mis c) = 2 ∷ certShape c
+         -> Cert G fs ws -> List CertStep
+certShape (cNil ws e)                    = emptied ∷ []
+certShape (cSink ws x mx e c)            = removedSink ∷ certShape c
+certShape (cBlock ws C f mf sb cl mis c) = removedBlock ∷ certShape c

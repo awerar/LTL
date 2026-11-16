@@ -4,8 +4,8 @@
 --
 -- LTL.Gfp already has Path, which is what Reach_U(v) is in m4.tex section 3;
 -- that is the right form for gfpSound and gfpComplete, where nothing is ever
--- built.  Phase 6 builds: a round is a path, a lasso is two paths, and the
--- evaluation of G25 indexes into them.  So the same relation is given again
+-- built.  The lasso branch builds: a round is a path, a lasso is two paths, and
+-- the evaluation of G25 indexes into them.  So the same relation is given again
 -- carrying the list of states it visits, and indexed by its endpoint:
 --
 --   Walk P us v ws x   --  v -> ws_1 -> ... -> ws_n = x, every ws_i in us

@@ -42,24 +42,18 @@ lenTail : (m : Nat) (v : Val) -> hasLength (suc m) v ≡ true
 lenTail m []      ()
 lenTail m (b ∷ v) e = e
 
-deMorgan : (a b : Bool) -> ¬ᵇ (a ∧ᵇ b) ≡ true
-        -> ¬ᵇ a ∨ᵇ ¬ᵇ b ≡ true
-deMorgan true  true  ()
-deMorgan true  false e = refl
-deMorgan false b     e = refl
-
 unconsNeq : (m : Nat) (y z : Val) -> hasLength (suc m) y ≡ true
          -> hasLength (suc m) z ≡ true -> y ≢ᵛ z ≡ true
          -> prodRel _≢ᵇ_ _≢ᵛ_ (unconsV y) (unconsV z) ≡ true
 unconsNeq m []      z       () ez e
 unconsNeq m (b ∷ v) []      ey () e
-unconsNeq m (b ∷ v) (c ∷ w) ey ez e = deMorgan (b ⇔ᵇ c) (v ≡ᵛ w) e
+unconsNeq m (b ∷ v) (c ∷ w) ey ez e = ¬ᵇ-∧ᵇ (b ⇔ᵇ c) (v ≡ᵛ w) e
 
 vecIFin : (n : Nat) -> IFin (hasLength n)
 vecIFin zero =
   cBar (λ x ex -> cBar (λ y ey ->
-    emptyElim (clash x y ex (andTrueL (hasLength zero y) (x ≢ᵛ y) ey)
-                            (andTrueR (hasLength zero y) (x ≢ᵛ y) ey))))
+    emptyElim (clash x y ex (∧ᵇ-trueˡ (hasLength zero y) (x ≢ᵛ y) ey)
+                            (∧ᵇ-trueʳ (hasLength zero y) (x ≢ᵛ y) ey))))
   where
     clash : (x y : Val) -> hasLength zero x ≡ true -> hasLength zero y ≡ true
          -> x ≢ᵛ y ≡ true -> Empty
@@ -70,7 +64,7 @@ vecIFin zero =
         nil2 = subst (λ u -> u ≢ᵛ [] ≡ true) (lenZero x ex)
                      (subst (λ u -> x ≢ᵛ u ≡ true) (lenZero y ey) e)
 vecIFin (suc m) =
-  barMono (λ v ev -> andIntro (hasLength (suc m) v)
+  barMono (λ v ev -> ∧ᵇ-intro (hasLength (suc m) v)
                               (prodPred (λ b -> true) (hasLength m) (unconsV v))
                               ev (lenTail m v ev))
           (barPull unconsV (hasLength (suc m)) (unconsNeq m)
@@ -107,7 +101,8 @@ stAllSat P x m =
               (filter-sub (isState P) (allVecs (length (sub P))) m)
 
 ------------------------------------------------------------------------
--- The guard of Barras, refined by Gonthier (siles.pdf, section 5).
+-- The guard of Barras, refined by Gonthier (Coquand and Siles, CPP 2011,
+-- section 5).
 --
 -- The paper's point is that one computes with the decision procedure DIRECTLY,
 -- as a type-theoretic boolean function, without extracting to ML.  It also
@@ -137,7 +132,7 @@ guardBar n (suc k) w =
   λ E sb -> cBar (λ x ex ->
     guardBar n k (guardBar n k w)
              (λ y -> E y ∧ᵇ (x ≢ᵛ y))
-             (λ v ev -> sb v (andTrueL (E v) (x ≢ᵛ v) ev)))
+             (λ v ev -> sb v (∧ᵇ-trueˡ (E v) (x ≢ᵛ v) ev)))
 
 -- The guard depth is n itself, and that is not a cosmetic choice.
 --

@@ -452,32 +452,3 @@ proveTree n Q = go (decidePC Q)
     go : ⊢ Q ⊎ LassoCountermodel Q -> String
     go (inl d) = renderTree n d
     go (inr c) = renderCM Q c
-
-------------------------------------------------------------------------
--- Checks: the printer on the identity (L1), the abbreviations, and a
--- countermodel.  The first is ⇒Refl-full of LTL.Proofs, as text.
-
-pretty-identity : renderDeriv (⇒Refl {var zero}) ≡
-  "⊢ p ⇒ p\n\n1  P2       (p ⇒ (p ⇒ p) ⇒ p) ⇒ (p ⇒ p ⇒ p) ⇒ p ⇒ p\n2  P1       p ⇒ (p ⇒ p) ⇒ p\n3  MP 1, 2  (p ⇒ p ⇒ p) ⇒ p ⇒ p\n4  P1       p ⇒ p ⇒ p\n5  MP 3, 4  p ⇒ p\n"
-pretty-identity = refl
-
-pretty-sugar :
-  showFormula (□ var 0 ⇒ var 0 ∧ ○ var 0 ∧ ○ □ var 0)
-   ∷ showFormula (◇ var 0 ∧ ◇ var 1 ⇒ ◇ (var 0 ∧ var 1))
-   ∷ showFormula (○ ¬ var 0 ⇔ ¬ ○ var 0)
-   ∷ showFormula (¬ var 0 ⇒ var 1)
-   ∷ showFormula (¬ (var 0 ⇒ var 1))
-   ∷ showFormulaRaw (◇ var 0)
-   ∷ [] ≡
-     "□ p ⇒ p ∧ ○ p ∧ ○ □ p"
-   ∷ "◇ p ∧ ◇ q ⇒ ◇ (p ∧ q)"
-   ∷ "○ ¬ p ⇔ ¬ ○ p"
-   ∷ "¬ p ⇒ q"
-   ∷ "¬ (p ⇒ q)"
-   ∷ "¬ □ ¬ p"
-   ∷ []
-pretty-sugar = refl
-
-pretty-countermodel : prove (var 0 ⇒ □ var 0) ≡
-  "⊬ p ⇒ □ p\n\nCountermodel: the formula is false at time 0.  Variables true at each time:\n    0  {p}\n    1  {}\n    2  {p}\n    3  {p}\nthen repeating forever:\n    4  {p}\n  (back to time 4)\n"
-pretty-countermodel = refl

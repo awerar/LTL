@@ -73,24 +73,3 @@ module _ (P : Formula) where
 
   sub-□ : {A : Formula} -> □ A ∈ sub P -> A ∈ sub P
   sub-□ {A} h = sub-mono P h (there (sub-self A))
-
-------------------------------------------------------------------------
--- sub produces duplicates.
---
--- This is the point recorded in FORMALISATION-PLAN.md section 0.  Ben-Ari's own
--- example is already an instance: for  □ p ⇒ ○ □ p  we get
---
---   [ □ p ⇒ ○ □ p , □ p , p , ○ □ p , □ p , p ]
---
--- of length 6, with  □ p  and  p  each occurring twice.  A valuation as a
--- List Bool of length 6 therefore assigns them independent bits, which is why
--- isState (G5) carries a duplicate-coherence clause.
-
-benAri : Formula
-benAri = □ (var zero) ⇒ ○ □ (var zero)
-
-subBenAri-length : length (sub benAri) ≡ 6
-subBenAri-length = refl
-
-subBenAri-dup : nth (sub benAri) 1 ⊥ ≡ nth (sub benAri) 4 ⊥
-subBenAri-dup = refl

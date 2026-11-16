@@ -77,6 +77,7 @@ module LTL.Compare where
 
 open import LTL.DecideSCC public
 open import LTL.Examples  public
+open import LTL.Checks    using (c5; c5pqNow; c5q)
 
 ------------------------------------------------------------------------
 -- The only inference in the file.

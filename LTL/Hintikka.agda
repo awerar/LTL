@@ -24,8 +24,9 @@
 --             the state, Lemma 5.4 hands over a position of the orbit at which
 --             A fails, and one false conjunct refutes the conjunction.
 --
--- Both halves of the box case use exactly one lemma each from Phase 6: carry
--- (T2) and globalFulfil (G24).  Nothing else in the development is needed.
+-- Both halves of the □ case use exactly one lemma each: carry (T2, LTL.Step)
+-- and globalFulfil (G24, LTL.Global).  Nothing else in the development is
+-- needed.
 
 module LTL.Hintikka where
 
@@ -39,14 +40,14 @@ stateOk : (P : Formula) (s : Val) -> s ∈ Uinf P -> {A : Formula}
        -> A ∈ sub P -> okAt P s A ≡ true
 stateOk P s m mA =
   all-at (okAt P s) (sub P) mA
-           (andTrueL (allOk P s (sub P)) (allCoh P s (length (sub P)))
+           (∧ᵇ-trueˡ (allOk P s (sub P)) (allCoh P s (length (sub P)))
                      (uinfState P s m))
 
 -- (S2)
 □S2 : (P : Formula) (s : Val) -> s ∈ Uinf P -> (B : Formula)
    -> □ B ∈ sub P -> valOf P s (□ B) ≡ true -> valOf P s B ≡ true
 □S2 P s m B mb e =
-  ⇒TrueB (valOf P s (□ B)) (valOf P s B) (stateOk P s m mb) e
+  ⇒ᵇ-mp (valOf P s (□ B)) (valOf P s B) (stateOk P s m mb) e
 
 ⇒Cong : {a a' b b' : Bool} -> a ≡ a' -> b ≡ b'
      -> a ⇒ᵇ b ≡ a' ⇒ᵇ b'
@@ -180,14 +181,10 @@ hintStart P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
 -- and soundness would give [[¬ P]] = 1 there too.  This is the countermodel
 -- half of Theorem 6.1, with only the packaging left for G28.
 
-clash : (x : Bool) -> x ≡ true -> ¬ᵇ x ≡ true -> Empty
-clash true  ex ()
-clash false () en
-
 notRefutable : (P : Formula) (v0 : Val) (r : Run P v0)
             -> valOf P v0 P ≡ true -> ⊢ ¬ P -> Empty
 notRefutable P v0 r e d =
-  clash (evalAt P c0 c1 P (v0 , rest)) holds negated
+  ¬ᵇ-clash (evalAt P c0 c1 P (v0 , rest)) holds negated
   where
     open Run r
 
@@ -207,13 +204,3 @@ notRefutableSat P e d = go (any-true (λ v -> valOf P v P) (Uinf P) e)
   where
     go : (Σ[ v ∈ Val ] v ∈ Uinf P × valOf P v P ≡ true) -> Empty
     go (v , m , ev) = notRefutable P v (runOf P v m (lasso P v m)) ev d
-
-------------------------------------------------------------------------
--- Checkpoint.
---
--- ◇ p is consistent: ¬ ◇ p has no derivation in L.  This is a THEOREM,
--- not a computation -- the certificate is the lasso of LTL.Lasso, and
--- the proof is Hintikka's lemma at stage 0 against soundness.
-
-◇P-consistent : ⊢ ¬ ◇P -> Empty
-◇P-consistent = notRefutableSat ◇P satB-◇P

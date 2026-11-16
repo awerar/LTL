@@ -11,7 +11,7 @@
 -- ¬ᵇ evalAt A (nextPos pos) on the nose.  That leaves four.
 --
 --   (K □)  is all pointwise: the SAME orbit on both sides, so it is
---            all-at then ⇒TrueB then all-intro.
+--            all-at then ⇒ᵇ-mp then all-intro.
 --
 --   (Exp)    needs the orbit of pos to contain pos, its successor, and the
 --            whole orbit of its successor.  All three are orbitIter, since
@@ -57,10 +57,6 @@ tautP3 true  false = refl
 tautP3 false true  = refl
 tautP3 false false = refl
 
-tautId : (a : Bool) -> a ⇒ᵇ a ≡ true
-tautId true  = refl
-tautId false = refl
-
 ------------------------------------------------------------------------
 -- Conjunction, as (Exp) and (Lin) need it
 
@@ -88,9 +84,9 @@ module _ (P : Formula) where
   k□Sound c0 c1 A B pos e1 e2 =
     all-intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
       (λ {q} m ->
-         ⇒TrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
-                (all-at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
-                (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
+         ⇒ᵇ-mp (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
+               (all-at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
+               (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
 
   ------------------------------------------------------------------------
   -- (Exp)
@@ -99,7 +95,7 @@ module _ (P : Formula) where
           -> evalAt P c0 c1 (□ A ⇒ A ∧ ○ A ∧ ○ □ A) pos ≡
              true
   expSound c0 c1 A pos =
-    ⇒IntroB (evalAt P c0 c1 (□ A) pos)
+    ⇒ᵇ-intro (evalAt P c0 c1 (□ A) pos)
               (evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos) body
     where
       body : evalAt P c0 c1 (□ A) pos ≡ true
@@ -128,10 +124,10 @@ module _ (P : Formula) where
   indSound : (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
           -> evalAt P c0 c1 (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos ≡ true
   indSound c0 c1 A pos =
-    ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ ○ A)) pos)
-              (evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 (□ A) pos)
-              (λ e1 -> ⇒IntroB (evalAt P c0 c1 A pos) (evalAt P c0 c1 (□ A) pos)
-                                 (body e1))
+    ⇒ᵇ-intro (evalAt P c0 c1 (□ (A ⇒ ○ A)) pos)
+             (evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 (□ A) pos)
+             (λ e1 -> ⇒ᵇ-intro (evalAt P c0 c1 A pos)
+                               (evalAt P c0 c1 (□ A) pos) (body e1))
     where
       body : evalAt P c0 c1 (□ (A ⇒ ○ A)) pos ≡ true
           -> evalAt P c0 c1 A pos ≡ true
@@ -145,7 +141,7 @@ module _ (P : Formula) where
           along (suc t) =
             subst (λ r -> evalAt P c0 c1 A r ≡ true)
                   (sym (posIter-suc c0 c1 t pos))
-                  (⇒TrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
+                  (⇒ᵇ-mp (evalAt P c0 c1 A (posIter c0 c1 t pos))
                             (evalAt P c0 c1 A
                                     (nextPos c0 c1 (posIter c0 c1 t pos)))
                             (all-at (evalAt P c0 c1 (A ⇒ ○ A))
@@ -177,16 +173,16 @@ module _ (P : Formula) where
     tautP3 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
 
   sound b c0 c1 mc0 wc stb (k□ {A} {B}) pos vp =
-    ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ B)) pos)
+    ⇒ᵇ-intro (evalAt P c0 c1 (□ (A ⇒ B)) pos)
               (evalAt P c0 c1 (□ A) pos ⇒ᵇ evalAt P c0 c1 (□ B) pos)
-              (λ e1 -> ⇒IntroB (evalAt P c0 c1 (□ A) pos)
+              (λ e1 -> ⇒ᵇ-intro (evalAt P c0 c1 (□ A) pos)
                                  (evalAt P c0 c1 (□ B) pos)
                                  (λ e2 -> k□Sound c0 c1 A B pos e1 e2))
 
   -- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
   sound b c0 c1 mc0 wc stb (k○ {A} {B}) pos vp =
-    tautId (evalAt P c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
-            evalAt P c0 c1 B (nextPos c0 c1 pos))
+    ⇒ᵇ-refl (evalAt P c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
+             evalAt P c0 c1 B (nextPos c0 c1 pos))
 
   sound b c0 c1 mc0 wc stb (exp {A}) pos vp = expSound c0 c1 A pos
 
@@ -197,8 +193,8 @@ module _ (P : Formula) where
   sound b c0 c1 mc0 wc stb (lin {A}) pos vp =
     ∧True c0 c1 (○ ¬ A ⇒ ¬ ○ A)
                     (¬ ○ A ⇒ ○ ¬ A) pos
-          (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
-            (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
+          (⇒ᵇ-refl (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
+            (⇒ᵇ-refl (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
 
   -- (PC).  evalAt is DEFINED by ¬ᵇ at ¬ and by ⇒ᵇ at ⇒, so the two
   -- compositionality hypotheses of tautSound are refl and the case is one line.
@@ -209,7 +205,7 @@ module _ (P : Formula) where
               (λ X m -> refl) (λ X Y m -> refl) e
 
   sound b c0 c1 mc0 wc stb (mp {A} {B} d e) pos vp =
-    ⇒TrueB (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+    ⇒ᵇ-mp (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
              (sound b c0 c1 mc0 wc stb d pos vp)
              (sound b c0 c1 mc0 wc stb e pos vp)
 

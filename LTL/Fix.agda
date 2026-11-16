@@ -9,11 +9,10 @@
 -- The note's proof is one line: "otherwise (R1) or (R2) would apply and the
 -- procedure would not have stopped."  Formally that is two things.
 --
--- First, that the procedure really has stopped -- uinfStable.  Since G29 this
--- is not an argument at all: elimGo returns us exactly in the branch where
--- findFalse reports that every state of us passes keep, so the witness that
--- the procedure has stopped is the branch's own hypothesis, applied.  The
--- fixed-point equation and the ≤ measure it used to need are both gone.
+-- First, that the procedure really has stopped -- uinfStable.  This is not an
+-- argument at all: elimGo returns us exactly in the branch where findFalse
+-- reports that every state of us passes keep, so the witness that the
+-- procedure has stopped is the branch's own hypothesis, applied.
 --
 -- Second, and this is the work, that the failure of (R2) yields a WITNESS.
 -- (R2) fails at v when v is outside gfpW, and gfpComplete only gives the
@@ -63,16 +62,16 @@ module _ (P : Formula) where
 
   uinfNotR1 : {v : Val} -> v ∈ Uinf P -> r1 P (Uinf P) v ≡ false
   uinfNotR1 {v} m =
-    orFalseL (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
-             (notTrue (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
-                      (uinfStable m))
+    ∨ᵇ-falseˡ (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
+              (¬ᵇ-true (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
+                       (uinfStable m))
 
   uinfNotR2 : {v : Val} -> v ∈ Uinf P
            -> r2 P (evList P (Uinf P)) v ≡ false
   uinfNotR2 {v} m =
-    orFalseR (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
-             (notTrue (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
-                      (uinfStable m))
+    ∨ᵇ-falseʳ (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
+              (¬ᵇ-true (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
+                       (uinfStable m))
 
 ------------------------------------------------------------------------
 -- First half of Lemma 5.1: a successor exists
@@ -169,10 +168,10 @@ module _ (P : Formula) where
             -> Escape P (Uinf P) A v
   uinfFulfil v m A mA pend =
     gfpEscape (Uinf P) A v m
-      (andFalseTrueL (pending P v A) (v ∈ᵛ gfpW P (Uinf P) A)
-                     (any-false (badEv P v) (evList P (Uinf P)) (uinfNotR2 P m)
-                                (evList-mem P (Uinf P) mA))
-                     (cong ¬ᵇ_ pend))
+      (∧ᵇ-false-cancelˡ (pending P v A) (v ∈ᵛ gfpW P (Uinf P) A)
+         (any-false (badEv P v) (evList P (Uinf P)) (uinfNotR2 P m)
+                    (evList-mem P (Uinf P) mA))
+         (cong ¬ᵇ_ pend))
 
   ------------------------------------------------------------------------
   -- Survivors are states.

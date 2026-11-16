@@ -7,11 +7,10 @@
 --             passing to  E intersect (R x) , one always stops.
 --
 -- With R the complement of equality this says: one cannot go on choosing
--- DISTINCT elements of E forever.  That is exactly the principle the
--- development used to re-derive by hand, once per use, as a decreasing length.
--- Phase 8 (G29) replaces all of those by recursion on a Bar: shrinkGo
--- (LTL.Gfp), elimGo (LTL.Elim), lassoSearch (LTL.Lasso), and then closeGo
--- (LTL.Closure), which is G30 and which no length would have justified at all.
+-- DISTINCT elements of E forever.  Every search of the development recurses on
+-- a Bar (G29): shrinkGo (LTL.Gfp), elimGo (LTL.Elim), lassoSearch (LTL.Lasso),
+-- and closeGo (LTL.Closure, G30), whose accumulator GROWS, so that no
+-- decreasing length would justify it at all.
 --
 -- Subsets are taken DECIDABLE, as boolean predicates, rather than as
 -- Prop-valued ones.  Everything this development quantifies over is decidable,
@@ -64,8 +63,8 @@ barStep : {A : Set} (R : A -> A -> Bool) (E F : A -> Bool)
        -> (x y : A) -> E y ∧ᵇ R x y ≡ true
        -> F y ∧ᵇ R x y ≡ true
 barStep R E F sb x y e =
-  andIntro (F y) (R x y) (sb y (andTrueL (E y) (R x y) e))
-                         (andTrueR (E y) (R x y) e)
+  ∧ᵇ-intro (F y) (R x y) (sb y (∧ᵇ-trueˡ (E y) (R x y) e))
+                         (∧ᵇ-trueʳ (E y) (R x y) e)
 
 barMono : {A : Set} {R : A -> A -> Bool} {E F : A -> Bool}
        -> ((x : A) -> E x ≡ true -> F x ≡ true)
@@ -111,14 +110,14 @@ barUnion {A} {T} {G} {H} (cBar hg) bh = inner H bh
       where
         pick : (x : A) -> G x ∨ᵇ H' x ≡ true
             -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
-        pick x ex = sumElim fromG fromH (orTrue (G x) (H' x) ex)
+        pick x ex = sumElim fromG fromH (∨ᵇ-true (G x) (H' x) ex)
           where
             fromG : G x ≡ true
                  -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
             fromG eg =
               barMono (λ y ey -> ∧∨-distrib (G y) (H' y) (T x y) ey)
                       (barUnion (hg x eg)
-                                (barMono (λ y ey -> andTrueL (H' y) (T x y) ey)
+                                (barMono (λ y ey -> ∧ᵇ-trueˡ (H' y) (T x y) ey)
                                          (cBar hh)))
 
             fromH : H' x ≡ true
@@ -158,9 +157,10 @@ barProd {A} {B} {R} {S} {E} {F} (cBar he) bf = inner F bf
                    (λ q -> prodPred E F' q ∧ᵇ prodRel R S p q)
         pick (x , y) ep =
           barMono (prodMono R S E F' x y)
-                  (barUnion (barProd (he x (andTrueL (E x) (F' y) ep)) (cBar hf))
+                  (barUnion (barProd (he x (∧ᵇ-trueˡ (E x) (F' y) ep))
+                                     (cBar hf))
                             (inner (λ b -> F' b ∧ᵇ S y b)
-                                   (hf y (andTrueR (E x) (F' y) ep))))
+                                   (hf y (∧ᵇ-trueʳ (E x) (F' y) ep))))
 
 ------------------------------------------------------------------------
 -- Pulling back along a map that reflects the relation on a domain D
@@ -176,22 +176,16 @@ barPull {A} {B} {R} {S} f D h {E} (cBar hE) = cBar pick
     pick : (y : B) -> D y ∧ᵇ E (f y) ≡ true
         -> Bar S (λ z -> (D z ∧ᵇ E (f z)) ∧ᵇ S y z)
     pick y ey =
-      barMono keep (barPull f D h (hE (f y) (andTrueR (D y) (E (f y)) ey)))
+      barMono keep (barPull f D h (hE (f y) (∧ᵇ-trueʳ (D y) (E (f y)) ey)))
       where
         keep : (z : B) -> (D z ∧ᵇ E (f z)) ∧ᵇ S y z ≡ true
             -> D z ∧ᵇ E (f z) ∧ᵇ R (f y) (f z) ≡ true
-        keep z ez =
-          andIntro (D z) (E (f z) ∧ᵇ R (f y) (f z))
-                   (andTrueL (D z) (E (f z))
-                             (andTrueL (D z ∧ᵇ E (f z)) (S y z) ez))
-                   (andIntro (E (f z)) (R (f y) (f z))
-                             (andTrueR (D z) (E (f z))
-                                       (andTrueL (D z ∧ᵇ E (f z)) (S y z) ez))
-                             (h y z (andTrueL (D y) (E (f y)) ey)
-                                    (andTrueL (D z) (E (f z))
-                                              (andTrueL (D z ∧ᵇ E (f z))
-                                                        (S y z) ez))
-                                    (andTrueR (D z ∧ᵇ E (f z)) (S y z) ez)))
+        keep z ez with ∧ᵇ-split (D z ∧ᵇ E (f z)) (S y z) ez
+        ... | dez , syz with ∧ᵇ-split (D z) (E (f z)) dez
+        ...   | dz , efz =
+          ∧ᵇ-intro (D z) (E (f z) ∧ᵇ R (f y) (f z)) dz
+                   (∧ᵇ-intro (E (f z)) (R (f y) (f z)) efz
+                             (h y z (∧ᵇ-trueˡ (D y) (E (f y)) ey) dz syz))
 
 ------------------------------------------------------------------------
 -- Bool is inductively finite
@@ -216,5 +210,5 @@ boolIFin =
   cBar (λ y ey ->
   cBar (λ z ez ->
     emptyElim (noThreeDistinct x y z ey
-                 (andTrueL (x ≢ᵇ z) (y ≢ᵇ z) ez)
-                 (andTrueR (x ≢ᵇ z) (y ≢ᵇ z) ez)))))
+                 (∧ᵇ-trueˡ (x ≢ᵇ z) (y ≢ᵇ z) ez)
+                 (∧ᵇ-trueʳ (x ≢ᵇ z) (y ≢ᵇ z) ez)))))

@@ -15,19 +15,19 @@
 -- no greatest fixed point and no round numbering in it: the induction is the
 -- reverse traversal of the condensation DAG that the certificate records.
 --
--- What is reused, and it is the whole point of the phase.
+-- What is reused from LTL.Extract, which is the point of this module.
 --
 --   stepLemma      -- (Step), Lemma 2.7, unchanged
 --   extractR1      -- the sink case, unchanged and used verbatim
 --   Refuted        -- the induction hypothesis, unchanged
 --   provableEach's -- the three-position argument, minus its middle case
 --
--- and what is NOT reused is extractR2, for the reason PHASE11-PLAN.md gives:
--- extractR2 is stated for  gfpW P us A  and uses gfpIn, gfpHolds and gfpClosed,
--- so it is welded to the greatest fixed point.  extractBlock below is its copy
--- with those three facts turned into three hypotheses, which the certificate's
--- block supplies instead.  Nothing in LTL.Extract is touched: C8 compares three
--- procedures and needs all of them.
+-- and what is NOT reused is extractR2: it is stated for  gfpW P us A  and uses
+-- gfpIn, gfpHolds and gfpClosed, so it is welded to the greatest fixed point.
+-- extractBlock below is its copy with those three facts turned into three
+-- hypotheses, which the certificate's block supplies instead.  Nothing in
+-- LTL.Extract is touched: LTL.Compare (checkpoint C8) compares the procedures
+-- and needs all of them.
 --
 -- The fit with certAll, hypothesis by hypothesis.
 --
@@ -48,8 +48,8 @@
 --        valOf P y A ≡ true          and unfulfilled at y
 --
 --    -- the two hypotheses (R2) needs, now at EVERY state of C rather than at
---    one state per round.  That is the improvement PHASE11-PLAN.md predicted
---    from uniformity on a component: extractBlock refutes the whole component
+--    one state per round.  That is what uniformity on a component buys:
+--    extractBlock refutes the whole component
 --    in one use of (Ind), where elimRound needs one round per state.
 --
 -- 3. THE ONE WRINKLE, AND WHY IT IS PAID BY A FILTER.  certAll quantifies its
@@ -229,12 +229,12 @@ module _ (P : Formula) where
 
           dHold : (y : Val) -> y ∈ D -> valOf P y A ≡ true
           dHold y my =
-            notFalse (valOf P y A)
-                     (orFalseR (valOf P y (□ A)) (¬ᵇ valOf P y A)
-                               (missA y (dC y my)))
+            ¬ᵇ-false (valOf P y A)
+                     (∨ᵇ-falseʳ (valOf P y (□ A)) (¬ᵇ valOf P y A)
+                                (missA y (dC y my)))
 
           pend : valOf P z (□ A) ≡ false
-          pend = orFalseL (valOf P z (□ A)) (¬ᵇ valOf P z A) (missA z mz)
+          pend = ∨ᵇ-falseˡ (valOf P z (□ A)) (¬ᵇ valOf P z A) (missA z mz)
 
           mzD : z ∈ D
           mzD = into z mz mzU
@@ -327,51 +327,5 @@ proofFrom (inr d) e = d
 -- and the shape of the certificate, as in cert-P of LTL.GraphExamples: 2 for
 -- cBlock, 1 for cSink, 0 for cNil.
 
-sccShape : (Q : Formula) -> List Nat
+sccShape : (Q : Formula) -> List CertStep
 sccShape Q = sumElim (λ fi -> []) certShape (sccGraph (¬ Q))
-
-------------------------------------------------------------------------
--- Checkpoints.
---
--- Ben-Ari's formula and  □ p ⇒ □ ○ p , the two examples LTL.Extract
--- ends with, decided again by the SCC route.  These are the real test: both
--- derivations are produced, so the graph search, certAll, extractR1 and
--- extractBlock all run, and the answers agree with benAriProof and bnbProof.
-
-scc-benAri : isInl (sccProof benAri) ≡ false
-scc-benAri = refl
-
-benAriProofSCC : ⊢ benAri
-benAriProofSCC = proofFrom (sccProof benAri) refl
-
-scc-bnb : isInl (sccProof bnb) ≡ false
-scc-bnb = refl
-
-bnbProofSCC : ⊢ bnb
-bnbProofSCC = proofFrom (sccProof bnb) refl
-
--- The certificates themselves, read as their removal orders.  For Ben-Ari's
--- formula Ust has one state, it is a sink, and the certificate is  cSink, cNil
--- -- only extractR1 runs, which is what LTL.Extract records of benAriProof.
---
--- For  □ p ⇒ □ ○ p  Ust has two states and the certificate is
--- cSink, cBlock, cNil : one state has no successor inside the set and leaves
--- first, and only then is what remains a component whose eventuality is
--- unfulfillable, refuted by extractBlock in a single use of (Ind).  That is the
--- same order as the elimination's -- G30's note "bnb still exercises (R2), now
--- in the second round rather than the first, because the (R1)-victim has to
--- leave before the eventuality is unfulfillable" -- reached by a different
--- route, and it is why bnb is the example that matters: extractBlock, the copy
--- of (R2), is on the path from here to bnbProofSCC.
-
-shape-benAri : sccShape benAri ≡ 1 ∷ 0 ∷ []
-shape-benAri = refl
-
-shape-bnb : sccShape bnb ≡ 1 ∷ 2 ∷ 0 ∷ []
-shape-bnb = refl
-
--- and the positive side, to show the search is not simply always certifying:
--- ◇ p is satisfiable, so its state set has a fair component.
-
-scc-◇P : isInl (sccGraph ◇P) ≡ true
-scc-◇P = refl

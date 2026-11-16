@@ -16,14 +16,11 @@
 -- either one already seen -- and the cycle closes -- or a fresh one, which is
 -- then given up.
 --
--- Until Phase 8 those states were an explicit pool, with |U_inf| as fuel and a
--- ≤ measure saying the pool shortens; at fuel zero the pool was empty, so the
--- fresh case could not arise.  G29 replaces all of that by a Bar: the states
--- still available ARE the Bar's predicate E, giving one up is exactly the sub-
--- Bar  cBar  hands over, and the search terminates because Bar is well founded.
--- So the pool, the fuel, the measure and the base case all disappear together,
--- and what is left is the invariant  z in U_inf and z not yet a boundary
--- implies E z  -- which is the pigeonhole, still not a lemma.
+-- The states still available are not a list carried along (G29): they ARE the
+-- Bar's predicate E, giving one up is exactly the sub-Bar  cBar  hands over,
+-- and the search terminates because Bar is well founded.  What is carried is
+-- the invariant  z in U_inf and z not yet a boundary implies E z  -- which is
+-- the pigeonhole, and it is not a separate lemma.
 --
 -- The bookkeeping the note leaves implicit -- which prefix is the stem, which
 -- suffix is the cycle -- is kept by recording, for each boundary b already
@@ -109,8 +106,8 @@ closeLasso P v0 cur (mkSeen mb ps wp qs wq nn h) =
 availCons : (P : Formula) {E : Pred} (bs : List Val) -> Avail E (Uinf P) bs
          -> (cur : Val) -> Avail (λ y -> E y ∧ᵇ (cur ≢ᵛ y)) (Uinf P) (cur ∷ bs)
 availCons P {E} bs av cur z mz e =
-  andIntro (E z) (cur ≢ᵛ z)
-           (av z mz (orFalseR (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
+  ∧ᵇ-intro (E z) (cur ≢ᵛ z)
+           (av z mz (∨ᵇ-falseʳ (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
            (cong ¬ᵇ_ onEq)
   where
     onEq : cur ≡ᵛ z ≡ false
@@ -118,7 +115,7 @@ availCons P {E} bs av cur z mz e =
       true≢false (trans (sym (subst (λ u -> u ≡ᵛ cur ≡ true)
                                     (≡ᵛ-sound cur z ec)
                                     (≡ᵛ-refl cur)))
-                        (orFalseL (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
+                        (∨ᵇ-falseˡ (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
 
 module _ (P : Formula) (v0 : Val) where
 
@@ -190,54 +187,3 @@ module _ (P : Formula) where
     where
       m : v ∈ Uinf P
       m = ∈ᵛ-sound v (Uinf P) e
-
-------------------------------------------------------------------------
--- The lasso, computed.
---
--- For ◇ p the four positions of sub (◇ p) are
---
---    ¬ □ ¬ p ,  □ ¬ p ,  ¬ p ,  p
---
--- and Uinf has the three states of Example 1 of lecture15.pdf:
---
---    sPending = 1 0 1 0   ◇ p holds, p does not: the eventuality is pending
---    sFulfil  = 1 0 0 1   p holds: the eventuality is fulfilled
---    sSink    = 0 1 1 0   ◇ p is false, so p fails forever
---
--- Starting at sPending, lassoAt below finds the stem  sFulfil, sSink  (the
--- walk from the start to the cycle) and the cycle  sSink , of length one:
---
---    1 0 1 0  ->  1 0 0 1  ->  0 1 1 0  ->  0 1 1 0  ->  ...
---
--- The eventuality pending at the start is fulfilled at the second state, and
--- nothing is pending on the cycle, which is what Proposition 5.3 promises and
--- what the type of cyc above records.  This run satisfies ◇ p at stage 0, so
--- it is a countermodel to ¬ ◇ p (see the checkpoint in LTL.Eval).
-
-sPending : Val
-sPending = true ∷ false ∷ true ∷ false ∷ []
-sFulfil : Val
-sFulfil = true ∷ false ∷ false ∷ true ∷ []
-sSink : Val
-sSink = false ∷ true ∷ true ∷ false ∷ []
-
-◇P-lasso : lassoAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ [])
-◇P-lasso = refl
-
-
--- A degenerate but instructive second case.  For  □ p  the demand-driven
--- state set has a single member: □ p forces p by (S2) and carries itself
--- along every step by (T2), so the closure of the states containing □ p is
--- the one state  1 1  looping to itself.  Nothing is pending there, every round
--- is the one forced step, and the cycle has length one.  That the cycle is
--- nonempty is not automatic; it is what the extra step appended by roundOf
--- buys, and null qs ≡ false in mkLasso records it.
-
-□P : Formula
-□P = □ (var zero)
-
-s□ : Val
-s□ = true ∷ true ∷ []
-
-□P-lasso : lassoAt □P s□ refl ≡ ([] , s□ ∷ [])
-□P-lasso = refl

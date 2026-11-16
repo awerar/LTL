@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Examples -- Figure 11 of exLTL.pdf (Schmitt and Goubault-Larrecq,
--- "Linear Temporal Logic", page 14) run through decide.
+-- LTL.Examples -- Figure 11 of Schmitt and Goubault-Larrecq, "Linear Temporal
+-- Logic" (page 14), run through decide.
 --
 -- Forty-six named modal and temporal statements, in the box/diamond fragment
 -- -- no ○ occurs in any of them.  The figure's last column marks the ones its

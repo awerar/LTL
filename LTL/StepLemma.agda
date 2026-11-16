@@ -78,7 +78,7 @@ notSucc P v w lenv lenw e = sigElim (all-false (stepAt P v w) (sub P) e)
          -> (valOf P v (□ B) ⇒ᵇ valOf P w (□ B)) ∧ᵇ
             (¬ᵇ valOf P v (□ B) ∧ᵇ valOf P v B ⇒ᵇ ¬ᵇ valOf P w (□ B)) ≡ false
          -> ⊢ ¬ R
-    case□ {B} m q = sumElim t2 t3 (andFalse _ _ q)
+    case□ {B} m q = sumElim t2 t3 (∧ᵇ-false _ _ q)
       where
         -- (T2): □ B holds at v, so it must hold at w; it does not.
         t2 : valOf P v (□ B) ⇒ᵇ valOf P w (□ B) ≡ false
@@ -103,15 +103,15 @@ notSucc P v w lenv lenw e = sigElim (all-false (stepAt P v w) (sub P) e)
             pr = ⇒ᵇ-false _ _ q3
 
             eV : valOf P v (□ B) ≡ false
-            eV = notTrue (valOf P v (□ B))
-                         (andTrueL (¬ᵇ valOf P v (□ B)) (valOf P v B)
+            eV = ¬ᵇ-true (valOf P v (□ B))
+                         (∧ᵇ-trueˡ (¬ᵇ valOf P v (□ B)) (valOf P v B)
                                    (fst pr))
 
             eB : valOf P v B ≡ true
-            eB = andTrueR (¬ᵇ valOf P v (□ B)) (valOf P v B) (fst pr)
+            eB = ∧ᵇ-trueʳ (¬ᵇ valOf P v (□ B)) (valOf P v B) (fst pr)
 
             eW : valOf P w (□ B) ≡ true
-            eW = notFalse (valOf P w (□ B)) (snd pr)
+            eW = ¬ᵇ-false (valOf P w (□ B)) (snd pr)
 
     ----------------------------------------------------------------
 

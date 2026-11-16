@@ -49,9 +49,9 @@ open import LTL.CompletePC public
 -- only part of a certificate that is about the temporal content at all.  So
 -- what G34 does is exactly to remove the propositional padding from around it.
 --
--- Additive, as Phase 9 was: provableEach and provable stay as they are, and
--- LTL.Proofs reports 82357 against 7 only because all three proofs are in the
--- development at once.
+-- Additive: provableEach and provable stay as they are, and LTL.Proofs reports
+-- 82357 against 7 only because all three proofs are in the development at
+-- once.
 
 provableEachPC : (Q : Formula) -> satB (¬ Q) ≡ false
               -> (w : Val) -> w ∈ St (¬ Q)
@@ -80,8 +80,8 @@ provableEachPC Q e w m = byPosition
                                  (∈ᵛ-sound w (Ust R) ec) (cong ¬ᵇ_ eb)))
 
 -- G34's certificate, kept as a named term so that LTL.Proofs can put the whole
--- progression side by side.  It is the Phase 9 shape with the branches
--- shortened; provablePC below changes the SHAPE.
+-- progression side by side.  It is the shape of LTL.Extract's provable with
+-- the branches shortened; provablePC below changes the SHAPE.
 
 provableStPC : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provableStPC Q e =
@@ -210,7 +210,7 @@ tautRemoved Q e =
                     bad : Empty
                     bad =
                       true≢false (trans (sym (chiRowTrue Ats a (sub R)))
-                                        (notTrue (valFrom Ats a (chi R w))
+                                        (¬ᵇ-true (valFrom Ats a (chi R w))
                                                  (prem (memMap (¬Chi R) mRem))))
 
 -- one modus ponens per removed state, against Theorem 4.1.  Same shape as
@@ -247,20 +247,8 @@ decidePC Q with satB (¬ Q) in e
 --
 -- The same four numbers as countOf (LTL.Decide) -- size, modus ponens,
 -- generalisations, (Ind) -- so that the two are comparable line by line, and
--- one more that only the new system can have: how many nodes are (PC).
-
-derivPC : {A : Formula} -> ⊢ A -> Nat
-derivPC p1  = 0
-derivPC p2  = 0
-derivPC p3  = 0
-derivPC k□  = 0
-derivPC k○  = 0
-derivPC exp = 0
-derivPC ind = 0
-derivPC lin = 0
-derivPC (pc e)   = 1
-derivPC (mp d e) = derivPC d + derivPC e
-derivPC (gen d)  = derivPC d
+-- one more that only the new system can have: how many nodes are (PC)
+-- (derivPC, LTL.Decide).
 
 countOfPC : (Q : Formula) -> Nat × Nat × Nat × Nat
 countOfPC Q = onDec (decidePC Q)
@@ -277,21 +265,6 @@ pcCountOf Q = onDec (decidePC Q)
     onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat
     onDec (inl d) = derivPC d
     onDec (inr c) = zero
-
-------------------------------------------------------------------------
--- Checkpoints.
---
--- The two formulas of C4 are still decided in the affirmative, and by the same
--- boolean: what changed is the size of the answer, not the answer.
-
-decidePC-benAri : isProof (decidePC benAri) ≡ true
-decidePC-benAri = refl
-
-decidePC-bnb : isProof (decidePC bnb) ≡ true
-decidePC-bnb = refl
-
-decidePC-◇P : isProof (decidePC ◇P) ≡ false
-decidePC-◇P = refl
 
 ------------------------------------------------------------------------
 -- G35 of PHASE10-PLAN.md: chi over atoms.
@@ -337,7 +310,7 @@ module _ (P : Formula) where
     subst (λ u -> valFrom Ats a (chi P u) ≡ true) (mkV-id P v st len) full
     where
       ok : allOk P v (sub P) ≡ true
-      ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
+      ok = ∧ᵇ-trueˡ (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
       atomAg : (X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
             -> valFrom Ats a X ≡ valOf P v X
@@ -370,8 +343,8 @@ module _ (P : Formula) where
       Ats = atomsOf F
 
       row : {a : Val} -> a ∈ allVecs (length Ats) -> valFrom Ats a F ≡ true
-      row {a} m = boolContra (valFrom Ats a (chi P v)) (valFrom Ats a (chiA v))
-                             (chiABridge v st len Ats a)
+      row {a} m = ⇒ᵇ-contra (valFrom Ats a (chi P v)) (valFrom Ats a (chiA v))
+                            (chiABridge v st len Ats a)
 
 ------------------------------------------------------------------------
 -- and the certificate over chiA
@@ -447,7 +420,7 @@ tautRemovedA Q e =
                     bad : Empty
                     bad =
                       true≢false (trans (sym chiARow)
-                                        (notTrue (valFrom Ats a (chiA R w))
+                                        (¬ᵇ-true (valFrom Ats a (chiA R w))
                                                  (prem (memMap (¬ChiA R) mRem))))
 
 mpRemovedA : (P : Formula) (ws : List Val) {C : Formula}

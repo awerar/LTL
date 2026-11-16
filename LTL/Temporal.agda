@@ -65,7 +65,7 @@ linBwd = mp ∧Snd lin
 
 ○∨2 : {A B : Formula}
    -> ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
-○∨2 = caseU (liftP (○Mono explode)) (⇒TransU identP (liftP (○Mono p1)))
+○∨2 = caseU (liftP (○Mono explode)) (⇒TransU ⇒Refl (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
 -- Monotonicity of ∨ in its second argument
@@ -129,12 +129,3 @@ expConv {A} = ⇒Trans (indRule cTo○C) (□Mono ∧Fst)
     cTo○C = ⇒Trans (∧Pair (⇒Trans ∧Snd (○Mono □Elim))
                                 (⇒Trans ∧Snd (○Mono □○□)))
                        ○∧Intro
-
-------------------------------------------------------------------------
--- The (S2) case of Lemma 2.5, now available.
---
--- A valuation with  □ A  in v but  A  not in v  is refuted by (Exp); this
--- completes the list of shapes begun in LTL.Prop.
-
-□Case : {A C : Formula} -> ⊢ □ A ⇒ ¬ A ⇒ C
-□Case = ⇒Trans □Elim explode

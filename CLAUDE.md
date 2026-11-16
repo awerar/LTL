@@ -29,7 +29,10 @@ derivation or a certified finite lasso countermodel.
   `v ∈ᵛ us` on nodes (`LTL/Nodes.agda`; valuations at the `Val` instance made in
   `LTL/Reach.agda`), `A ≡ᶠ B`, `A ∈ᶠ As` on formulas (all `infix 4.5`,
   so `v ∈ᵛ us ≡ true` needs no parentheses). Lemmas about a symbol use the
-  stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`). `⊢ A` (`data ⊢_` in
+  stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`); never `foo_bar`, which Agda
+  reads as a mixfix operator. The Boolean lemmas, all in the "Boolean lemmas"
+  section of `LTL/Prelude.agda`, follow one scheme: `∧ᵇ-trueˡ`, `∧ᵇ-split`,
+  `∨ᵇ-introʳ`, `¬ᵇ-true`, `⇒ᵇ-mp`, `⇔ᵇ-complete`; add new ones there. `⊢ A` (`data ⊢_` in
   `LTL/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
   `⊥`/`⊤` are formulas. Function types and lambdas stay ASCII (`->`) apart from
   `λ`.
@@ -45,9 +48,13 @@ derivation or a certified finite lasso countermodel.
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
   `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/Nodes.agda`.
 - Module headers cite goals G1–G40 of `FORMALISATION-PLAN.md` /
-  `PHASE11-PLAN.md` (gitignored, not in the repo) and the lemma/theorem numbers
-  of `m4.tex` / `m5.tex`. Keep that comment style: long header comments that
-  tie the code to the note.
+  `PHASE11-PLAN.md` (gitignored, not in the repo; `docs/plan-index.md` lists
+  where each goal and checkpoint lives) and the lemma/theorem numbers of
+  `m4.tex` / `m5.tex`. Keep that comment style: long header comments that tie
+  the code to the note. Describe the code as it is, not how it got there:
+  development history belongs in git, not in comments.
+- Computational `refl` checks go in `LTL/Checks.agda` (one section per module)
+  or `LTL/GraphExamples.agda`, not in the proof modules.
 
 ## Documents
 
@@ -61,7 +68,8 @@ derivation or a certified finite lasso countermodel.
 ## Module index (`LTL/`, in dependency order)
 
 1. **Foundations** — `Base` (Nat, Bool, Empty, Unit, `≡`); `Prelude` (`⊎`,
-   `Σ`, `×`, List, `∈`, `⊆`, `<`, index/nth, Boolean connectives and lemmas).
+   `Σ`, `×`, List, `∈`, `⊆`, `<`, index/nth, Boolean connectives and all
+   Boolean lemmas, `refuteTrue`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
    any node type: `Sets` (`≤`, `FindResult`, filter/any/all lemmas); `Bar`
    (inductively finite sets after Coquand–Siles, closure lemmas; all searches
@@ -72,14 +80,14 @@ derivation or a certified finite lasso countermodel.
    `≡ᶠ`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
    `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** — `Prop` (L0–L7 via
-   `identP`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
+   `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).
 4. **States and transitions (m4 §2)** — `Val` (valuations, `chi`, `beta`);
    `State` (`isState`, `St P`); `Step` (`step`, `succs`, T1–T3); `Taut`
    (Boolean facts about chi/beta for (PC)); `Proj`, `NonState`, `Complete`
    (`stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas 2.7–2.8).
-5. **Finite search infrastructure** — `Reach` (`≡ᵛ` on valuations and the
-   `Val` instance of `Nodes`, reachability); `VecBar` (valuations of a given
+5. **Finite search infrastructure** — `Reach` (`≡ᵛ` on valuations, the
+   `Val` instance of `Nodes`, successor lists); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
    explored state set).
 6. **Elimination / provable branch (m4 §3–4)** — `Gfp` (set W, `Path`);
@@ -91,9 +99,12 @@ derivation or a certified finite lasso countermodel.
    `fairGraph` certificate theorem, largest module; parameterised like `Nodes`,
    imports only the generic layer, instantiated at `Val` in `SccLasso`);
    `GraphExamples` (Graph's computational checks, at `Node = Nat`);
-   `SccLasso`, `SccExtract`, `SccTrap` (graph ↔ logic translation); `DecideSCC` (`decideSCC`);
-   `CompletePC`, `ShortPC` (`decidePC`, short certificates via (PC)).
-9. **Examples and benchmarks** — `Examples` (46 formulas, Schmitt &
+   `SccLasso`, `SccExtract`, `SccTrap` (graph ↔ logic translation);
+   `DecideSCC` (`decideSCC`); `CompletePC`, `ShortPC` (`decidePC`, short
+   certificates via (PC)). `Decide` also holds `derivCounts` (size, MP, Gen,
+   Ind, PC counts of a derivation).
+9. **Examples and benchmarks** — `Checks` (the core modules' `refl` checks
+   and example formulas: `benAri`, `◇P`, `bnb`, `c5`, …); `Examples` (46 formulas, Schmitt &
    Goubault-Larrecq Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`); `Compare`
    (decide vs decideSCC on 47 formulas); `Proofs` (prints and measures
    certificates).

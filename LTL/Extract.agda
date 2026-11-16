@@ -221,9 +221,8 @@ module _ (P : Formula) where
   ustRefuted : Refuted (Ust P)
   ustRefuted u mu e = emptyElim (∈ᵛ-false u (Ust P) e mu)
 
-  -- The induction that used to run along the fuel of elimIter now runs along
-  -- the Bar that elimGo runs on, and it is the same induction: the hypothesis
-  -- is carried across one round by roundRefuted in the branch where a round
+  -- The induction runs along the Bar that elimGo runs on: the hypothesis is
+  -- carried across one round by roundRefuted in the branch where a round
   -- removes something, and returned unchanged in the branch where none does.
 
   goRefuted   : {E : Pred} (us : List Val)
@@ -251,7 +250,7 @@ module _ (P : Formula) where
   extract {v} m =
     uinfRefuted v
                 (filter-sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m)
-                (notTrue (v ∈ᵛ Uinf P)
+                (¬ᵇ-true (v ∈ᵛ Uinf P)
                          (filter-prop (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m))
 
 ------------------------------------------------------------------------
@@ -267,7 +266,7 @@ module _ (P : Formula) where
 -- Q.  This is one of the two branches of G28; the other needs the lasso.
 
 -- The three cases are a top-level function rather than a where-block of
--- provable, so that the short certificate of Phase 9 can reuse them: what
+-- provable, so that the short certificate of LTL.ShortPC can reuse them: what
 -- provablePC (LTL.ShortPC) changes is the OTHER half of the modus ponens, the
 -- state completeness, and nothing here.
 
@@ -306,22 +305,3 @@ provableEach Q e w m = byPosition
 provable : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provable Q e =
   mp (betaElim (¬ Q) (St (¬ Q)) (provableEach Q e)) (stateComplete (¬ Q))
-
-------------------------------------------------------------------------
--- Checkpoint.
---
--- Ben-Ari's formula, decided.  The procedure removes both states containing
--- ¬ benAri, so provable returns a derivation of  □ p ⇒ ○ □ p  in the
--- system L.  This is the first half of C4, reached without Phase 6: the
--- refutation branch of Theorem 6.1 is complete on its own.
-
-benAriProof : ⊢ benAri
-benAriProof = provable benAri satB-¬BenAri
-
--- The same for  □ p ⇒ □ ○ p .  This is the example that matters as a
--- test: by trace-¬Bnb of LTL.Trace its refutation passes through case (R2),
--- so extractR2 -- the loop invariant, (Ind) and all -- is on the path from
--- satB-¬Bnb to this derivation, where for benAri only extractR1 is.
-
-bnbProof : ⊢ bnb
-bnbProof = provable bnb satB-¬Bnb

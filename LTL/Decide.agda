@@ -58,7 +58,7 @@ buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
     -- (S1) at ¬ Q, the head of sub (¬ Q)
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
-      notTrue (valOf (¬ Q) v0 Q)
+      ¬ᵇ-true (valOf (¬ Q) v0 Q)
         (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
                               (¬ᵇ valOf (¬ Q) v0 Q)
                                   (stateOk (¬ Q) v0 m (sub-self (¬ Q)))))
@@ -115,65 +115,47 @@ lassoOfDecide Q (inr c) = cmStart Q c , cmRest Q c , cmCycle Q c
 --
 -- A derivation is a finite tree -- eleven constructors, of which only pc
 -- carries a side condition, and that one a decidable boolean -- so one can
--- simply count it.  These are the inl branch's counterpart to traceOf
+-- simply count it.  This is the inl branch's counterpart to traceOf
 -- below: what decide returns on a provable formula is not the assertion that it
 -- is provable but the proof, and this is how one looks at it.
 
-derivSize : {A : Formula} -> ⊢ A -> Nat
-derivSize p1  = 1
-derivSize p2  = 1
-derivSize p3  = 1
-derivSize k□  = 1
-derivSize k○  = 1
-derivSize exp = 1
-derivSize ind = 1
-derivSize lin = 1
-derivSize (pc e)   = 1
-derivSize (mp d e) = suc (derivSize d + derivSize e)
-derivSize (gen d)  = suc (derivSize d)
+-- One pass over the tree counts everything at once: the number of nodes, and
+-- how many of them are modus ponens, generalisation, (Ind) and (PC).  (Ind)
+-- is the interesting axiom: it is the one case of Theorem 4.1 that the loop
+-- invariant needs, so counting it says whether the refutation went through
+-- extractR2 at all.  (PC) only occurs in the certificates of LTL.ShortPC.
 
-derivMP : {A : Formula} -> ⊢ A -> Nat
-derivMP p1  = 0
-derivMP p2  = 0
-derivMP p3  = 0
-derivMP k□  = 0
-derivMP k○  = 0
-derivMP exp = 0
-derivMP ind = 0
-derivMP lin = 0
-derivMP (pc e)   = 0
-derivMP (mp d e) = suc (derivMP d + derivMP e)
-derivMP (gen d)  = derivMP d
+record DerivCounts : Set where
+  constructor counts
+  field
+    size mps gens inds pcs : Nat
 
-derivGen : {A : Formula} -> ⊢ A -> Nat
-derivGen p1  = 0
-derivGen p2  = 0
-derivGen p3  = 0
-derivGen k□  = 0
-derivGen k○  = 0
-derivGen exp = 0
-derivGen ind = 0
-derivGen lin = 0
-derivGen (pc e)   = 0
-derivGen (mp d e) = derivGen d + derivGen e
-derivGen (gen d)  = suc (derivGen d)
+derivCounts : {A : Formula} -> ⊢ A -> DerivCounts
+derivCounts p1       = counts 1 0 0 0 0
+derivCounts p2       = counts 1 0 0 0 0
+derivCounts p3       = counts 1 0 0 0 0
+derivCounts k□       = counts 1 0 0 0 0
+derivCounts k○       = counts 1 0 0 0 0
+derivCounts exp      = counts 1 0 0 0 0
+derivCounts ind      = counts 1 0 0 1 0
+derivCounts lin      = counts 1 0 0 0 0
+derivCounts (pc e)   = counts 1 0 0 0 1
+derivCounts (mp d e) =
+  counts (suc (size a + size b)) (suc (mps a + mps b)) (gens a + gens b)
+         (inds a + inds b) (pcs a + pcs b)
+  where
+    open DerivCounts
+    a = derivCounts d
+    b = derivCounts e
+derivCounts (gen d)  = counts (suc size) mps (suc gens) inds pcs
+  where open DerivCounts (derivCounts d)
 
--- (Ind) is the only constructor whose presence is interesting: it is the one
--- case of Theorem 4.1 that the loop invariant needs, so counting it says
--- whether the refutation went through extractR2 at all.
-
-derivInd : {A : Formula} -> ⊢ A -> Nat
-derivInd p1  = 0
-derivInd p2  = 0
-derivInd p3  = 0
-derivInd k□  = 0
-derivInd k○  = 0
-derivInd exp = 0
-derivInd ind = 1
-derivInd lin = 0
-derivInd (pc e)   = 0
-derivInd (mp d e) = derivInd d + derivInd e
-derivInd (gen d)  = derivInd d
+derivSize derivMP derivGen derivInd derivPC : {A : Formula} -> ⊢ A -> Nat
+derivSize d = DerivCounts.size (derivCounts d)
+derivMP   d = DerivCounts.mps  (derivCounts d)
+derivGen  d = DerivCounts.gens (derivCounts d)
+derivInd  d = DerivCounts.inds (derivCounts d)
+derivPC   d = DerivCounts.pcs  (derivCounts d)
 
 -- size, modus ponens steps, generalisations, (Ind) instances
 
@@ -227,101 +209,3 @@ shapeOf Q = onDec (decide Q)
     onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat × Nat
     onDec (inl d) = zero , zero
     onDec (inr c) = length (cmRest Q c) , length (cmCycle Q c)
-
-------------------------------------------------------------------------
--- Checkpoint C4.
---
--- Ben-Ari's formula is decided in the affirmative: decide returns inl, so the
--- certificate is a derivation of  □ p ⇒ ○ □ p  in the system L.  The
--- same for  □ p ⇒ □ ○ p , whose derivation goes through case (R2) of
--- Theorem 4.1 -- see bnbProof in LTL.Extract.
-
-decide-benAri : isProof (decide benAri) ≡ true
-decide-benAri = refl
-
-decide-bnb : isProof (decide bnb) ≡ true
-decide-bnb = refl
-
--- ◇ p is decided in the negative, and the certificate is a lasso.
---
--- The procedure runs on  ¬ ◇ p = ¬ ¬ □ ¬ p , whose five
--- subformulas are
---
---    ¬ ◇ p ,  ◇ p ,  □ ¬ p ,  ¬ p ,  p
---
--- and the surviving state it starts from is  1 0 1 1 0 : ◇ p fails, □ ¬ p
--- holds, p does not.  The stem is empty -- rest and cycle coincide -- and the
--- cycle is that state looping to itself.  So the countermodel is the obvious
--- one, p false forever, and by the ⊢ Q -> Empty field of the record,
--- ◇ p has no derivation in L.
-
-◇P-cmState : Val
-◇P-cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
-
-decide-◇P : isProof (decide ◇P) ≡ false
-decide-◇P = refl
-
-decide-◇P-lasso : lassoOfDecide ◇P (decide ◇P) ≡
-                       (◇P-cmState , ◇P-cmState ∷ [] , ◇P-cmState ∷ [])
-decide-◇P-lasso = refl
-
-------------------------------------------------------------------------
--- Checkpoint C5, the target of Phase 8.
---
---   □ (p ∨ q) ⇒ □ p ∨ □ q
---
--- is NOT valid, and decide says so with a lasso.  Sub of its negation has
--- length 13, so the state space is nominally 8192 vectors; the five atoms are
--- □ (p ∨ q), p, q, □ p, □ q, so 32 assignments are built, 17 of them are
--- states, and the closure of those containing the negation has 8 members, none
--- of which is eliminated.  This is the measurement Phase 8 exists for: 34.6 s
--- before G29, 1.4 s after it, and 0.9 s after G30 -- for the whole
--- countermodel, not just the branch.
---
--- The countermodel it returns is the expected one.  Writing a state as the
--- pair (p , q) -- the other eleven bits are determined -- the run is
---
---   (1,1)  ->  (0,1)  ->  (1,0)  ->  (1,1)  ->  (1,1)  ->  ...
---
--- so p or q holds at every stage, while p fails at stage 1 and q at stage 2.
--- Hence □ (p ∨ q) holds and neither □ p nor □ q does.  The stem is
--- three states and the cycle is the single state at which both hold forever.
-
--- The atoms p and q of C5 (c for C5).
-
-cp : Formula
-cp = var zero
-
-cq : Formula
-cq = var (suc zero)
-
-c5 : Formula
-c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
-
--- p and q, but neither forever
-c5pqNow : Val
-c5pqNow = true  ∷ false ∷ true ∷ true ∷ false ∷ true ∷ true
-      ∷ false ∷ true  ∷ false ∷ true  ∷ false ∷ true ∷ []
-
--- q, not p
-c5q : Val
-c5q = true  ∷ false ∷ true ∷ true ∷ true  ∷ false ∷ true
-   ∷ false ∷ true  ∷ false ∷ false ∷ false ∷ true ∷ []
-
--- p, not q
-c5p : Val
-c5p = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ false
-   ∷ true  ∷ false ∷ true  ∷ true  ∷ false ∷ false ∷ []
-
--- p and q, both forever
-c5pqForever : Val
-c5pqForever = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
-    ∷ true  ∷ false ∷ true ∷ true ∷ true  ∷ true ∷ []
-
-decide-c5 : isProof (decide c5) ≡ false
-decide-c5 = refl
-
-decide-c5-lasso : lassoOfDecide c5 (decide c5) ≡
-                  (c5pqNow , c5q ∷ c5p ∷ c5pqForever ∷ c5pqForever ∷ [] ,
-                             c5pqForever ∷ [])
-decide-c5-lasso = refl

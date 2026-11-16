@@ -7,7 +7,7 @@
 -- Ben-Ari's (PC) by (P1)-(P3) is what makes that possible: no tautology checker
 -- and no substitution relation are needed to say what a derivation is.
 --
--- Phase 8 adds (PC) back as an ELEVENTH constructor, with a decidable side
+-- (PC) comes back as an ELEVENTH constructor, with a decidable side
 -- condition on the formula itself and no substitution relation -- see below and
 -- LTL.Skel.  Only LTL.CompletePC and LTL.ShortPC build pc nodes, so the
 -- ten-constructor system is still what every lemma below them is proved in; pc
@@ -59,7 +59,7 @@ data ⊢_ : Formula -> Set where
 
   -- (PC)  Ben-Ari's Axiom 0, without the substitution relation.
   --
-  -- Definition 12.1 of benari.pdf takes "any substitution instance of a valid
+  -- Ben-Ari's Definition 12.1 takes "any substitution instance of a valid
   -- propositional formula".  m4.tex Remark 6.4 rejects that because it needs a
   -- tautology checker AND a substitution relation to say what a derivation is,
   -- and then a substitution lemma for soundness.  Only the first half is

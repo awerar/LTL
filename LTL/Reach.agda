@@ -1,33 +1,21 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Reach -- G7 of FORMALISATION-PLAN.md.
+-- LTL.Reach -- valuations as a set, and successor lists.
 --
--- Reach_U(v) of m4.tex section 3: the states reachable from v by ->-steps
--- inside U, v included.  It is needed twice: in condition (R2) of
--- Definition 3.1, and to build the loop invariant B = beta_W of Theorem 4.1,
--- where W = Reach_{U_k}(v).
+-- Here the generic set layer meets valuations.  LTL.Sets and LTL.Bar are
+-- stated for any element type, and LTL.Nodes for any node type with an
+-- equality test; below,  _≡ᵛ_  is defined, proved sound and reflexive, and
+-- LTL.Nodes is instantiated at Val with it.  That instance supplies ∈ᵛ ≢ᵛ,
+-- the hypothesis names (Closed, AllSat, ...) and listBar to the whole
+-- development.  LTL.SccLasso instantiates LTL.Graph with the same three
+-- arguments.
 --
--- Computed by fuel-bounded iteration rather than well-founded recursion: each
--- round either adds a state or stabilises, so length us rounds suffice.
---
--- What survives of this module is the SET machinery -- ≡ᵛ, ∈ᵛ, insertV,
--- unionV -- which the rest of the development uses throughout.  reach itself is
--- kept for the computation below, but the elimination procedure does not use
--- it: "length us rounds suffice" is exactly the claim one has to prove to get
--- the closure property of Theorem 4.1 step (ii) out of it, and it is a
--- pigeonhole argument over a duplicate-free accumulator.  LTL.Gfp replaces the
--- reachable set by the largest closed set of unfulfilling states, where closure
--- is free, and shows in gfpSound/gfpComplete that the resulting condition (R2)
--- is the note's, with Reach_U(v) taken in its exact sense rather than
--- approximated from below by a fuel bound.
---
--- It is also where the generic set layer meets valuations.  LTL.Sets and
--- LTL.Bar are stated for any element type, and LTL.Nodes for any node type with
--- an equality test; below,  _≡ᵛ_  is defined, proved sound and reflexive, and
--- LTL.Nodes is instantiated at Val with it.  That instance supplies ∈ᵛ ≢ᵛ, the
--- hypothesis names (Closed, AllSat, ...) and listBar to the whole development,
--- under the names it has always used.  LTL.SccLasso instantiates LTL.Graph with
--- the same three arguments.
+-- G7 of FORMALISATION-PLAN.md is Reach_U(v) of m4.tex section 3, the states
+-- reachable from v by ->-steps inside U.  The elimination does not compute it:
+-- (R2) uses the largest closed set of unfulfilling states instead (LTL.Gfp),
+-- and gfpSound/gfpComplete there show that this is the note's condition, with
+-- Reach_U(v) in its exact sense as the inductive type Path.  The SCC procedure
+-- computes reachable sets in LTL.Graph (reachSet).
 
 module LTL.Reach where
 
@@ -50,45 +38,22 @@ _≡ᵛ_ : Val -> Val -> Bool
 ≡ᵛ-refl (true  ∷ v) = ≡ᵛ-refl v
 ≡ᵛ-refl (false ∷ v) = ≡ᵛ-refl v
 
-eqCons : {b c : Bool} {v w : Val} -> b ≡ c -> v ≡ w -> b ∷ v ≡ c ∷ w
-eqCons refl refl = refl
-
 ≡ᵛ-sound : (v w : Val) -> v ≡ᵛ w ≡ true -> v ≡ w
 ≡ᵛ-sound []      []      e = refl
 ≡ᵛ-sound []      (c ∷ w) ()
 ≡ᵛ-sound (b ∷ v) []      ()
 ≡ᵛ-sound (b ∷ v) (c ∷ w) e =
-  eqCons (⇔ᵇ-sound b c (andTrueL (b ⇔ᵇ c) (v ≡ᵛ w) e))
-         (≡ᵛ-sound v w (andTrueR (b ⇔ᵇ c) (v ≡ᵛ w) e))
+  cong₂ _∷_ (⇔ᵇ-sound b c (∧ᵇ-trueˡ (b ⇔ᵇ c) (v ≡ᵛ w) e))
+            (≡ᵛ-sound v w (∧ᵇ-trueʳ (b ⇔ᵇ c) (v ≡ᵛ w) e))
 
 -- The set layer, at Val.  ∈ᵛ comes from here:  v ∈ᵛ us = any (v ≡ᵛ_) us .
 
 open import LTL.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
 
-insertV : Val -> List Val -> List Val
-insertV v us = filterCons (¬ᵇ (v ∈ᵛ us)) v us
-
-unionV : List Val -> List Val -> List Val
-unionV []       ys = ys
-unionV (x ∷ xs) ys = insertV x (unionV xs ys)
-
 ------------------------------------------------------------------------
--- One round of expansion, then the fuel-bounded closure
+-- Reading a successor list
 
 module _ (P : Formula) where
-
-  reachStep : List Val -> List Val -> List Val
-  reachStep us acc = unionV (concat (map (succs P us) acc)) acc
-
-  reachIter : Nat -> List Val -> List Val -> List Val
-  reachIter zero    us acc = acc
-  reachIter (suc n) us acc = reachIter n us (reachStep us acc)
-
-  reach : List Val -> Val -> List Val
-  reach us v = reachIter (length us) us (v ∷ [])
-
-  ------------------------------------------------------------------------
-  -- Reading a successor list
 
   succsMem : (us : List Val) (v : Val) {w : Val}
           -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
@@ -98,14 +63,3 @@ module _ (P : Formula) where
   succsIn : (us : List Val) (v : Val) {w : Val}
          -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
   succsIn us v mw st = filter-true (step P v) us mw st
-
-------------------------------------------------------------------------
--- Computational checks.
---
--- For ◇ p the three states are sPending = 1010, sFulfil = 1001 and
--- sSink = 0110 (see LTL.Step).  sPending and sFulfil reach everything; sSink
--- reaches only itself.
-
-reach-◇P : map (λ v -> length (reach ◇P (St ◇P) v)) (St ◇P) ≡
-                3 ∷ 3 ∷ 1 ∷ []
-reach-◇P = refl

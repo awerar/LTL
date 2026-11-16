@@ -3,7 +3,7 @@
 -- LTL.Closure -- G30 of FORMALISATION-PLAN.md: the set the SEARCH explores, as
 -- opposed to the list the DERIVATIONS quantify over.
 --
--- Until Phase 8 those were the same object, St P.  They should not be.
+-- The two are different lists.
 --
 --   St P is  filter (isState P) (allVecs |Sub P|) , and it has to stay that
 --   way: state completeness (G17) is proved by splitting the disjunction over
@@ -13,9 +13,9 @@
 --
 --   The elimination, Theorem 4.1 and the lasso, on the other hand, ARE
 --   normalised -- computing with the decision procedure directly is the point
---   (siles.pdf section 6) -- and they do not need every state.  They need a set
---   U of states that is closed under ->-successors and contains every state
---   containing P, and nothing else.
+--   (Coquand and Siles, section 6) -- and they do not need every state.  They
+--   need a set U of states that is closed under ->-successors and contains
+--   every state containing P, and nothing else.
 --
 -- This module builds such a U and proves the three properties, ustSt, ustSeed
 -- and ustClosed, that everything downstream is stated against.
@@ -33,19 +33,19 @@
 --    bit at  ¬ A  and at  A ⇒ B  from the bits at A and at B, and coherence
 --    makes the bit depend on the formula rather than on the position.  So a
 --    state is determined by its bits at the ATOMS of Sub P -- the var, ○ and
---    box entries -- and mkV builds the whole vector from such an assignment.
+--    □ entries -- and mkV builds the whole vector from such an assignment.
 --    That replaces 2^|Sub P| candidates by 2^|atoms|; for the C5 formula, 8192
 --    by 128.  stCandSt and stStCand show the resulting StCand P (St P built
 --    from the CANDIDATES) has exactly the members of St P, so nothing is lost
 --    and nothing is gained but speed.
 --
 -- 2. The closure.  U need not be all of StCand P either: it is enough to
---    take the ->-closure of the states containing P.  That is a LEAST fixed point, the
---    one place in the development where the removing iteration of section 4b
---    does not apply -- the accumulator grows -- and it is why Bar is needed
---    rather than another decreasing length.  Each round adds a state that was
---    not there before, so the vectors chosen are distinct, and vecIFin says one
---    cannot go on choosing distinct vectors of length n forever.
+--    take the ->-closure of the states containing P.  That is a LEAST fixed
+--    point, the one place in the development where the removing iteration of
+--    section 4b does not apply -- the accumulator grows -- and it is why Bar is
+--    needed rather than another decreasing length.  Each round adds a state
+--    that was not there before, so the vectors chosen are distinct, and vecIFin
+--    says one cannot go on choosing distinct vectors of length n forever.
 
 module LTL.Closure where
 
@@ -54,10 +54,8 @@ open import LTL.VecBar public
 ------------------------------------------------------------------------
 -- Extensionality for bit vectors, and the assignment a state induces.
 --
--- Everything else this module used to define -- ∈ᶠ, insF, atoms, valFrom and
--- the indexOf/nth round-trip -- moved down to LTL.Skel when (PC) needed it
--- below Deriv.  The skeleton evaluation is shared with the tautology test,
--- which is the point: mkV builds a state from a truth-table row.
+-- The skeleton evaluation (∈ᶠ, insF, atoms, valFrom; LTL.Skel) is shared with
+-- the tautology test of (PC): mkV builds a state from a truth-table row.
 
 valExt : (v w : Val) -> length v ≡ length w
       -> ((i : Nat) -> i < length v -> bitAt v i ≡ bitAt w i) -> v ≡ w
@@ -65,7 +63,8 @@ valExt []      []      e  h = refl
 valExt []      (c ∷ w) () h
 valExt (b ∷ v) []      () h
 valExt (b ∷ v) (c ∷ w) e  h =
-  eqCons (h zero ltZero) (valExt v w (sucInj e) (λ i l -> h (suc i) (ltSuc l)))
+  cong₂ _∷_ (h zero ltZero)
+            (valExt v w (sucInj e) (λ i l -> h (suc i) (ltSuc l)))
 
 ------------------------------------------------------------------------
 -- The vector an assignment to the atoms determines, and the assignment a
@@ -82,12 +81,11 @@ module _ (P : Formula) where
   ------------------------------------------------------------------------
   -- A state is the vector its own atom bits determine.
   --
-  -- This used to be a five-case induction on the formula.  It is now one
-  -- instance of skelEval (LTL.Skel): valOf at a state is a COMPOSITIONAL
-  -- reading of formulas, which is exactly what (S1) says, and skelEval says any
-  -- such reading agrees with the skeleton evaluation.  The other instance of
-  -- the same lemma is the soundness of (PC) in LTL.Sound, where the two
-  -- hypotheses are refl because evalAt is defined by ¬ᵇ and ⇒ᵇ.
+  -- This is one instance of skelEval (LTL.Skel): valOf at a state is a
+  -- COMPOSITIONAL reading of formulas, which is exactly what (S1) says, and
+  -- skelEval says any such reading agrees with the skeleton evaluation.  The
+  -- other instance of the same lemma is the soundness of (PC) in LTL.Sound,
+  -- where the two hypotheses are refl because evalAt is defined by ¬ᵇ and ⇒ᵇ.
 
   valFromEq : (v : Val) -> allOk P v (sub P) ≡ true
            -> (A : Formula) -> A ∈ sub P
@@ -106,10 +104,10 @@ module _ (P : Formula) where
   mkV-id v st len = valExt (mkV (atomBits v)) v lenEq pointwise
     where
       ok : allOk P v (sub P) ≡ true
-      ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
+      ok = ∧ᵇ-trueˡ (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
       coh : allCoh P v (length (sub P)) ≡ true
-      coh = andTrueR (allOk P v (sub P)) (allCoh P v (length (sub P))) st
+      coh = ∧ᵇ-trueʳ (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
       lenEq : length (mkV (atomBits v)) ≡ length v
       lenEq = trans (map-length (valFrom (atoms (sub P)) (atomBits v)) (sub P))
@@ -223,18 +221,18 @@ module _ (P : Formula) where
   addAll : List Val -> List Val
   addAll acc = filter (missing acc) StCand ++ acc
 
-  -- Reading settled in both directions (the Boolean step is nandTrueL of
+  -- Reading settled in both directions (the Boolean step is ¬ᵇ∧ᵇ-cancelˡ of
   -- LTL.Prelude)
 
   missingOf : (acc : List Val) (x : Val) -> settled acc x ≡ false
            -> missing acc x ≡ true
-  missingOf acc x q = notFalse (missing acc x) q
+  missingOf acc x q = ¬ᵇ-false (missing acc x) q
 
   notInAcc : (acc : List Val) (x : Val) -> settled acc x ≡ false
           -> x ∈ᵛ acc ≡ false
   notInAcc acc x q =
-    notTrue (x ∈ᵛ acc)
-            (andTrueR (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) (missingOf acc x q))
+    ¬ᵇ-true (x ∈ᵛ acc)
+            (∧ᵇ-trueʳ (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) (missingOf acc x q))
 
   inAddAll : (acc : List Val) (x : Val) -> x ∈ StCand
           -> settled acc x ≡ false -> x ∈ addAll acc
@@ -261,7 +259,7 @@ module _ (P : Formula) where
       av' : (z : Val) -> z ∈ StCand -> z ∈ᵛ addAll acc ≡ false
          -> E z ∧ᵇ (x ≢ᵛ z) ≡ true
       av' z mz e =
-        andIntro (E z) (x ≢ᵛ z)
+        ∧ᵇ-intro (E z) (x ≢ᵛ z)
                  (av z mz outAcc)
                  (cong ¬ᵇ_ outX)
         where
@@ -319,9 +317,9 @@ module _ (P : Formula) where
 
   closeFindSeed acc av bar      (allTrue f)       {z} mz e =
     ∈ᵛ-sound z acc
-      (notFalse (z ∈ᵛ acc)
-                (nandTrueL (wanted acc z) (¬ᵇ (z ∈ᵛ acc)) (f mz)
-                           (orL (valOf P z P) (any (λ u -> step P u z) acc) e)))
+      (¬ᵇ-false (z ∈ᵛ acc)
+                (¬ᵇ∧ᵇ-cancelˡ (wanted acc z) (¬ᵇ (z ∈ᵛ acc)) (f mz)
+                   (∨ᵇ-introˡ (valOf P z P) (any (λ u -> step P u z) acc) e)))
   closeFindSeed acc av (cBar h) (found x mx q)     mz e =
     closeGoSeed (addAll acc) _ (h x (av x mx (notInAcc acc x q))) mz e
 
@@ -341,10 +339,10 @@ module _ (P : Formula) where
 
   closeFindClosed acc av bar      (allTrue f)       {u} {w} mu mw st =
     ∈ᵛ-sound w acc
-      (notFalse (w ∈ᵛ acc)
-                (nandTrueL (wanted acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
-                           (orR (valOf P w P) (any (λ u' -> step P u' w) acc)
-                                (any-intro (λ u' -> step P u' w) acc mu st))))
+      (¬ᵇ-false (w ∈ᵛ acc)
+                (¬ᵇ∧ᵇ-cancelˡ (wanted acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
+                   (∨ᵇ-introʳ (valOf P w P) (any (λ u' -> step P u' w) acc)
+                              (any-intro (λ u' -> step P u' w) acc mu st))))
   closeFindClosed acc av (cBar h) (found x mx q)      mu mw st =
     closeGoClosed (addAll acc) _ (h x (av x mx (notInAcc acc x q))) mu mw st
 

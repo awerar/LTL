@@ -51,7 +51,7 @@ beta P vs = ⋁ (map (chi P) vs)
 --
 -- This is where the index/nth round-trip of G2 is paid off: a membership
 -- proof for A in sub P locates the literal of A inside chi P v, signed by the
--- bit that v gives at that position.  Every conjunct projection of Phase 4
+-- bit that v gives at that position.  Every projection of a conjunct of chi
 -- goes through it.
 
 litList-mem : {A : Formula} (As : List Formula) (v : Val)
@@ -63,25 +63,3 @@ litList-mem (A ∷ As) []      () h
 litList-mem (A ∷ As) (b ∷ v) e here      = here
 litList-mem (A ∷ As) (b ∷ v) e (there h) =
   there (litList-mem As v (sucInj e) h)
-
-------------------------------------------------------------------------
--- Sanity checks by computation.
---
--- sub benAri has length 6 (LTL.Sub), so there are 2^6 = 64 valuations to
--- filter in G5.
-
-allVecs-three : length (allVecs 3) ≡ 8
-allVecs-three = refl
-
-allVecs-benAri : length (allVecs (length (sub benAri))) ≡ 64
-allVecs-benAri = refl
-
--- Positions 1 and 4 of sub benAri are the same formula (□ p), so a valuation
--- disagreeing there yields a chi containing both □ p and ¬ □ p.  This
--- is exactly what the coherence clause of G5 will exclude.
-
-badVal : Val
-badVal = true ∷ true ∷ true ∷ true ∷ false ∷ true ∷ []
-
-badVal-length : length badVal ≡ length (sub benAri)
-badVal-length = refl

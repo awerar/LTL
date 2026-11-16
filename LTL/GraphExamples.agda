@@ -159,10 +159,10 @@ fair-P = refl
 -- way.
 
 certSteps : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
-         -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
+         -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List CertStep
 certSteps (inl l) = []
 certSteps (inr c) = certShape c
 
 cert-P : certSteps (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡
-         2 ∷ 1 ∷ 0 ∷ []
+         removedBlock ∷ removedSink ∷ emptied ∷ []
 cert-P = refl

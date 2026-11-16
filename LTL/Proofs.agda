@@ -348,7 +348,7 @@ tautSelf : (A : Formula) -> isTaut (A ⇒ A) ≡ true
 tautSelf A =
   all-intro (λ a -> valFrom (atomsOf (A ⇒ A)) a (A ⇒ A))
             (allVecs (length (atomsOf (A ⇒ A))))
-            (λ {a} m -> tautId (valFrom (atomsOf (A ⇒ A)) a A))
+            (λ {a} m -> ⇒ᵇ-refl (valFrom (atomsOf (A ⇒ A)) a A))
 
 ⇒ReflPc : (A : Formula) -> ⊢ A ⇒ A
 ⇒ReflPc A = pc (tautSelf A)
@@ -568,7 +568,7 @@ c6-axX-count = refl
 -- -- and G34 had 2 + |St P|, one per branch; collapsing the disjunction merges
 -- all of them into the single line, so the whole appeal to the propositional
 -- layer is made exactly once, which is exactly where Ben-Ari writes PC
--- (benari.pdf, Definition 12.1).  Everything else in a certificate is (T) --
+-- (his Definition 12.1).  Everything else in a certificate is (T) --
 -- once per eventuality -- and (Exp), (Ind), (Lin) inside extract.
 
 c6-pc : pcCountOf taut ∷ pcCountOf axT ∷ pcCountOf axX ∷ [] ≡ 1 ∷ 1 ∷ 1 ∷ []

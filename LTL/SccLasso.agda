@@ -149,19 +149,19 @@ module _ (P : Formula) where
            -> valOf P z A ≡ false
   evWitness A z ez pd =
     sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
-            (λ e2 -> notTrue (valOf P z A) e2)
-            (orTrue (valOf P z (□ A)) (¬ᵇ valOf P z A) ez)
+            (λ e2 -> ¬ᵇ-true (valOf P z A) e2)
+            (∨ᵇ-true (valOf P z (□ A)) (¬ᵇ valOf P z A) ez)
 
   -- and building one, from either disjunct.
 
   evNotPending : (A : Formula) (z : Val)
               -> valOf P z (□ A) ≡ true -> evPred A z ≡ true
-  evNotPending A z e = orL (valOf P z (□ A)) (¬ᵇ valOf P z A) e
+  evNotPending A z e = ∨ᵇ-introˡ (valOf P z (□ A)) (¬ᵇ valOf P z A) e
 
   evFails : (A : Formula) (z : Val)
          -> valOf P z A ≡ false -> evPred A z ≡ true
   evFails A z e =
-    orR (valOf P z (□ A)) (¬ᵇ valOf P z A) (cong ¬ᵇ_ e)
+    ∨ᵇ-introʳ (valOf P z (□ A)) (¬ᵇ valOf P z A) (cong ¬ᵇ_ e)
 
   ------------------------------------------------------------------------
   -- Persistence to a state VISITED, not to the endpoint.
@@ -332,38 +332,3 @@ module _ (P : Formula) where
     where
       m : v0 ∈ Uinf P
       m = ∈ᵛ-sound v0 (Uinf P) e
-
-------------------------------------------------------------------------
--- The lassos, computed, beside the ones LTL.Lasso records.
---
--- For  ◇ p  the stem is the same and the cycle is the base point twice where
--- lassoSearch has it once.  That is not an accident of this example: mkCirc
--- always starts from the bare loop found by loopAt and prepends one LEG per
--- fairness predicate, each leg being the loop again followed by the trip out to
--- the witness and back.  Here there is one eventuality, its witness in the
--- terminal component {sSink} is sSink itself, so both halves of the trip are
--- empty and the leg is the bare loop over again.  The SCC construction chooses
--- its witnesses in its own order and does not produce the shortest fair cycle
--- -- which is the observation checkpoint C8 is to make, not a defect.
-
-scc◇P : sccAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ sSink ∷ [])
-scc◇P = refl
-
-lasso◇P : lassoAt ◇P sPending refl ≡ (sFulfil ∷ sSink ∷ [] , sSink ∷ [])
-lasso◇P = refl
-
--- and the same doubling in the degenerate case, where the state set is one
--- state looping to itself.
-
-scc□P : sccAt □P s□ refl ≡ ([] , s□ ∷ s□ ∷ [])
-scc□P = refl
-
-lasso□P : lassoAt □P s□ refl ≡ ([] , s□ ∷ [])
-lasso□P = refl
-
--- The run, unwound, to show that runOf accepts the result unchanged: the stem
--- of ◇ p walked out, then the cycle forever.
-
-scc◇P-run : map (sccState ◇P sPending refl) (0 ∷ 1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ≡
-                 sPending ∷ sFulfil ∷ sSink ∷ sSink ∷ sSink ∷ sSink ∷ []
-scc◇P-run = refl

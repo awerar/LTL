@@ -31,14 +31,16 @@ root:
 
 ```sh
 agda -i . LTL/DecideSCC.agda
-agda -i . LTL/GraphExamples.agda
 agda -i . LTL/ShortPC.agda
+agda -i . LTL/Checks.agda
+agda -i . LTL/GraphExamples.agda
 agda -i . LTL/Compare.agda
 agda -i . LTL/Lecture.agda
 agda -i . LTL/Proofs.agda
 ```
 
-`Compare` imports the examples and contains computational comparisons on 47
+`Checks` and `GraphExamples` hold the computational checks of the core
+modules. `Compare` imports the examples and contains computational comparisons on 47
 formulas. `Lecture` examines a worked example. `Proofs` measures and inspects
 proof certificates. These benchmark modules take longer than the core proofs.
 The source comments include historical timings; those depend on the machine and
@@ -122,6 +124,10 @@ correctness.
 
 `Graph`, `SccLasso`, `SccExtract`, `SccTrap`: graph certificates and their
 application to temporal logic.
+
+The source comments cite goals (G1–G40), phases and checkpoints of the plans
+of the original development, which are not in this repository;
+[docs/plan-index.md](docs/plan-index.md) lists where each one lives in the code.
 
 The textbook and external papers used during the original development are not
 included in this repository; bibliographic links are provided in the proposal.

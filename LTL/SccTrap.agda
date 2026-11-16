@@ -1,18 +1,18 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.SccTrap -- the two lemmas G40 needs and PHASE11-PLAN.md did not budget
--- for.  Both are about the SEAM between the graph layer and the two sets the
--- existing development is built on, and neither is graph theory or logic: they
--- are the statements that make  Ust P  and  Uinf P  usable from LTL.Graph.
+-- LTL.SccTrap -- two lemmas G40 needs.  Both are about the SEAM between the
+-- graph layer and the two sets the existing development is built on, and
+-- neither is graph theory or logic: they are the statements that make  Ust P
+-- and  Uinf P  usable from LTL.Graph.
 --
 -- Why they are needed at all.  The SCC procedure has to run on  Ust P : the
 -- refutation branch (G39) is stated against Ust P, and running the search on
--- Uinf P instead would be circular, since Uinf P IS the elimination the phase
--- is supposed to replace.  But the positive branch (G38) delivers into
--- mkLasso, every side condition of which is against Uinf P.  So something has
--- to carry a fair loop found in Ust P down into Uinf P, and something has to
--- say that a component found anywhere in Ust P is reachable from a state that
--- actually contains P -- otherwise the loop is a countermodel to nothing.
+-- Uinf P instead would be circular, since Uinf P IS the elimination the SCC
+-- procedure is supposed to replace.  But the positive branch (G38) delivers
+-- into mkLasso, every side condition of which is against Uinf P.  So something
+-- has to carry a fair loop found in Ust P down into Uinf P, and something has
+-- to say that a component found anywhere in Ust P is reachable from a state
+-- that actually contains P -- otherwise the loop is a countermodel to nothing.
 --
 -- 1. EVERY STATE OF Ust P IS REACHED FROM A SEED.
 --
@@ -55,8 +55,7 @@
 -- elimination and it is not a new fixed-point theory: it is one direction, the
 -- one that says the elimination throws nothing useful away, and it is proved by
 -- running the existing recursion with an extra invariant.  The other direction
--- -- that Uinf P is itself a trap -- is Lemma 5.1 and has been in LTL.Fix since
--- Phase 5.
+-- -- that Uinf P is itself a trap -- is Lemma 5.1, in LTL.Fix.
 
 module LTL.SccTrap where
 
@@ -75,9 +74,6 @@ any-none p []       h = refl
 any-none p (y ∷ ys) h =
   subst (λ b -> b ∨ᵇ any p ys ≡ false) (sym (h y here))
         (any-none p ys (λ z m -> h z (there m)))
-
-orBothFalse : (a b : Bool) -> a ≡ false -> b ≡ false -> a ∨ᵇ b ≡ false
-orBothFalse a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
 
 ------------------------------------------------------------------------
 -- 1. Every state of Ust P is reached from a state containing P.
@@ -108,13 +104,13 @@ module _ (P : Formula) where
       fromNew : z ∈ filter (missing P acc) (StCand P) -> Seeded P z
       fromNew m1 =
         sumElim isSeed viaU
-                (orTrue (valOf P z P) (any (λ u -> step P u z) acc) want)
+                (∨ᵇ-true (valOf P z P) (any (λ u -> step P u z) acc) want)
         where
           mzs : z ∈ StCand P
           mzs = filter-sub (missing P acc) (StCand P) m1
 
           want : wanted P acc z ≡ true
-          want = andTrueL (wanted P acc z) (¬ᵇ (z ∈ᵛ acc))
+          want = ∧ᵇ-trueˡ (wanted P acc z) (¬ᵇ (z ∈ᵛ acc))
                           (filter-prop (missing P acc) (StCand P) m1)
 
           isSeed : valOf P z P ≡ true -> Seeded P z
@@ -221,7 +217,7 @@ module _ (P : Formula) where
           -> C ⊆ us
           -> (z : Val) -> z ∈ C -> keep P us (evList P us) z ≡ true
   trapKeep us C (mkTrap hsucc hful) sb z mz =
-    cong ¬ᵇ_ (orBothFalse (r1 P us z) (r2 P (evList P us) z) e1 e2)
+    cong ¬ᵇ_ (∨ᵇ-false-intro (r1 P us z) (r2 P (evList P us) z) e1 e2)
     where
       e1 : r1 P us z ≡ false
       e1 = onS (hsucc z mz)

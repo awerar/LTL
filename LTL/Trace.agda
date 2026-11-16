@@ -55,16 +55,16 @@ module _ (P : Formula) where
          -> keep P us (evList P us) v ≡ false -> Reason P us v
   dropped us v e =
     sumElim byR1 fromR2
-            (orTrue (r1 P us v) (r2 P (evList P us) v)
-                    (notFalse (r1 P us v ∨ᵇ r2 P (evList P us) v) e))
+            (∨ᵇ-true (r1 P us v) (r2 P (evList P us) v)
+                     (¬ᵇ-false (r1 P us v ∨ᵇ r2 P (evList P us) v) e))
     where
       fromPair : (g : Ev) -> g ∈ evList P us -> badEv P v g ≡ true
               -> Reason P us v
       fromPair (A , W) mg q =
         byR2 A (□Args-mem (sub P) (fst (evList-of P us mg)))
-             (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (v ∈ᵛ W) q))
+             (¬ᵇ-true (valOf P v (□ A)) (∧ᵇ-trueˡ (pending P v A) (v ∈ᵛ W) q))
              (subst (λ Z -> v ∈ Z) (snd (evList-of P us mg))
-                    (∈ᵛ-sound v W (andTrueR (pending P v A) (v ∈ᵛ W) q)))
+                    (∈ᵛ-sound v W (∧ᵇ-trueʳ (pending P v A) (v ∈ᵛ W) q)))
 
       fromSig : (Σ[ g ∈ Ev ] g ∈ evList P us × badEv P v g ≡ true)
              -> Reason P us v
@@ -86,76 +86,3 @@ module _ (P : Formula) where
 
   reasons : List Val -> List Bool
   reasons us = map snd (elimTrace us)
-
-------------------------------------------------------------------------
--- Observation.
---
--- The observations are made on Ust, the demand-driven state set of G30, which
--- is what the procedure actually explores; St still has the six states of the
--- comment in LTL.Elim, but four of them are never reached from a state
--- containing ¬ benAri and the procedure never looks at them.
---
--- Only ONE state of ¬ benAri contains it, namely E, and E has no successor,
--- so the closure stops there and the single round removes it by (R1).  Ben-Ari's
--- own example therefore never exercises (R2) in this formulation.
-
-trace-¬BenAri : reasons ¬BenAri (Ust ¬BenAri) ≡ true ∷ []
-trace-¬BenAri = refl
-
--- and the second round removes nothing, so the procedure has converged.
-
-trace-¬BenAri2 : reasons ¬BenAri (elimRound ¬BenAri (Ust ¬BenAri)) ≡ []
-trace-¬BenAri2 = refl
-
--- ◇ p loses no state at all.
-
-trace-◇P : reasons ◇P (Ust ◇P) ≡ []
-trace-◇P = refl
-
-------------------------------------------------------------------------
--- A small example that does exercise (R2).
---
---   bnb  =  □ p ⇒ □ ○ p
---
--- is provable, and unlike benAri its refutation genuinely needs the loop
--- invariant.  The state with □ p true and □ ○ p false has successors,
--- so (R1) does not apply; but (T2) carries □ p along every path, (S2) then
--- gives p and (T1) gives ○ p at every state reached, so the eventuality that
--- □ ○ p leaves pending is fulfilled nowhere.  That is case (R2), and it
--- fires in the first round -- the false entry below.
---
--- The closure of the states containing ¬ bnb has just two members: □ p and
--- ¬ □ ○ p force p, and (T2) and (T3) carry both along every step, so
--- the only freedom left is the bit at ○ p.  The state with ○ p false has no
--- successor and goes by (R1) in the first round; the other one loops to itself,
--- and once its (R1)-victim is gone the eventuality that □ ○ p leaves
--- pending is fulfilled at no reachable state, so it goes by (R2) in the second.
--- Nothing survives, and in particular no survivor contains ¬ bnb.
---
--- The (R2) round is the one that matters: extractR2 -- the loop invariant,
--- (Ind) and all -- is on the path from satB-¬Bnb to bnbProof in LTL.Extract.
-
-bnb : Formula
-bnb = □ (var zero) ⇒ □ ○ (var zero)
-
-¬Bnb : Formula
-¬Bnb = ¬ bnb
-
-Ust-¬Bnb : length (Ust ¬Bnb) ≡ 2
-Ust-¬Bnb = refl
-
-trace-¬Bnb : reasons ¬Bnb (Ust ¬Bnb) ≡ true ∷ []
-trace-¬Bnb = refl
-
-trace-¬Bnb2 : reasons ¬Bnb (elimRound ¬Bnb (Ust ¬Bnb)) ≡ false ∷ []
-trace-¬Bnb2 = refl
-
-Uinf-¬Bnb : length (Uinf ¬Bnb) ≡ 0
-Uinf-¬Bnb = refl
-
-satB-¬Bnb : satB ¬Bnb ≡ false
-satB-¬Bnb = refl
-
--- and the converse, which Hintikka's lemma needs: a box-subformula names an
--- eventuality.  That is □Args-of, and it followed □Args down to LTL.Skel
--- in Phase 9, where the (S2) premise of LTL.CompletePC needs it.

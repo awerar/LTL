@@ -7,8 +7,8 @@
 -- the convention fixed after Lemma 1.1 -- so the two clauses of (L5) at n = 0
 -- are exactly the two clauses of (L0).
 --
--- ⋁Elim is the workhorse of Phase 4: dropping refuted disjuncts, and taking
--- the disjunction over W in Theorem 4.1, are both instances of it.
+-- ⋁Elim is the workhorse of the provable branch: dropping refuted disjuncts,
+-- and taking the disjunction over W in Theorem 4.1, are both instances of it.
 
 module LTL.PropList where
 
@@ -53,7 +53,7 @@ mpU2 f g = mpU (mpU (liftP p2) f) g
 
 -- Case analysis under an antecedent: from P ⇒ (X ⇒ Z) and P ⇒ (¬ X ⇒ Z)
 -- conclude P ⇒ Z.  This is the cons case of ⋁Elim isolated, and it is what
--- the (D4) disjunction lemmas of Phase 3 need.
+-- the (D4) disjunction lemmas of LTL.Temporal need.
 
 caseU : {P X Z : Formula}
      -> ⊢ P ⇒ X ⇒ Z -> ⊢ P ⇒ ¬ X ⇒ Z
@@ -129,7 +129,7 @@ allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m
     hIH = ⋁Elim As ds
 
     hNA : ⊢ P ⇒ ¬ A ⇒ C
-    hNA = ⇒TransU identP (liftP hIH)
+    hNA = ⇒TransU ⇒Refl (liftP hIH)
 
     h1 : ⊢ P ⇒ ¬ C ⇒ A
     h1 = ⇒TransU (mpU (liftP (contra {¬ A} {C})) hNA) (liftP dne)
@@ -138,24 +138,9 @@ allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m
     h2 = mpU (liftP (contra {A} {C})) (liftP d)
 
 ------------------------------------------------------------------------
--- Monotonicity of ⋁.
---
--- This is what "dropping the refuted disjuncts" comes to in Lemma 2.6 and
--- Lemma 2.7, and what step (ii) of Theorem 4.1 needs to pass from
--- beta (succs w) to B.
-
-⋁Mono : (As Bs : List Formula)
-     -> ({A : Formula} -> A ∈ As -> A ∈ Bs)
-     -> ⊢ ⋁ As ⇒ ⋁ Bs
-⋁Mono As Bs sb = ⋁Elim As (allInto-map As (λ m -> ⋁Intro Bs (sb m)))
-
-⋀Mono : (As Bs : List Formula)
-     -> ({A : Formula} -> A ∈ Bs -> A ∈ As)
-     -> ⊢ ⋀ As ⇒ ⋀ Bs
-⋀Mono As Bs sb = ⋀Intro Bs (allFrom-map Bs (λ m -> ⋀Proj As (sb m)))
-
--- Dropping a single refuted disjunct.  Lemma 2.6 discharges the non-states
--- this way, and Lemma 2.7 the successors w with v not-> w.
+-- Dropping a refuted disjunct.  This is what "dropping the refuted
+-- disjuncts" comes to in Lemma 2.6, which discharges the non-states this way,
+-- and in Lemma 2.7, for the successors w with v not-> w.
 
 ⋁Drop : {A : Formula} (As : List Formula)
      -> ⊢ ¬ A -> ⊢ ⋁ (A ∷ As) ⇒ ⋁ As

@@ -20,18 +20,12 @@
 -- (R2) now reads "v lies in W" rather than "A holds throughout Reach_{U_k}(v)";
 -- gfpSound and gfpComplete at the end of this file show the two are the same
 -- condition, with Reach given by its proper definition, the inductive type Path
--- of ->-paths inside U_k.  That is closer to the note than the fuel-bounded
--- reach of LTL.Reach, which only approximates Path from below.
+-- of ->-paths inside U_k.
 --
--- G29 of FORMALISATION-PLAN.md.  Until Phase 8 the iteration was run for
--- length W_0 rounds and the fixed point was recovered afterwards, by
--- shrinkFix and filterL_allTrue, from a ≤ measure.  It is now run until the
--- round finds nothing to remove and STOPS THERE, with termination by recursion
--- on a Bar.  Three things come out of that.  The search does one pass instead
--- of |W_0| once it has converged, which is where most of checkpoint C5 was
--- going; the fixed-point equation disappears, since the closed case returns W
--- itself rather than an iterate of it; and the ≤ measure survives only inside
--- barOfList, where it is paid once.
+-- G29 of FORMALISATION-PLAN.md: the iteration runs until a round finds
+-- nothing to remove and STOPS THERE, with termination by recursion on a Bar.
+-- So the search does one pass once it has converged, the closed case returns W
+-- itself, and no fixed-point equation or ≤ measure is needed.
 
 module LTL.Gfp where
 
@@ -106,7 +100,7 @@ module _ (P : Formula) where
              -> ClosedIn us W
   closedOfAll us W f w w' mw mw' st =
     ∈ᵛ-sound w' W
-      (⇒TrueB (step P w w') (w' ∈ᵛ W)
+      (⇒ᵇ-mp (step P w w') (w' ∈ᵛ W)
                 (all-at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
                 st)
 
@@ -201,7 +195,7 @@ module _ (P : Formula) (us : List Val) where
           inner : {w' : Val} -> w' ∈ us
                -> step P z w' ⇒ᵇ (w' ∈ᵛ W) ≡ true
           inner {w'} mw' =
-            ⇒IntroB (step P z w') (w' ∈ᵛ W)
+            ⇒ᵇ-intro (step P z w') (w' ∈ᵛ W)
                       (λ st -> ∈ᵛ-complete w' W (inW w' (cl z w' xz mw' st)))
 
 gfpGreatest : (P : Formula) (us : List Val) (A : Formula) (X : Val -> Set)

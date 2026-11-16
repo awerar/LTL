@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.Prelude -- the small amount of infrastructure beyond LTL.Base that the
--- development needs: boolean connectives with their elimination lemmas,
+-- development needs: boolean connectives and their lemmas,
 -- soundness/reflexivity of ≡ⁿ, sums, Σ-types and products, lists with
 -- membership, and the index/nth round-trip of FORMALISATION-PLAN.md G2.
 --
@@ -29,18 +29,6 @@ infix  6 _⇔ᵇ_
 _∧ᵇ_ : Bool -> Bool -> Bool
 true  ∧ᵇ b = b
 false ∧ᵇ b = false
-
-andTrueL : (a b : Bool) -> a ∧ᵇ b ≡ true -> a ≡ true
-andTrueL true  b p = refl
-andTrueL false b ()
-
-andTrueR : (a b : Bool) -> a ∧ᵇ b ≡ true -> b ≡ true
-andTrueR true  b p = p
-andTrueR false b ()
-
-andIntro : (a b : Bool) -> a ≡ true -> b ≡ true -> a ∧ᵇ b ≡ true
-andIntro true  b p q = q
-andIntro false b () q
 
 ¬ᵇ_ : Bool -> Bool
 ¬ᵇ true  = false
@@ -143,52 +131,149 @@ snd : {A : Set} {B : A -> Set} -> (p : Σ A B) -> B (fst p)
 snd (a , b) = b
 
 ------------------------------------------------------------------------
--- Reading a false boolean backwards
+-- Boolean lemmas
+--
+-- Named after the connective they are about, in the hyphen style of the
+-- standard library: ∧ᵇ-trueˡ reads the left conjunct off a true conjunction,
+-- ∨ᵇ-introʳ proves a disjunction from its right disjunct, ⇒ᵇ-mp is modus ponens
+-- for ⇒ᵇ.  A -false lemma reads a connective that is false; a -cancel lemma
+-- uses one known argument to get the other.
 
-andFalse : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ false ⊎ b ≡ false
-andFalse true  b e = inr e
-andFalse false b e = inl refl
-
--- ¬ᵇ (a ∧ᵇ b) is true and a is true, so b is false
-nandTrueL : (a b : Bool) -> ¬ᵇ (a ∧ᵇ b) ≡ true -> a ≡ true -> b ≡ false
-nandTrueL true  true  () e
-nandTrueL true  false q  e = refl
-nandTrueL false b     q  ()
-
--- a ∧ᵇ b is false when b is
-andFalseIntroR : (a b : Bool) -> b ≡ false -> a ∧ᵇ b ≡ false
-andFalseIntroR true  b eb = eb
-andFalseIntroR false b eb = refl
-
--- a ∧ᵇ b is false and a is true, so b is false
-andFalseTrueL : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ true -> b ≡ false
-andFalseTrueL true  b eab ea = eab
-andFalseTrueL false b eab ()
+true≢false : true ≡ false -> Empty
+true≢false ()
 
 -- A Boolean that cannot be true is false.
 refuteTrue : (b : Bool) -> (b ≡ true -> Empty) -> b ≡ false
 refuteTrue true  no = emptyElim (no refl)
 refuteTrue false no = refl
 
-notTrue : (b : Bool) -> ¬ᵇ b ≡ true -> b ≡ false
-notTrue true  ()
-notTrue false e = refl
+-- Conjunction
 
-notFalse : (b : Bool) -> ¬ᵇ b ≡ false -> b ≡ true
-notFalse true  e = refl
-notFalse false ()
+∧ᵇ-trueˡ : (a b : Bool) -> a ∧ᵇ b ≡ true -> a ≡ true
+∧ᵇ-trueˡ true  b p = refl
+∧ᵇ-trueˡ false b ()
 
-⇒TrueB : (a b : Bool) -> a ⇒ᵇ b ≡ true -> a ≡ true -> b ≡ true
-⇒TrueB true  b e q  = e
-⇒TrueB false b e ()
+∧ᵇ-trueʳ : (a b : Bool) -> a ∧ᵇ b ≡ true -> b ≡ true
+∧ᵇ-trueʳ true  b p = p
+∧ᵇ-trueʳ false b ()
 
-⇒IntroB : (a b : Bool) -> (a ≡ true -> b ≡ true) -> a ⇒ᵇ b ≡ true
-⇒IntroB true  b f = f refl
-⇒IntroB false b f = refl
+∧ᵇ-split : (a b : Bool) -> a ∧ᵇ b ≡ true -> a ≡ true × b ≡ true
+∧ᵇ-split true  b p = refl , p
+∧ᵇ-split false b ()
+
+∧ᵇ-intro : (a b : Bool) -> a ≡ true -> b ≡ true -> a ∧ᵇ b ≡ true
+∧ᵇ-intro true  b p q = q
+∧ᵇ-intro false b () q
+
+∧ᵇ-false : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ false ⊎ b ≡ false
+∧ᵇ-false true  b e = inr e
+∧ᵇ-false false b e = inl refl
+
+-- a ∧ᵇ b is false when b is
+∧ᵇ-false-introʳ : (a b : Bool) -> b ≡ false -> a ∧ᵇ b ≡ false
+∧ᵇ-false-introʳ true  b eb = eb
+∧ᵇ-false-introʳ false b eb = refl
+
+-- a ∧ᵇ b is false and a is true, so b is false
+∧ᵇ-false-cancelˡ : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ true -> b ≡ false
+∧ᵇ-false-cancelˡ true  b eab ea = eab
+∧ᵇ-false-cancelˡ false b eab ()
+
+-- ¬ᵇ (a ∧ᵇ b) is true and a is true, so b is false
+¬ᵇ∧ᵇ-cancelˡ : (a b : Bool) -> ¬ᵇ (a ∧ᵇ b) ≡ true -> a ≡ true -> b ≡ false
+¬ᵇ∧ᵇ-cancelˡ true  true  () e
+¬ᵇ∧ᵇ-cancelˡ true  false q  e = refl
+¬ᵇ∧ᵇ-cancelˡ false b     q  ()
+
+-- De Morgan, in the direction the searches use
+¬ᵇ-∧ᵇ : (a b : Bool) -> ¬ᵇ (a ∧ᵇ b) ≡ true -> ¬ᵇ a ∨ᵇ ¬ᵇ b ≡ true
+¬ᵇ-∧ᵇ true  true  ()
+¬ᵇ-∧ᵇ true  false e = refl
+¬ᵇ-∧ᵇ false b     e = refl
+
+-- Disjunction
+
+∨ᵇ-true : (a b : Bool) -> a ∨ᵇ b ≡ true -> a ≡ true ⊎ b ≡ true
+∨ᵇ-true true  b e = inl refl
+∨ᵇ-true false b e = inr e
+
+∨ᵇ-introˡ : (a b : Bool) -> a ≡ true -> a ∨ᵇ b ≡ true
+∨ᵇ-introˡ true  b e  = refl
+∨ᵇ-introˡ false b ()
+
+∨ᵇ-introʳ : (a b : Bool) -> b ≡ true -> a ∨ᵇ b ≡ true
+∨ᵇ-introʳ true  b e = refl
+∨ᵇ-introʳ false b e = e
+
+∨ᵇ-falseˡ : (a b : Bool) -> a ∨ᵇ b ≡ false -> a ≡ false
+∨ᵇ-falseˡ true  b ()
+∨ᵇ-falseˡ false b e = refl
+
+∨ᵇ-falseʳ : (a b : Bool) -> a ∨ᵇ b ≡ false -> b ≡ false
+∨ᵇ-falseʳ true  b ()
+∨ᵇ-falseʳ false b e = e
+
+∨ᵇ-false-intro : (a b : Bool) -> a ≡ false -> b ≡ false -> a ∨ᵇ b ≡ false
+∨ᵇ-false-intro a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
+
+-- Negation
+
+¬ᵇ-true : (b : Bool) -> ¬ᵇ b ≡ true -> b ≡ false
+¬ᵇ-true true  ()
+¬ᵇ-true false e = refl
+
+¬ᵇ-false : (b : Bool) -> ¬ᵇ b ≡ false -> b ≡ true
+¬ᵇ-false true  e = refl
+¬ᵇ-false false ()
 
 ¬ᵇ-involutive : (b : Bool) -> ¬ᵇ ¬ᵇ b ≡ b
 ¬ᵇ-involutive true  = refl
 ¬ᵇ-involutive false = refl
+
+¬ᵇ¬ᵇ-true : (x : Bool) -> ¬ᵇ ¬ᵇ x ≡ true -> x ≡ true
+¬ᵇ¬ᵇ-true true  e = refl
+¬ᵇ¬ᵇ-true false ()
+
+¬ᵇ-clash : (x : Bool) -> x ≡ true -> ¬ᵇ x ≡ true -> Empty
+¬ᵇ-clash true  ex ()
+¬ᵇ-clash false () en
+
+-- Implication
+
+⇒ᵇ-refl : (b : Bool) -> b ⇒ᵇ b ≡ true
+⇒ᵇ-refl true  = refl
+⇒ᵇ-refl false = refl
+
+⇒ᵇ-mp : (a b : Bool) -> a ⇒ᵇ b ≡ true -> a ≡ true -> b ≡ true
+⇒ᵇ-mp true  b e q  = e
+⇒ᵇ-mp false b e ()
+
+⇒ᵇ-intro : (a b : Bool) -> (a ≡ true -> b ≡ true) -> a ⇒ᵇ b ≡ true
+⇒ᵇ-intro true  b f = f refl
+⇒ᵇ-intro false b f = refl
+
+⇒ᵇ-const : (x y : Bool) -> y ≡ true -> x ⇒ᵇ y ≡ true
+⇒ᵇ-const true  y e = e
+⇒ᵇ-const false y e = refl
+
+⇒ᵇ-false : (a b : Bool) -> a ⇒ᵇ b ≡ false -> a ≡ true × b ≡ false
+⇒ᵇ-false true  true  ()
+⇒ᵇ-false true  false e = refl , refl
+⇒ᵇ-false false b     ()
+
+⇒ᵇ-contra : (x y : Bool) -> (y ≡ true -> x ≡ true) -> ¬ᵇ x ⇒ᵇ ¬ᵇ y ≡ true
+⇒ᵇ-contra true  y     h = refl
+⇒ᵇ-contra false true  h = emptyElim (true≢false (sym (h refl)))
+⇒ᵇ-contra false false h = refl
+
+-- Equivalence
+
+⇔ᵇ-refl : (b : Bool) -> b ⇔ᵇ b ≡ true
+⇔ᵇ-refl true  = refl
+⇔ᵇ-refl false = refl
+
+⇔ᵇ-complete : (x y : Bool) -> x ≡ y -> x ⇔ᵇ y ≡ true
+⇔ᵇ-complete x y refl = ⇔ᵇ-refl x
 
 ⇔ᵇ-sound : (a b : Bool) -> a ⇔ᵇ b ≡ true -> a ≡ b
 ⇔ᵇ-sound true  true  e = refl
@@ -201,32 +286,6 @@ notFalse false ()
 ⇔ᵇ-false true  false e = refl
 ⇔ᵇ-false false true  e = refl
 ⇔ᵇ-false false false ()
-
-⇒ᵇ-false : (a b : Bool) -> a ⇒ᵇ b ≡ false -> a ≡ true × b ≡ false
-⇒ᵇ-false true  true  ()
-⇒ᵇ-false true  false e = refl , refl
-⇒ᵇ-false false b     ()
-
-------------------------------------------------------------------------
--- Disjunction, read in both directions.
---
--- These four sat in LTL.Sets until LTL.Skel needed them: the tautology test of
--- (PC) is below Deriv, and Sets was then far above it.
-
-orTrue : (a b : Bool) -> a ∨ᵇ b ≡ true -> a ≡ true ⊎ b ≡ true
-orTrue true  b e = inl refl
-orTrue false b e = inr e
-
-orL : (a b : Bool) -> a ≡ true -> a ∨ᵇ b ≡ true
-orL true  b e  = refl
-orL false b ()
-
-orR : (a b : Bool) -> b ≡ true -> a ∨ᵇ b ≡ true
-orR true  b e = refl
-orR false b e = e
-
-true≢false : true ≡ false -> Empty
-true≢false ()
 
 ------------------------------------------------------------------------
 -- Lists
@@ -379,6 +438,17 @@ nth-mem []       i       ()        d
 nth-mem (x ∷ xs) zero    lt        d = here
 nth-mem (x ∷ xs) (suc i) (ltSuc l) d = there (nth-mem xs i l d)
 
+map-length : {A B : Set} (f : A -> B) (xs : List A)
+          -> length (map f xs) ≡ length xs
+map-length f []       = refl
+map-length f (x ∷ xs) = cong suc (map-length f xs)
+
+nth-map : {A B : Set} (f : A -> B) (xs : List A) (i : Nat) -> i < length xs
+       -> (d : A) (e : B) -> nth (map f xs) i e ≡ f (nth xs i d)
+nth-map f []       i       ()        d e
+nth-map f (x ∷ xs) zero    lt        d e = refl
+nth-map f (x ∷ xs) (suc i) (ltSuc l) d e = nth-map f xs i l d e
+
 ltSucCase : (i n : Nat) -> i < suc n -> i ≡ n ⊎ i < n
 ltSucCase zero    zero     lt        = inl refl
 ltSucCase zero    (suc n)  lt        = inr ltZero
@@ -387,8 +457,7 @@ ltSucCase (suc j) (suc n)  (ltSuc l) =
   sumElim (λ e -> inl (cong suc e)) (λ l' -> inr (ltSuc l')) (ltSucCase j n l)
 
 ------------------------------------------------------------------------
--- Conjunction over a list.  It sat in LTL.Skel; LTL.Sets needs it and imports
--- only the prelude.
+-- Conjunction over a list.
 
 all : {A : Set} -> (A -> Bool) -> List A -> Bool
 all p []       = true
@@ -397,15 +466,15 @@ all p (x ∷ xs) = p x ∧ᵇ all p xs
 all-at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
       -> x ∈ xs -> all p xs ≡ true -> p x ≡ true
 all-at p []       ()        e
-all-at p (y ∷ ys) here      e = andTrueL (p y) (all p ys) e
-all-at p (y ∷ ys) (there m) e = all-at p ys m (andTrueR (p y) (all p ys) e)
+all-at p (y ∷ ys) here      e = ∧ᵇ-trueˡ (p y) (all p ys) e
+all-at p (y ∷ ys) (there m) e = all-at p ys m (∧ᵇ-trueʳ (p y) (all p ys) e)
 
 all-atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
            -> x ∈ xs -> p x ≡ false -> all p xs ≡ false
 all-atFalse p []       ()        e
 all-atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
 all-atFalse p (y ∷ ys) (there m) e =
-  andFalseIntroR (p y) (all p ys) (all-atFalse p ys m e)
+  ∧ᵇ-false-introʳ (p y) (all p ys) (all-atFalse p ys m e)
 
 all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
          -> Σ[ x ∈ A ] x ∈ xs × p x ≡ false
@@ -413,10 +482,10 @@ all-false p []       ()
 all-false p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
           (λ e2 -> there-Σ (all-false p ys e2))
-          (andFalse (p y) (all p ys) e)
+          (∧ᵇ-false (p y) (all p ys) e)
 
 all-intro : {A : Set} (p : A -> Bool) (xs : List A)
          -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true
 all-intro p []       f = refl
 all-intro p (y ∷ ys) f =
-  andIntro (p y) (all p ys) (f here) (all-intro p ys (λ m -> f (there m)))
+  ∧ᵇ-intro (p y) (all p ys) (f here) (all-intro p ys (λ m -> f (there m)))

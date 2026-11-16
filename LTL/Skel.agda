@@ -3,7 +3,8 @@
 -- LTL.Skel -- the propositional skeleton of a formula, and the decidable
 -- tautology test that (PC) needs.
 --
--- Ben-Ari's system (benari.pdf, Definition 12.1) takes as Axiom 0
+-- Ben-Ari's system (Mathematical Logic for Computer Science, 3rd edition,
+-- Definition 12.1) takes as Axiom 0
 --
 --     PC     any substitution instance of a valid propositional formula
 --
@@ -73,24 +74,6 @@ indexOf []       A = zero
 indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
 
 ------------------------------------------------------------------------
--- Small list infrastructure
-
-cong₂ : {A B C : Set} (f : A -> B -> C) {x x' : A} {y y' : B}
-     -> x ≡ x' -> y ≡ y' -> f x y ≡ f x' y'
-cong₂ f refl refl = refl
-
-map-length : {A B : Set} (f : A -> B) (xs : List A)
-          -> length (map f xs) ≡ length xs
-map-length f []       = refl
-map-length f (x ∷ xs) = cong suc (map-length f xs)
-
-nth-map : {A B : Set} (f : A -> B) (xs : List A) (i : Nat) -> i < length xs
-       -> (d : A) (e : B) -> nth (map f xs) i e ≡ f (nth xs i d)
-nth-map f []       i       ()        d e
-nth-map f (x ∷ xs) zero    lt        d e = refl
-nth-map f (x ∷ xs) (suc i) (ltSuc l) d e = nth-map f xs i l d e
-
-------------------------------------------------------------------------
 -- Formula membership as a boolean, and the idx/nth round-trip for it.
 --
 -- indexOf locates the FIRST occurrence of a formula by ≡ᶠ, so this is the
@@ -124,7 +107,8 @@ indexOf-ltF (B ∷ Bs) A e with B ≡ᶠ A
 -- The atoms of a list of formulas.
 --
 -- Insertion keeps the list free of ≡ᶠ-duplicates: Sub P repeats (see
--- subBenAri-dup), and a repeated atom would double the truth table for nothing.
+-- subBenAri-dup in LTL.Checks), and a repeated atom would double the truth
+-- table for nothing.
 
 isAtomB : Formula -> Bool
 isAtomB (var n) = true
@@ -139,13 +123,13 @@ insF A Bs = filterCons (¬ᵇ (A ∈ᶠ Bs)) A Bs
 insF-self : (A : Formula) (Bs : List Formula) -> A ∈ᶠ insF A Bs ≡ true
 insF-self A Bs with A ∈ᶠ Bs in e
 ... | true  = e
-... | false = orL (A ≡ᶠ A) _ (≡ᶠ-refl A)
+... | false = ∨ᵇ-introˡ (A ≡ᶠ A) _ (≡ᶠ-refl A)
 
 insF-mono : (A : Formula) (Bs : List Formula) (X : Formula)
          -> X ∈ᶠ Bs ≡ true -> X ∈ᶠ insF A Bs ≡ true
 insF-mono A Bs X e with A ∈ᶠ Bs
 ... | true  = e
-... | false = orR (A ≡ᶠ X) (X ∈ᶠ Bs) e
+... | false = ∨ᵇ-introʳ (A ≡ᶠ X) (X ∈ᶠ Bs) e
 
 atoms : List Formula -> List Formula
 atoms []           = []
@@ -172,13 +156,11 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 ------------------------------------------------------------------------
 -- The arguments of the box-subformulas.
 --
--- □Args collects the A for which □ A occurs in the list.  It lived in
--- LTL.Elim, which is where the eventualities are; it is here because Phase 9
--- needs it on the OTHER branch of the import graph -- the (S2) premise of the
--- short Lemma 2.6 (LTL.CompletePC) is a conjunction of  □ A -> A  over it,
--- and LTL.Complete cannot reach LTL.Elim.  It is a pure syntactic function of
--- a List Formula, so nothing but its position changes; □Args-mem stays in
--- LTL.Trace, which is the only place that needs it.
+-- □Args collects the A for which □ A occurs in the list: the eventualities of
+-- LTL.Elim.  It is defined here, below Deriv, because the short Lemma 2.6
+-- (LTL.CompletePC) needs it as well, and that is on the other branch of the
+-- import graph: its (S2) premise is a conjunction of  □ A -> A  over □Args.
+-- □Args-mem is in LTL.Trace, the only place that needs it.
 
 □Args : List Formula -> List Formula
 □Args []           = []

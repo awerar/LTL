@@ -49,8 +49,8 @@
 -- So the elimination is still COMPUTED in the fair branch -- uinfTrap runs
 -- elimGo -- but it is not what decides, and it produces no lasso: the lasso is
 -- the SCC construction's.  In the certificate branch the elimination is not
--- computed at all.  That asymmetry is the honest summary of what the phase
--- bought, and checkpoint C8 measures it.
+-- computed at all.  That asymmetry is what the SCC procedure buys, and
+-- checkpoint C8 (LTL.Compare) measures it.
 
 module LTL.DecideSCC where
 
@@ -203,7 +203,7 @@ buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
   where
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
-      notTrue (valOf (¬ Q) v0 Q)
+      ¬ᵇ-true (valOf (¬ Q) v0 Q)
         (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
                               (¬ᵇ valOf (¬ Q) v0 Q)
                                   (stateOk (¬ Q) v0 m (sub-self (¬ Q)))))
@@ -243,21 +243,3 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
               fromRun s es
                       (trapLoopRun R s (fairTrapLoop R s ms
                                                      (fairLoop r st cy ts tc nn wit)))
-
-------------------------------------------------------------------------
--- Checkpoints.
---
--- The two examples LTL.Extract ends with, and the two LTL.Lasso ends with:
--- the valid ones come back as proofs and the invalid ones as countermodels,
--- through the SCC branch each time.  The full agreement with decide, on all
--- forty-six statements of LTL.Examples, is checkpoint C8 and lives in
--- LTL.Compare, so that it is clear which side of the timing rule it is on.
-
-decideSCC-benAri : isProof (decideSCC benAri) ≡ true
-decideSCC-benAri = refl
-
-decideSCC-bnb : isProof (decideSCC bnb) ≡ true
-decideSCC-bnb = refl
-
-decideSCC-◇P : isProof (decideSCC ◇P) ≡ false
-decideSCC-◇P = refl

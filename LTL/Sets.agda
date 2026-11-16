@@ -1,17 +1,13 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Sets -- lists as finite sets, over any element type: the infrastructure
--- the searches of Phases 5, 6 and 8 run on.  It was the first half of LTL.Gfp
--- until Phase 8, and it mentioned valuations until the graph layer (LTL.Graph)
--- was made generic over its node type.  Now it imports only the prelude: the
--- searching, filtering and counting lemmas below never needed more than an
--- element type.  The part that needs an equality TEST on the elements -- ∈ᵛ and
--- the hypothesis names Closed, NoneSat, HoldsOutside -- is LTL.Nodes, which is
+-- LTL.Sets -- lists as finite sets, over any element type: the searching,
+-- filtering and counting lemmas the searches run on.  It imports only the
+-- prelude.  The part that needs an equality TEST on the elements -- ∈ᵛ and the
+-- hypothesis names Closed, NoneSat, HoldsOutside -- is LTL.Nodes, which is
 -- parameterised by one.
 --
--- _≤_ survives only inside barOfList (LTL.Nodes), which is the bridge from a
--- Kuratowski finite list to an inductively finite predicate (LTL.Bar).
--- Nothing else in the development counts any more.
+-- _≤_ is used only inside barOfList (LTL.Nodes), the bridge from a Kuratowski
+-- finite list to an inductively finite predicate (LTL.Bar); no search counts.
 
 module LTL.Sets where
 
@@ -43,17 +39,6 @@ leTrans (leSuc k) (leSuc l) = leSuc (leTrans k l)
 
 lePred : {a b : Nat} -> suc a ≤ suc b -> a ≤ b
 lePred (leSuc l) = l
-
-------------------------------------------------------------------------
--- Boolean glue
-
-orFalseL : (a b : Bool) -> a ∨ᵇ b ≡ false -> a ≡ false
-orFalseL true  b ()
-orFalseL false b e = refl
-
-orFalseR : (a b : Bool) -> a ∨ᵇ b ≡ false -> b ≡ false
-orFalseR true  b ()
-orFalseR false b e = e
 
 ------------------------------------------------------------------------
 -- Searching a list for a member that fails a boolean test.
@@ -162,20 +147,21 @@ any-true p []       ()
 any-true p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
           (λ e2 -> there-Σ (any-true p ys e2))
-          (orTrue (p y) (any p ys) e)
+          (∨ᵇ-true (p y) (any p ys) e)
 
 any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> any p xs ≡ true
 any-intro p []       ()        e
-any-intro p (y ∷ ys) here      e = orL (p y) (any p ys) e
-any-intro p (y ∷ ys) (there m) e = orR (p y) (any p ys) (any-intro p ys m e)
+any-intro p (y ∷ ys) here      e = ∨ᵇ-introˡ (p y) (any p ys) e
+any-intro p (y ∷ ys) (there m) e =
+  ∨ᵇ-introʳ (p y) (any p ys) (any-intro p ys m e)
 
 any-false : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ false
          -> {x : A} -> x ∈ xs -> p x ≡ false
 any-false p []       e  ()
-any-false p (y ∷ ys) e here      = orFalseL (p y) (any p ys) e
+any-false p (y ∷ ys) e here      = ∨ᵇ-falseˡ (p y) (any p ys) e
 any-false p (y ∷ ys) e (there m) =
-  any-false p ys (orFalseR (p y) (any p ys) e) m
+  any-false p ys (∨ᵇ-falseʳ (p y) (any p ys) e) m
 
 ------------------------------------------------------------------------
 -- null

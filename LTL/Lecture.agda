@@ -1,8 +1,9 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Lecture -- lecture15.pdf's own worked example, run through decide.
+-- LTL.Lecture -- the worked example of the course's lecture 15 notes (not in
+-- the repository), run through decide.
 --
--- The appendix of lecture15.pdf (pages 139-141) analyses
+-- The appendix of those notes (pages 139-141) analyses
 --
 --     F a ∧ F b  ⇒  F (a ∧ b)
 --

@@ -10,7 +10,7 @@
 --
 -- What section 4g measured is that 97 % of a certificate is the case split over
 -- the 2^|Sub P| valuations and the one-by-one refutation of the non-states.
--- Both are propositional, so Ben-Ari writes PC beside them (benari.pdf,
+-- Both are propositional, so Ben-Ari writes PC beside them (his
 -- Definition 12.1, Axiom 0) and never writes them out.  With the eleventh
 -- constructor of LTL.Deriv available they can be discharged the same way and,
 -- unlike Ben-Ari's, CHECKED: pc takes isTaut A ≡ true, a decidable condition
@@ -21,10 +21,10 @@
 --
 -- The chain is the |□Args (sub P)| instances of (T), one modus ponens each,
 -- so G32 is  1 + 46 |□Args (sub P)|  constructors exactly: 1 for p ⇒ p,
--- 47 for □ p ⇒ p where the old proof is 296839, and 277 for the
--- twenty-two-subformula example of section 4g, whose old proof cannot be
--- written down at all.  That is the shape the phase was after -- linear in the
--- number of eventualities where it was exponential in |Sub P|.
+-- 47 for □ p ⇒ p where LTL.Complete's proof is 296839, and 277 for the
+-- twenty-two-subformula example of section 4g, for which LTL.Complete's proof
+-- cannot be written down at all.  It is linear in the number of eventualities
+-- where LTL.Complete's is exponential in |Sub P|.
 --
 -- TWO DEPARTURES from the proposal in section 7, both simplifications, and both
 -- measured in LTL.Proofs.
@@ -36,7 +36,7 @@
 --     a state as soon as (S2) holds -- rather than by SELECTING it from D P.
 --     Carrying D P would cost nothing in the certificate, since allCompletePC
 --     is one node, but it would put a formula of size 2^|Sub P| inside the side
---     condition, and the side condition is the one thing Phase 9 adds that a
+--     condition, and the side condition is the one thing (PC) adds that a
 --     machine may have to evaluate.  Without it the side condition is small
 --     enough to check by refl, which LTL.Proofs does.  So G31 stands on its
 --     own, as the pc form of the case split, and G32 does not go through it.

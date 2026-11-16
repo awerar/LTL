@@ -4,11 +4,9 @@
 --
 -- Parameterised by the node type and its equality test, with the two facts
 -- about the test the searches use: it is sound (true means equal) and
--- reflexive.  Everything here used to be stated for valuations, in LTL.Sets
--- and LTL.Bar; nothing in it ever read a bit of one, and the graph layer
--- (LTL.Graph) needs it for an arbitrary node type.  LTL.Reach instantiates it
--- at  Val  with  _≡ᵛ_ , and that instance is the one the rest of the
--- development sees, under the same names as before.
+-- reflexive.  The graph layer (LTL.Graph) uses it at an arbitrary node type;
+-- LTL.Reach instantiates it at  Val  with  _≡ᵛ_ , and that instance is the one
+-- the rest of the development sees.
 --
 -- The superscript ᵛ reads "vertex": ∈ᵛ ≢ᵛ are the tests on nodes, and at the
 -- Val instance they are the tests on valuations.  The parameter _≡ᵛ_ has
@@ -49,14 +47,14 @@ x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
 ∈ᵛ-sound v (u ∷ us) e =
   sumElim (λ e1 -> subst (λ z -> v ∈ z ∷ us) (≡ᵛ-sound v u e1) here)
           (λ e2 -> there (∈ᵛ-sound v us e2))
-          (orTrue (v ≡ᵛ u) (any (v ≡ᵛ_) us) e)
+          (∨ᵇ-true (v ≡ᵛ u) (any (v ≡ᵛ_) us) e)
 
 ∈ᵛ-complete : (v : Node) (us : List Node) -> v ∈ us -> v ∈ᵛ us ≡ true
 ∈ᵛ-complete v []       ()
 ∈ᵛ-complete v (u ∷ us) here     =
-  orL (v ≡ᵛ v) (any (v ≡ᵛ_) us) (≡ᵛ-refl v)
+  ∨ᵇ-introˡ (v ≡ᵛ v) (any (v ≡ᵛ_) us) (≡ᵛ-refl v)
 ∈ᵛ-complete v (u ∷ us) (there m) =
-  orR (v ≡ᵛ u) (any (v ≡ᵛ_) us) (∈ᵛ-complete v us m)
+  ∨ᵇ-introʳ (v ≡ᵛ u) (any (v ≡ᵛ_) us) (∈ᵛ-complete v us m)
 
 ∈ᵛ-false : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
 ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
@@ -103,8 +101,8 @@ IFin E = Bar _≢ᵛ_ E
 ------------------------------------------------------------------------
 -- Kuratowski implies inductively finite.
 --
--- The ≤ measure of the development survives here and nowhere else: it is paid
--- once, when the Bar is built, and no search counts anything afterwards.
+-- This is the only place the development uses the ≤ measure: it is paid once,
+-- when the Bar is built, and no search counts anything afterwards.
 
 barOfList : {E : Pred} (n : Nat) (xs : List Node) -> length xs ≤ n
          -> ((x : Node) -> E x ≡ true -> x ∈ xs) -> IFin E
@@ -115,17 +113,17 @@ barOfList {E = E} (suc n) xs le sb =
                     (lePred (leTrans (filter-lt (x ≢ᵛ_) xs (sb x ex)
                                                 (≢ᵛ-self x)) le))
                     (λ z ez -> filter-true (x ≢ᵛ_) xs
-                                 (sb z (andTrueL (E z) (x ≢ᵛ z) ez))
-                                 (andTrueR (E z) (x ≢ᵛ z) ez)))
+                                 (sb z (∧ᵇ-trueˡ (E z) (x ≢ᵛ z) ez))
+                                 (∧ᵇ-trueʳ (E z) (x ≢ᵛ z) ez)))
 
 ------------------------------------------------------------------------
 -- The invariant the removing searches carry.
 --
 -- AllSat E xs says the list xs lies inside the predicate E.  A search that
 -- removes an element x from xs passes to E intersect (R x), and that is
--- precisely the sub-Bar cBar hands over -- so the "pool" of section 4c of
--- FORMALISATION-PLAN.md is no longer a list carried alongside the search: it
--- is the Bar's own predicate.
+-- precisely the sub-Bar cBar hands over -- so the pool of candidates still
+-- available is not a list carried alongside the search: it is the Bar's own
+-- predicate.
 
 -- Naming convention for the searches built on this (Closure, Gfp, Elim, Fix,
 -- Graph, SccTrap):
@@ -158,7 +156,7 @@ dropAllSat : {E : Pred} (p : Pred) (xs : List Node) -> AllSat E xs
           -> (x : Node) -> p x ≡ false
           -> AllSat (λ y -> E y ∧ᵇ (x ≢ᵛ y)) (filter p xs)
 dropAllSat {E} p xs sb x q z mz =
-  andIntro (E z) (x ≢ᵛ z)
+  ∧ᵇ-intro (E z) (x ≢ᵛ z)
            (sb z (filter-sub p xs mz))
            (cong ¬ᵇ_ onEq)
   where
