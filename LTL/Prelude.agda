@@ -165,6 +165,11 @@ andFalseTrueL : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ true -> b ≡ fals
 andFalseTrueL true  b eab ea = eab
 andFalseTrueL false b eab ()
 
+-- A Boolean that cannot be true is false.
+refuteTrue : (b : Bool) -> (b ≡ true -> Empty) -> b ≡ false
+refuteTrue true  no = emptyElim (no refl)
+refuteTrue false no = refl
+
 notTrue : (b : Bool) -> ¬ᵇ b ≡ true -> b ≡ false
 notTrue true  ()
 notTrue false e = refl
@@ -281,6 +286,12 @@ data _∈_ {A : Set} (x : A) : List A -> Set where
   here  : {xs : List A}              -> x ∈ x ∷ xs
   there : {y : A} {xs : List A} -> x ∈ xs -> x ∈ y ∷ xs
 
+-- A witness found in ys is a witness in y ∷ ys.
+
+there-Σ : {A : Set} {P : A -> Set} {y : A} {ys : List A}
+       -> Σ[ x ∈ A ] x ∈ ys × P x -> Σ[ x ∈ A ] x ∈ y ∷ ys × P x
+there-Σ (x , m , p) = x , there m , p
+
 -- Inclusion of lists as sets.  The element is explicit, as in the lemmas that
 -- use it (LTL.Extract).
 
@@ -395,6 +406,14 @@ all-atFalse p []       ()        e
 all-atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
 all-atFalse p (y ∷ ys) (there m) e =
   andFalseIntroR (p y) (all p ys) (all-atFalse p ys m e)
+
+all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
+         -> Σ[ x ∈ A ] x ∈ xs × p x ≡ false
+all-false p []       ()
+all-false p (y ∷ ys) e =
+  sumElim (λ e1 -> y , here , e1)
+          (λ e2 -> there-Σ (all-false p ys e2))
+          (andFalse (p y) (all p ys) e)
 
 all-intro : {A : Set} (p : A -> Bool) (xs : List A)
          -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true

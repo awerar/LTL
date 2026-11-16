@@ -33,54 +33,56 @@ open import LTL.Global public
 ------------------------------------------------------------------------
 -- The Boolean evaluation at a position
 
-evalAt : (P : Formula) (c0 : Val) (c1 : List Val) -> Formula -> Pos -> Bool
-evalAt P c0 c1 (var n) pos = valOf P (posState pos) (var n)
-evalAt P c0 c1 (¬ A)   pos = ¬ᵇ evalAt P c0 c1 A pos
-evalAt P c0 c1 (A ⇒ B) pos = evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 B pos
-evalAt P c0 c1 (○ A)   pos = evalAt P c0 c1 A (nextPos c0 c1 pos)
-evalAt P c0 c1 (□ A)   pos = all (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+module _ (P : Formula) where
 
-------------------------------------------------------------------------
--- The two ways of using it, and the shapes G26 and G27 will want
+  evalAt : (c0 : Val) (c1 : List Val) -> Formula -> Pos -> Bool
+  evalAt c0 c1 (var n) pos = valOf P (posState pos) (var n)
+  evalAt c0 c1 (¬ A)   pos = ¬ᵇ evalAt c0 c1 A pos
+  evalAt c0 c1 (A ⇒ B) pos = evalAt c0 c1 A pos ⇒ᵇ evalAt c0 c1 B pos
+  evalAt c0 c1 (○ A)   pos = evalAt c0 c1 A (nextPos c0 c1 pos)
+  evalAt c0 c1 (□ A)   pos = all (evalAt c0 c1 A) (orbitOf c0 c1 pos)
 
-eval□-at : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
-        -> evalAt P c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
-        -> evalAt P c0 c1 A q ≡ true
-eval□-at P c0 c1 A pos q e m =
-  all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
+  ------------------------------------------------------------------------
+  -- The two ways of using it, and the shapes G26 and G27 will want
 
-eval□-intro : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-           -> ((q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ true)
-           -> evalAt P c0 c1 (□ A) pos ≡ true
-eval□-intro P c0 c1 A pos f =
-  all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos) (λ {q} m -> f q m)
+  eval□-at : (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
+          -> evalAt c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
+          -> evalAt c0 c1 A q ≡ true
+  eval□-at c0 c1 A pos q e m =
+    all-at (evalAt c0 c1 A) (orbitOf c0 c1 pos) m e
 
-eval□-false : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
-           -> q ∈ orbitOf c0 c1 pos -> evalAt P c0 c1 A q ≡ false
-           -> evalAt P c0 c1 (□ A) pos ≡ false
-eval□-false P c0 c1 A pos q m e =
-  all-atFalse (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e
+  eval□-intro : (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
+             -> ((q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt c0 c1 A q ≡ true)
+             -> evalAt c0 c1 (□ A) pos ≡ true
+  eval□-intro c0 c1 A pos f =
+    all-intro (evalAt c0 c1 A) (orbitOf c0 c1 pos) (λ {q} m -> f q m)
 
-------------------------------------------------------------------------
--- The evaluation on a run, indexed as in the note's unwinding
+  eval□-false : (c0 : Val) (c1 : List Val) (A : Formula) (pos q : Pos)
+             -> q ∈ orbitOf c0 c1 pos -> evalAt c0 c1 A q ≡ false
+             -> evalAt c0 c1 (□ A) pos ≡ false
+  eval□-false c0 c1 A pos q m e =
+    all-atFalse (evalAt c0 c1 A) (orbitOf c0 c1 pos) m e
 
-eval : (P : Formula) (v0 : Val) -> Run P v0 -> Formula -> Nat -> Bool
-eval P v0 r A i = evalAt P c0 c1 A (posIter c0 c1 i (v0 , rest))
-  where open Run r
+  ------------------------------------------------------------------------
+  -- The evaluation on a run, indexed as in the note's unwinding
 
-------------------------------------------------------------------------
--- Running it.
---
--- evalOn P v e A i evaluates A at stage i of the lasso built from the named
--- surviving state v.  It is the whole pipeline in one expression: the states,
--- the elimination, Proposition 5.3, the unwinding, and the Boolean semantics.
+  eval : (v0 : Val) -> Run P v0 -> Formula -> Nat -> Bool
+  eval v0 r A i = evalAt c0 c1 A (posIter c0 c1 i (v0 , rest))
+    where open Run r
 
-evalOn : (P : Formula) (v : Val) -> v ∈ᵛ Uinf P ≡ true
-      -> Formula -> Nat -> Bool
-evalOn P v e A i = eval P v (runOf P v m (lasso P v m)) A i
-  where
-    m : v ∈ Uinf P
-    m = ∈ᵛ-sound v (Uinf P) e
+  ------------------------------------------------------------------------
+  -- Running it.
+  --
+  -- evalOn P v e A i evaluates A at stage i of the lasso built from the named
+  -- surviving state v.  It is the whole pipeline in one expression: the states,
+  -- the elimination, Proposition 5.3, the unwinding, and the Boolean semantics.
+
+  evalOn : (v : Val) -> v ∈ᵛ Uinf P ≡ true
+        -> Formula -> Nat -> Bool
+  evalOn v e A i = eval v (runOf P v m (lasso P v m)) A i
+    where
+      m : v ∈ Uinf P
+      m = ∈ᵛ-sound v (Uinf P) e
 
 ------------------------------------------------------------------------
 -- Checkpoint.

@@ -31,45 +31,48 @@ open import LTL.Walk public
 ------------------------------------------------------------------------
 -- The elimination has stopped
 
-elimGoStable   : (P : Formula) {E : Pred} (us : List Val)
-              -> (sb : AllSat E us) (bar : IFin E) {v : Val}
-              -> v ∈ elimGo P us sb bar
-              -> keep P (elimGo P us sb bar)
-                        (evList P (elimGo P us sb bar)) v ≡ true
-elimFindStable : (P : Formula) {E : Pred} (us : List Val)
-              -> (sb : AllSat E us) (bar : IFin E)
-              -> (fr : FindResult (keep P us (evList P us)) us) {v : Val}
-              -> v ∈ elimFind P us sb bar fr
-              -> keep P (elimFind P us sb bar fr)
-                        (evList P (elimFind P us sb bar fr)) v ≡ true
+module _ (P : Formula) where
 
-elimGoStable P us sb bar =
-  elimFindStable P us sb bar (findFalse (keep P us (evList P us)) us)
+  elimGoStable   : {E : Pred} (us : List Val)
+                -> (sb : AllSat E us) (bar : IFin E) {v : Val}
+                -> v ∈ elimGo P us sb bar
+                -> keep P (elimGo P us sb bar)
+                          (evList P (elimGo P us sb bar)) v ≡ true
+  elimFindStable : {E : Pred} (us : List Val)
+                -> (sb : AllSat E us) (bar : IFin E)
+                -> (fr : FindResult (keep P us (evList P us)) us) {v : Val}
+                -> v ∈ elimFind P us sb bar fr
+                -> keep P (elimFind P us sb bar fr)
+                          (evList P (elimFind P us sb bar fr)) v ≡ true
 
-elimFindStable P us sb bar      (allTrue f)       m = f m
-elimFindStable P us sb (cBar h) (found x mx q)      =
-  elimGoStable P (elimRound P us)
-               (dropAllSat (keep P us (evList P us)) us sb x q) (h x (sb x mx))
+  elimGoStable us sb bar =
+    elimFindStable us sb bar (findFalse (keep P us (evList P us)) us)
 
-uinfStable : (P : Formula) {v : Val} -> v ∈ Uinf P
-          -> keep P (Uinf P) (evList P (Uinf P)) v ≡ true
-uinfStable P = elimGoStable P (Ust P) (ustAllSat P) (ustBar P)
+  elimFindStable us sb bar      (allTrue f)       m = f m
+  elimFindStable us sb (cBar h) (found x mx q)      =
+    elimGoStable (elimRound P us)
+                 (dropAllSat (keep P us (evList P us)) us sb x q)
+                 (h x (sb x mx))
 
-------------------------------------------------------------------------
--- so neither clause of Definition 3.1 applies to a survivor
+  uinfStable : {v : Val} -> v ∈ Uinf P
+            -> keep P (Uinf P) (evList P (Uinf P)) v ≡ true
+  uinfStable = elimGoStable (Ust P) (ustAllSat P) (ustBar P)
 
-uinfNotR1 : (P : Formula) {v : Val} -> v ∈ Uinf P -> r1 P (Uinf P) v ≡ false
-uinfNotR1 P {v} m =
-  orFalseL (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
-           (notTrue (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
-                    (uinfStable P m))
+  ------------------------------------------------------------------------
+  -- so neither clause of Definition 3.1 applies to a survivor
 
-uinfNotR2 : (P : Formula) {v : Val} -> v ∈ Uinf P
-         -> r2 P (evList P (Uinf P)) v ≡ false
-uinfNotR2 P {v} m =
-  orFalseR (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
-           (notTrue (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
-                    (uinfStable P m))
+  uinfNotR1 : {v : Val} -> v ∈ Uinf P -> r1 P (Uinf P) v ≡ false
+  uinfNotR1 {v} m =
+    orFalseL (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
+             (notTrue (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
+                      (uinfStable m))
+
+  uinfNotR2 : {v : Val} -> v ∈ Uinf P
+           -> r2 P (evList P (Uinf P)) v ≡ false
+  uinfNotR2 {v} m =
+    orFalseR (r1 P (Uinf P) v) (r2 P (evList P (Uinf P)) v)
+             (notTrue (r1 P (Uinf P) v ∨ᵇ r2 P (evList P (Uinf P)) v)
+                      (uinfStable m))
 
 ------------------------------------------------------------------------
 -- First half of Lemma 5.1: a successor exists
@@ -99,119 +102,114 @@ record Escape (P : Formula) (us : List Val) (A : Formula) (v : Val) : Set where
     targetIn : target ∈ us
     fails    : valOf P target A ≡ false
 
-Escapes : Formula -> List Val -> Formula -> List Val -> Set
-Escapes P us A W =
-  (z : Val) -> z ∈ us -> z ∈ᵛ W ≡ false -> Escape P us A z
+module _ (P : Formula) where
 
-escBase : (P : Formula) (us : List Val) (A : Formula) -> Escapes P us A (wZero P us A)
-escBase P us A z mz e = onHolds (valOf P z A) refl
-  where
-    onHolds : (b : Bool) -> valOf P z A ≡ b -> Escape P us A z
-    onHolds false eh = esc [] z wnil mz eh
-    onHolds true  eh =
-      emptyElim (∈ᵛ-false z (wZero P us A) e
-                          (filter-true (holdsAt P A) us mz eh))
+  Escapes : List Val -> Formula -> List Val -> Set
+  Escapes us A W =
+    (z : Val) -> z ∈ us -> z ∈ᵛ W ≡ false -> Escape P us A z
 
-escStep : (P : Formula) (us : List Val) (A : Formula) (W : List Val)
-       -> Escapes P us A W -> Escapes P us A (shrink P us W)
-escStep P us A W h z mz e = onIn (z ∈ᵛ W) refl
-  where
-    onIn : (b : Bool) -> z ∈ᵛ W ≡ b -> Escape P us A z
-    onIn false eb = h z mz eb
-    onIn true  eb = fromSig (all-false (λ w -> step P z w ⇒ᵇ (w ∈ᵛ W))
-                                        us (notIn (succsInside P us W z) refl))
-      where
-        -- z survived into W but not into shrink P us W, so it has a successor
-        -- in us that had already left W.
-        notIn : (c : Bool) -> succsInside P us W z ≡ c -> succsInside P us W z ≡ false
-        notIn false ec = ec
-        notIn true  ec =
-          emptyElim (∈ᵛ-false z (shrink P us W) e
-                      (filter-true (succsInside P us W) W (∈ᵛ-sound z W eb) ec))
+  escBase : (us : List Val) (A : Formula) -> Escapes us A (wZero P us A)
+  escBase us A z mz e with valOf P z A in eh
+  ... | false = esc [] z wnil mz eh
+  ... | true  =
+    emptyElim (∈ᵛ-false z (wZero P us A) e (filter-true (holdsAt P A) us mz eh))
 
-        fromSig : (Σ[ w ∈ Val ] w ∈ us ×
-                                  step P z w ⇒ᵇ (w ∈ᵛ W) ≡ false)
-               -> Escape P us A z
-        fromSig (w , mw , q) =
-          escCons (h w mw (snd (⇒ᵇ-false (step P z w) (w ∈ᵛ W) q)))
-          where
-            escCons : Escape P us A w -> Escape P us A z
-            escCons (esc ws x wk mx ex) =
-              esc (w ∷ ws) x
-                  (wcons mw (fst (⇒ᵇ-false (step P z w) (w ∈ᵛ W) q)) wk)
-                  mx ex
+  escStep : (us : List Val) (A : Formula) (W : List Val)
+         -> Escapes us A W -> Escapes us A (shrink P us W)
+  escStep us A W h z mz e with z ∈ᵛ W in eb
+  ... | false = h z mz eb
+  ... | true  =
+    fromSig (all-false (λ w -> step P z w ⇒ᵇ (w ∈ᵛ W)) us notIn)
+    where
+      -- z survived into W but not into shrink P us W, so it has a successor
+      -- in us that had already left W.
+      notIn : succsInside P us W z ≡ false
+      notIn = refuteTrue (succsInside P us W z) λ ec ->
+        ∈ᵛ-false z (shrink P us W) e
+         (filter-true (succsInside P us W) W (∈ᵛ-sound z W eb) ec)
 
-escGo   : (P : Formula) (us : List Val) (A : Formula) {E : Pred}
-       -> (W : List Val) (sb : AllSat E W) (bar : IFin E)
-       -> Escapes P us A W -> Escapes P us A (shrinkGo P us W sb bar)
-escFind : (P : Formula) (us : List Val) (A : Formula) {E : Pred}
-       -> (W : List Val) (sb : AllSat E W) (bar : IFin E)
-       -> (fr : FindResult (succsInside P us W) W)
-       -> Escapes P us A W -> Escapes P us A (shrinkFind P us W sb bar fr)
+      fromSig : (Σ[ w ∈ Val ] w ∈ us × step P z w ⇒ᵇ (w ∈ᵛ W) ≡ false)
+             -> Escape P us A z
+      fromSig (w , mw , q) =
+        escCons (h w mw (snd (⇒ᵇ-false (step P z w) (w ∈ᵛ W) q)))
+        where
+          escCons : Escape P us A w -> Escape P us A z
+          escCons (esc ws x wk mx ex) =
+            esc (w ∷ ws) x
+                (wcons mw (fst (⇒ᵇ-false (step P z w) (w ∈ᵛ W) q)) wk)
+                    mx ex
 
-escGo P us A W sb bar = escFind P us A W sb bar (findFalse (succsInside P us W) W)
+  escGo   : (us : List Val) (A : Formula) {E : Pred}
+         -> (W : List Val) (sb : AllSat E W) (bar : IFin E)
+         -> Escapes us A W -> Escapes us A (shrinkGo P us W sb bar)
+  escFind : (us : List Val) (A : Formula) {E : Pred}
+         -> (W : List Val) (sb : AllSat E W) (bar : IFin E)
+         -> (fr : FindResult (succsInside P us W) W)
+         -> Escapes us A W -> Escapes us A (shrinkFind P us W sb bar fr)
 
-escFind P us A W sb bar      (allTrue f)   e = e
-escFind P us A W sb (cBar h) (found x m q) e =
-  escGo P us A (shrink P us W) (dropAllSat (succsInside P us W) W sb x q) (h x (sb x m))
-        (escStep P us A W e)
+  escGo us A W sb bar = escFind us A W sb bar (findFalse (succsInside P us W) W)
 
-gfpEscape : (P : Formula) (us : List Val) (A : Formula) -> Escapes P us A (gfpW P us A)
-gfpEscape P us A =
-  escGo P us A (wZero P us A) (memAllSat (wZero P us A)) (listBar (wZero P us A))
-        (escBase P us A)
+  escFind us A W sb bar      (allTrue f)   e = e
+  escFind us A W sb (cBar h) (found x m q) e =
+    escGo us A (shrink P us W) (dropAllSat (succsInside P us W) W sb x q)
+          (h x (sb x m)) (escStep us A W e)
 
-------------------------------------------------------------------------
--- Second half of Lemma 5.1: a pending eventuality is fulfilled somewhere
--- reachable
+  gfpEscape : (us : List Val) (A : Formula) -> Escapes us A (gfpW P us A)
+  gfpEscape us A =
+    escGo us A (wZero P us A) (memAllSat (wZero P us A))
+          (listBar (wZero P us A)) (escBase us A)
 
-uinfFulfil : (P : Formula) (v : Val) -> v ∈ Uinf P
-          -> (A : Formula) -> A ∈ □Args (sub P)
-          -> valOf P v (□ A) ≡ false
-          -> Escape P (Uinf P) A v
-uinfFulfil P v m A mA pend =
-  gfpEscape P (Uinf P) A v m
-    (andFalseTrueL (pending P v A) (v ∈ᵛ gfpW P (Uinf P) A)
-                   (any-false (badEv P v) (evList P (Uinf P)) (uinfNotR2 P m)
-                              (evList-mem P (Uinf P) mA))
-                   (cong ¬ᵇ_ pend))
+  ------------------------------------------------------------------------
+  -- Second half of Lemma 5.1: a pending eventuality is fulfilled somewhere
+  -- reachable
 
-------------------------------------------------------------------------
--- Survivors are states.
---
--- Each round only filters, so U_inf is contained in St P.  Hintikka's lemma
--- needs this to read (S1) and (S2) off a state of the run.
+  uinfFulfil : (v : Val) -> v ∈ Uinf P
+            -> (A : Formula) -> A ∈ □Args (sub P)
+            -> valOf P v (□ A) ≡ false
+            -> Escape P (Uinf P) A v
+  uinfFulfil v m A mA pend =
+    gfpEscape (Uinf P) A v m
+      (andFalseTrueL (pending P v A) (v ∈ᵛ gfpW P (Uinf P) A)
+                     (any-false (badEv P v) (evList P (Uinf P)) (uinfNotR2 P m)
+                                (evList-mem P (Uinf P) mA))
+                     (cong ¬ᵇ_ pend))
 
-elimGoSub   : (P : Formula) {E : Pred} (us : List Val)
-           -> (sb : AllSat E us) (bar : IFin E) {x : Val}
-           -> x ∈ elimGo P us sb bar -> x ∈ us
-elimFindSub : (P : Formula) {E : Pred} (us : List Val)
-           -> (sb : AllSat E us) (bar : IFin E)
-           -> (fr : FindResult (keep P us (evList P us)) us) {x : Val}
-           -> x ∈ elimFind P us sb bar fr -> x ∈ us
+  ------------------------------------------------------------------------
+  -- Survivors are states.
+  --
+  -- Each round only filters, so U_inf is contained in St P.  Hintikka's lemma
+  -- needs this to read (S1) and (S2) off a state of the run.
 
-elimGoSub P us sb bar =
-  elimFindSub P us sb bar (findFalse (keep P us (evList P us)) us)
+  elimGoSub   : {E : Pred} (us : List Val)
+             -> (sb : AllSat E us) (bar : IFin E) {x : Val}
+             -> x ∈ elimGo P us sb bar -> x ∈ us
+  elimFindSub : {E : Pred} (us : List Val)
+             -> (sb : AllSat E us) (bar : IFin E)
+             -> (fr : FindResult (keep P us (evList P us)) us) {x : Val}
+             -> x ∈ elimFind P us sb bar fr -> x ∈ us
 
-elimFindSub P us sb bar      (allTrue f)    m = m
-elimFindSub P us sb (cBar h) (found x mx q) m =
-  filter-sub (keep P us (evList P us)) us
-             (elimGoSub P (elimRound P us)
-                        (dropAllSat (keep P us (evList P us)) us sb x q)
-                        (h x (sb x mx)) m)
+  elimGoSub us sb bar =
+    elimFindSub us sb bar (findFalse (keep P us (evList P us)) us)
 
-uinfUst : (P : Formula) (x : Val) -> x ∈ Uinf P -> x ∈ Ust P
-uinfUst P x m = elimGoSub P (Ust P) (ustAllSat P) (ustBar P) m
+  elimFindSub us sb bar      (allTrue f)    m = m
+  elimFindSub us sb (cBar h) (found x mx q) m =
+    filter-sub (keep P us (evList P us)) us
+               (elimGoSub (elimRound P us)
+                          (dropAllSat (keep P us (evList P us)) us sb x q)
+                          (h x (sb x mx)) m)
 
-uinfSub : (P : Formula) (x : Val) -> x ∈ Uinf P -> x ∈ St P
-uinfSub P x m = ustSt P (uinfUst P x m)
+  uinfUst : (x : Val) -> x ∈ Uinf P -> x ∈ Ust P
+  uinfUst x m = elimGoSub (Ust P) (ustAllSat P) (ustBar P) m
 
--- The projection is named rather than applied inline: giving filter-prop its
--- list argument against the folded  St P  is what keeps the elaborator from
--- unfolding Uinf while it solves the implicit.
+  uinfSub : (x : Val) -> x ∈ Uinf P -> x ∈ St P
+  uinfSub x m = ustSt P (uinfUst x m)
 
-stIsState : (P : Formula) {x : Val} -> x ∈ St P -> isState P x ≡ true
-stIsState P m = filter-prop (isState P) (allVecs (length (sub P))) m
+  -- The projection is named rather than applied inline: giving filter-prop its
+  -- list argument against the folded  St P  is what keeps the elaborator from
+  -- unfolding Uinf while it solves the implicit.
 
-uinfState : (P : Formula) (x : Val) -> x ∈ Uinf P -> isState P x ≡ true
-uinfState P x m = stIsState P (uinfSub P x m)
+  stIsState : {x : Val} -> x ∈ St P -> isState P x ≡ true
+  stIsState m = filter-prop (isState P) (allVecs (length (sub P))) m
+
+  uinfState : (x : Val) -> x ∈ Uinf P -> isState P x ≡ true
+  uinfState x m = stIsState (uinfSub x m)

@@ -134,26 +134,28 @@ mpChain (A ∷ As) d = mpChain As (mp d □Elim)
 -- The G32 tautology: the (S2) premises of s2List imply beta P (St P), i.e.
 -- that some state of St P holds.
 
-stateFml : Formula -> Formula
-stateFml P = ⇒List (s2List P) (beta P (St P))
+module _ (P : Formula) where
 
-tautState : (P : Formula) -> isTaut (stateFml P) ≡ true
-tautState P =
-  all-intro (λ a -> valFrom (atomsOf (stateFml P)) a (stateFml P))
-            (allVecs (length (atomsOf (stateFml P))))
-            row
-  where
-    Ats : List Formula
-    Ats = atomsOf (stateFml P)
+  stateFml : Formula
+  stateFml = ⇒List (s2List P) (beta P (St P))
 
-    row : {a : Val} -> a ∈ allVecs (length Ats)
-       -> valFrom Ats a (stateFml P) ≡ true
-    row {a} m =
-      □Chain Ats a (□Args (sub P)) (beta P (St P))
-               (λ g -> betaSkel Ats a P (λ B mb -> g B (□Args-of (sub P) mb)))
+  tautState : isTaut stateFml ≡ true
+  tautState =
+    all-intro (λ a -> valFrom (atomsOf stateFml) a stateFml)
+              (allVecs (length (atomsOf stateFml)))
+              row
+    where
+      Ats : List Formula
+      Ats = atomsOf stateFml
 
-stateCompletePC : (P : Formula) -> ⊢ beta P (St P)
-stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
+      row : {a : Val} -> a ∈ allVecs (length Ats)
+         -> valFrom Ats a stateFml ≡ true
+      row {a} m =
+        □Chain Ats a (□Args (sub P)) (beta P (St P))
+                 (λ g -> betaSkel Ats a P (λ B mb -> g B (□Args-of (sub P) mb)))
+
+  stateCompletePC : ⊢ beta P (St P)
+  stateCompletePC = mpChain (□Args (sub P)) (pc tautState)
 
 ------------------------------------------------------------------------
 -- (L5) the same way, which is where the rest of the certificate is.

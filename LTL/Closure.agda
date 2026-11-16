@@ -71,309 +71,314 @@ valExt (b ∷ v) (c ∷ w) e  h =
 -- The vector an assignment to the atoms determines, and the assignment a
 -- state induces
 
-mkV : Formula -> Val -> Val
-mkV P a = map (valFrom (atoms (sub P)) a) (sub P)
+module _ (P : Formula) where
 
-atomBits : Formula -> Val -> Val
-atomBits P v = map (valOf P v) (atoms (sub P))
+  mkV : Val -> Val
+  mkV a = map (valFrom (atoms (sub P)) a) (sub P)
 
-------------------------------------------------------------------------
--- A state is the vector its own atom bits determine.
---
--- This used to be a five-case induction on the formula.  It is now one
--- instance of skelEval (LTL.Skel): valOf at a state is a COMPOSITIONAL reading
--- of formulas, which is exactly what (S1) says, and skelEval says any such
--- reading agrees with the skeleton evaluation.  The other instance of the same
--- lemma is the soundness of (PC) in LTL.Sound, where the two hypotheses are
--- refl because evalAt is defined by ¬ᵇ and ⇒ᵇ.
+  atomBits : Val -> Val
+  atomBits v = map (valOf P v) (atoms (sub P))
 
-valFromEq : (P : Formula) (v : Val) -> allOk P v (sub P) ≡ true
-         -> (A : Formula) -> A ∈ sub P
-         -> valFrom (atoms (sub P)) (atomBits P v) A ≡ valOf P v A
-valFromEq P v ok =
-  skelEval (valOf P v) (atoms (sub P)) P
-           (λ X mX aX -> atomMem (sub P) mX aX)
-           (λ X mX -> ⇔ᵇ-sound (valOf P v (¬ X)) (¬ᵇ valOf P v X)
-                               (allOk-at P v (sub P) mX ok))
-           (λ X Y mX -> ⇔ᵇ-sound (valOf P v (X ⇒ Y))
-                                 (valOf P v X ⇒ᵇ valOf P v Y)
-                                 (allOk-at P v (sub P) mX ok))
+  ------------------------------------------------------------------------
+  -- A state is the vector its own atom bits determine.
+  --
+  -- This used to be a five-case induction on the formula.  It is now one
+  -- instance of skelEval (LTL.Skel): valOf at a state is a COMPOSITIONAL
+  -- reading of formulas, which is exactly what (S1) says, and skelEval says any
+  -- such reading agrees with the skeleton evaluation.  The other instance of
+  -- the same lemma is the soundness of (PC) in LTL.Sound, where the two
+  -- hypotheses are refl because evalAt is defined by ¬ᵇ and ⇒ᵇ.
 
-mkV-id : (P : Formula) (v : Val) -> isState P v ≡ true
-      -> length v ≡ length (sub P) -> mkV P (atomBits P v) ≡ v
-mkV-id P v st len = valExt (mkV P (atomBits P v)) v lenEq pointwise
-  where
-    ok : allOk P v (sub P) ≡ true
-    ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
+  valFromEq : (v : Val) -> allOk P v (sub P) ≡ true
+           -> (A : Formula) -> A ∈ sub P
+           -> valFrom (atoms (sub P)) (atomBits v) A ≡ valOf P v A
+  valFromEq v ok =
+    skelEval (valOf P v) (atoms (sub P)) P
+             (λ X mX aX -> atomMem (sub P) mX aX)
+             (λ X mX -> ⇔ᵇ-sound (valOf P v (¬ X)) (¬ᵇ valOf P v X)
+                                 (all-at (okAt P v) (sub P) mX ok))
+             (λ X Y mX -> ⇔ᵇ-sound (valOf P v (X ⇒ Y))
+                                   (valOf P v X ⇒ᵇ valOf P v Y)
+                                   (all-at (okAt P v) (sub P) mX ok))
 
-    coh : allCoh P v (length (sub P)) ≡ true
-    coh = andTrueR (allOk P v (sub P)) (allCoh P v (length (sub P))) st
+  mkV-id : (v : Val) -> isState P v ≡ true
+        -> length v ≡ length (sub P) -> mkV (atomBits v) ≡ v
+  mkV-id v st len = valExt (mkV (atomBits v)) v lenEq pointwise
+    where
+      ok : allOk P v (sub P) ≡ true
+      ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
-    lenEq : length (mkV P (atomBits P v)) ≡ length v
-    lenEq = trans (map-length (valFrom (atoms (sub P)) (atomBits P v)) (sub P))
-                  (sym len)
+      coh : allCoh P v (length (sub P)) ≡ true
+      coh = andTrueR (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
-    pointwise : (i : Nat) -> i < length (mkV P (atomBits P v))
-             -> bitAt (mkV P (atomBits P v)) i ≡ bitAt v i
-    pointwise i l = trans (trans atI (valFromEq P v ok (nth (sub P) i ⊥) mI))
-                          (sym cohI)
-      where
-        lI : i < length (sub P)
-        lI = subst (λ k -> i < k)
-                   (map-length (valFrom (atoms (sub P)) (atomBits P v)) (sub P)) l
+      lenEq : length (mkV (atomBits v)) ≡ length v
+      lenEq = trans (map-length (valFrom (atoms (sub P)) (atomBits v)) (sub P))
+                    (sym len)
 
-        mI : nth (sub P) i ⊥ ∈ sub P
-        mI = nth-mem (sub P) i lI ⊥
+      pointwise : (i : Nat) -> i < length (mkV (atomBits v))
+               -> bitAt (mkV (atomBits v)) i ≡ bitAt v i
+      pointwise i l = trans (trans atI (valFromEq v ok (nth (sub P) i ⊥) mI))
+                            (sym cohI)
+        where
+          lI : i < length (sub P)
+          lI = subst (λ k -> i < k)
+                     (map-length (valFrom (atoms (sub P)) (atomBits v)) (sub P))
+                     l
 
-        atI : bitAt (mkV P (atomBits P v)) i ≡
-              valFrom (atoms (sub P)) (atomBits P v) (nth (sub P) i ⊥)
-        atI = nth-map (valFrom (atoms (sub P)) (atomBits P v)) (sub P) i lI ⊥ false
+          mI : nth (sub P) i ⊥ ∈ sub P
+          mI = nth-mem (sub P) i lI ⊥
 
-        cohI : bitAt v i ≡ valOf P v (nth (sub P) i ⊥)
-        cohI = ⇔ᵇ-sound (bitAt v i) (valOf P v (nth (sub P) i ⊥))
-                        (allCoh-at P v (length (sub P)) i lI coh)
+          atI : bitAt (mkV (atomBits v)) i ≡
+                valFrom (atoms (sub P)) (atomBits v) (nth (sub P) i ⊥)
+          atI = nth-map (valFrom (atoms (sub P)) (atomBits v)) (sub P)
+                        i lI ⊥ false
 
-------------------------------------------------------------------------
--- The candidates, and the state list they give
+          cohI : bitAt v i ≡ valOf P v (nth (sub P) i ⊥)
+          cohI = ⇔ᵇ-sound (bitAt v i) (valOf P v (nth (sub P) i ⊥))
+                          (allCoh-at P v (length (sub P)) i lI coh)
 
-cands : Formula -> List Val
-cands P = map (mkV P) (allVecs (length (atoms (sub P))))
+  ------------------------------------------------------------------------
+  -- The candidates, and the state list they give
 
-candsLen : (P : Formula) {v : Val} -> v ∈ cands P
-        -> length v ≡ length (sub P)
-candsLen P {v} m =
-  fromSig (map-mem-inv (mkV P) (allVecs (length (atoms (sub P)))) m)
-  where
-    fromSig : (Σ[ a ∈ Val ] a ∈ allVecs (length (atoms (sub P))) ×
-                                v ≡ mkV P a)
-           -> length v ≡ length (sub P)
-    fromSig (a , ma , ea) =
-      trans (cong length ea)
-            (map-length (valFrom (atoms (sub P)) a) (sub P))
+  cands : List Val
+  cands = map mkV (allVecs (length (atoms (sub P))))
 
--- St P, computed from the candidates rather than from all of allVecs.
+  candsLen : {v : Val} -> v ∈ cands
+          -> length v ≡ length (sub P)
+  candsLen {v} m =
+    fromSig (map-mem-inv mkV (allVecs (length (atoms (sub P)))) m)
+    where
+      fromSig : (Σ[ a ∈ Val ] a ∈ allVecs (length (atoms (sub P))) ×
+                                  v ≡ mkV a)
+             -> length v ≡ length (sub P)
+      fromSig (a , ma , ea) =
+        trans (cong length ea)
+              (map-length (valFrom (atoms (sub P)) a) (sub P))
 
-StCand : Formula -> List Val
-StCand P = filter (isState P) (cands P)
+  -- St P, computed from the candidates rather than from all of allVecs.
 
-stCandSt : (P : Formula) {v : Val} -> v ∈ StCand P -> v ∈ St P
-stCandSt P {v} m =
-  filter-true (isState P) (allVecs (length (sub P)))
-              (allVecs-complete (length (sub P)) v
-                                (candsLen P (filter-sub (isState P) (cands P) m)))
-              (filter-prop (isState P) (cands P) m)
+  StCand : List Val
+  StCand = filter (isState P) cands
 
-stStCand : (P : Formula) {v : Val} -> v ∈ St P -> v ∈ StCand P
-stStCand P {v} m = filter-true (isState P) (cands P) inCands st
-  where
-    st : isState P v ≡ true
-    st = filter-prop (isState P) (allVecs (length (sub P))) m
+  stCandSt : {v : Val} -> v ∈ StCand -> v ∈ St P
+  stCandSt {v} m =
+    filter-true (isState P) (allVecs (length (sub P)))
+                (allVecs-complete (length (sub P)) v
+                                  (candsLen (filter-sub (isState P) cands m)))
+                (filter-prop (isState P) cands m)
 
-    len : length v ≡ length (sub P)
-    len = allVecs-len' (length (sub P)) v
-                       (filter-sub (isState P) (allVecs (length (sub P))) m)
-      where
-        allVecs-len' : (n : Nat) (w : Val) -> w ∈ allVecs n -> length w ≡ n
-        allVecs-len' n w mw = ≡ⁿ-sound (length w) n (allVecs-len n mw)
+  stStCand : {v : Val} -> v ∈ St P -> v ∈ StCand
+  stStCand {v} m = filter-true (isState P) cands inCands st
+    where
+      st : isState P v ≡ true
+      st = filter-prop (isState P) (allVecs (length (sub P))) m
 
-    inCands : v ∈ cands P
-    inCands =
-      subst (λ z -> z ∈ cands P) (mkV-id P v st len)
-            (memMap (mkV P)
-                    (allVecs-complete (length (atoms (sub P))) (atomBits P v)
-                                      (map-length (valOf P v) (atoms (sub P)))))
+      len : length v ≡ length (sub P)
+      len = allVecs-len' (length (sub P)) v
+                         (filter-sub (isState P) (allVecs (length (sub P))) m)
+        where
+          allVecs-len' : (n : Nat) (w : Val) -> w ∈ allVecs n -> length w ≡ n
+          allVecs-len' n w mw = ≡ⁿ-sound (length w) n (allVecs-len n mw)
 
-------------------------------------------------------------------------
--- The ->-closure of the states containing P.
---
--- Step 2.  The accumulator acc starts empty and each round adds every state of
--- StCand P that is WANTED -- contains P, or is a ->-successor of something
--- already in acc -- and is not there yet.  When a round finds nothing to add,
--- acc contains every wanted state, which is ustSeed and ustClosed together.
---
--- This is the one search in the development that GROWS, so the removing
--- iteration of FORMALISATION-PLAN.md section 4b does not apply and there is no
--- decreasing length to run on.  What there is instead: each round adds at least
--- one state that was not there before, that state is a vector of length
--- |Sub P|, and one cannot go on choosing distinct vectors of a fixed length
--- forever.  That is vecIFin exactly, guarded so that it is not forced as the
--- search runs, and it is why Bar is needed here and not merely convenient.
+      inCands : v ∈ cands
+      inCands =
+        subst (λ z -> z ∈ cands) (mkV-id v st len)
+              (memMap mkV
+                      (allVecs-complete
+                         (length (atoms (sub P))) (atomBits v)
+                         (map-length (valOf P v) (atoms (sub P)))))
 
-vecBar : (P : Formula) -> IFin (hasLength (length (sub P)))
-vecBar P = guardedVecBar (length (sub P)) (hasLength (length (sub P))) (λ v ev -> ev)
+  ------------------------------------------------------------------------
+  -- The ->-closure of the states containing P.
+  --
+  -- Step 2.  The accumulator acc starts empty and each round adds every state
+  -- of StCand P that is WANTED -- contains P, or is a ->-successor of something
+  -- already in acc -- and is not there yet.  When a round finds nothing to add,
+  -- acc contains every wanted state, which is ustSeed and ustClosed together.
+  --
+  -- This is the one search in the development that GROWS, so the removing
+  -- iteration of FORMALISATION-PLAN.md section 4b does not apply and there is
+  -- no decreasing length to run on.  What there is instead: each round adds at
+  -- least one state that was not there before, that state is a vector of length
+  -- |Sub P|, and one cannot go on choosing distinct vectors of a fixed length
+  -- forever.  That is vecIFin exactly, guarded so that it is not forced as the
+  -- search runs, and it is why Bar is needed here and not merely convenient.
 
-wanted : Formula -> List Val -> Val -> Bool
-wanted P acc v = valOf P v P ∨ᵇ any (λ u -> step P u v) acc
+  vecBar : IFin (hasLength (length (sub P)))
+  vecBar = guardedVecBar (length (sub P)) (hasLength (length (sub P)))
+                         (λ v ev -> ev)
 
-missing : Formula -> List Val -> Val -> Bool
-missing P acc v = wanted P acc v ∧ᵇ ¬ᵇ (v ∈ᵛ acc)
+  wanted : List Val -> Val -> Bool
+  wanted acc v = valOf P v P ∨ᵇ any (λ u -> step P u v) acc
 
--- x is settled when it needs no adding: it is not wanted, or acc already has
--- it.  The search looks for an unsettled x with findFalse.
+  missing : List Val -> Val -> Bool
+  missing acc v = wanted acc v ∧ᵇ ¬ᵇ (v ∈ᵛ acc)
 
-settled : Formula -> List Val -> Val -> Bool
-settled P acc v = ¬ᵇ missing P acc v
+  -- x is settled when it needs no adding: it is not wanted, or acc already has
+  -- it.  The search looks for an unsettled x with findFalse.
 
-addAll : Formula -> List Val -> List Val
-addAll P acc = filter (missing P acc) (StCand P) ++ acc
+  settled : List Val -> Val -> Bool
+  settled acc v = ¬ᵇ missing acc v
 
--- Reading settled in both directions (the Boolean step is nandTrueL of
--- LTL.Prelude)
+  addAll : List Val -> List Val
+  addAll acc = filter (missing acc) StCand ++ acc
 
-missingOf : (P : Formula) (acc : List Val) (x : Val) -> settled P acc x ≡ false
-         -> missing P acc x ≡ true
-missingOf P acc x q = notFalse (missing P acc x) q
+  -- Reading settled in both directions (the Boolean step is nandTrueL of
+  -- LTL.Prelude)
 
-notInAcc : (P : Formula) (acc : List Val) (x : Val) -> settled P acc x ≡ false
-        -> x ∈ᵛ acc ≡ false
-notInAcc P acc x q =
-  notTrue (x ∈ᵛ acc)
-          (andTrueR (wanted P acc x) (¬ᵇ (x ∈ᵛ acc)) (missingOf P acc x q))
+  missingOf : (acc : List Val) (x : Val) -> settled acc x ≡ false
+           -> missing acc x ≡ true
+  missingOf acc x q = notFalse (missing acc x) q
 
-inAddAll : (P : Formula) (acc : List Val) (x : Val) -> x ∈ StCand P
-        -> settled P acc x ≡ false -> x ∈ addAll P acc
-inAddAll P acc x m q =
-  memAppL (filter (missing P acc) (StCand P)) acc
-          (filter-true (missing P acc) (StCand P) m (missingOf P acc x q))
+  notInAcc : (acc : List Val) (x : Val) -> settled acc x ≡ false
+          -> x ∈ᵛ acc ≡ false
+  notInAcc acc x q =
+    notTrue (x ∈ᵛ acc)
+            (andTrueR (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) (missingOf acc x q))
 
-------------------------------------------------------------------------
--- The search
+  inAddAll : (acc : List Val) (x : Val) -> x ∈ StCand
+          -> settled acc x ≡ false -> x ∈ addAll acc
+  inAddAll acc x m q =
+    memAppL (filter (missing acc) StCand) acc
+            (filter-true (missing acc) StCand m (missingOf acc x q))
 
-closeGo   : (P : Formula) {E : Pred} (acc : List Val)
-         -> Avail E (StCand P) acc
-         -> IFin E -> List Val
-closeFind : (P : Formula) {E : Pred} (acc : List Val)
-         -> Avail E (StCand P) acc
-         -> IFin E -> FindResult (settled P acc) (StCand P) -> List Val
+  ------------------------------------------------------------------------
+  -- The search
 
-closeGo P acc av bar = closeFind P acc av bar (findFalse (settled P acc) (StCand P))
+  closeGo   : {E : Pred} (acc : List Val)
+           -> Avail E StCand acc
+           -> IFin E -> List Val
+  closeFind : {E : Pred} (acc : List Val)
+           -> Avail E StCand acc
+           -> IFin E -> FindResult (settled acc) StCand -> List Val
 
-closeFind P acc av bar      (allTrue f)      = acc
-closeFind P {E} acc av (cBar h) (found x m q) =
-  closeGo P (addAll P acc) av' (h x (av x m (notInAcc P acc x q)))
-  where
-    av' : (z : Val) -> z ∈ StCand P -> z ∈ᵛ addAll P acc ≡ false
-       -> E z ∧ᵇ (x ≢ᵛ z) ≡ true
-    av' z mz e =
-      andIntro (E z) (x ≢ᵛ z)
-               (av z mz (outAcc (z ∈ᵛ acc) refl))
-               (cong ¬ᵇ_ (outX (x ≡ᵛ z) refl))
-      where
-        outAcc : (b : Bool) -> z ∈ᵛ acc ≡ b -> z ∈ᵛ acc ≡ false
-        outAcc false eb = eb
-        outAcc true  eb =
-          emptyElim (∈ᵛ-false z (addAll P acc) e
-                      (memAppR (filter (missing P acc) (StCand P)) acc
-                               (∈ᵛ-sound z acc eb)))
+  closeGo acc av bar = closeFind acc av bar (findFalse (settled acc) StCand)
 
-        outX : (b : Bool) -> x ≡ᵛ z ≡ b -> x ≡ᵛ z ≡ false
-        outX false eb = eb
-        outX true  eb =
-          emptyElim (∈ᵛ-false z (addAll P acc) e
-                      (subst (λ y -> y ∈ addAll P acc) (≡ᵛ-sound x z eb)
-                             (inAddAll P acc x m q)))
+  closeFind acc av bar      (allTrue f)      = acc
+  closeFind {E} acc av (cBar h) (found x m q) =
+    closeGo (addAll acc) av' (h x (av x m (notInAcc acc x q)))
+    where
+      av' : (z : Val) -> z ∈ StCand -> z ∈ᵛ addAll acc ≡ false
+         -> E z ∧ᵇ (x ≢ᵛ z) ≡ true
+      av' z mz e =
+        andIntro (E z) (x ≢ᵛ z)
+                 (av z mz outAcc)
+                 (cong ¬ᵇ_ outX)
+        where
+          outAcc : z ∈ᵛ acc ≡ false
+          outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
+            ∈ᵛ-false z (addAll acc) e
+             (memAppR (filter (missing acc) StCand) acc
+                      (∈ᵛ-sound z acc eb))
 
-------------------------------------------------------------------------
--- Its three properties, each by the same recursion
+          outX : x ≡ᵛ z ≡ false
+          outX = refuteTrue (x ≡ᵛ z) λ eb ->
+            ∈ᵛ-false z (addAll acc) e
+             (subst (λ y -> y ∈ addAll acc) (≡ᵛ-sound x z eb)
+                    (inAddAll acc x m q))
 
-closeGoSt   : (P : Formula) {E : Pred} (acc : List Val)
-           -> (av : Avail E (StCand P) acc)
-           -> (bar : IFin E)
-           -> acc ⊆ StCand P
-           -> {z : Val} -> z ∈ closeGo P acc av bar -> z ∈ StCand P
-closeFindSt : (P : Formula) {E : Pred} (acc : List Val)
-           -> (av : Avail E (StCand P) acc)
-           -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P))
-           -> acc ⊆ StCand P
-           -> {z : Val} -> z ∈ closeFind P acc av bar fr -> z ∈ StCand P
+  ------------------------------------------------------------------------
+  -- Its three properties, each by the same recursion
 
-closeGoSt P acc av bar =
-  closeFindSt P acc av bar (findFalse (settled P acc) (StCand P))
+  closeGoSt   : {E : Pred} (acc : List Val)
+             -> (av : Avail E StCand acc)
+             -> (bar : IFin E)
+             -> acc ⊆ StCand
+             -> {z : Val} -> z ∈ closeGo acc av bar -> z ∈ StCand
+  closeFindSt : {E : Pred} (acc : List Val)
+             -> (av : Avail E StCand acc)
+             -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
+             -> acc ⊆ StCand
+             -> {z : Val} -> z ∈ closeFind acc av bar fr -> z ∈ StCand
 
-closeFindSt P acc av bar      (allTrue f)      sb {z} m = sb z m
-closeFindSt P acc av (cBar h) (found x mx q) sb       m =
-  closeGoSt P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q))) sb' m
-  where
-    sb' : (z : Val) -> z ∈ addAll P acc -> z ∈ StCand P
-    sb' z mz = sumElim (λ m1 -> filter-sub (missing P acc) (StCand P) m1)
-                       (λ m2 -> sb z m2)
-                       (memAppCase (filter (missing P acc) (StCand P)) acc mz)
+  closeGoSt acc av bar =
+    closeFindSt acc av bar (findFalse (settled acc) StCand)
 
-closeGoSeed   : (P : Formula) {E : Pred} (acc : List Val)
-             -> (av : Avail E (StCand P) acc)
-             -> (bar : IFin E) {z : Val}
-             -> z ∈ StCand P -> valOf P z P ≡ true
-             -> z ∈ closeGo P acc av bar
-closeFindSeed : (P : Formula) {E : Pred} (acc : List Val)
-             -> (av : Avail E (StCand P) acc)
-             -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P)) {z : Val}
-             -> z ∈ StCand P -> valOf P z P ≡ true
-             -> z ∈ closeFind P acc av bar fr
+  closeFindSt acc av bar      (allTrue f)      sb {z} m = sb z m
+  closeFindSt acc av (cBar h) (found x mx q) sb       m =
+    closeGoSt (addAll acc) _ (h x (av x mx (notInAcc acc x q))) sb' m
+    where
+      sb' : (z : Val) -> z ∈ addAll acc -> z ∈ StCand
+      sb' z mz = sumElim (λ m1 -> filter-sub (missing acc) StCand m1)
+                         (λ m2 -> sb z m2)
+                         (memAppCase (filter (missing acc) StCand) acc mz)
 
-closeGoSeed P acc av bar =
-  closeFindSeed P acc av bar (findFalse (settled P acc) (StCand P))
+  closeGoSeed   : {E : Pred} (acc : List Val)
+               -> (av : Avail E StCand acc)
+               -> (bar : IFin E) {z : Val}
+               -> z ∈ StCand -> valOf P z P ≡ true
+               -> z ∈ closeGo acc av bar
+  closeFindSeed : {E : Pred} (acc : List Val)
+               -> (av : Avail E StCand acc)
+               -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
+               -> {z : Val} -> z ∈ StCand -> valOf P z P ≡ true
+               -> z ∈ closeFind acc av bar fr
 
-closeFindSeed P acc av bar      (allTrue f)       {z} mz e =
-  ∈ᵛ-sound z acc
-    (notFalse (z ∈ᵛ acc)
-              (nandTrueL (wanted P acc z) (¬ᵇ (z ∈ᵛ acc)) (f mz)
-                         (orL (valOf P z P) (any (λ u -> step P u z) acc) e)))
-closeFindSeed P acc av (cBar h) (found x mx q)     mz e =
-  closeGoSeed P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q))) mz e
+  closeGoSeed acc av bar =
+    closeFindSeed acc av bar (findFalse (settled acc) StCand)
 
-closeGoClosed   : (P : Formula) {E : Pred} (acc : List Val)
-               -> (av : Avail E (StCand P) acc)
-               -> (bar : IFin E) {u w : Val}
-               -> u ∈ closeGo P acc av bar -> w ∈ StCand P
-               -> step P u w ≡ true -> w ∈ closeGo P acc av bar
-closeFindClosed : (P : Formula) {E : Pred} (acc : List Val)
-               -> (av : Avail E (StCand P) acc)
-               -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P)) {u w : Val}
-               -> u ∈ closeFind P acc av bar fr -> w ∈ StCand P
-               -> step P u w ≡ true -> w ∈ closeFind P acc av bar fr
+  closeFindSeed acc av bar      (allTrue f)       {z} mz e =
+    ∈ᵛ-sound z acc
+      (notFalse (z ∈ᵛ acc)
+                (nandTrueL (wanted acc z) (¬ᵇ (z ∈ᵛ acc)) (f mz)
+                           (orL (valOf P z P) (any (λ u -> step P u z) acc) e)))
+  closeFindSeed acc av (cBar h) (found x mx q)     mz e =
+    closeGoSeed (addAll acc) _ (h x (av x mx (notInAcc acc x q))) mz e
 
-closeGoClosed P acc av bar =
-  closeFindClosed P acc av bar (findFalse (settled P acc) (StCand P))
+  closeGoClosed   : {E : Pred} (acc : List Val)
+                 -> (av : Avail E StCand acc)
+                 -> (bar : IFin E) {u w : Val}
+                 -> u ∈ closeGo acc av bar -> w ∈ StCand
+                 -> step P u w ≡ true -> w ∈ closeGo acc av bar
+  closeFindClosed : {E : Pred} (acc : List Val)
+                 -> (av : Avail E StCand acc)
+                 -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
+                 -> {u w : Val} -> u ∈ closeFind acc av bar fr -> w ∈ StCand
+                 -> step P u w ≡ true -> w ∈ closeFind acc av bar fr
 
-closeFindClosed P acc av bar      (allTrue f)       {u} {w} mu mw st =
-  ∈ᵛ-sound w acc
-    (notFalse (w ∈ᵛ acc)
-              (nandTrueL (wanted P acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
-                         (orR (valOf P w P) (any (λ u' -> step P u' w) acc)
-                              (any-intro (λ u' -> step P u' w) acc mu st))))
-closeFindClosed P acc av (cBar h) (found x mx q)      mu mw st =
-  closeGoClosed P (addAll P acc) _ (h x (av x mx (notInAcc P acc x q))) mu mw st
+  closeGoClosed acc av bar =
+    closeFindClosed acc av bar (findFalse (settled acc) StCand)
 
-------------------------------------------------------------------------
--- The set the search explores, and its three properties
+  closeFindClosed acc av bar      (allTrue f)       {u} {w} mu mw st =
+    ∈ᵛ-sound w acc
+      (notFalse (w ∈ᵛ acc)
+                (nandTrueL (wanted acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
+                           (orR (valOf P w P) (any (λ u' -> step P u' w) acc)
+                                (any-intro (λ u' -> step P u' w) acc mu st))))
+  closeFindClosed acc av (cBar h) (found x mx q)      mu mw st =
+    closeGoClosed (addAll acc) _ (h x (av x mx (notInAcc acc x q))) mu mw st
 
-emptyAcc : (P : Formula) (z : Val) -> z ∈ [] {A = Val} -> z ∈ StCand P
-emptyAcc P z ()
+  ------------------------------------------------------------------------
+  -- The set the search explores, and its three properties
 
--- Ust P is the set U of m5.tex (U_st in m4.tex): the ->-closure of the states
--- that contain P.  It is the state set every later search runs on.
+  emptyAcc : (z : Val) -> z ∈ [] {A = Val} -> z ∈ StCand
+  emptyAcc z ()
 
-Ust : Formula -> List Val
-Ust P = closeGo P [] (λ z mz e -> stAllSat P z (stCandSt P mz)) (vecBar P)
+  -- Ust P is the set U of m5.tex (U_st in m4.tex): the ->-closure of the states
+  -- that contain P.  It is the state set every later search runs on.
 
-ustSt : (P : Formula) {v : Val} -> v ∈ Ust P -> v ∈ St P
-ustSt P m =
-  stCandSt P (closeGoSt P [] (λ z mz e -> stAllSat P z (stCandSt P mz)) (vecBar P)
-                        (emptyAcc P) m)
+  Ust : List Val
+  Ust = closeGo [] (λ z mz e -> stAllSat P z (stCandSt mz)) vecBar
 
-ustSeed : (P : Formula) {v : Val}
-       -> v ∈ St P -> valOf P v P ≡ true -> v ∈ Ust P
-ustSeed P m e =
-  closeGoSeed P [] (λ z mz e' -> stAllSat P z (stCandSt P mz)) (vecBar P) (stStCand P m) e
+  ustSt : {v : Val} -> v ∈ Ust -> v ∈ St P
+  ustSt m =
+    stCandSt (closeGoSt [] (λ z mz e -> stAllSat P z (stCandSt mz)) vecBar
+                        emptyAcc m)
 
-ustClosed : (P : Formula) {v w : Val}
-         -> v ∈ Ust P -> w ∈ St P -> step P v w ≡ true -> w ∈ Ust P
-ustClosed P mv mw st =
-  closeGoClosed P [] (λ z mz e -> stAllSat P z (stCandSt P mz)) (vecBar P)
-                mv (stStCand P mw) st
+  ustSeed : {v : Val}
+         -> v ∈ St P -> valOf P v P ≡ true -> v ∈ Ust
+  ustSeed m e =
+    closeGoSeed [] (λ z mz e' -> stAllSat P z (stCandSt mz)) vecBar
+                (stStCand m) e
 
-ustAllSat : (P : Formula) -> AllSat (hasLength (length (sub P))) (Ust P)
-ustAllSat P x m = stAllSat P x (ustSt P m)
+  ustClosed : {v w : Val}
+           -> v ∈ Ust -> w ∈ St P -> step P v w ≡ true -> w ∈ Ust
+  ustClosed mv mw st =
+    closeGoClosed [] (λ z mz e -> stAllSat P z (stCandSt mz)) vecBar
+                  mv (stStCand mw) st
 
-ustBar : (P : Formula) -> IFin (hasLength (length (sub P)))
-ustBar P = vecBar P
+  ustAllSat : AllSat (hasLength (length (sub P))) Ust
+  ustAllSat x m = stAllSat P x (ustSt m)
+
+  ustBar : IFin (hasLength (length (sub P)))
+  ustBar = vecBar

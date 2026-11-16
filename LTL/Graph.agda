@@ -246,23 +246,21 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
       av' : Avail (λ z -> E z ∧ᵇ (x ≢ᵛ z)) ws (reachRound ws G v acc)
       av' z mz e =
         andIntro (E z) (x ≢ᵛ z)
-                 (av z mz (outAcc (z ∈ᵛ acc) refl))
-                 (cong ¬ᵇ_ (outX (x ≡ᵛ z) refl))
+                 (av z mz outAcc)
+                 (cong ¬ᵇ_ outX)
         where
-          outAcc : (b : Bool) -> z ∈ᵛ acc ≡ b -> z ∈ᵛ acc ≡ false
-          outAcc false eb = eb
-          outAcc true  eb =
-            emptyElim (∈ᵛ-false z (reachRound ws G v acc) e
-                        (memAppR (filter (reachMissing G v acc) ws) acc
-                                 (∈ᵛ-sound z acc eb)))
+          outAcc : z ∈ᵛ acc ≡ false
+          outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
+            ∈ᵛ-false z (reachRound ws G v acc) e
+             (memAppR (filter (reachMissing G v acc) ws) acc
+                      (∈ᵛ-sound z acc eb))
 
-          outX : (b : Bool) -> x ≡ᵛ z ≡ b -> x ≡ᵛ z ≡ false
-          outX false eb = eb
-          outX true  eb =
-            emptyElim (∈ᵛ-false z (reachRound ws G v acc) e
-                        (subst (λ y -> y ∈ reachRound ws G v acc)
-                               (≡ᵛ-sound x z eb)
-                               (reachInRound acc x m q)))
+          outX : x ≡ᵛ z ≡ false
+          outX = refuteTrue (x ≡ᵛ z) λ eb ->
+            ∈ᵛ-false z (reachRound ws G v acc) e
+             (subst (λ y -> y ∈ reachRound ws G v acc)
+                    (≡ᵛ-sound x z eb)
+                    (reachInRound acc x m q))
 
   ------------------------------------------------------------------------
   -- Its four properties, each by the same recursion.
@@ -558,16 +556,16 @@ module _ (ws : List Node) (G : Edges) where
       av' z mz =
         andIntro (E z) (r ≢ᵛ z)
                  (av z (reachTrans ws G r w z mw mz))
-                 (cong ¬ᵇ_ (notR (r ≡ᵛ z) refl))
+                 (cong ¬ᵇ_ notR)
         where
-          notR : (b : Bool) -> r ≡ᵛ z ≡ b -> r ≡ᵛ z ≡ false
-          notR false eb = eb
-          notR true  eb = emptyElim (true≢false (trans (sym rIn) q))
+          notR : r ≡ᵛ z ≡ false
+          notR = refuteTrue (r ≡ᵛ z) λ eb ->
+            true≢false (trans (sym (rIn eb)) q)
             where
-              rIn : r ∈ᵛ reachSet ws G w ≡ true
-              rIn = ∈ᵛ-complete r (reachSet ws G w)
-                      (subst (λ y -> y ∈ reachSet ws G w)
-                             (sym (≡ᵛ-sound r z eb)) mz)
+              rIn : r ≡ᵛ z ≡ true -> r ∈ᵛ reachSet ws G w ≡ true
+              rIn eb = ∈ᵛ-complete r (reachSet ws G w)
+                         (subst (λ y -> y ∈ reachSet ws G w)
+                                (sym (≡ᵛ-sound r z eb)) mz)
 
   findTerm : (r : Node) -> r ∈ ws
           -> Terminal ws G
@@ -719,21 +717,18 @@ data Block (ws : List Node) (G : Edges) (fs : List Pred) : Set where
 blockOf : (ws : List Node) (G : Edges) (fs : List Pred)
        -> ({x : Node} -> x ∈ ws -> hasOut ws G x ≡ true)
        -> Terminal ws G -> Block ws G fs
-blockOf ws G fs h (terminalAt r mr et) =
-  onFair (meetsAll fs (sccOf ws G r)) refl
+blockOf ws G fs h (terminalAt r mr et) with meetsAll fs (sccOf ws G r) in eb
+... | true  = fromLoop (loopAt ws G r mr et (h mr))
   where
-    onFair : (b : Bool) -> meetsAll fs (sccOf ws G r) ≡ b -> Block ws G fs
-    onFair true  eb = fromLoop (loopAt ws G r mr et (h mr))
-      where
-        fromLoop : Loop ws G r -> Block ws G fs
-        fromLoop (loopBy cy t nn) =
-          bFair r mr (mkCirc ws G r cy t nn (sccOf ws G r)
-                             (sccTo ws G r) (sccFrom ws G r) fs eb)
-    onFair false eb = unf (all-false (λ g -> any g (sccOf ws G r)) fs eb)
-      where
-        unf : (Σ[ g ∈ Pred ] g ∈ fs × any g (sccOf ws G r) ≡ false)
-           -> Block ws G fs
-        unf (g , mg , eg) = bUnfair r mr et g mg eg
+    fromLoop : Loop ws G r -> Block ws G fs
+    fromLoop (loopBy cy t nn) =
+      bFair r mr (mkCirc ws G r cy t nn (sccOf ws G r)
+                         (sccTo ws G r) (sccFrom ws G r) fs eb)
+... | false = unf (all-false (λ g -> any g (sccOf ws G r)) fs eb)
+  where
+    unf : (Σ[ g ∈ Pred ] g ∈ fs × any g (sccOf ws G r) ≡ false)
+       -> Block ws G fs
+    unf (g , mg , eg) = bUnfair r mr et g mg eg
 
 pickBlock : (ws : List Node) (G : Edges) (fs : List Pred)
          -> ({x : Node} -> x ∈ ws -> hasOut ws G x ≡ true) -> Block ws G fs
@@ -887,40 +882,25 @@ module _ (G : Edges) (fs : List Pred) (R : Node -> Set)
   certAll (cSink ws x mx e c)  ih z = certAll c ih' z
     where
       ih' : HoldsOutside R (ws ∖ᵛ x)
-      ih' y eo = onWs (y ∈ᵛ ws) refl
-        where
-          onWs : (b : Bool) -> y ∈ᵛ ws ≡ b -> R y
-          onWs false eb = ih y eb
-          onWs true  eb = onX (x ≡ᵛ y) refl
-            where
-              my : y ∈ ws
-              my = ∈ᵛ-sound y ws eb
-
-              onX : (c' : Bool) -> x ≡ᵛ y ≡ c' -> R y
-              onX true  ec = subst R (≡ᵛ-sound x y ec) (sinkCase ws x mx e ih)
-              onX false ec =
-                emptyElim (∈ᵛ-false y (ws ∖ᵛ x) eo
-                            (filter-true (x ≢ᵛ_) ws my (cong ¬ᵇ_ ec)))
+      ih' y eo with y ∈ᵛ ws in eb
+      ... | false = ih y eb
+      ... | true with x ≡ᵛ y in ec
+      ...   | true  = subst R (≡ᵛ-sound x y ec) (sinkCase ws x mx e ih)
+      ...   | false =
+        emptyElim (∈ᵛ-false y (ws ∖ᵛ x) eo
+                    (filter-true (x ≢ᵛ_) ws (∈ᵛ-sound y ws eb) (cong ¬ᵇ_ ec)))
   certAll (cBlock ws C f mf sb cl mis c) ih z =
     certAll c ih' z
     where
       ih' : HoldsOutside R (ws ∖ C)
-      ih' y eo = onWs (y ∈ᵛ ws) refl
-        where
-          onWs : (b : Bool) -> y ∈ᵛ ws ≡ b -> R y
-          onWs false eb = ih y eb
-          onWs true  eb = onC (y ∈ᵛ C) refl
-            where
-              my : y ∈ ws
-              my = ∈ᵛ-sound y ws eb
-
-              onC : (c' : Bool) -> y ∈ᵛ C ≡ c' -> R y
-              onC true  ec =
-                blockCase ws C f mf sb cl mis ih y (∈ᵛ-sound y C ec)
-              onC false ec =
-                emptyElim (∈ᵛ-false y (ws ∖ C) eo
-                            (filter-true (λ u -> ¬ᵇ (u ∈ᵛ C)) ws my
-                                         (cong ¬ᵇ_ ec)))
+      ih' y eo with y ∈ᵛ ws in eb
+      ... | false = ih y eb
+      ... | true with y ∈ᵛ C in ec
+      ...   | true  = blockCase ws C f mf sb cl mis ih y (∈ᵛ-sound y C ec)
+      ...   | false =
+        emptyElim (∈ᵛ-false y (ws ∖ C) eo
+                    (filter-true (λ u -> ¬ᵇ (u ∈ᵛ C)) ws (∈ᵛ-sound y ws eb)
+                                 (cong ¬ᵇ_ ec)))
 
 ------------------------------------------------------------------------
 -- The two outputs are EXCLUSIVE.
@@ -1047,13 +1027,11 @@ certNoCirc G fs (cSink ws x mx e c) r (circuit cy t nn wit) =
           null-mem (outs ws G x) e (filter-true (G x) ws my gy)
 
     keep : (z : Node) -> z ∈ cy -> z ∈ ws ∖ᵛ x
-    keep z mz = filter-true (x ≢ᵛ_) ws (trailIn ws G t mz) (out (x ≡ᵛ z) refl)
+    keep z mz = filter-true (x ≢ᵛ_) ws (trailIn ws G t mz) (cong ¬ᵇ_ out)
       where
-        out : (b : Bool) -> x ≡ᵛ z ≡ b -> x ≢ᵛ z ≡ true
-        out false eb = cong ¬ᵇ_ eb
-        out true  eb =
-          emptyElim (offCycle (subst (λ y -> y ∈ cy)
-                                     (sym (≡ᵛ-sound x z eb)) mz))
+        out : x ≡ᵛ z ≡ false
+        out = refuteTrue (x ≡ᵛ z) λ eb ->
+          offCycle (subst (λ y -> y ∈ cy) (sym (≡ᵛ-sound x z eb)) mz)
 certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
   certNoCirc G fs c r (circuit cy (trailRestrict ws (ws ∖ C) G t keep) nn wit)
   where
@@ -1071,11 +1049,10 @@ certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
 
     keep : (z : Node) -> z ∈ cy -> z ∈ ws ∖ C
     keep z mz = filter-true (λ y -> ¬ᵇ (y ∈ᵛ C)) ws (trailIn ws G t mz)
-                            (out (z ∈ᵛ C) refl)
+                            (cong ¬ᵇ_ out)
       where
-        out : (b : Bool) -> z ∈ᵛ C ≡ b -> ¬ᵇ (z ∈ᵛ C) ≡ true
-        out false eb = cong ¬ᵇ_ eb
-        out true  eb = emptyElim (inBlock z mz (∈ᵛ-sound z C eb))
+        out : z ∈ᵛ C ≡ false
+        out = refuteTrue (z ∈ᵛ C) λ eb -> inBlock z mz (∈ᵛ-sound z C eb)
 
 ------------------------------------------------------------------------
 -- The dichotomy, at the top level.

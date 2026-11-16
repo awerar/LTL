@@ -43,120 +43,129 @@ open import LTL.Closure public
 -- holdsAt P A w says that the eventuality  □ A  is NOT fulfilled at w, in the
 -- terminology of m4.tex section 3: fulfilment is  A not in w .
 
-holdsAt : Formula -> Formula -> Val -> Bool
-holdsAt P A w = valOf P w A
+module _ (P : Formula) where
 
--- W_0 of the header: the states of us at which A holds.
+  holdsAt : Formula -> Val -> Bool
+  holdsAt A w = valOf P w A
 
-wZero : Formula -> List Val -> Formula -> List Val
-wZero P us A = filter (holdsAt P A) us
+  -- W_0 of the header: the states of us at which A holds.
 
--- Every successor of w that lies in us also lies in W.  shrink keeps exactly
--- the w of W for which this is true.
+  wZero : List Val -> Formula -> List Val
+  wZero us A = filter (holdsAt A) us
 
-succsInside : Formula -> List Val -> List Val -> Val -> Bool
-succsInside P us W w = all (λ w' -> step P w w' ⇒ᵇ (w' ∈ᵛ W)) us
+  -- Every successor of w that lies in us also lies in W.  shrink keeps exactly
+  -- the w of W for which this is true.
 
-shrink : Formula -> List Val -> List Val -> List Val
-shrink P us W = filter (succsInside P us W) W
+  succsInside : List Val -> List Val -> Val -> Bool
+  succsInside us W w = all (λ w' -> step P w w' ⇒ᵇ (w' ∈ᵛ W)) us
 
-------------------------------------------------------------------------
--- The iteration, run until it stops.
---
--- findFalse asks the one question the round needs: is there a state of W with
--- a successor in us that has already left W?  If there is not, W is closed and
--- is the answer.  If there is, that state leaves W -- and it leaves the Bar's
--- predicate with it, which is what dropAllSat says and what makes the recursive
--- call structurally smaller.
+  shrink : List Val -> List Val -> List Val
+  shrink us W = filter (succsInside us W) W
 
-shrinkGo   : (P : Formula) (us : List Val) {E : Pred} (W : List Val)
-          -> AllSat E W -> IFin E -> List Val
-shrinkFind : (P : Formula) (us : List Val) {E : Pred} (W : List Val)
-          -> AllSat E W -> IFin E -> FindResult (succsInside P us W) W -> List Val
+  ------------------------------------------------------------------------
+  -- The iteration, run until it stops.
+  --
+  -- findFalse asks the one question the round needs: is there a state of W with
+  -- a successor in us that has already left W?  If there is not, W is closed
+  -- and is the answer.  If there is, that state leaves W -- and it leaves the
+  -- Bar's predicate with it, which is what dropAllSat says and what makes the
+  -- recursive call structurally smaller.
 
-shrinkGo P us W sb bar = shrinkFind P us W sb bar (findFalse (succsInside P us W) W)
+  shrinkGo   : (us : List Val) {E : Pred} (W : List Val)
+            -> AllSat E W -> IFin E -> List Val
+  shrinkFind : (us : List Val) {E : Pred} (W : List Val)
+            -> AllSat E W -> IFin E -> FindResult (succsInside us W) W
+            -> List Val
 
-shrinkFind P us W sb bar      (allTrue f)   = W
-shrinkFind P us W sb (cBar h) (found x m q) =
-  shrinkGo P us (shrink P us W) (dropAllSat (succsInside P us W) W sb x q) (h x (sb x m))
+  shrinkGo us W sb bar = shrinkFind us W sb bar (findFalse (succsInside us W) W)
 
-gfpW : Formula -> List Val -> Formula -> List Val
-gfpW P us A = shrinkGo P us (wZero P us A) (memAllSat (wZero P us A))
-                       (listBar (wZero P us A))
+  shrinkFind us W sb bar      (allTrue f)   = W
+  shrinkFind us W sb (cBar h) (found x m q) =
+    shrinkGo us (shrink us W) (dropAllSat (succsInside us W) W sb x q)
+             (h x (sb x m))
 
-------------------------------------------------------------------------
--- Closure, which is what step (ii) of Theorem 4.1 needs
+  gfpW : List Val -> Formula -> List Val
+  gfpW us A = shrinkGo us (wZero us A) (memAllSat (wZero us A))
+                       (listBar (wZero us A))
 
-ClosedIn : Formula -> List Val -> List Val -> Set
-ClosedIn P us W =
-  (w w' : Val) -> w ∈ W -> w' ∈ us -> step P w w' ≡ true -> w' ∈ W
+  ------------------------------------------------------------------------
+  -- Closure, which is what step (ii) of Theorem 4.1 needs
 
--- The same for a family X : Val -> Set in place of the list W.
+  ClosedIn : List Val -> List Val -> Set
+  ClosedIn us W =
+    (w w' : Val) -> w ∈ W -> w' ∈ us -> step P w w' ≡ true -> w' ∈ W
 
-ClosedFam : Formula -> List Val -> (Val -> Set) -> Set
-ClosedFam P us X =
-  (w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w'
+  -- The same for a family X : Val -> Set in place of the list W.
 
-closedOfAll : (P : Formula) (us W : List Val)
-           -> ({x : Val} -> x ∈ W -> succsInside P us W x ≡ true)
-           -> ClosedIn P us W
-closedOfAll P us W f w w' mw mw' st =
-  ∈ᵛ-sound w' W
-    (⇒TrueB (step P w w') (w' ∈ᵛ W)
-              (all-at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
-              st)
+  ClosedFam : List Val -> (Val -> Set) -> Set
+  ClosedFam us X =
+    (w w' : Val) -> X w -> w' ∈ us -> step P w w' ≡ true -> X w'
 
-shrinkGoClosed   : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
-                -> ClosedIn P us (shrinkGo P us W sb bar)
-shrinkFindClosed : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
-                -> (fr : FindResult (succsInside P us W) W)
-                -> ClosedIn P us (shrinkFind P us W sb bar fr)
+  closedOfAll : (us W : List Val)
+             -> ({x : Val} -> x ∈ W -> succsInside us W x ≡ true)
+             -> ClosedIn us W
+  closedOfAll us W f w w' mw mw' st =
+    ∈ᵛ-sound w' W
+      (⇒TrueB (step P w w') (w' ∈ᵛ W)
+                (all-at (λ z -> step P w z ⇒ᵇ (z ∈ᵛ W)) us mw' (f mw))
+                st)
 
-shrinkGoClosed P us W sb bar =
-  shrinkFindClosed P us W sb bar (findFalse (succsInside P us W) W)
+  shrinkGoClosed   : (us : List Val) {E : Pred} (W : List Val)
+                     (sb : AllSat E W) (bar : IFin E)
+                  -> ClosedIn us (shrinkGo us W sb bar)
+  shrinkFindClosed : (us : List Val) {E : Pred} (W : List Val)
+                     (sb : AllSat E W) (bar : IFin E)
+                  -> (fr : FindResult (succsInside us W) W)
+                  -> ClosedIn us (shrinkFind us W sb bar fr)
 
-shrinkFindClosed P us W sb bar      (allTrue f)   = closedOfAll P us W f
-shrinkFindClosed P us W sb (cBar h) (found x m q) =
-  shrinkGoClosed P us (shrink P us W) (dropAllSat (succsInside P us W) W sb x q)
-                 (h x (sb x m))
+  shrinkGoClosed us W sb bar =
+    shrinkFindClosed us W sb bar (findFalse (succsInside us W) W)
 
-gfpClosed : (P : Formula) (us : List Val) (A : Formula)
-         -> ClosedIn P us (gfpW P us A)
-gfpClosed P us A =
-  shrinkGoClosed P us (wZero P us A) (memAllSat (wZero P us A))
-                 (listBar (wZero P us A))
+  shrinkFindClosed us W sb bar      (allTrue f)   = closedOfAll us W f
+  shrinkFindClosed us W sb (cBar h) (found x m q) =
+    shrinkGoClosed us (shrink us W) (dropAllSat (succsInside us W) W sb x q)
+                   (h x (sb x m))
 
-------------------------------------------------------------------------
--- The other two properties: W sits inside U_k, and A holds throughout it
+  gfpClosed : (us : List Val) (A : Formula)
+           -> ClosedIn us (gfpW us A)
+  gfpClosed us A =
+    shrinkGoClosed us (wZero us A) (memAllSat (wZero us A))
+                   (listBar (wZero us A))
 
-shrinkGoSub   : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E) {z : Val}
-             -> z ∈ shrinkGo P us W sb bar -> z ∈ W
-shrinkFindSub : (P : Formula) (us : List Val) {E : Pred} (W : List Val) (sb : AllSat E W) (bar : IFin E)
-             -> (fr : FindResult (succsInside P us W) W) {z : Val}
-             -> z ∈ shrinkFind P us W sb bar fr -> z ∈ W
+  ------------------------------------------------------------------------
+  -- The other two properties: W sits inside U_k, and A holds throughout it
 
-shrinkGoSub P us W sb bar =
-  shrinkFindSub P us W sb bar (findFalse (succsInside P us W) W)
+  shrinkGoSub   : (us : List Val) {E : Pred} (W : List Val)
+                  (sb : AllSat E W) (bar : IFin E)
+               -> {z : Val} -> z ∈ shrinkGo us W sb bar -> z ∈ W
+  shrinkFindSub : (us : List Val) {E : Pred} (W : List Val)
+                  (sb : AllSat E W) (bar : IFin E)
+               -> (fr : FindResult (succsInside us W) W) {z : Val}
+               -> z ∈ shrinkFind us W sb bar fr -> z ∈ W
 
-shrinkFindSub P us W sb bar      (allTrue f)   mz = mz
-shrinkFindSub P us W sb (cBar h) (found x m q) mz =
-  filter-sub (succsInside P us W) W
-             (shrinkGoSub P us (shrink P us W)
-                          (dropAllSat (succsInside P us W) W sb x q) (h x (sb x m)) mz)
+  shrinkGoSub us W sb bar =
+    shrinkFindSub us W sb bar (findFalse (succsInside us W) W)
 
-gfpWZero : (P : Formula) (us : List Val) (A : Formula) {w : Val}
-        -> w ∈ gfpW P us A -> w ∈ wZero P us A
-gfpWZero P us A =
-  shrinkGoSub P us (wZero P us A) (memAllSat (wZero P us A))
-              (listBar (wZero P us A))
+  shrinkFindSub us W sb bar      (allTrue f)   mz = mz
+  shrinkFindSub us W sb (cBar h) (found x m q) mz =
+    filter-sub (succsInside us W) W
+               (shrinkGoSub us (shrink us W)
+                            (dropAllSat (succsInside us W) W sb x q)
+                            (h x (sb x m)) mz)
 
-gfpIn : (P : Formula) (us : List Val) (A : Formula) {w : Val}
-     -> w ∈ gfpW P us A -> w ∈ us
-gfpIn P us A m = filter-sub (holdsAt P A) us (gfpWZero P us A m)
+  gfpWZero : (us : List Val) (A : Formula) {w : Val}
+          -> w ∈ gfpW us A -> w ∈ wZero us A
+  gfpWZero us A =
+    shrinkGoSub us (wZero us A) (memAllSat (wZero us A))
+                (listBar (wZero us A))
 
-gfpHolds : (P : Formula) (us : List Val) (A : Formula) {w : Val}
-        -> w ∈ gfpW P us A -> valOf P w A ≡ true
-gfpHolds P us A m = filter-prop (holdsAt P A) us (gfpWZero P us A m)
+  gfpIn : (us : List Val) (A : Formula) {w : Val}
+       -> w ∈ gfpW us A -> w ∈ us
+  gfpIn us A m = filter-sub (holdsAt A) us (gfpWZero us A m)
+
+  gfpHolds : (us : List Val) (A : Formula) {w : Val}
+          -> w ∈ gfpW us A -> valOf P w A ≡ true
+  gfpHolds us A m = filter-prop (holdsAt A) us (gfpWZero us A m)
 
 ------------------------------------------------------------------------
 -- Greatest: any closed family of states at which A holds is inside gfpW.
@@ -213,39 +222,41 @@ data Path (P : Formula) (us : List Val) : Val -> Val -> Set where
   pcons : {v w x : Val} -> w ∈ us -> step P v w ≡ true
        -> Path P us w x -> Path P us v x
 
-pathEnd : (P : Formula) (us : List Val) {v w : Val}
-       -> v ∈ us -> Path P us v w -> w ∈ us
-pathEnd P us mv pnil            = mv
-pathEnd P us mv (pcons mw st p) = pathEnd P us mw p
+module _ (P : Formula) where
 
-pathSnoc : (P : Formula) (us : List Val) {v w w' : Val}
-        -> Path P us v w -> w' ∈ us -> step P w w' ≡ true -> Path P us v w'
-pathSnoc P us pnil            mw' st' = pcons mw' st' pnil
-pathSnoc P us (pcons mw st p) mw' st' = pcons mw st (pathSnoc P us p mw' st')
+  pathEnd : (us : List Val) {v w : Val}
+         -> v ∈ us -> Path P us v w -> w ∈ us
+  pathEnd us mv pnil            = mv
+  pathEnd us mv (pcons mw st p) = pathEnd us mw p
 
-------------------------------------------------------------------------
--- (R2), the note's way and this one, are the same condition.
+  pathSnoc : (us : List Val) {v w w' : Val}
+          -> Path P us v w -> w' ∈ us -> step P w w' ≡ true -> Path P us v w'
+  pathSnoc us pnil            mw' st' = pcons mw' st' pnil
+  pathSnoc us (pcons mw st p) mw' st' = pcons mw st (pathSnoc us p mw' st')
 
-gfpPath : (P : Formula) (us : List Val) (A : Formula) {v w : Val}
-       -> v ∈ gfpW P us A -> Path P us v w -> w ∈ gfpW P us A
-gfpPath P us A m pnil            = m
-gfpPath P us A m (pcons mw st p) =
-  gfpPath P us A (gfpClosed P us A _ _ m mw st) p
+  ------------------------------------------------------------------------
+  -- (R2), the note's way and this one, are the same condition.
 
--- v in gfpW  implies  the eventuality is fulfilled at no state reachable from v
-gfpSound : (P : Formula) (us : List Val) (A : Formula) (v : Val)
-        -> v ∈ gfpW P us A
-        -> (w : Val) -> Path P us v w -> valOf P w A ≡ true
-gfpSound P us A v m w p = gfpHolds P us A (gfpPath P us A m p)
+  gfpPath : (us : List Val) (A : Formula) {v w : Val}
+         -> v ∈ gfpW P us A -> Path P us v w -> w ∈ gfpW P us A
+  gfpPath us A m pnil            = m
+  gfpPath us A m (pcons mw st p) =
+    gfpPath us A (gfpClosed P us A _ _ m mw st) p
 
--- and conversely
-gfpComplete : (P : Formula) (us : List Val) (A : Formula) (v : Val)
-           -> v ∈ us
-           -> ((w : Val) -> Path P us v w -> valOf P w A ≡ true)
-           -> v ∈ gfpW P us A
-gfpComplete P us A v mv h =
-  gfpGreatest P us A (λ w -> Path P us v w)
-              (λ w p -> pathEnd P us mv p)
-              h
-              (λ w w' p mw' st -> pathSnoc P us p mw' st)
-              v pnil
+  -- v in gfpW  implies  no state reachable from v fulfils the eventuality
+  gfpSound : (us : List Val) (A : Formula) (v : Val)
+          -> v ∈ gfpW P us A
+          -> (w : Val) -> Path P us v w -> valOf P w A ≡ true
+  gfpSound us A v m w p = gfpHolds P us A (gfpPath us A m p)
+
+  -- and conversely
+  gfpComplete : (us : List Val) (A : Formula) (v : Val)
+             -> v ∈ us
+             -> ((w : Val) -> Path P us v w -> valOf P w A ≡ true)
+             -> v ∈ gfpW P us A
+  gfpComplete us A v mv h =
+    gfpGreatest P us A (λ w -> Path P us v w)
+                (λ w p -> pathEnd us mv p)
+                h
+                (λ w w' p mw' st -> pathSnoc us p mw' st)
+                v pnil

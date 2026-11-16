@@ -57,206 +57,202 @@ allIntoMap : {C : Formula} (f : Val -> Formula) (ws : List Val)
 allIntoMap f []       h = intoNil
 allIntoMap f (w ∷ ws) h = intoCons (h w here) (allIntoMap f ws (λ z m -> h z (there m)))
 
-betaElim : (P : Formula) {C : Formula} (ws : List Val)
-        -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
-        -> ⊢ (beta P ws) ⇒ C
-betaElim P ws h = ⋁Elim (map (chi P) ws) (allIntoMap (chi P) ws h)
+module _ (P : Formula) where
 
-betaIntro : (P : Formula) (ws : List Val) {w : Val}
-         -> w ∈ ws -> ⊢ (chi P w) ⇒ (beta P ws)
-betaIntro P ws m = ⋁Intro (map (chi P) ws) (memMap (chi P) m)
+  betaElim : {C : Formula} (ws : List Val)
+          -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
+          -> ⊢ (beta P ws) ⇒ C
+  betaElim ws h = ⋁Elim (map (chi P) ws) (allIntoMap (chi P) ws h)
 
-¬Beta : (P : Formula) (ws : List Val)
-     -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
-     -> ⊢ ¬ (beta P ws)
-¬Beta P ws h =
-  refute {beta P ws} {⊤}
-         (liftP deriv⊤)
-         (betaElim P ws (λ w m -> mp ¬Elim (h w m)))
+  betaIntro : (ws : List Val) {w : Val}
+           -> w ∈ ws -> ⊢ (chi P w) ⇒ (beta P ws)
+  betaIntro ws m = ⋁Intro (map (chi P) ws) (memMap (chi P) m)
 
-------------------------------------------------------------------------
--- The induction hypothesis of the theorem
+  ¬Beta : (ws : List Val)
+       -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
+       -> ⊢ ¬ (beta P ws)
+  ¬Beta ws h =
+    refute {beta P ws} {⊤}
+           (liftP deriv⊤)
+           (betaElim ws (λ w m -> mp ¬Elim (h w m)))
 
--- The induction hypothesis ranges over Ust P, the set the search explores, not
--- over St P: a state outside Ust P is never removed and never has to be
--- refuted -- the provable branch disposes of it by (S1) instead.  What makes
--- the change possible is ustClosed, used in both cases below: the step lemma
--- offers ALL state-successors of u, and forward-closure puts each of them back
--- inside Ust P, where the hypothesis applies.
+  ------------------------------------------------------------------------
+  -- The induction hypothesis of the theorem
 
-Refuted : Formula -> List Val -> Set
-Refuted P us =
-  (u : Val) -> u ∈ Ust P -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi P u)
+  -- The induction hypothesis ranges over Ust P, the set the search explores,
+  -- not over St P: a state outside Ust P is never removed and never has to be
+  -- refuted -- the provable branch disposes of it by (S1) instead.  What makes
+  -- the change possible is ustClosed, used in both cases below: the step lemma
+  -- offers ALL state-successors of u, and forward-closure puts each of them
+  -- back inside Ust P, where the hypothesis applies.
 
-------------------------------------------------------------------------
--- Case (R1).
---
--- stepLemma gives the successors of u inside St P, while (R1) speaks of U_k;
--- but a successor lying in U_k would be a member of succs P us u, which (R1)
--- says is empty.  So every disjunct of beta_S is refuted by the hypothesis,
--- (D1) puts the refutation under ○, and (Lin) brings the negation out.
+  Refuted : List Val -> Set
+  Refuted us =
+    (u : Val) -> u ∈ Ust P -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi P u)
 
-extractR1 : (P : Formula) (us : List Val) (u : Val)
-         -> u ∈ Ust P -> Refuted P us -> r1 P us u ≡ true
-         -> ⊢ ¬ (chi P u)
-extractR1 P us u mu ih e1 =
-  refute (stepLemma P u (stLen P (ustSt P mu)))
-         (liftP (mp linFwd (○Gen (¬Beta P (succs P (St P) u) each))))
-  where
-    outside : (w : Val) -> w ∈ succs P (St P) u -> w ∈ᵛ us ≡ false
-    outside w m = go (w ∈ᵛ us) refl
-      where
-        go : (b : Bool) -> w ∈ᵛ us ≡ b -> w ∈ᵛ us ≡ false
-        go false eb = eb
-        go true  eb =
-          emptyElim (null-mem (succs P us u) e1
-                      (succsIn P us u (∈ᵛ-sound w us eb)
-                               (snd (succsMem P (St P) u m))))
+  ------------------------------------------------------------------------
+  -- Case (R1).
+  --
+  -- stepLemma gives the successors of u inside St P, while (R1) speaks of U_k;
+  -- but a successor lying in U_k would be a member of succs P us u, which (R1)
+  -- says is empty.  So every disjunct of beta_S is refuted by the hypothesis,
+  -- (D1) puts the refutation under ○, and (Lin) brings the negation out.
 
-    each : (w : Val) -> w ∈ succs P (St P) u -> ⊢ ¬ (chi P w)
-    each w m = ih w (ustClosed P mu (fst (succsMem P (St P) u m))
-                               (snd (succsMem P (St P) u m)))
-                 (outside w m)
+  extractR1 : (us : List Val) (u : Val)
+           -> u ∈ Ust P -> Refuted us -> r1 P us u ≡ true
+           -> ⊢ ¬ (chi P u)
+  extractR1 us u mu ih e1 =
+    refute (stepLemma P u (stLen P (ustSt P mu)))
+           (liftP (mp linFwd (○Gen (¬Beta (succs P (St P) u) each))))
+    where
+      outside : (w : Val) -> w ∈ succs P (St P) u -> w ∈ᵛ us ≡ false
+      outside w m = refuteTrue (w ∈ᵛ us) λ eb ->
+        null-mem (succs P us u) e1
+         (succsIn P us u (∈ᵛ-sound w us eb)
+                  (snd (succsMem P (St P) u m)))
 
-------------------------------------------------------------------------
--- Case (R2).
---
--- B := beta_W is the loop invariant, W the closed set of LTL.Gfp.  The three
--- steps of the note, in order: (i) B ⇒ A by (L2) and (L5), since A holds
--- throughout W; (ii) B ⇒ ○ B by the step lemma, dropping the successors
--- that left U_k by the induction hypothesis and keeping the rest by closure of
--- W; (iii) B ⇒ □ A by (Ind) through indRule and (D3) through □Mono.
--- Then u lies in W, so chi_u ⇒ □ A, while the eventuality is pending at u,
--- so chi_u ⇒ ¬ □ A.
+      each : (w : Val) -> w ∈ succs P (St P) u -> ⊢ ¬ (chi P w)
+      each w m = ih w (ustClosed P mu (fst (succsMem P (St P) u m))
+                                 (snd (succsMem P (St P) u m)))
+                   (outside w m)
 
-extractR2 : (P : Formula) (us : List Val) (u : Val)
-         -> u ∈ Ust P -> us ⊆ Ust P -> Refuted P us
-         -> (A : Formula) -> □ A ∈ sub P
-         -> valOf P u (□ A) ≡ false -> u ∈ gfpW P us A
-         -> ⊢ ¬ (chi P u)
-extractR2 P us u mu sb ih A mbox pend mgfp = refute chi□ chi¬□
-  where
-    W : List Val
-    W = gfpW P us A
+  ------------------------------------------------------------------------
+  -- Case (R2).
+  --
+  -- B := beta_W is the loop invariant, W the closed set of LTL.Gfp.  The three
+  -- steps of the note, in order: (i) B ⇒ A by (L2) and (L5), since A holds
+  -- throughout W; (ii) B ⇒ ○ B by the step lemma, dropping the successors
+  -- that left U_k by the induction hypothesis and keeping the rest by closure
+  -- of W; (iii) B ⇒ □ A by (Ind) through indRule and (D3) through □Mono.
+  -- Then u lies in W, so chi_u ⇒ □ A, while the eventuality is pending at u,
+  -- so chi_u ⇒ ¬ □ A.
 
-    lenW : (w : Val) -> w ∈ W -> length w ≡ length (sub P)
-    lenW w m = stLen P (ustSt P (sb w (gfpIn P us A m)))
+  extractR2 : (us : List Val) (u : Val)
+           -> u ∈ Ust P -> us ⊆ Ust P -> Refuted us
+           -> (A : Formula) -> □ A ∈ sub P
+           -> valOf P u (□ A) ≡ false -> u ∈ gfpW P us A
+           -> ⊢ ¬ (chi P u)
+  extractR2 us u mu sb ih A mbox pend mgfp = refute chi□ chi¬□
+    where
+      W : List Val
+      W = gfpW P us A
 
-    -- (i)
-    bA : ⊢ (beta P W) ⇒ A
-    bA = betaElim P W eachA
-      where
-        eachA : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ A
-        eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b))
-                          (gfpHolds P us A m)
-                          (chiProjVal P w (lenW w m) (sub-□ P mbox))
+      lenW : (w : Val) -> w ∈ W -> length w ≡ length (sub P)
+      lenW w m = stLen P (ustSt P (sb w (gfpIn P us A m)))
 
-    -- (ii)
-    toW : (w : Val) -> w ∈ W
-       -> ⊢ (beta P (succs P (St P) w)) ⇒ (beta P W)
-    toW w m = betaElim P (succs P (St P) w) eachS
-      where
-        eachS : (w' : Val) -> w' ∈ succs P (St P) w
-             -> ⊢ (chi P w') ⇒ (beta P W)
-        eachS w' m' = go (w' ∈ᵛ us) refl
-          where
-            pr : w' ∈ St P × step P w w' ≡ true
-            pr = succsMem P (St P) w m'
+      -- (i)
+      bA : ⊢ (beta P W) ⇒ A
+      bA = betaElim W eachA
+        where
+          eachA : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ A
+          eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b))
+                            (gfpHolds P us A m)
+                            (chiProjVal P w (lenW w m) (sub-□ P mbox))
 
-            go : (b : Bool) -> w' ∈ᵛ us ≡ b
-              -> ⊢ (chi P w') ⇒ (beta P W)
-            go false eb =
-              mp ¬Elim (ih w' (ustClosed P (sb w (gfpIn P us A m))
-                                           (fst pr) (snd pr)) eb)
-            go true  eb = betaIntro P W (gfpClosed P us A w w' m
+      -- (ii)
+      toW : (w : Val) -> w ∈ W
+         -> ⊢ (beta P (succs P (St P) w)) ⇒ (beta P W)
+      toW w m = betaElim (succs P (St P) w) eachS
+        where
+          eachS : (w' : Val) -> w' ∈ succs P (St P) w
+               -> ⊢ (chi P w') ⇒ (beta P W)
+          eachS w' m' = byMem
+            where
+              pr : w' ∈ St P × step P w w' ≡ true
+              pr = succsMem P (St P) w m'
+
+              byMem : ⊢ (chi P w') ⇒ (beta P W)
+              byMem with w' ∈ᵛ us in eb
+              ... | false =
+                mp ¬Elim (ih w' (ustClosed P (sb w (gfpIn P us A m))
+                                             (fst pr) (snd pr)) eb)
+              ... | true  = betaIntro W (gfpClosed P us A w w' m
                                                    (∈ᵛ-sound w' us eb)
-                                                   (snd pr))
+                                                     (snd pr))
 
-    bNext : ⊢ (beta P W) ⇒ ○ (beta P W)
-    bNext = betaElim P W eachN
-      where
-        eachN : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ ○ (beta P W)
-        eachN w m = ⇒Trans (stepLemma P w (lenW w m)) (○Mono (toW w m))
+      bNext : ⊢ (beta P W) ⇒ ○ (beta P W)
+      bNext = betaElim W eachN
+        where
+          eachN : (w : Val) -> w ∈ W -> ⊢ (chi P w) ⇒ ○ (beta P W)
+          eachN w m = ⇒Trans (stepLemma P w (lenW w m)) (○Mono (toW w m))
 
-    -- (iii)
-    chi□ : ⊢ (chi P u) ⇒ □ A
-    chi□ = ⇒Trans (betaIntro P W mgfp)
-                      (⇒Trans (indRule bNext) (□Mono bA))
+      -- (iii)
+      chi□ : ⊢ (chi P u) ⇒ □ A
+      chi□ = ⇒Trans (betaIntro W mgfp)
+                        (⇒Trans (indRule bNext) (□Mono bA))
 
-    chi¬□ : ⊢ (chi P u) ⇒ ¬ □ A
-    chi¬□ = subst (λ b -> ⊢ (chi P u) ⇒ (lit (□ A) b)) pend
-                        (chiProjVal P u (stLen P (ustSt P mu)) mbox)
+      chi¬□ : ⊢ (chi P u) ⇒ ¬ □ A
+      chi¬□ = subst (λ b -> ⊢ (chi P u) ⇒ (lit (□ A) b)) pend
+                          (chiProjVal P u (stLen P (ustSt P mu)) mbox)
 
-------------------------------------------------------------------------
--- One round of the elimination preserves the hypothesis
+  ------------------------------------------------------------------------
+  -- One round of the elimination preserves the hypothesis
 
-roundRefuted : (P : Formula) (us : List Val)
-            -> us ⊆ Ust P -> Refuted P us -> Refuted P (elimRound P us)
-roundRefuted P us sb ih u mu e = onMem (u ∈ᵛ us) refl
-  where
-    gs : List Ev
-    gs = evList P us
+  roundRefuted : (us : List Val)
+              -> us ⊆ Ust P -> Refuted us -> Refuted (elimRound P us)
+  roundRefuted us sb ih u mu e with u ∈ᵛ us in eb
+  ... | false = ih u mu eb
+  ... | true  = byReason (dropped P us u kf)
+    where
+      gs : List Ev
+      gs = evList P us
 
-    onMem : (b : Bool) -> u ∈ᵛ us ≡ b -> ⊢ ¬ (chi P u)
-    onMem false eb = ih u mu eb
-    onMem true  eb = byReason (dropped P us u (kf (keep P us gs u) refl))
-      where
-        mus : u ∈ us
-        mus = ∈ᵛ-sound u us eb
+      mus : u ∈ us
+      mus = ∈ᵛ-sound u us eb
 
-        -- keep is false at u, by cases on its value
-        kf : (b : Bool) -> keep P us gs u ≡ b -> keep P us gs u ≡ false
-        kf false ek = ek
-        kf true  ek = emptyElim (∈ᵛ-false u (elimRound P us) e
-                                          (filter-true (keep P us gs) us mus ek))
+      -- u was in us but is not in the next round, so keep is false at u
+      kf : keep P us gs u ≡ false
+      kf = refuteTrue (keep P us gs u) λ ek ->
+        ∈ᵛ-false u (elimRound P us) e
+                 (filter-true (keep P us gs) us mus ek)
 
-        byReason : Reason P us u -> ⊢ ¬ (chi P u)
-        byReason (byR1 e1)                = extractR1 P us u mu ih e1
-        byReason (byR2 A mbox pend mgfp)  =
-          extractR2 P us u mu sb ih A mbox pend mgfp
+      byReason : Reason P us u -> ⊢ ¬ (chi P u)
+      byReason (byR1 e1)               = extractR1 us u mu ih e1
+      byReason (byR2 A mbox pend mgfp) =
+        extractR2 us u mu sb ih A mbox pend mgfp
 
-------------------------------------------------------------------------
--- Theorem 4.1
+  ------------------------------------------------------------------------
+  -- Theorem 4.1
 
-elimRoundSub : (P : Formula) (us : List Val)
-            -> us ⊆ Ust P -> elimRound P us ⊆ Ust P
-elimRoundSub P us sb x m = sb x (filter-sub (keep P us (evList P us)) us m)
+  elimRoundSub : (us : List Val)
+              -> us ⊆ Ust P -> elimRound P us ⊆ Ust P
+  elimRoundSub us sb x m = sb x (filter-sub (keep P us (evList P us)) us m)
 
-ustRefuted : (P : Formula) -> Refuted P (Ust P)
-ustRefuted P u mu e = emptyElim (∈ᵛ-false u (Ust P) e mu)
+  ustRefuted : Refuted (Ust P)
+  ustRefuted u mu e = emptyElim (∈ᵛ-false u (Ust P) e mu)
 
--- The induction that used to run along the fuel of elimIter now runs along the
--- Bar that elimGo runs on, and it is the same induction: the hypothesis is
--- carried across one round by roundRefuted in the branch where a round removes
--- something, and returned unchanged in the branch where none does.
+  -- The induction that used to run along the fuel of elimIter now runs along
+  -- the Bar that elimGo runs on, and it is the same induction: the hypothesis
+  -- is carried across one round by roundRefuted in the branch where a round
+  -- removes something, and returned unchanged in the branch where none does.
 
-goRefuted   : (P : Formula) {E : Pred} (us : List Val)
-           -> (sb : AllSat E us) (bar : IFin E)
-           -> us ⊆ Ust P -> Refuted P us -> Refuted P (elimGo P us sb bar)
-findRefuted : (P : Formula) {E : Pred} (us : List Val)
-           -> (sb : AllSat E us) (bar : IFin E)
-           -> (fr : FindResult (keep P us (evList P us)) us)
-           -> us ⊆ Ust P -> Refuted P us -> Refuted P (elimFind P us sb bar fr)
+  goRefuted   : {E : Pred} (us : List Val)
+             -> (sb : AllSat E us) (bar : IFin E)
+             -> us ⊆ Ust P -> Refuted us -> Refuted (elimGo P us sb bar)
+  findRefuted : {E : Pred} (us : List Val)
+             -> (sb : AllSat E us) (bar : IFin E)
+             -> (fr : FindResult (keep P us (evList P us)) us)
+             -> us ⊆ Ust P -> Refuted us -> Refuted (elimFind P us sb bar fr)
 
-goRefuted P us sb bar =
-  findRefuted P us sb bar (findFalse (keep P us (evList P us)) us)
+  goRefuted us sb bar =
+    findRefuted us sb bar (findFalse (keep P us (evList P us)) us)
 
-findRefuted P us sb bar      (allTrue f)    ss r = r
-findRefuted P us sb (cBar h) (found x mx q) ss r =
-  goRefuted P (elimRound P us)
-            (dropAllSat (keep P us (evList P us)) us sb x q) (h x (sb x mx))
-            (elimRoundSub P us ss) (roundRefuted P us ss r)
+  findRefuted us sb bar      (allTrue f)    ss r = r
+  findRefuted us sb (cBar h) (found x mx q) ss r =
+    goRefuted (elimRound P us)
+              (dropAllSat (keep P us (evList P us)) us sb x q) (h x (sb x mx))
+              (elimRoundSub us ss) (roundRefuted us ss r)
 
-uinfRefuted : (P : Formula) -> Refuted P (Uinf P)
-uinfRefuted P =
-  goRefuted P (Ust P) (ustAllSat P) (ustBar P) (λ x m -> m) (ustRefuted P)
+  uinfRefuted : Refuted (Uinf P)
+  uinfRefuted =
+    goRefuted (Ust P) (ustAllSat P) (ustBar P) (λ x m -> m) ustRefuted
 
-extract : (P : Formula) {v : Val} -> v ∈ removed P -> ⊢ ¬ (chi P v)
-extract P {v} m =
-  uinfRefuted P v
-              (filter-sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m)
-              (notTrue (v ∈ᵛ Uinf P)
-                       (filter-prop (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m))
+  extract : {v : Val} -> v ∈ removed P -> ⊢ ¬ (chi P v)
+  extract {v} m =
+    uinfRefuted v
+                (filter-sub (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m)
+                (notTrue (v ∈ᵛ Uinf P)
+                         (filter-prop (λ z -> ¬ᵇ (z ∈ᵛ Uinf P)) (Ust P) m))
 
 ------------------------------------------------------------------------
 -- The provable branch of Theorem 6.1.
@@ -278,7 +274,7 @@ extract P {v} m =
 provableEach : (Q : Formula) -> satB (¬ Q) ≡ false
             -> (w : Val) -> w ∈ St (¬ Q)
             -> ⊢ (chi (¬ Q) w) ⇒ Q
-provableEach Q e w m = outer (w ∈ᵛ Ust R) refl
+provableEach Q e w m = byPosition
   where
     R : Formula
     R = ¬ Q
@@ -290,29 +286,22 @@ provableEach Q e w m = outer (w ∈ᵛ Ust R) refl
                         (chiProjVal R w (stLen R m) (sub-self R)))
                dne
 
+    byPosition : ⊢ (chi R w) ⇒ Q
+    byPosition with w ∈ᵛ Ust R in ec
     -- w never joined the search, so by ustSeed it does not contain R
-    outer : (c : Bool) -> w ∈ᵛ Ust R ≡ c -> ⊢ (chi R w) ⇒ Q
-    outer false ec = fromR (notIn (valOf R w R) refl)
-      where
-        notIn : (d : Bool) -> valOf R w R ≡ d -> valOf R w R ≡ false
-        notIn false ed = ed
-        notIn true  ed =
-          emptyElim (∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
-    outer true  ec = go (w ∈ᵛ Uinf R) refl
-      where
-        mu : w ∈ Ust R
-        mu = ∈ᵛ-sound w (Ust R) ec
-
-        -- w survived, so satB says it does not contain R either
-        go : (b : Bool) -> w ∈ᵛ Uinf R ≡ b -> ⊢ (chi R w) ⇒ Q
-        go true  eb =
-          fromR (any-false (λ z -> valOf R z R) (Uinf R) e
-                           (∈ᵛ-sound w (Uinf R) eb))
-        -- w was removed, so chi_w is refutable
-        go false eb =
-          mp ¬Elim
-             (extract R (filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R))
-                                     (Ust R) mu (cong ¬ᵇ_ eb)))
+    ... | false =
+      fromR (refuteTrue (valOf R w R) λ ed ->
+               ∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
+    ... | true with w ∈ᵛ Uinf R in eb
+    -- w survived, so satB says it does not contain R either
+    ...   | true =
+      fromR (any-false (λ z -> valOf R z R) (Uinf R) e
+                       (∈ᵛ-sound w (Uinf R) eb))
+    -- w was removed, so chi_w is refutable
+    ...   | false =
+      mp ¬Elim
+         (extract R (filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
+                                 (∈ᵛ-sound w (Ust R) ec) (cong ¬ᵇ_ eb)))
 
 provable : (Q : Formula) -> satB (¬ Q) ≡ false -> ⊢ Q
 provable Q e =

@@ -160,12 +160,11 @@ dropAllSat : {E : Pred} (p : Pred) (xs : List Node) -> AllSat E xs
 dropAllSat {E} p xs sb x q z mz =
   andIntro (E z) (x ≢ᵛ z)
            (sb z (filter-sub p xs mz))
-           (cong ¬ᵇ_ (onEq (x ≡ᵛ z) refl))
+           (cong ¬ᵇ_ onEq)
   where
-    onEq : (b : Bool) -> x ≡ᵛ z ≡ b -> x ≡ᵛ z ≡ false
-    onEq false e = e
-    onEq true  e =
-      emptyElim (true≢false (trans (sym (subst (λ u -> p u ≡ true)
-                                               (sym (≡ᵛ-sound x z e))
-                                               (filter-prop p xs mz)))
-                                   q))
+    onEq : x ≡ᵛ z ≡ false
+    onEq = refuteTrue (x ≡ᵛ z) λ e ->
+      true≢false (trans (sym (subst (λ u -> p u ≡ true)
+                                    (sym (≡ᵛ-sound x z e))
+                                    (filter-prop p xs mz)))
+                        q)

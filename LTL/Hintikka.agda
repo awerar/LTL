@@ -16,7 +16,8 @@
 --
 --   var       nothing to do -- evalAt reads the state through valOf.
 --   ¬, ⇒      (S1), through okAt at a state of U_inf.
---   ○         (T1), through allStep-at at the transition posStep supplies.
+--   ○         (T1), through all-at of stepAt at the transition posStep
+--             supplies.
 --   □         both halves.  If □ A is in the state, (T2) carries it along the
 --             run -- □Along -- and (S2) turns it into A at each stage, and
 --             every position of the orbit is such a stage.  If □ A is not in
@@ -37,7 +38,7 @@ open import LTL.Extract public
 stateOk : (P : Formula) (s : Val) -> s ∈ Uinf P -> {A : Formula}
        -> A ∈ sub P -> okAt P s A ≡ true
 stateOk P s m mA =
-  allOk-at P s (sub P) mA
+  all-at (okAt P s) (sub P) mA
            (andTrueL (allOk P s (sub P)) (allCoh P s (length (sub P)))
                      (uinfState P s m))
 
@@ -114,14 +115,13 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
   hintikka mbc cyc (○ B) mA pos vp =
     trans (⇔ᵇ-sound (valOf P (posState pos) (○ B))
                     (valOf P (posState (nextPos c0 c1 pos)) B)
-                    (allStep-at P (posState pos)
-                                (posState (nextPos c0 c1 pos)) (sub P) mA
+                    (all-at (stepAt P (posState pos)
+                                    (posState (nextPos c0 c1 pos))) (sub P) mA
                                 (snd (posStep P b c0 c1 mc0 wc stb vp))))
           (hintikka mbc cyc B (sub-○ P mA)
                     (nextPos c0 c1 pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
 
-  hintikka mbc cyc (□ B) mA pos vp =
-    on□ (valOf P (posState pos) (□ B)) refl
+  hintikka mbc cyc (□ B) mA pos vp = by□
     where
       ih : (q : Pos) -> ValidPos P b q
         -> valOf P (posState q) B ≡ evalAt P c0 c1 B q
@@ -152,10 +152,10 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
               (trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
                      eq)
 
-      on□ : (x : Bool) -> valOf P (posState pos) (□ B) ≡ x
-         -> valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
-      on□ true  e = trans e (sym (□Holds e))
-      on□ false e = trans e (sym (allFalse e))
+      by□ : valOf P (posState pos) (□ B) ≡ evalAt P c0 c1 (□ B) pos
+      by□ with valOf P (posState pos) (□ B) in e
+      ... | true  = sym (□Holds e)
+      ... | false = sym (allFalse e)
 
 ------------------------------------------------------------------------
 -- Hintikka's lemma on a run, at every stage and at the start

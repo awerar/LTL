@@ -60,38 +60,41 @@ open import LTL.Decide  public
 ------------------------------------------------------------------------
 -- Paths out of trails, for the Trap's second field.
 
-trailPath : (P : Formula) (C : List Val) {v : Val} {zs : List Val} {w : Val}
-         -> Trail C (step P) v zs w -> Path P C v w
-trailPath P C tNil          = pnil
-trailPath P C (tCons m e t) = pcons m e (trailPath P C t)
+module _ (P : Formula) where
 
-reachPath : (P : Formula) (C : List Val) {v w : Val}
-         -> Reaches C (step P) v w -> Path P C v w
-reachPath P C (reachesBy zs t) = trailPath P C t
+  trailPath : (C : List Val) {v : Val} {zs : List Val} {w : Val}
+           -> Trail C (step P) v zs w -> Path P C v w
+  trailPath C tNil          = pnil
+  trailPath C (tCons m e t) = pcons m e (trailPath C t)
 
--- Walking from a pending eventuality to a state where it fails.  Along the way
--- either it is already fulfilled -- and the prefix of the trail to that state
--- is the path -- or it is still pending at the far end, where the caller's
--- hypothesis (for us, evWitness at the graph layer's witness) says it fails.
+  reachPath : (C : List Val) {v w : Val}
+           -> Reaches C (step P) v w -> Path P C v w
+  reachPath C (reachesBy zs t) = trailPath C t
 
-trapFail : (P : Formula) (C : List Val) (A : Formula) -> □ A ∈ sub P
-        -> (z w : Val) -> Reaches C (step P) z w
-        -> valOf P z (□ A) ≡ false
-        -> (valOf P w (□ A) ≡ false -> valOf P w A ≡ false)
-        -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
-trapFail P C A mbx z w (reachesBy as t) pd atW =
-  sumElim onFul (λ pw -> w , trailPath P C t , atW pw)
-          (walkPersist P C A mbx (trailWalk P C t) pd)
-  where
-    onFul : Fulfil P A z as
-         -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
-    onFul (ful u mu eu) = pathTo u mu eu
-      where
-        pathTo : (x : Val) -> x ∈ z ∷ as -> valOf P x A ≡ false
-              -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
-        pathTo x here      e = x , pnil , e
-        pathTo x (there m) e =
-          x , reachPath P C (trailTo C (step P) t m) , e
+  -- Walking from a pending eventuality to a state where it fails.  Along the
+  -- way either it is already fulfilled -- and the prefix of the trail to that
+  -- state is the path -- or it is still pending at the far end, where the
+  -- caller's hypothesis (for us, evWitness at the graph layer's witness) says
+  -- it fails.
+
+  trapFail : (C : List Val) (A : Formula) -> □ A ∈ sub P
+          -> (z w : Val) -> Reaches C (step P) z w
+          -> valOf P z (□ A) ≡ false
+          -> (valOf P w (□ A) ≡ false -> valOf P w A ≡ false)
+          -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
+  trapFail C A mbx z w (reachesBy as t) pd atW =
+    sumElim onFul (λ pw -> w , trailPath C t , atW pw)
+            (walkPersist P C A mbx (trailWalk P C t) pd)
+    where
+      onFul : Fulfil P A z as
+           -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
+      onFul (ful u mu eu) = pathTo u mu eu
+        where
+          pathTo : (x : Val) -> x ∈ z ∷ as -> valOf P x A ≡ false
+                -> Σ[ y ∈ Val ] Path P C z y × valOf P y A ≡ false
+          pathTo x here      e = x , pnil , e
+          pathTo x (there m) e =
+            x , reachPath C (trailTo C (step P) t m) , e
 
 ------------------------------------------------------------------------
 -- A fair loop, cut down to the vertices it uses, with its Trap: a TrapLoop.

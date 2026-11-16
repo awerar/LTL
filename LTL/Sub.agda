@@ -57,20 +57,22 @@ sub-mono (□ A)   (there h)  k = there (sub-mono A h k)
 ------------------------------------------------------------------------
 -- The five membership lemmas
 
-sub-¬ : (P : Formula) {A : Formula} -> ¬ A ∈ sub P -> A ∈ sub P
-sub-¬ P {A} h = sub-mono P h (there (sub-self A))
+module _ (P : Formula) where
 
-sub-⇒L : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> A ∈ sub P
-sub-⇒L P {A} {B} h = sub-mono P h (there (memAppL (sub A) (sub B) (sub-self A)))
+  sub-¬ : {A : Formula} -> ¬ A ∈ sub P -> A ∈ sub P
+  sub-¬ {A} h = sub-mono P h (there (sub-self A))
 
-sub-⇒R : (P : Formula) {A B : Formula} -> A ⇒ B ∈ sub P -> B ∈ sub P
-sub-⇒R P {A} {B} h = sub-mono P h (there (memAppR (sub A) (sub B) (sub-self B)))
+  sub-⇒L : {A B : Formula} -> A ⇒ B ∈ sub P -> A ∈ sub P
+  sub-⇒L {A} {B} h = sub-mono P h (there (memAppL (sub A) (sub B) (sub-self A)))
 
-sub-○ : (P : Formula) {A : Formula} -> ○ A ∈ sub P -> A ∈ sub P
-sub-○ P {A} h = sub-mono P h (there (sub-self A))
+  sub-⇒R : {A B : Formula} -> A ⇒ B ∈ sub P -> B ∈ sub P
+  sub-⇒R {A} {B} h = sub-mono P h (there (memAppR (sub A) (sub B) (sub-self B)))
 
-sub-□ : (P : Formula) {A : Formula} -> □ A ∈ sub P -> A ∈ sub P
-sub-□ P {A} h = sub-mono P h (there (sub-self A))
+  sub-○ : {A : Formula} -> ○ A ∈ sub P -> A ∈ sub P
+  sub-○ {A} h = sub-mono P h (there (sub-self A))
+
+  sub-□ : {A : Formula} -> □ A ∈ sub P -> A ∈ sub P
+  sub-□ {A} h = sub-mono P h (there (sub-self A))
 
 ------------------------------------------------------------------------
 -- sub produces duplicates.

@@ -98,239 +98,240 @@ open import LTL.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
 -- step P v x ≡ true is Trail's edge field at  G = step P  on the nose.  The
 -- graph layer's abstraction costs one induction to undo, in either direction.
 
-trailWalk : (P : Formula) (us : List Val) {v : Val} {zs : List Val} {w : Val}
-         -> Trail us (step P) v zs w -> Walk P us v zs w
-trailWalk P us tNil          = wnil
-trailWalk P us (tCons m e t) = wcons m e (trailWalk P us t)
+module _ (P : Formula) where
 
-walkTrail : (P : Formula) (us : List Val) {v : Val} {zs : List Val} {w : Val}
-         -> Walk P us v zs w -> Trail us (step P) v zs w
-walkTrail P us wnil            = tNil
-walkTrail P us (wcons m e wk)  = tCons m e (walkTrail P us wk)
+  trailWalk : (us : List Val) {v : Val} {zs : List Val} {w : Val}
+           -> Trail us (step P) v zs w -> Walk P us v zs w
+  trailWalk us tNil          = wnil
+  trailWalk us (tCons m e t) = wcons m e (trailWalk us t)
 
--- The base point of a non-empty cycle is a state the cycle visits.  Used in
--- both directions: to place the base point among mkLasso's states, and to see
--- that it lies in the vertex list.
+  walkTrail : (us : List Val) {v : Val} {zs : List Val} {w : Val}
+           -> Walk P us v zs w -> Trail us (step P) v zs w
+  walkTrail us wnil            = tNil
+  walkTrail us (wcons m e wk)  = tCons m e (walkTrail us wk)
 
-walkLast : (P : Formula) (us : List Val) {v : Val} {zs : List Val} {w : Val}
-        -> Walk P us v zs w -> null zs ≡ false -> w ∈ zs
-walkLast P us wk nn = trailLast us (step P) (walkTrail P us wk) nn
+  -- The base point of a non-empty cycle is a state the cycle visits.  Used in
+  -- both directions: to place the base point among mkLasso's states, and to see
+  -- that it lies in the vertex list.
 
-------------------------------------------------------------------------
--- The fairness predicates.
---
--- One per eventuality of  □Args (sub P) .  Its FALSITY at z is exactly the
--- pair of hypotheses the refutation branch consumes -- □ A pending at z, and
--- A holding at z -- which is why the same list of predicates will serve G39;
--- here only its truth at a witness is used, which is the disjunction read the
--- other way.
+  walkLast : (us : List Val) {v : Val} {zs : List Val} {w : Val}
+          -> Walk P us v zs w -> null zs ≡ false -> w ∈ zs
+  walkLast us wk nn = trailLast us (step P) (walkTrail us wk) nn
 
-evPred : Formula -> Formula -> Val -> Bool
-evPred P A z = valOf P z (□ A) ∨ᵇ ¬ᵇ valOf P z A
+  ------------------------------------------------------------------------
+  -- The fairness predicates.
+  --
+  -- One per eventuality of  □Args (sub P) .  Its FALSITY at z is exactly the
+  -- pair of hypotheses the refutation branch consumes -- □ A pending at z, and
+  -- A holding at z -- which is why the same list of predicates will serve G39;
+  -- here only its truth at a witness is used, which is the disjunction read the
+  -- other way.
 
-evPreds : Formula -> List Pred
-evPreds P = map (evPred P) (□Args (sub P))
+  evPred : Formula -> Val -> Bool
+  evPred A z = valOf P z (□ A) ∨ᵇ ¬ᵇ valOf P z A
 
-evPredsMem : (P : Formula) {A : Formula} -> A ∈ □Args (sub P)
-          -> evPred P A ∈ evPreds P
-evPredsMem P m = memMap (evPred P) m
+  evPreds : List Pred
+  evPreds = map evPred (□Args (sub P))
 
-evPredsInv : (P : Formula) {g : Pred} -> g ∈ evPreds P
-          -> Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred P A
-evPredsInv P m = map-mem-inv (evPred P) (□Args (sub P)) m
+  evPredsMem : {A : Formula} -> A ∈ □Args (sub P)
+            -> evPred A ∈ evPreds
+  evPredsMem m = memMap evPred m
 
--- Reading a witness: the predicate holds at z and the eventuality is still
--- pending there, so the first disjunct is out and the second says A fails.
+  evPredsInv : {g : Pred} -> g ∈ evPreds
+            -> Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred A
+  evPredsInv m = map-mem-inv evPred (□Args (sub P)) m
 
-evWitness : (P : Formula) (A : Formula) (z : Val)
-         -> evPred P A z ≡ true -> valOf P z (□ A) ≡ false
-         -> valOf P z A ≡ false
-evWitness P A z ez pd =
-  sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
-          (λ e2 -> notTrue (valOf P z A) e2)
-          (orTrue (valOf P z (□ A)) (¬ᵇ valOf P z A) ez)
+  -- Reading a witness: the predicate holds at z and the eventuality is still
+  -- pending there, so the first disjunct is out and the second says A fails.
 
--- and building one, from either disjunct.
+  evWitness : (A : Formula) (z : Val)
+           -> evPred A z ≡ true -> valOf P z (□ A) ≡ false
+           -> valOf P z A ≡ false
+  evWitness A z ez pd =
+    sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
+            (λ e2 -> notTrue (valOf P z A) e2)
+            (orTrue (valOf P z (□ A)) (¬ᵇ valOf P z A) ez)
 
-evNotPending : (P : Formula) (A : Formula) (z : Val)
-            -> valOf P z (□ A) ≡ true -> evPred P A z ≡ true
-evNotPending P A z e = orL (valOf P z (□ A)) (¬ᵇ valOf P z A) e
+  -- and building one, from either disjunct.
 
-evFails : (P : Formula) (A : Formula) (z : Val)
-       -> valOf P z A ≡ false -> evPred P A z ≡ true
-evFails P A z e =
-  orR (valOf P z (□ A)) (¬ᵇ valOf P z A) (cong ¬ᵇ_ e)
+  evNotPending : (A : Formula) (z : Val)
+              -> valOf P z (□ A) ≡ true -> evPred A z ≡ true
+  evNotPending A z e = orL (valOf P z (□ A)) (¬ᵇ valOf P z A) e
 
-------------------------------------------------------------------------
--- Persistence to a state VISITED, not to the endpoint.
---
--- walkPersist (LTL/Walk.agda:127) says: along a walk with □ A pending at the
--- start, either A is fulfilled at a state visited or □ A is still pending at
--- the END.  Here the second alternative is wanted at an arbitrary visited
--- state.  The induction is walkPersist's own -- the step is persist, i.e. (T3)
--- -- with the target carried along and the walk cut short when it is reached.
+  evFails : (A : Formula) (z : Val)
+         -> valOf P z A ≡ false -> evPred A z ≡ true
+  evFails A z e =
+    orR (valOf P z (□ A)) (¬ᵇ valOf P z A) (cong ¬ᵇ_ e)
 
-persistTo : (P : Formula) (us : List Val) (A : Formula) -> □ A ∈ sub P
-         -> {v : Val} {ws : List Val} {x : Val} -> Walk P us v ws x
-         -> valOf P v (□ A) ≡ false
-         -> {z : Val} -> z ∈ ws
-         -> Fulfil P A v ws ⊎ valOf P z (□ A) ≡ false
-persistTo P us A mb wnil e ()
-persistTo P us A mb (wcons {v} {w} {ws} {x} mw st wk) e {z} mz =
-  onA (valOf P v A) refl z mz
-  where
-    onA : (b : Bool) -> valOf P v A ≡ b -> (y : Val) -> y ∈ w ∷ ws
-       -> Fulfil P A v (w ∷ ws) ⊎ valOf P y (□ A) ≡ false
-    onA false ea y my        = inl (ful v here ea)
-    onA true  ea y here      = inr (persist P v w A mb st e ea)
-    onA true  ea y (there k) =
-      sumElim (λ f -> inl (fulfilCons f)) inr
-              (persistTo P us A mb wk (persist P v w A mb st e ea) k)
+  ------------------------------------------------------------------------
+  -- Persistence to a state VISITED, not to the endpoint.
+  --
+  -- walkPersist (LTL/Walk.agda:127) says: along a walk with □ A pending at the
+  -- start, either A is fulfilled at a state visited or □ A is still pending at
+  -- the END.  Here the second alternative is wanted at an arbitrary visited
+  -- state.  The induction is walkPersist's own -- the step is persist, i.e.
+  -- (T3) -- with the target carried along and the walk cut short when it is
+  -- reached.
 
-------------------------------------------------------------------------
--- G38.
---
--- A FairLoop of LTL.Graph, inside any vertex list contained in Uinf P, is a
--- Lasso of Proposition 5.3.
+  persistTo : (us : List Val) (A : Formula) -> □ A ∈ sub P
+           -> {v : Val} {ws : List Val} {x : Val} -> Walk P us v ws x
+           -> valOf P v (□ A) ≡ false
+           -> {z : Val} -> z ∈ ws
+           -> Fulfil P A v ws ⊎ valOf P z (□ A) ≡ false
+  persistTo us A mb wnil e ()
+  persistTo us A mb (wcons {v} {w} {ws} {x} mw st wk) e {z} mz =
+    onA z mz
+    where
+      onA : (y : Val) -> y ∈ w ∷ ws
+         -> Fulfil P A v (w ∷ ws) ⊎ valOf P y (□ A) ≡ false
+      onA y my with valOf P v A in ea
+      ... | false = inl (ful v here ea)
+      onA y here      | true = inr (persist P v w A mb st e ea)
+      onA y (there k) | true =
+        sumElim (λ f -> inl (fulfilCons f)) inr
+                (persistTo us A mb wk (persist P v w A mb st e ea) k)
 
-sccLasso : (P : Formula) (vs : List Val)
+  ------------------------------------------------------------------------
+  -- G38.
+  --
+  -- A FairLoop of LTL.Graph, inside any vertex list contained in Uinf P, is a
+  -- Lasso of Proposition 5.3.
+
+  sccLasso : (vs : List Val)
+          -> vs ⊆ Uinf P
+          -> (v0 : Val) -> FairLoop vs (step P) evPreds v0 -> Lasso P v0
+  sccLasso vs sb v0 (fairLoop r st cy ts tc nn wit) =
+    mkLasso r mr st wst cy wcy nn cyc
+    where
+      -- The cycle is non-empty, so its base point is a state it visits, and
+      -- every state it visits lies in the vertex list.
+      mr : r ∈ Uinf P
+      mr = sb r (trailIn vs (step P) tc (trailLast vs (step P) tc nn))
+
+      wst : Walk P (Uinf P) v0 st r
+      wst = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb ts)
+
+      wcy : Walk P (Uinf P) r cy r
+      wcy = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb tc)
+
+      cyc : AllFulfilled P r cy (r ∷ cy)
+      cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
+        where
+          mbx : □ A ∈ sub P
+          mbx = □Args-mem (sub P) mA
+
+          -- Still pending at the base point: go out to the witness the graph
+          -- layer chose for evPred P A.
+          atR : valOf P r (□ A) ≡ false -> Fulfil P A r cy
+          atR pr = onW (wit (evPred A) (evPredsMem mA))
+            where
+              onW : (Σ[ z ∈ Val ] z ∈ cy × evPred A z ≡ true)
+                 -> Fulfil P A r cy
+              onW (z , mz , ez) =
+                sumElim (λ f -> f)
+                        (λ pz -> ful z (there mz) (evWitness A z ez pz))
+                        (persistTo (Uinf P) A mbx wcy pr mz)
+
+          -- Travelling along the cycle from s, as Proposition 5.3 does.
+          fromSub : SubWalk P (Uinf P) s r r cy -> Fulfil P A r cy
+          fromSub (subWalk zs wz f) =
+            sumElim mapFul atR (walkPersist P (Uinf P) A mbx wz pd)
+            where
+              mapFul : Fulfil P A s zs -> Fulfil P A r cy
+              mapFul (ful z m q) = ful z (f m) q
+
+  -- and hence a Run: the existing positive tail, unchanged.
+
+  sccRun : (vs : List Val)
         -> vs ⊆ Uinf P
-        -> (v0 : Val) -> FairLoop vs (step P) (evPreds P) v0 -> Lasso P v0
-sccLasso P vs sb v0 (fairLoop r st cy ts tc nn wit) =
-  mkLasso r mr st wst cy wcy nn cyc
-  where
-    -- The cycle is non-empty, so its base point is a state it visits, and every
-    -- state it visits lies in the vertex list.
-    mr : r ∈ Uinf P
-    mr = sb r (trailIn vs (step P) tc (trailLast vs (step P) tc nn))
+        -> (v0 : Val) -> v0 ∈ Uinf P
+        -> FairLoop vs (step P) evPreds v0 -> Run P v0
+  sccRun vs sb v0 mv0 fl = runOf P v0 mv0 (sccLasso vs sb v0 fl)
 
-    wst : Walk P (Uinf P) v0 st r
-    wst = trailWalk P (Uinf P) (trailMono vs (Uinf P) (step P) sb ts)
+  ------------------------------------------------------------------------
+  -- The converse, which is what makes the instance at Uinf P total.
+  --
+  -- A fulfilling lasso IS a fair loop for evPreds P.  For each eventuality: if
+  -- it is not pending at the base point, the base point is its own witness --
+  -- and it lies ON the cycle because the cycle is non-empty; if it is pending
+  -- there, the lasso's own cycle-fulfilment field supplies a state of the cycle
+  -- where A fails, which is the other disjunct.  This is the polarity of evPred
+  -- checked from the other side.
 
-    wcy : Walk P (Uinf P) r cy r
-    wcy = trailWalk P (Uinf P) (trailMono vs (Uinf P) (step P) sb tc)
+  lassoFair : (v0 : Val) -> Lasso P v0
+           -> FairLoop (Uinf P) (step P) evPreds v0
+  lassoFair v0 (mkLasso b mb ps wp qs wq nn cyc) =
+    fairLoop b ps qs (walkTrail (Uinf P) wp) (walkTrail (Uinf P) wq) nn each
+    where
+      mbq : b ∈ qs
+      mbq = walkLast (Uinf P) wq nn
 
-    cyc : AllFulfilled P r cy (r ∷ cy)
-    cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
-      where
-        mbx : □ A ∈ sub P
-        mbx = □Args-mem (sub P) mA
+      forA : (A : Formula) -> A ∈ □Args (sub P)
+          -> Σ[ z ∈ Val ] z ∈ qs × evPred A z ≡ true
+      forA A mA with valOf P b (□ A) in ep
+      ... | true  = b , mbq , evNotPending A b ep
+      ... | false = onFul (cyc b here A mA ep)
+        where
+          onFul : Fulfil P A b qs
+               -> Σ[ z ∈ Val ] z ∈ qs × evPred A z ≡ true
+          onFul (ful z m q) = z , onMem m , evFails A z q
+            where
+              onMem : z ∈ b ∷ qs -> z ∈ qs
+              onMem here      = mbq
+              onMem (there k) = k
 
-        -- Still pending at the base point: go out to the witness the graph
-        -- layer chose for evPred P A.
-        atR : valOf P r (□ A) ≡ false -> Fulfil P A r cy
-        atR pr = onW (wit (evPred P A) (evPredsMem P mA))
-          where
-            onW : (Σ[ z ∈ Val ] z ∈ cy × evPred P A z ≡ true)
-               -> Fulfil P A r cy
-            onW (z , mz , ez) =
-              sumElim (λ f -> f)
-                      (λ pz -> ful z (there mz) (evWitness P A z ez pz))
-                      (persistTo P (Uinf P) A mbx wcy pr mz)
+      each : (g : Pred) -> g ∈ evPreds
+          -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
+      each g mg = onInv (evPredsInv mg)
+        where
+          onInv : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred A)
+               -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
+          onInv (A , mA , eg) =
+            subst (λ h -> Σ[ z ∈ Val ] z ∈ qs × h z ≡ true)
+                  (sym eg) (forA A mA)
 
-        -- Travelling along the cycle from s, as Proposition 5.3 does.
-        fromSub : SubWalk P (Uinf P) s r r cy -> Fulfil P A r cy
-        fromSub (subWalk zs wz f) =
-          sumElim mapFul atR (walkPersist P (Uinf P) A mbx wz pd)
-          where
-            mapFul : Fulfil P A s zs -> Fulfil P A r cy
-            mapFul (ful z m q) = ful z (f m) q
+  ------------------------------------------------------------------------
+  -- The instance: the search run on Uinf P itself, which always finds a loop.
 
--- and hence a Run: the existing positive tail, unchanged.
+  uinfFair : (v0 : Val) -> v0 ∈ Uinf P
+          -> FairLoop (Uinf P) (step P) evPreds v0 ⊎
+             Cert (step P) evPreds (reachSet (Uinf P) (step P) v0)
+  uinfFair v0 mv0 = fairGraph (Uinf P) (step P) evPreds v0 mv0
 
-sccRun : (P : Formula) (vs : List Val)
-      -> vs ⊆ Uinf P
-      -> (v0 : Val) -> v0 ∈ Uinf P
-      -> FairLoop vs (step P) (evPreds P) v0 -> Run P v0
-sccRun P vs sb v0 mv0 fl = runOf P v0 mv0 (sccLasso P vs sb v0 fl)
+  -- Proposition 5.3, again.  The certificate branch is refuted by fairNoLoop
+  -- against the loop  lasso  already supplies; since fairGraph in fact returns
+  -- inl, that branch is never evaluated and  lasso  is never run.
 
-------------------------------------------------------------------------
--- The converse, which is what makes the instance at Uinf P total.
---
--- A fulfilling lasso IS a fair loop for evPreds P.  For each eventuality: if it
--- is not pending at the base point, the base point is its own witness -- and it
--- lies ON the cycle because the cycle is non-empty; if it is pending there, the
--- lasso's own cycle-fulfilment field supplies a state of the cycle where A
--- fails, which is the other disjunct.  This is the polarity of evPred checked
--- from the other side.
+  sccLassoOf : (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
+  sccLassoOf v0 mv0 = sumElim yes no (uinfFair v0 mv0)
+    where
+      yes : FairLoop (Uinf P) (step P) evPreds v0 -> Lasso P v0
+      yes fl = sccLasso (Uinf P) (λ z m -> m) v0 fl
 
-lassoFair : (P : Formula) (v0 : Val) -> Lasso P v0
-         -> FairLoop (Uinf P) (step P) (evPreds P) v0
-lassoFair P v0 (mkLasso b mb ps wp qs wq nn cyc) =
-  fairLoop b ps qs (walkTrail P (Uinf P) wp) (walkTrail P (Uinf P) wq) nn each
-  where
-    mbq : b ∈ qs
-    mbq = walkLast P (Uinf P) wq nn
+      no : Cert (step P) evPreds (reachSet (Uinf P) (step P) v0) -> Lasso P v0
+      no c = emptyElim (fairNoLoop (Uinf P) (step P) evPreds v0 mv0 c
+                                   (lassoFair v0 (lasso P v0 mv0)))
 
-    forA : (A : Formula) -> A ∈ □Args (sub P)
-        -> Σ[ z ∈ Val ] z ∈ qs × evPred P A z ≡ true
-    forA A mA = onPend (valOf P b (□ A)) refl
-      where
-        onPend : (c : Bool) -> valOf P b (□ A) ≡ c
-              -> Σ[ z ∈ Val ] z ∈ qs × evPred P A z ≡ true
-        onPend true  ep = b , mbq , evNotPending P A b ep
-        onPend false ep = onFul (cyc b here A mA ep)
-          where
-            onFul : Fulfil P A b qs
-                 -> Σ[ z ∈ Val ] z ∈ qs × evPred P A z ≡ true
-            onFul (ful z m q) = z , onMem m , evFails P A z q
-              where
-                onMem : z ∈ b ∷ qs -> z ∈ qs
-                onMem here      = mbq
-                onMem (there k) = k
+  sccRunOf : (v0 : Val) -> v0 ∈ Uinf P -> Run P v0
+  sccRunOf v0 mv0 = runOf P v0 mv0 (sccLassoOf v0 mv0)
 
-    each : (g : Pred) -> g ∈ evPreds P
-        -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
-    each g mg = onInv (evPredsInv P mg)
-      where
-        onInv : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred P A)
-             -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
-        onInv (A , mA , eg) =
-          subst (λ h -> Σ[ z ∈ Val ] z ∈ qs × h z ≡ true)
-                (sym eg) (forA A mA)
+  ------------------------------------------------------------------------
+  -- Projections, so that the two procedures can be set side by side.  lassoAt
+  -- of LTL.Lasso reads the round-based search the same way, so sccAt and
+  -- lassoAt are two List Val × List Val to be compared.
 
-------------------------------------------------------------------------
--- The instance: the search run on Uinf P itself, and it always finds the loop.
+  sccAt : (v : Val) -> v ∈ᵛ Uinf P ≡ true
+       -> List Val × List Val
+  sccAt v e = lassoStem P v l , lassoCycle P v l
+    where
+      l : Lasso P v
+      l = sccLassoOf v (∈ᵛ-sound v (Uinf P) e)
 
-uinfFair : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P
-        -> FairLoop (Uinf P) (step P) (evPreds P) v0 ⊎
-           Cert (step P) (evPreds P) (reachSet (Uinf P) (step P) v0)
-uinfFair P v0 mv0 = fairGraph (Uinf P) (step P) (evPreds P) v0 mv0
-
--- Proposition 5.3, again.  The certificate branch is refuted by fairNoLoop
--- against the loop  lasso  already supplies; since fairGraph in fact returns
--- inl, that branch is never evaluated and  lasso  is never run.
-
-sccLassoOf : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
-sccLassoOf P v0 mv0 = sumElim yes no (uinfFair P v0 mv0)
-  where
-    yes : FairLoop (Uinf P) (step P) (evPreds P) v0 -> Lasso P v0
-    yes fl = sccLasso P (Uinf P) (λ z m -> m) v0 fl
-
-    no : Cert (step P) (evPreds P) (reachSet (Uinf P) (step P) v0) -> Lasso P v0
-    no c = emptyElim (fairNoLoop (Uinf P) (step P) (evPreds P) v0 mv0 c
-                                 (lassoFair P v0 (lasso P v0 mv0)))
-
-sccRunOf : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Run P v0
-sccRunOf P v0 mv0 = runOf P v0 mv0 (sccLassoOf P v0 mv0)
-
-------------------------------------------------------------------------
--- Projections, so that the two procedures can be set side by side.  lassoAt of
--- LTL.Lasso reads the round-based search the same way, so sccAt and lassoAt are
--- two List Val × List Val to be compared.
-
-sccAt : (P : Formula) (v : Val) -> v ∈ᵛ Uinf P ≡ true
-     -> List Val × List Val
-sccAt P v e = lassoStem P v l , lassoCycle P v l
-  where
-    l : Lasso P v
-    l = sccLassoOf P v (∈ᵛ-sound v (Uinf P) e)
-
-sccState : (P : Formula) (v0 : Val) -> v0 ∈ᵛ Uinf P ≡ true -> Nat -> Val
-sccState P v0 e i = stateAt P v0 (sccRunOf P v0 m) i
-  where
-    m : v0 ∈ Uinf P
-    m = ∈ᵛ-sound v0 (Uinf P) e
+  sccState : (v0 : Val) -> v0 ∈ᵛ Uinf P ≡ true -> Nat -> Val
+  sccState v0 e i = stateAt P v0 (sccRunOf v0 m) i
+    where
+      m : v0 ∈ Uinf P
+      m = ∈ᵛ-sound v0 (Uinf P) e
 
 ------------------------------------------------------------------------
 -- The lassos, computed, beside the ones LTL.Lasso records.

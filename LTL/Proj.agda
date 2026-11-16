@@ -6,8 +6,8 @@
 -- conjunct of chi P v carries a particular literal, so chi P v is refutable.
 -- The three ingredients are here:
 --
---   * searching a false conjunction for the offending index (allOk-false,
---     allCoh-false, both now in LTL.State), and the corresponding projections;
+--   * searching a false conjunction for the offending index (all-false for
+--     allOk, allCoh-false in LTL.State), and the corresponding projections;
 --   * cohLookup, which says that under coherence the bit at ANY occurrence of
 --     a formula equals valOf, so positional chi and lookup-based conditions
 --     talk about the same bits;
@@ -28,36 +28,38 @@ refute f g = mp (¬IntroU (liftP f) (liftP g)) deriv⊤
 ------------------------------------------------------------------------
 -- Under coherence, every occurrence of A carries the bit valOf P v A
 
-cohLookup : (P : Formula) (v : Val)
+module _ (P : Formula) where
+
+  cohLookup : (v : Val)
+           -> allCoh P v (length (sub P)) ≡ true
+           -> {A : Formula} (h : A ∈ sub P)
+           -> bitAt v (index h) ≡ valOf P v A
+  cohLookup v ch {A} h =
+    trans (⇔ᵇ-sound (bitAt v (index h))
+                    (valOf P v (nth (sub P) (index h) ⊥))
+                    (allCoh-at P v (length (sub P)) (index h)
+                                   (index-length h) ch))
+          (cong (valOf P v) (index-nth h ⊥))
+
+  ------------------------------------------------------------------------
+  -- Projection of a conjunct out of chi
+
+  chiProjRaw : (v : Val)
+            -> length v ≡ length (sub P)
+            -> {A : Formula} (h : A ∈ sub P)
+            -> ⊢ (chi P v) ⇒ (lit A (bitAt v (index h)))
+  chiProjRaw v len h =
+    ⋀Proj (litList (sub P) v) (litList-mem (sub P) v len h)
+
+  chiProj : (v : Val)
+         -> length v ≡ length (sub P)
          -> allCoh P v (length (sub P)) ≡ true
          -> {A : Formula} (h : A ∈ sub P)
-         -> bitAt v (index h) ≡ valOf P v A
-cohLookup P v ch {A} h =
-  trans (⇔ᵇ-sound (bitAt v (index h))
-                  (valOf P v (nth (sub P) (index h) ⊥))
-                  (allCoh-at P v (length (sub P)) (index h)
-                                 (index-length h) ch))
-        (cong (valOf P v) (index-nth h ⊥))
-
-------------------------------------------------------------------------
--- Projection of a conjunct out of chi
-
-chiProjRaw : (P : Formula) (v : Val)
-          -> length v ≡ length (sub P)
-          -> {A : Formula} (h : A ∈ sub P)
-          -> ⊢ (chi P v) ⇒ (lit A (bitAt v (index h)))
-chiProjRaw P v len h =
-  ⋀Proj (litList (sub P) v) (litList-mem (sub P) v len h)
-
-chiProj : (P : Formula) (v : Val)
-       -> length v ≡ length (sub P)
-       -> allCoh P v (length (sub P)) ≡ true
-       -> {A : Formula} (h : A ∈ sub P)
-       -> ⊢ (chi P v) ⇒ (lit A (valOf P v A))
-chiProj P v len ch {A} h =
-  subst (λ b -> ⊢ (chi P v) ⇒ (lit A b))
-        (cohLookup P v ch h)
-        (chiProjRaw P v len h)
+         -> ⊢ (chi P v) ⇒ (lit A (valOf P v A))
+  chiProj v len ch {A} h =
+    subst (λ b -> ⊢ (chi P v) ⇒ (lit A b))
+          (cohLookup v ch h)
+          (chiProjRaw v len h)
 
 ------------------------------------------------------------------------
 -- Positional projection, for the coherence-failure case, where cohLookup is

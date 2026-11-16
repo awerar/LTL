@@ -64,161 +64,167 @@ tautId false = refl
 ------------------------------------------------------------------------
 -- Conjunction, as (Exp) and (Lin) need it
 
-∧True : (P : Formula) (c0 : Val) (c1 : List Val) (X Y : Formula) (pos : Pos)
-     -> evalAt P c0 c1 X pos ≡ true -> evalAt P c0 c1 Y pos ≡ true
-     -> evalAt P c0 c1 (X ∧ Y) pos ≡ true
-∧True P c0 c1 X Y pos ex ey =
-  aux (evalAt P c0 c1 X pos) (evalAt P c0 c1 Y pos) ex ey
-  where
-    aux : (x y : Bool) -> x ≡ true -> y ≡ true
-       -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
-    aux true  true  ex' ey' = refl
-    aux true  false ex' ()
-    aux false y     ()  ey'
+module _ (P : Formula) where
 
-------------------------------------------------------------------------
--- (K □)
+  ∧True : (c0 : Val) (c1 : List Val) (X Y : Formula) (pos : Pos)
+       -> evalAt P c0 c1 X pos ≡ true -> evalAt P c0 c1 Y pos ≡ true
+       -> evalAt P c0 c1 (X ∧ Y) pos ≡ true
+  ∧True c0 c1 X Y pos ex ey =
+    aux (evalAt P c0 c1 X pos) (evalAt P c0 c1 Y pos) ex ey
+    where
+      aux : (x y : Bool) -> x ≡ true -> y ≡ true
+         -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
+      aux true  true  ex' ey' = refl
+      aux true  false ex' ()
+      aux false y     ()  ey'
 
-k□Sound : (P : Formula) (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
-       -> evalAt P c0 c1 (□ (A ⇒ B)) pos ≡ true
-       -> evalAt P c0 c1 (□ A) pos ≡ true
-       -> evalAt P c0 c1 (□ B) pos ≡ true
-k□Sound P c0 c1 A B pos e1 e2 =
-  all-intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
-    (λ {q} m -> ⇒TrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
-                         (all-at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
-                         (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
+  ------------------------------------------------------------------------
+  -- (K □)
 
-------------------------------------------------------------------------
--- (Exp)
+  k□Sound : (c0 : Val) (c1 : List Val) (A B : Formula) (pos : Pos)
+         -> evalAt P c0 c1 (□ (A ⇒ B)) pos ≡ true
+         -> evalAt P c0 c1 (□ A) pos ≡ true
+         -> evalAt P c0 c1 (□ B) pos ≡ true
+  k□Sound c0 c1 A B pos e1 e2 =
+    all-intro (evalAt P c0 c1 B) (orbitOf c0 c1 pos)
+      (λ {q} m ->
+         ⇒TrueB (evalAt P c0 c1 A q) (evalAt P c0 c1 B q)
+                (all-at (evalAt P c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
+                (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos) m e2))
 
-expSound : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-        -> evalAt P c0 c1 (□ A ⇒ A ∧ ○ A ∧ ○ □ A) pos ≡
-           true
-expSound P c0 c1 A pos =
-  ⇒IntroB (evalAt P c0 c1 (□ A) pos)
-            (evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos) body
-  where
-    body : evalAt P c0 c1 (□ A) pos ≡ true
-        -> evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos ≡ true
-    body eb =
-      ∧True P c0 c1 A (○ A ∧ ○ □ A) pos
+  ------------------------------------------------------------------------
+  -- (Exp)
+
+  expSound : (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
+          -> evalAt P c0 c1 (□ A ⇒ A ∧ ○ A ∧ ○ □ A) pos ≡
+             true
+  expSound c0 c1 A pos =
+    ⇒IntroB (evalAt P c0 c1 (□ A) pos)
+              (evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos) body
+    where
+      body : evalAt P c0 c1 (□ A) pos ≡ true
+          -> evalAt P c0 c1 (A ∧ ○ A ∧ ○ □ A) pos ≡ true
+      body eb =
+        ∧True c0 c1 A (○ A ∧ ○ □ A) pos
               (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                      (orbitIter c0 c1 zero pos) eb)
-              (∧True P c0 c1 (○ A) (○ □ A) pos
+                        (orbitIter c0 c1 zero pos) eb)
+                (∧True c0 c1 (○ A) (○ □ A) pos
                        (all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                               (orbitIter c0 c1 (suc zero) pos) eb)
-                       (all-intro (evalAt P c0 c1 A)
-                                  (orbitOf c0 c1 (nextPos c0 c1 pos))
-                                  (λ {q} m ->
-                                     all-at (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                                            (orbitSub c0 c1 pos q m) eb)))
+                                 (orbitIter c0 c1 (suc zero) pos) eb)
+                         (all-intro (evalAt P c0 c1 A)
+                                    (orbitOf c0 c1 (nextPos c0 c1 pos))
+                                    (λ {q} m ->
+                                       all-at (evalAt P c0 c1 A)
+                                              (orbitOf c0 c1 pos)
+                                              (orbitSub c0 c1 pos q m) eb)))
 
-------------------------------------------------------------------------
--- (Ind).
---
--- The forward induction the note leaves to "one checks": A propagates along
--- the run because the hypothesis is available at every stage of it, and the
--- orbit consists exactly of those stages.
+  ------------------------------------------------------------------------
+  -- (Ind).
+  --
+  -- The forward induction the note leaves to "one checks": A propagates along
+  -- the run because the hypothesis is available at every stage of it, and the
+  -- orbit consists exactly of those stages.
 
-indSound : (P : Formula) (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
-        -> evalAt P c0 c1 (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos ≡ true
-indSound P c0 c1 A pos =
-  ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ ○ A)) pos)
-            (evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 (□ A) pos)
-            (λ e1 -> ⇒IntroB (evalAt P c0 c1 A pos) (evalAt P c0 c1 (□ A) pos)
-                               (body e1))
-  where
-    body : evalAt P c0 c1 (□ (A ⇒ ○ A)) pos ≡ true
-        -> evalAt P c0 c1 A pos ≡ true
-        -> evalAt P c0 c1 (□ A) pos ≡ true
-    body e1 e2 =
-      all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-                (λ {q} m -> fromIter q (orbitOf-iter c0 c1 pos q m))
-      where
-        along : (t : Nat) -> evalAt P c0 c1 A (posIter c0 c1 t pos) ≡ true
-        along zero    = e2
-        along (suc t) =
-          subst (λ r -> evalAt P c0 c1 A r ≡ true)
-                (sym (posIter-suc c0 c1 t pos))
-                (⇒TrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
-                          (evalAt P c0 c1 A
-                                  (nextPos c0 c1 (posIter c0 c1 t pos)))
-                          (all-at (evalAt P c0 c1 (A ⇒ ○ A))
-                                  (orbitOf c0 c1 pos)
-                                  (orbitIter c0 c1 t pos) e1)
-                          (along t))
+  indSound : (c0 : Val) (c1 : List Val) (A : Formula) (pos : Pos)
+          -> evalAt P c0 c1 (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos ≡ true
+  indSound c0 c1 A pos =
+    ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ ○ A)) pos)
+              (evalAt P c0 c1 A pos ⇒ᵇ evalAt P c0 c1 (□ A) pos)
+              (λ e1 -> ⇒IntroB (evalAt P c0 c1 A pos) (evalAt P c0 c1 (□ A) pos)
+                                 (body e1))
+    where
+      body : evalAt P c0 c1 (□ (A ⇒ ○ A)) pos ≡ true
+          -> evalAt P c0 c1 A pos ≡ true
+          -> evalAt P c0 c1 (□ A) pos ≡ true
+      body e1 e2 =
+        all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+                  (λ {q} m -> fromIter q (orbitOf-iter c0 c1 pos q m))
+        where
+          along : (t : Nat) -> evalAt P c0 c1 A (posIter c0 c1 t pos) ≡ true
+          along zero    = e2
+          along (suc t) =
+            subst (λ r -> evalAt P c0 c1 A r ≡ true)
+                  (sym (posIter-suc c0 c1 t pos))
+                  (⇒TrueB (evalAt P c0 c1 A (posIter c0 c1 t pos))
+                            (evalAt P c0 c1 A
+                                    (nextPos c0 c1 (posIter c0 c1 t pos)))
+                            (all-at (evalAt P c0 c1 (A ⇒ ○ A))
+                                    (orbitOf c0 c1 pos)
+                                    (orbitIter c0 c1 t pos) e1)
+                            (along t))
 
-        fromIter : (q : Pos) -> (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
-                -> evalAt P c0 c1 A q ≡ true
-        fromIter q (t , et) =
-          subst (λ r -> evalAt P c0 c1 A r ≡ true) et (along t)
+          fromIter : (q : Pos) -> (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
+                  -> evalAt P c0 c1 A q ≡ true
+          fromIter q (t , et) =
+            subst (λ r -> evalAt P c0 c1 A r ≡ true) et (along t)
 
-------------------------------------------------------------------------
--- Soundness
+  ------------------------------------------------------------------------
+  -- Soundness
 
-sound : (P : Formula) (b c0 : Val) (c1 : List Val)
-     -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
-     -> {C : Formula} -> ⊢ C
-     -> (pos : Pos) -> ValidPos P b pos
-     -> evalAt P c0 c1 C pos ≡ true
+  sound : (b c0 : Val) (c1 : List Val)
+       -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
+       -> {C : Formula} -> ⊢ C
+       -> (pos : Pos) -> ValidPos P b pos
+       -> evalAt P c0 c1 C pos ≡ true
 
-sound P b c0 c1 mc0 wc stb (p1 {A} {B}) pos vp =
-  tautP1 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+  sound b c0 c1 mc0 wc stb (p1 {A} {B}) pos vp =
+    tautP1 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
 
-sound P b c0 c1 mc0 wc stb (p2 {A} {B} {C}) pos vp =
-  tautP2 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos) (evalAt P c0 c1 C pos)
+  sound b c0 c1 mc0 wc stb (p2 {A} {B} {C}) pos vp =
+    tautP2 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos) (evalAt P c0 c1 C pos)
 
-sound P b c0 c1 mc0 wc stb (p3 {A} {B}) pos vp =
-  tautP3 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+  sound b c0 c1 mc0 wc stb (p3 {A} {B}) pos vp =
+    tautP3 (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
 
-sound P b c0 c1 mc0 wc stb (k□ {A} {B}) pos vp =
-  ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ B)) pos)
-            (evalAt P c0 c1 (□ A) pos ⇒ᵇ evalAt P c0 c1 (□ B) pos)
-            (λ e1 -> ⇒IntroB (evalAt P c0 c1 (□ A) pos)
-                               (evalAt P c0 c1 (□ B) pos)
-                               (λ e2 -> k□Sound P c0 c1 A B pos e1 e2))
+  sound b c0 c1 mc0 wc stb (k□ {A} {B}) pos vp =
+    ⇒IntroB (evalAt P c0 c1 (□ (A ⇒ B)) pos)
+              (evalAt P c0 c1 (□ A) pos ⇒ᵇ evalAt P c0 c1 (□ B) pos)
+              (λ e1 -> ⇒IntroB (evalAt P c0 c1 (□ A) pos)
+                                 (evalAt P c0 c1 (□ B) pos)
+                                 (λ e2 -> k□Sound c0 c1 A B pos e1 e2))
 
--- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
-sound P b c0 c1 mc0 wc stb (k○ {A} {B}) pos vp =
-  tautId (evalAt P c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
-          evalAt P c0 c1 B (nextPos c0 c1 pos))
+  -- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
+  sound b c0 c1 mc0 wc stb (k○ {A} {B}) pos vp =
+    tautId (evalAt P c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
+            evalAt P c0 c1 B (nextPos c0 c1 pos))
 
-sound P b c0 c1 mc0 wc stb (exp {A}) pos vp = expSound P c0 c1 A pos
+  sound b c0 c1 mc0 wc stb (exp {A}) pos vp = expSound c0 c1 A pos
 
-sound P b c0 c1 mc0 wc stb (ind {A}) pos vp = indSound P c0 c1 A pos
+  sound b c0 c1 mc0 wc stb (ind {A}) pos vp = indSound c0 c1 A pos
 
--- ○ ¬ A and ¬ ○ A evaluate to the same Boolean, so both halves of
--- the biconditional are z ⇒ᵇ z
-sound P b c0 c1 mc0 wc stb (lin {A}) pos vp =
-  ∧True P c0 c1 (○ ¬ A ⇒ ¬ ○ A)
-                  (¬ ○ A ⇒ ○ ¬ A) pos
+  -- ○ ¬ A and ¬ ○ A evaluate to the same Boolean, so both halves of
+  -- the biconditional are z ⇒ᵇ z
+  sound b c0 c1 mc0 wc stb (lin {A}) pos vp =
+    ∧True c0 c1 (○ ¬ A ⇒ ¬ ○ A)
+                    (¬ ○ A ⇒ ○ ¬ A) pos
           (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
-          (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
+            (tautId (¬ᵇ evalAt P c0 c1 A (nextPos c0 c1 pos)))
 
--- (PC).  evalAt is DEFINED by ¬ᵇ at ¬ and by ⇒ᵇ at ⇒, so the two
--- compositionality hypotheses of tautSound are refl and the case is one line.
--- This is the whole of Ben-Ari's Axiom 0, and it is where the substitution
--- lemma that Remark 6.4 feared would have gone.
-sound P b c0 c1 mc0 wc stb (pc {C} e) pos vp =
-  tautSound (λ X -> evalAt P c0 c1 X pos) C (λ X m -> refl) (λ X Y m -> refl) e
+  -- (PC).  evalAt is DEFINED by ¬ᵇ at ¬ and by ⇒ᵇ at ⇒, so the two
+  -- compositionality hypotheses of tautSound are refl and the case is one line.
+  -- This is the whole of Ben-Ari's Axiom 0, and it is where the substitution
+  -- lemma that Remark 6.4 feared would have gone.
+  sound b c0 c1 mc0 wc stb (pc {C} e) pos vp =
+    tautSound (λ X -> evalAt P c0 c1 X pos) C
+              (λ X m -> refl) (λ X Y m -> refl) e
 
-sound P b c0 c1 mc0 wc stb (mp {A} {B} d e) pos vp =
-  ⇒TrueB (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
-           (sound P b c0 c1 mc0 wc stb d pos vp)
-           (sound P b c0 c1 mc0 wc stb e pos vp)
+  sound b c0 c1 mc0 wc stb (mp {A} {B} d e) pos vp =
+    ⇒TrueB (evalAt P c0 c1 A pos) (evalAt P c0 c1 B pos)
+             (sound b c0 c1 mc0 wc stb d pos vp)
+             (sound b c0 c1 mc0 wc stb e pos vp)
 
-sound P b c0 c1 mc0 wc stb (gen {A} d) pos vp =
-  all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
-            (λ {q} m -> sound P b c0 c1 mc0 wc stb d q
-                              (orbitValid P b c0 c1 mc0 wc stb pos q vp m))
+  sound b c0 c1 mc0 wc stb (gen {A} d) pos vp =
+    all-intro (evalAt P c0 c1 A) (orbitOf c0 c1 pos)
+              (λ {q} m -> sound b c0 c1 mc0 wc stb d q
+                                (orbitValid P b c0 c1 mc0 wc stb pos q vp m))
 
-------------------------------------------------------------------------
--- Soundness on a run, at every stage
+  ------------------------------------------------------------------------
+  -- Soundness on a run, at every stage
 
-soundRun : (P : Formula) (v0 : Val) (r : Run P v0) {C : Formula} -> ⊢ C
-        -> (i : Nat) -> eval P v0 r C i ≡ true
-soundRun P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) d i =
-  sound P b c0 c1 mc0 wc stb d
-        (posIter c0 c1 i (v0 , rest))
-        (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest) (vpos v0 rest mv0 wr))
+  soundRun : (v0 : Val) (r : Run P v0) {C : Formula} -> ⊢ C
+          -> (i : Nat) -> eval P v0 r C i ≡ true
+  soundRun v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) d i =
+    sound b c0 c1 mc0 wc stb d
+          (posIter c0 c1 i (v0 , rest))
+          (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest)
+                        (vpos v0 rest mv0 wr))

@@ -62,10 +62,9 @@ boolEqOf x y refl = boolEqRefl x
 ------------------------------------------------------------------------
 -- Membership, as a boolean.
 --
--- The converse of ∈ᶠ-tail: LTL.Skel proves what a true A ∈ᶠ As gives, and this
--- is what gives one.  It is what turns a membership proof into the side condition of
--- atomLook, so it is the only thing standing between A ∈ sub P and the
--- bridge below.
+-- From a membership proof to the Boolean A ∈ᶠ As.  It is what turns a
+-- membership proof into the side condition of atomLook, so it is the only thing
+-- standing between A ∈ sub P and the bridge below.
 
 ∈ᶠ-mem : (As : List Formula) {A : Formula} -> A ∈ As -> A ∈ᶠ As ≡ true
 ∈ᶠ-mem []       ()
@@ -128,12 +127,9 @@ skel∧Intro false y     () e2
 
 litTrue : (Ats : List Formula) (a : Val) (A : Formula)
        -> valFrom Ats a (lit A (valFrom Ats a A)) ≡ true
-litTrue Ats a A = go (valFrom Ats a A) refl
-  where
-    go : (b : Bool) -> valFrom Ats a A ≡ b
-      -> valFrom Ats a (lit A b) ≡ true
-    go true  e = e
-    go false e = cong ¬ᵇ_ e
+litTrue Ats a A with valFrom Ats a A in e
+... | true  = e
+... | false = cong ¬ᵇ_ e
 
 litListTrue : (Ats : List Formula) (a : Val) (As : List Formula) {C : Formula}
            -> C ∈ litList As (map (valFrom Ats a) As)
@@ -214,11 +210,9 @@ okAtSkel Ats a P (□ B)   m boxOk =
 allOkSkel : (Ats : List Formula) (a : Val) (P : Formula) (As : List Formula)
          -> ({A : Formula} -> A ∈ As -> A ∈ sub P) -> □Ok Ats a P
          -> allOk P (skelVec Ats a P) As ≡ true
-allOkSkel Ats a P []       sb boxOk = refl
-allOkSkel Ats a P (A ∷ As) sb boxOk =
-  andIntro (okAt P (skelVec Ats a P) A) (allOk P (skelVec Ats a P) As)
-           (okAtSkel Ats a P A (sb here) boxOk)
-           (allOkSkel Ats a P As (λ m -> sb (there m)) boxOk)
+allOkSkel Ats a P As sb boxOk =
+  all-intro (okAt P (skelVec Ats a P)) As
+            (λ {A} m -> okAtSkel Ats a P A (sb m) boxOk)
 
 -- Coherence.  The bit at position i is the skeleton's reading of the formula
 -- AT position i, by nth-map, and the bit at the first occurrence of that same
@@ -366,14 +360,10 @@ C ⇐ D = D ⇒ C
       emptyElim (true≢false (trans (sym e)
                                    (cong ¬ᵇ_
                                          (boolSelf (valFrom Ats a (var zero))))))
-    go (D ∷ Ds) k e = onD (valFrom Ats a D) refl
-      where
-        onD : (b : Bool) -> valFrom Ats a D ≡ b -> valFrom Ats a C ≡ true
-        onD true  eb = ⇒TrueB (valFrom Ats a D) (valFrom Ats a C) (k here) eb
-        onD false eb =
-          go Ds (λ m -> k (there m))
-             (⇒TrueB (¬ᵇ valFrom Ats a D) (valFrom Ats a (⋁ Ds)) e
-                     (cong ¬ᵇ_ eb))
+    go (D ∷ Ds) k e with valFrom Ats a D in eb
+    ... | true  = ⇒TrueB (valFrom Ats a D) (valFrom Ats a C) (k here) eb
+    -- with D false, e already says that ⋁ Ds holds
+    ... | false = go Ds (λ m -> k (there m)) e
 
 ------------------------------------------------------------------------
 -- G34 of PHASE10-PLAN.md: the branch as one node.
@@ -507,25 +497,21 @@ boolContra false false h = refl
 
 ∈ᶠ-sound : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true -> A ∈ As
 ∈ᶠ-sound []       A ()
-∈ᶠ-sound (B ∷ Bs) A e = go (B ≡ᶠ A) refl
-  where
-    go : (b : Bool) -> B ≡ᶠ A ≡ b -> A ∈ B ∷ Bs
-    go true  eb = subst (λ X -> X ∈ B ∷ Bs) (≡ᶠ-sound B A eb) here
-    go false eb = there (∈ᶠ-sound Bs A (∈ᶠ-tail B Bs A e eb))
+∈ᶠ-sound (B ∷ Bs) A e with B ≡ᶠ A in eb
+... | true  = subst (λ X -> X ∈ B ∷ Bs) (≡ᶠ-sound B A eb) here
+... | false = there (∈ᶠ-sound Bs A e)   -- e now says A ∈ᶠ Bs ≡ true
 
 -- the atoms of a list are members of it
 
 insFIn : (A : Formula) (Bs : List Formula) {X : Formula}
       -> X ∈ insF A Bs -> X ≡ A ⊎ X ∈ Bs
-insFIn A Bs {X} m = go (A ∈ᶠ Bs) refl
+insFIn A Bs {X} m with A ∈ᶠ Bs
+... | true  = inr m   -- A was already there, so m : X ∈ Bs
+... | false = onM m   -- A was inserted, so m : X ∈ A ∷ Bs
   where
-    go : (b : Bool) -> A ∈ᶠ Bs ≡ b -> X ≡ A ⊎ X ∈ Bs
-    go true  e = inr (subst (λ c -> X ∈ filterCons (¬ᵇ c) A Bs) e m)
-    go false e = onM (subst (λ c -> X ∈ filterCons (¬ᵇ c) A Bs) e m)
-      where
-        onM : X ∈ A ∷ Bs -> X ≡ A ⊎ X ∈ Bs
-        onM here      = inl refl
-        onM (there k) = inr k
+    onM : X ∈ A ∷ Bs -> X ≡ A ⊎ X ∈ Bs
+    onM here      = inl refl
+    onM (there k) = inr k
 
 atomsIn : (As : List Formula) {X : Formula} -> X ∈ atoms As -> X ∈ As
 atomsIn []           ()
@@ -589,10 +575,10 @@ skelAgree Ats a P v ok at (□ A)   m = at (□ A) m refl
 skelAgree Ats a P v ok at (¬ A)   m =
   trans (cong ¬ᵇ_ (skelAgree Ats a P v ok at A (sub-¬ P m)))
         (sym (⇔ᵇ-sound (valOf P v (¬ A)) (¬ᵇ valOf P v A)
-                       (allOk-at P v (sub P) m ok)))
+                       (all-at (okAt P v) (sub P) m ok)))
 skelAgree Ats a P v ok at (A ⇒ B) m =
   trans (cong₂ _⇒ᵇ_ (skelAgree Ats a P v ok at A (sub-⇒L P m))
                     (skelAgree Ats a P v ok at B (sub-⇒R P m)))
         (sym (⇔ᵇ-sound (valOf P v (A ⇒ B))
                        (valOf P v A ⇒ᵇ valOf P v B)
-                       (allOk-at P v (sub P) m ok)))
+                       (all-at (okAt P v) (sub P) m ok)))

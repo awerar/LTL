@@ -56,7 +56,7 @@ open import LTL.CompletePC public
 provableEachPC : (Q : Formula) -> satB (¬ Q) ≡ false
               -> (w : Val) -> w ∈ St (¬ Q)
               -> ⊢ (chi (¬ Q) w) ⇒ Q
-provableEachPC Q e w m = outer (w ∈ᵛ Ust R) refl
+provableEachPC Q e w m = byPosition
   where
     R : Formula
     R = ¬ Q
@@ -65,26 +65,19 @@ provableEachPC Q e w m = outer (w ∈ᵛ Ust R) refl
     fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
     fromR ev = pc (tautChi Q w (stLen R m) ev)
 
-    outer : (c : Bool) -> w ∈ᵛ Ust R ≡ c -> ⊢ (chi R w) ⇒ Q
-    outer false ec = fromR (notIn (valOf R w R) refl)
-      where
-        notIn : (d : Bool) -> valOf R w R ≡ d -> valOf R w R ≡ false
-        notIn false ed = ed
-        notIn true  ed =
-          emptyElim (∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
-    outer true  ec = go (w ∈ᵛ Uinf R) refl
-      where
-        mu : w ∈ Ust R
-        mu = ∈ᵛ-sound w (Ust R) ec
-
-        go : (b : Bool) -> w ∈ᵛ Uinf R ≡ b -> ⊢ (chi R w) ⇒ Q
-        go true  eb =
-          fromR (any-false (λ z -> valOf R z R) (Uinf R) e
-                           (∈ᵛ-sound w (Uinf R) eb))
-        go false eb =
-          mp ¬Elim
-             (extract R (filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R))
-                                     (Ust R) mu (cong ¬ᵇ_ eb)))
+    byPosition : ⊢ (chi R w) ⇒ Q
+    byPosition with w ∈ᵛ Ust R in ec
+    ... | false =
+      fromR (refuteTrue (valOf R w R) λ ed ->
+               ∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
+    ... | true with w ∈ᵛ Uinf R in eb
+    ...   | true =
+      fromR (any-false (λ z -> valOf R z R) (Uinf R) e
+                       (∈ᵛ-sound w (Uinf R) eb))
+    ...   | false =
+      mp ¬Elim
+         (extract R (filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
+                                 (∈ᵛ-sound w (Ust R) ec) (cong ¬ᵇ_ eb)))
 
 -- G34's certificate, kept as a named term so that LTL.Proofs can put the whole
 -- progression side by side.  It is the Phase 9 shape with the branches
@@ -203,15 +196,10 @@ tautRemoved Q e =
 
                     -- and did not survive it, because satB is false
                     notUinf : w ∈ᵛ Uinf R ≡ false
-                    notUinf = onU (w ∈ᵛ Uinf R) refl
-                      where
-                        onU : (b : Bool) -> w ∈ᵛ Uinf R ≡ b
-                           -> w ∈ᵛ Uinf R ≡ false
-                        onU false eu = eu
-                        onU true  eu =
-                          emptyElim (true≢false (trans (sym ev)
-                            (any-false (λ z -> valOf R z R) (Uinf R) e
-                                       (∈ᵛ-sound w (Uinf R) eu))))
+                    notUinf = refuteTrue (w ∈ᵛ Uinf R) λ eu ->
+                      true≢false (trans (sym ev)
+                        (any-false (λ z -> valOf R z R) (Uinf R) e
+                                   (∈ᵛ-sound w (Uinf R) eu)))
 
                     mRem : w ∈ removed R
                     mRem = filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)
@@ -244,18 +232,15 @@ provablePC Q e =
             (mpChain (□Args (sub (¬ Q))) (pc (tautRemoved Q e)))
 
 decidePC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-decidePC Q = onSat (satB (¬ Q)) refl
+decidePC Q with satB (¬ Q) in e
+... | false = inl (provablePC Q e)
+... | true  =
+  fromSig (any-true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
   where
     fromSig : (Σ[ v ∈ Val ] v ∈ Uinf (¬ Q) ×
                                 valOf (¬ Q) v (¬ Q) ≡ true)
            -> ⊢ Q ⊎ LassoCountermodel Q
     fromSig (v0 , m , ev) = inr (buildCM Q v0 m ev)
-
-    onSat : (x : Bool) -> satB (¬ Q) ≡ x
-         -> ⊢ Q ⊎ LassoCountermodel Q
-    onSat false e = inl (provablePC Q e)
-    onSat true  e =
-      fromSig (any-true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Counting it.
@@ -333,57 +318,60 @@ decidePC-◇P = refl
 -- CHECKING goes up.  Both certificates are therefore kept, and decidePC uses
 -- the short-to-check one.
 
-chiA : Formula -> Val -> Formula
-chiA P v = ⋀ (litList (atoms (sub P)) (atomBits P v))
+module _ (P : Formula) where
 
-¬ChiA : Formula -> Val -> Formula
-¬ChiA P v = ¬ (chiA P v)
+  chiA : Val -> Formula
+  chiA v = ⋀ (litList (atoms (sub P)) (atomBits P v))
 
--- a row making chiA true makes chi true, for a state v
+  ¬ChiA : Val -> Formula
+  ¬ChiA v = ¬ (chiA v)
 
-chiABridge : (P : Formula) (v : Val) -> isState P v ≡ true
-          -> length v ≡ length (sub P)
-          -> (Ats : List Formula) (a : Val)
-          -> valFrom Ats a (chiA P v) ≡ true
-          -> valFrom Ats a (chi P v) ≡ true
-chiABridge P v st len Ats a ec =
-  subst (λ u -> valFrom Ats a (chi P u) ≡ true) (mkV-id P v st len) full
-  where
-    ok : allOk P v (sub P) ≡ true
-    ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
+  -- a row making chiA true makes chi true, for a state v
 
-    atomAg : (X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
-          -> valFrom Ats a X ≡ valOf P v X
-    atomAg X mX aX =
-      litSound Ats a X (valOf P v X)
-               (⋀ProjTrue Ats a (litList (atoms (sub P)) (atomBits P v))
-                             (litMapMem (valOf P v) (atoms (sub P))
-                                        (∈ᶠ-sound (atoms (sub P)) X
-                                                  (atomMem (sub P) mX aX)))
-                             ec)
+  chiABridge : (v : Val) -> isState P v ≡ true
+            -> length v ≡ length (sub P)
+            -> (Ats : List Formula) (a : Val)
+            -> valFrom Ats a (chiA v) ≡ true
+            -> valFrom Ats a (chi P v) ≡ true
+  chiABridge v st len Ats a ec =
+    subst (λ u -> valFrom Ats a (chi P u) ≡ true) (mkV-id P v st len) full
+    where
+      ok : allOk P v (sub P) ≡ true
+      ok = andTrueL (allOk P v (sub P)) (allCoh P v (length (sub P))) st
 
-    full : valFrom Ats a (chi P (mkV P (atomBits P v))) ≡ true
-    full =
-      ⋀True Ats a (litList (sub P) (mkV P (atomBits P v)))
-               (litMapOk Ats a (valFrom (atoms (sub P)) (atomBits P v)) (sub P)
-                         (λ A mA -> trans (skelAgree Ats a P v ok atomAg A mA)
-                                          (sym (valFromEq P v ok A mA))))
+      atomAg : (X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
+            -> valFrom Ats a X ≡ valOf P v X
+      atomAg X mX aX =
+        litSound Ats a X (valOf P v X)
+                 (⋀ProjTrue Ats a (litList (atoms (sub P)) (atomBits P v))
+                               (litMapMem (valOf P v) (atoms (sub P))
+                                          (∈ᶠ-sound (atoms (sub P)) X
+                                                    (atomMem (sub P) mX aX)))
+                               ec)
 
-tautBridge : (P : Formula) (v : Val) -> isState P v ≡ true
-          -> length v ≡ length (sub P)
-          -> isTaut (¬ (chi P v) ⇒ (¬ChiA P v)) ≡ true
-tautBridge P v st len =
-  all-intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
-  where
-    F : Formula
-    F = ¬ (chi P v) ⇒ (¬ChiA P v)
+      full : valFrom Ats a (chi P (mkV P (atomBits P v))) ≡ true
+      full =
+        ⋀True Ats a (litList (sub P) (mkV P (atomBits P v)))
+                 (litMapOk Ats a (valFrom (atoms (sub P)) (atomBits P v))
+                           (sub P)
+                           (λ A mA -> trans (skelAgree Ats a P v ok atomAg A mA)
+                                            (sym (valFromEq P v ok A mA))))
 
-    Ats : List Formula
-    Ats = atomsOf F
+  tautBridge : (v : Val) -> isState P v ≡ true
+            -> length v ≡ length (sub P)
+            -> isTaut (¬ (chi P v) ⇒ (¬ChiA v)) ≡ true
+  tautBridge v st len =
+    all-intro (λ a -> valFrom Ats a F) (allVecs (length Ats)) row
+    where
+      F : Formula
+      F = ¬ (chi P v) ⇒ (¬ChiA v)
 
-    row : {a : Val} -> a ∈ allVecs (length Ats) -> valFrom Ats a F ≡ true
-    row {a} m = boolContra (valFrom Ats a (chi P v)) (valFrom Ats a (chiA P v))
-                           (chiABridge P v st len Ats a)
+      Ats : List Formula
+      Ats = atomsOf F
+
+      row : {a : Val} -> a ∈ allVecs (length Ats) -> valFrom Ats a F ≡ true
+      row {a} m = boolContra (valFrom Ats a (chi P v)) (valFrom Ats a (chiA v))
+                             (chiABridge v st len Ats a)
 
 ------------------------------------------------------------------------
 -- and the certificate over chiA
@@ -447,15 +435,10 @@ tautRemovedA Q e =
                     mUst = ustSeed R mSt ev
 
                     notUinf : w ∈ᵛ Uinf R ≡ false
-                    notUinf = onU (w ∈ᵛ Uinf R) refl
-                      where
-                        onU : (b : Bool) -> w ∈ᵛ Uinf R ≡ b
-                           -> w ∈ᵛ Uinf R ≡ false
-                        onU false eu = eu
-                        onU true  eu =
-                          emptyElim (true≢false (trans (sym ev)
-                            (any-false (λ z -> valOf R z R) (Uinf R) e
-                                       (∈ᵛ-sound w (Uinf R) eu))))
+                    notUinf = refuteTrue (w ∈ᵛ Uinf R) λ eu ->
+                      true≢false (trans (sym ev)
+                        (any-false (λ z -> valOf R z R) (Uinf R) e
+                                   (∈ᵛ-sound w (Uinf R) eu)))
 
                     mRem : w ∈ removed R
                     mRem = filter-true (λ z -> ¬ᵇ (z ∈ᵛ Uinf R)) (Ust R)

@@ -24,97 +24,75 @@ open import LTL.Val public
 -- carrying A, which is what lets chi (built positionally) and the conditions
 -- below (built by lookup) be about the same thing.
 
-valOf : Formula -> Val -> Formula -> Bool
-valOf P v A = bitAt v (indexOf (sub P) A)
+module _ (P : Formula) where
 
-------------------------------------------------------------------------
--- (S1) and (S2), imposed at each member of sub P.
---
--- var and ○ carry no local condition: the behaviour of ○ lives entirely in
--- the transition relation (LTL.Step), which is the point of Remark 2.1.
+  valOf : Val -> Formula -> Bool
+  valOf v A = bitAt v (indexOf (sub P) A)
 
-okAt : Formula -> Val -> Formula -> Bool
-okAt P v (var n) = true
-okAt P v (¬ A)   = valOf P v (¬ A) ⇔ᵇ ¬ᵇ valOf P v A
-okAt P v (A ⇒ B) = valOf P v (A ⇒ B) ⇔ᵇ valOf P v A ⇒ᵇ valOf P v B
-okAt P v (○ A)   = true
-okAt P v (□ A)   = valOf P v (□ A) ⇒ᵇ valOf P v A
+  ------------------------------------------------------------------------
+  -- (S1) and (S2), imposed at each member of sub P.
+  --
+  -- var and ○ carry no local condition: the behaviour of ○ lives entirely in
+  -- the transition relation (LTL.Step), which is the point of Remark 2.1.
 
-allOk : Formula -> Val -> List Formula -> Bool
-allOk P v []       = true
-allOk P v (A ∷ As) = okAt P v A ∧ᵇ allOk P v As
+  okAt : Val -> Formula -> Bool
+  okAt v (var n) = true
+  okAt v (¬ A)   = valOf v (¬ A) ⇔ᵇ ¬ᵇ valOf v A
+  okAt v (A ⇒ B) = valOf v (A ⇒ B) ⇔ᵇ valOf v A ⇒ᵇ valOf v B
+  okAt v (○ A)   = true
+  okAt v (□ A)   = valOf v (□ A) ⇒ᵇ valOf v A
 
-------------------------------------------------------------------------
--- Coherence on duplicates.
---
--- Stated as "every position agrees with the first occurrence of its formula",
--- which is linear rather than quadratic and equivalent by transitivity through
--- that first occurrence.
+  allOk : Val -> List Formula -> Bool
+  allOk v = all (okAt v)
 
-cohAt : Formula -> Val -> Nat -> Bool
-cohAt P v i = bitAt v i ⇔ᵇ valOf P v (nth (sub P) i ⊥)
+  ------------------------------------------------------------------------
+  -- Coherence on duplicates.
+  --
+  -- Stated as "every position agrees with the first occurrence of its formula",
+  -- which is linear rather than quadratic and equivalent by transitivity
+  -- through that first occurrence.
 
-allCoh : Formula -> Val -> Nat -> Bool
-allCoh P v zero    = true
-allCoh P v (suc n) = cohAt P v n ∧ᵇ allCoh P v n
+  cohAt : Val -> Nat -> Bool
+  cohAt v i = bitAt v i ⇔ᵇ valOf v (nth (sub P) i ⊥)
 
-------------------------------------------------------------------------
--- States
+  allCoh : Val -> Nat -> Bool
+  allCoh v zero    = true
+  allCoh v (suc n) = cohAt v n ∧ᵇ allCoh v n
 
-isState : Formula -> Val -> Bool
-isState P v = allOk P v (sub P) ∧ᵇ
-              allCoh P v (length (sub P))
+  ------------------------------------------------------------------------
+  -- States
 
-St : Formula -> List Val
-St P = filter (isState P) (allVecs (length (sub P)))
+  isState : Val -> Bool
+  isState v = allOk v (sub P) ∧ᵇ
+              allCoh v (length (sub P))
 
-------------------------------------------------------------------------
--- Searching allOk
+  St : List Val
+  St = filter isState (allVecs (length (sub P)))
 
-allOk-at : (P : Formula) (v : Val) (As : List Formula) {A : Formula}
-        -> A ∈ As -> allOk P v As ≡ true -> okAt P v A ≡ true
-allOk-at P v []       ()        e
-allOk-at P v (B ∷ Bs) here      e = andTrueL (okAt P v B) (allOk P v Bs) e
-allOk-at P v (B ∷ Bs) (there m) e =
-  allOk-at P v Bs m (andTrueR (okAt P v B) (allOk P v Bs) e)
+  ------------------------------------------------------------------------
+  -- Searching allCoh
 
-allOk-false : (P : Formula) (v : Val) (As : List Formula)
-           -> allOk P v As ≡ false
-           -> Σ[ A ∈ Formula ] A ∈ As × okAt P v A ≡ false
-allOk-false P v []       ()
-allOk-false P v (B ∷ Bs) e =
-  sumElim (λ e1 -> B , here , e1)
-          (λ e2 -> shift (allOk-false P v Bs e2))
-          (andFalse (okAt P v B) (allOk P v Bs) e)
-  where
-    shift : (Σ[ A ∈ Formula ] A ∈ Bs × okAt P v A ≡ false)
-         -> Σ[ A ∈ Formula ] A ∈ B ∷ Bs × okAt P v A ≡ false
-    shift (A , m , q) = A , there m , q
+  allCoh-at : (v : Val) (n i : Nat) -> i < n
+           -> allCoh v n ≡ true -> cohAt v i ≡ true
+  allCoh-at v zero    i ()  e
+  allCoh-at v (suc n) i lt  e =
+    sumElim (λ eq -> subst (λ k -> cohAt v k ≡ true) (sym eq)
+                           (andTrueL (cohAt v n) (allCoh v n) e))
+            (λ l  -> allCoh-at v n i l (andTrueR (cohAt v n) (allCoh v n) e))
+            (ltSucCase i n lt)
 
-------------------------------------------------------------------------
--- Searching allCoh
-
-allCoh-at : (P : Formula) (v : Val) (n i : Nat) -> i < n
-         -> allCoh P v n ≡ true -> cohAt P v i ≡ true
-allCoh-at P v zero    i ()  e
-allCoh-at P v (suc n) i lt  e =
-  sumElim (λ eq -> subst (λ k -> cohAt P v k ≡ true) (sym eq)
-                         (andTrueL (cohAt P v n) (allCoh P v n) e))
-          (λ l  -> allCoh-at P v n i l (andTrueR (cohAt P v n) (allCoh P v n) e))
-          (ltSucCase i n lt)
-
-allCoh-false : (P : Formula) (v : Val) (n : Nat)
-            -> allCoh P v n ≡ false
-            -> Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false
-allCoh-false P v zero    ()
-allCoh-false P v (suc n) e =
-  sumElim (λ e1 -> n , ltNSucN n , e1)
-          (λ e2 -> shift (allCoh-false P v n e2))
-          (andFalse (cohAt P v n) (allCoh P v n) e)
-  where
-    shift : (Σ[ i ∈ Nat ] i < n × cohAt P v i ≡ false)
-         -> Σ[ i ∈ Nat ] i < suc n × cohAt P v i ≡ false
-    shift (i , l , q) = i , ltWeak l , q
+  allCoh-false : (v : Val) (n : Nat)
+              -> allCoh v n ≡ false
+              -> Σ[ i ∈ Nat ] i < n × cohAt v i ≡ false
+  allCoh-false v zero    ()
+  allCoh-false v (suc n) e =
+    sumElim (λ e1 -> n , ltNSucN n , e1)
+            (λ e2 -> shift (allCoh-false v n e2))
+            (andFalse (cohAt v n) (allCoh v n) e)
+    where
+      shift : (Σ[ i ∈ Nat ] i < n × cohAt v i ≡ false)
+           -> Σ[ i ∈ Nat ] i < suc n × cohAt v i ≡ false
+      shift (i , l , q) = i , ltWeak l , q
 
 ------------------------------------------------------------------------
 -- Computational checks.

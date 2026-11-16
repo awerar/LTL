@@ -75,18 +75,15 @@ buildCM Q v0 m ev = countermodel v0 r m evalFalse noDeriv
 -- Theorem 6.1
 
 decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-decide Q = onSat (satB (¬ Q)) refl
+decide Q with satB (¬ Q) in e
+... | false = inl (provable Q e)
+... | true  =
+  fromSig (any-true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
   where
     fromSig : (Σ[ v ∈ Val ] v ∈ Uinf (¬ Q) ×
                                 valOf (¬ Q) v (¬ Q) ≡ true)
            -> ⊢ Q ⊎ LassoCountermodel Q
     fromSig (v0 , m , ev) = inr (buildCM Q v0 m ev)
-
-    onSat : (x : Bool) -> satB (¬ Q) ≡ x
-         -> ⊢ Q ⊎ LassoCountermodel Q
-    onSat false e = inl (provable Q e)
-    onSat true  e =
-      fromSig (any-true (λ v -> valOf (¬ Q) v (¬ Q)) (Uinf (¬ Q)) e)
 
 ------------------------------------------------------------------------
 -- Reading the answer

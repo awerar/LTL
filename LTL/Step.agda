@@ -22,84 +22,74 @@ open import LTL.State public
 ------------------------------------------------------------------------
 -- The three conditions, imposed at each member of sub P
 
-stepAt : Formula -> Val -> Val -> Formula -> Bool
-stepAt P v w (var n) = true
-stepAt P v w (¬ A)   = true
-stepAt P v w (A ⇒ B) = true
-stepAt P v w (○ B)   = valOf P v (○ B) ⇔ᵇ valOf P w B
-stepAt P v w (□ A)   =
-  (valOf P v (□ A) ⇒ᵇ valOf P w (□ A)) ∧ᵇ
-  (¬ᵇ valOf P v (□ A) ∧ᵇ valOf P v A ⇒ᵇ ¬ᵇ valOf P w (□ A))
+module _ (P : Formula) where
 
-allStep : Formula -> Val -> Val -> List Formula -> Bool
-allStep P v w []       = true
-allStep P v w (A ∷ As) = stepAt P v w A ∧ᵇ allStep P v w As
+  stepAt : Val -> Val -> Formula -> Bool
+  stepAt v w (var n) = true
+  stepAt v w (¬ A)   = true
+  stepAt v w (A ⇒ B) = true
+  stepAt v w (○ B)   = valOf P v (○ B) ⇔ᵇ valOf P w B
+  stepAt v w (□ A)   =
+    (valOf P v (□ A) ⇒ᵇ valOf P w (□ A)) ∧ᵇ
+    (¬ᵇ valOf P v (□ A) ∧ᵇ valOf P v A ⇒ᵇ ¬ᵇ valOf P w (□ A))
 
-step : Formula -> Val -> Val -> Bool
-step P v w = allStep P v w (sub P)
+  allStep : Val -> Val -> List Formula -> Bool
+  allStep v w = all (stepAt v w)
 
-------------------------------------------------------------------------
--- Successors within a given set of states
+  step : Val -> Val -> Bool
+  step v w = allStep v w (sub P)
 
-succs : Formula -> List Val -> Val -> List Val
-succs P us v = filter (step P v) us
+  ------------------------------------------------------------------------
+  -- Successors within a given set of states
 
-------------------------------------------------------------------------
--- Reading one conjunct out of a true step
+  succs : List Val -> Val -> List Val
+  succs us v = filter (step v) us
 
-allStep-at : (P : Formula) (v w : Val) (As : List Formula) {X : Formula}
-          -> X ∈ As -> allStep P v w As ≡ true -> stepAt P v w X ≡ true
-allStep-at P v w []       ()       e
-allStep-at P v w (B ∷ Bs) here     e =
-  andTrueL (stepAt P v w B) (allStep P v w Bs) e
-allStep-at P v w (B ∷ Bs) (there m) e =
-  allStep-at P v w Bs m (andTrueR (stepAt P v w B) (allStep P v w Bs) e)
+  ------------------------------------------------------------------------
+  -- Persistence, Lemma 2.8 of m4.tex.
+  --
+  -- On paper this needs a line of proof; here it is (T3), read off.
 
-------------------------------------------------------------------------
--- Persistence, Lemma 2.8 of m4.tex.
---
--- On paper this needs a line of proof; here it is (T3), read off.
+  persist : (v w : Val) (A : Formula)
+         -> □ A ∈ sub P
+         -> step v w ≡ true
+         -> valOf P v (□ A) ≡ false
+         -> valOf P v A ≡ true
+         -> valOf P w (□ A) ≡ false
+  persist v w A h st bx a =
+    t3aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
+          (all-at (stepAt v w) (sub P) h st) bx a
+    where
+      -- x = □ A at v,  z = A at v,  y = □ A at w
+      t3aux : (x z y : Bool)
+           -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
+           -> x ≡ false -> z ≡ true -> y ≡ false
+      t3aux true  z     y     e () c
+      t3aux false false y     e b ()
+      t3aux false true  false e b c = refl
+      t3aux false true  true  () b c
 
-persist : (P : Formula) (v w : Val) (A : Formula)
+  ------------------------------------------------------------------------
+  -- (T2), read off the same way.
+  --
+  -- The note uses it twice: in Lemma 2.7 to refute a successor dropping a box,
+  -- and in Hintikka's lemma to carry  □ A  forward along the run.
+
+  carry : (v w : Val) (A : Formula)
        -> □ A ∈ sub P
-       -> step P v w ≡ true
-       -> valOf P v (□ A) ≡ false
-       -> valOf P v A ≡ true
-       -> valOf P w (□ A) ≡ false
-persist P v w A h st bx a =
-  t3aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
-        (allStep-at P v w (sub P) h st) bx a
-  where
-    -- x = □ A at v,  z = A at v,  y = □ A at w
-    t3aux : (x z y : Bool)
-         -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
-         -> x ≡ false -> z ≡ true -> y ≡ false
-    t3aux true  z     y     e () c
-    t3aux false false y     e b ()
-    t3aux false true  false e b c = refl
-    t3aux false true  true  () b c
-
-------------------------------------------------------------------------
--- (T2), read off the same way.
---
--- The note uses it twice: in Lemma 2.7 to refute a successor dropping a box,
--- and in Hintikka's lemma to carry  □ A  forward along the run.
-
-carry : (P : Formula) (v w : Val) (A : Formula)
-     -> □ A ∈ sub P
-     -> step P v w ≡ true
-     -> valOf P v (□ A) ≡ true
-     -> valOf P w (□ A) ≡ true
-carry P v w A h st bx =
-  t2aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
-        (allStep-at P v w (sub P) h st) bx
-  where
-    t2aux : (x z y : Bool)
-         -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
-         -> x ≡ true -> y ≡ true
-    t2aux true  z true  e  b = refl
-    t2aux true  z false () b
-    t2aux false z y     e  ()
+       -> step v w ≡ true
+       -> valOf P v (□ A) ≡ true
+       -> valOf P w (□ A) ≡ true
+  carry v w A h st bx =
+    t2aux (valOf P v (□ A)) (valOf P v A) (valOf P w (□ A))
+          (all-at (stepAt v w) (sub P) h st) bx
+    where
+      t2aux : (x z y : Bool)
+           -> (x ⇒ᵇ y) ∧ᵇ (¬ᵇ x ∧ᵇ z ⇒ᵇ ¬ᵇ y) ≡ true
+           -> x ≡ true -> y ≡ true
+      t2aux true  z true  e  b = refl
+      t2aux true  z false () b
+      t2aux false z y     e  ()
 
 ------------------------------------------------------------------------
 -- Computational checks.

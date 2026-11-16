@@ -37,7 +37,7 @@ nonState : (P : Formula) (v : Val)
         -> length v ≡ length (sub P)
         -> isState P v ≡ false
         -> ⊢ ¬ (chi P v)
-nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
+nonState P v len e0 = byCoh e0
   where
     C : Formula
     C = chi P v
@@ -128,19 +128,20 @@ nonState P v len e0 = onCoh (allCoh P v (length (sub P))) refl e0
 
     ----------------------------------------------------------------
 
-    onCoh : (c : Bool) -> allCoh P v (length (sub P)) ≡ c
-         -> isState P v ≡ false -> ⊢ ¬ C
-    onCoh false ce e =
+    byCoh : isState P v ≡ false -> ⊢ ¬ C
+    byCoh e with allCoh P v (length (sub P)) in ce
+    ... | false =
       sigElim (allCoh-false P v (length (sub P)) ce)
       where
         sigElim : (Σ[ i ∈ Nat ] i < length (sub P) ×
                                     cohAt P v i ≡ false)
                -> ⊢ ¬ C
         sigElim (i , lt , cf) = cohFail i lt cf
-    onCoh true  ce e =
-      sumElim (λ ef -> sigElim (allOk-false P v (sub P) ef))
-              (λ bad -> emptyElim (true≢false (trans (sym ce) bad)))
-              (andFalse (allOk P v (sub P)) (allCoh P v (length (sub P))) e)
+    -- here e says  allOk P v (sub P) ∧ᵇ true ≡ false
+    ... | true  =
+      sumElim (λ ef -> sigElim (all-false (okAt P v) (sub P) ef))
+              (λ bad -> emptyElim (true≢false bad))
+              (andFalse (allOk P v (sub P)) true e)
       where
         sigElim : (Σ[ A ∈ Formula ] A ∈ sub P ×
                                         okAt P v A ≡ false)

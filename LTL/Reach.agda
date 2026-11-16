@@ -75,27 +75,29 @@ unionV (x ∷ xs) ys = insertV x (unionV xs ys)
 ------------------------------------------------------------------------
 -- One round of expansion, then the fuel-bounded closure
 
-reachStep : Formula -> List Val -> List Val -> List Val
-reachStep P us acc = unionV (concat (map (succs P us) acc)) acc
+module _ (P : Formula) where
 
-reachIter : Formula -> Nat -> List Val -> List Val -> List Val
-reachIter P zero    us acc = acc
-reachIter P (suc n) us acc = reachIter P n us (reachStep P us acc)
+  reachStep : List Val -> List Val -> List Val
+  reachStep us acc = unionV (concat (map (succs P us) acc)) acc
 
-reach : Formula -> List Val -> Val -> List Val
-reach P us v = reachIter P (length us) us (v ∷ [])
+  reachIter : Nat -> List Val -> List Val -> List Val
+  reachIter zero    us acc = acc
+  reachIter (suc n) us acc = reachIter n us (reachStep us acc)
 
-------------------------------------------------------------------------
--- Reading a successor list
+  reach : List Val -> Val -> List Val
+  reach us v = reachIter (length us) us (v ∷ [])
 
-succsMem : (P : Formula) (us : List Val) (v : Val) {w : Val}
-        -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
-succsMem P us v m =
-  filter-sub (step P v) us m , filter-prop (step P v) us m
+  ------------------------------------------------------------------------
+  -- Reading a successor list
 
-succsIn : (P : Formula) (us : List Val) (v : Val) {w : Val}
-       -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
-succsIn P us v mw st = filter-true (step P v) us mw st
+  succsMem : (us : List Val) (v : Val) {w : Val}
+          -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
+  succsMem us v m =
+    filter-sub (step P v) us m , filter-prop (step P v) us m
+
+  succsIn : (us : List Val) (v : Val) {w : Val}
+         -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
+  succsIn us v mw st = filter-true (step P v) us mw st
 
 ------------------------------------------------------------------------
 -- Computational checks.

@@ -158,15 +158,11 @@ null-mem (y ∷ ys) () m
 
 any-true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
         -> Σ[ x ∈ A ] x ∈ xs × p x ≡ true
-any-true {A} p []       ()
-any-true {A} p (y ∷ ys) e =
+any-true p []       ()
+any-true p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> shift (any-true p ys e2))
+          (λ e2 -> there-Σ (any-true p ys e2))
           (orTrue (p y) (any p ys) e)
-  where
-    shift : (Σ[ x ∈ A ] x ∈ ys × p x ≡ true)
-         -> Σ[ x ∈ A ] x ∈ y ∷ ys × p x ≡ true
-    shift (x , m , q) = x , there m , q
 
 any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> any p xs ≡ true
@@ -182,19 +178,7 @@ any-false p (y ∷ ys) e (there m) =
   any-false p ys (orFalseR (p y) (any p ys) e) m
 
 ------------------------------------------------------------------------
--- all
-
-all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
-         -> Σ[ x ∈ A ] x ∈ xs × p x ≡ false
-all-false {A} p []       ()
-all-false {A} p (y ∷ ys) e =
-  sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> shift (all-false p ys e2))
-          (andFalse (p y) (all p ys) e)
-  where
-    shift : (Σ[ x ∈ A ] x ∈ ys × p x ≡ false)
-         -> Σ[ x ∈ A ] x ∈ y ∷ ys × p x ≡ false
-    shift (x , m , q) = x , there m , q
+-- null
 
 null-false : {A : Set} (xs : List A) -> null xs ≡ false
           -> Σ[ x ∈ A ] x ∈ xs
@@ -208,7 +192,4 @@ map-mem-inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
            -> y ∈ map f xs -> Σ[ x ∈ A ] x ∈ xs × y ≡ f x
 map-mem-inv f []       ()
 map-mem-inv f (x ∷ xs) here      = x , here , refl
-map-mem-inv f (x ∷ xs) (there m) = shift (map-mem-inv f xs m)
-  where
-    shift : (Σ[ z ∈ _ ] z ∈ xs × _) -> Σ[ z ∈ _ ] z ∈ x ∷ xs × _
-    shift (z , mz , ez) = z , there mz , ez
+map-mem-inv f (x ∷ xs) (there m) = there-Σ (map-mem-inv f xs m)

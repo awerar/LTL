@@ -100,15 +100,8 @@ nth-map f (x ∷ xs) (suc i) (ltSuc l) d e = nth-map f xs i l d e
 infix 4.5 _∈ᶠ_
 
 _∈ᶠ_ : Formula -> List Formula -> Bool
-A ∈ᶠ      [] = false
+A ∈ᶠ []       = false
 A ∈ᶠ (B ∷ Bs) = (B ≡ᶠ A) ∨ᵇ (A ∈ᶠ Bs)
-
-∈ᶠ-tail : (B : Formula) (Bs : List Formula) (A : Formula)
-       -> A ∈ᶠ B ∷ Bs ≡ true -> B ≡ᶠ A ≡ false
-       -> A ∈ᶠ Bs ≡ true
-∈ᶠ-tail B Bs A e eb =
-  sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) eb)))
-          (λ e2 -> e2) (orTrue (B ≡ᶠ A) (A ∈ᶠ Bs) e)
 
 -- (The F in indexOf-nthF, indexOf-ltF: from the Boolean A ∈ᶠ As, where
 -- LTL.Proj's indexOf-nth, indexOf-lt start from a proof of A ∈ As.)
@@ -116,22 +109,16 @@ A ∈ᶠ (B ∷ Bs) = (B ≡ᶠ A) ∨ᵇ (A ∈ᶠ Bs)
 indexOf-nthF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
             -> nth As (indexOf As A) ⊥ ≡ A
 indexOf-nthF []       A ()
-indexOf-nthF (B ∷ Bs) A e = go (B ≡ᶠ A) refl
-  where
-    go : (b : Bool) -> B ≡ᶠ A ≡ b
-      -> nth (B ∷ Bs) (indexOfCons b (indexOf Bs A)) ⊥ ≡ A
-    go true  eb = ≡ᶠ-sound B A eb
-    go false eb = indexOf-nthF Bs A (∈ᶠ-tail B Bs A e eb)
+indexOf-nthF (B ∷ Bs) A e with B ≡ᶠ A in eb
+... | true  = ≡ᶠ-sound B A eb
+... | false = indexOf-nthF Bs A e
 
 indexOf-ltF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
            -> indexOf As A < length As
 indexOf-ltF []       A ()
-indexOf-ltF (B ∷ Bs) A e = go (B ≡ᶠ A) refl
-  where
-    go : (b : Bool) -> B ≡ᶠ A ≡ b
-      -> indexOfCons b (indexOf Bs A) < suc (length Bs)
-    go true  eb = ltZero
-    go false eb = ltSuc (indexOf-ltF Bs A (∈ᶠ-tail B Bs A e eb))
+indexOf-ltF (B ∷ Bs) A e with B ≡ᶠ A
+... | true  = ltZero
+... | false = ltSuc (indexOf-ltF Bs A e)
 
 ------------------------------------------------------------------------
 -- The atoms of a list of formulas.
@@ -150,21 +137,15 @@ insF : Formula -> List Formula -> List Formula
 insF A Bs = filterCons (¬ᵇ (A ∈ᶠ Bs)) A Bs
 
 insF-self : (A : Formula) (Bs : List Formula) -> A ∈ᶠ insF A Bs ≡ true
-insF-self A Bs = go (A ∈ᶠ Bs) refl
-  where
-    go : (b : Bool) -> A ∈ᶠ Bs ≡ b
-      -> A ∈ᶠ filterCons (¬ᵇ b) A Bs ≡ true
-    go true  e = e
-    go false e = orL (A ≡ᶠ A) (A ∈ᶠ Bs) (≡ᶠ-refl A)
+insF-self A Bs with A ∈ᶠ Bs in e
+... | true  = e
+... | false = orL (A ≡ᶠ A) _ (≡ᶠ-refl A)
 
 insF-mono : (A : Formula) (Bs : List Formula) (X : Formula)
          -> X ∈ᶠ Bs ≡ true -> X ∈ᶠ insF A Bs ≡ true
-insF-mono A Bs X e = go (A ∈ᶠ Bs) refl
-  where
-    go : (b : Bool) -> A ∈ᶠ Bs ≡ b
-      -> X ∈ᶠ filterCons (¬ᵇ b) A Bs ≡ true
-    go true  eb = e
-    go false eb = orR (A ≡ᶠ X) (X ∈ᶠ Bs) e
+insF-mono A Bs X e with A ∈ᶠ Bs
+... | true  = e
+... | false = orR (A ≡ᶠ X) (X ∈ᶠ Bs) e
 
 atoms : List Formula -> List Formula
 atoms []           = []

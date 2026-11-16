@@ -32,23 +32,25 @@ data Walk (P : Formula) (us : List Val) : Val -> List Val -> Val -> Set where
        -> w ∈ us -> step P v w ≡ true
        -> Walk P us w ws x -> Walk P us v (w ∷ ws) x
 
-walkApp : (P : Formula) (us : List Val) {v x y : Val} {ws zs : List Val}
-       -> Walk P us v ws x -> Walk P us x zs y -> Walk P us v (ws ++ zs) y
-walkApp P us wnil             w2 = w2
-walkApp P us (wcons mw st w1) w2 = wcons mw st (walkApp P us w1 w2)
+module _ (P : Formula) where
 
--- The endpoint is one of the states visited.
-walkEnd : (P : Formula) (us : List Val) {v : Val} {ws : List Val} {x : Val}
-       -> Walk P us v ws x -> x ∈ v ∷ ws
-walkEnd P us wnil             = here
-walkEnd P us (wcons mw st wk) = there (walkEnd P us wk)
+  walkApp : (us : List Val) {v x y : Val} {ws zs : List Val}
+         -> Walk P us v ws x -> Walk P us x zs y -> Walk P us v (ws ++ zs) y
+  walkApp us wnil             w2 = w2
+  walkApp us (wcons mw st w1) w2 = wcons mw st (walkApp us w1 w2)
 
--- Every state a walk visits after its start lies in us.
-walkIn : (P : Formula) (us : List Val) {v : Val} {ws : List Val} {x : Val}
-      -> Walk P us v ws x -> {z : Val} -> z ∈ ws -> z ∈ us
-walkIn P us wnil             ()
-walkIn P us (wcons mw st wk) here      = mw
-walkIn P us (wcons mw st wk) (there m) = walkIn P us wk m
+  -- The endpoint is one of the states visited.
+  walkEnd : (us : List Val) {v : Val} {ws : List Val} {x : Val}
+         -> Walk P us v ws x -> x ∈ v ∷ ws
+  walkEnd us wnil             = here
+  walkEnd us (wcons mw st wk) = there (walkEnd us wk)
+
+  -- Every state a walk visits after its start lies in us.
+  walkIn : (us : List Val) {v : Val} {ws : List Val} {x : Val}
+        -> Walk P us v ws x -> {z : Val} -> z ∈ ws -> z ∈ us
+  walkIn us wnil             ()
+  walkIn us (wcons mw st wk) here      = mw
+  walkIn us (wcons mw st wk) (there m) = walkIn us wk m
 
 ------------------------------------------------------------------------
 -- Membership under concatenation
@@ -144,11 +146,8 @@ walkPersist : (P : Formula) (us : List Val) (A : Formula) -> □ A ∈ sub P
            -> valOf P v (□ A) ≡ false
            -> Fulfil P A v ws ⊎ valOf P x (□ A) ≡ false
 walkPersist P us A mb wnil e = inr e
-walkPersist P us A mb (wcons {v} {w} {ws} {x} mw st wk) e = onA (valOf P v A) refl
-  where
-    onA : (b : Bool) -> valOf P v A ≡ b
-       -> Fulfil P A v (w ∷ ws) ⊎ valOf P x (□ A) ≡ false
-    onA false ea = inl (ful v here ea)
-    onA true  ea =
-      sumElim (λ f -> inl (fulfilCons f)) inr
-              (walkPersist P us A mb wk (persist P v w A mb st e ea))
+walkPersist P us A mb (wcons {v} {w} {ws} {x} mw st wk) e with valOf P v A in ea
+... | false = inl (ful v here ea)
+... | true  =
+  sumElim (λ f -> inl (fulfilCons f)) inr
+          (walkPersist P us A mb wk (persist P v w A mb st e ea))

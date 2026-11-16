@@ -23,22 +23,6 @@ open import LTL.Complete public
 open import LTL.Step     public
 
 ------------------------------------------------------------------------
--- Searching a false allStep
-
-allStep-false : (P : Formula) (v w : Val) (As : List Formula)
-             -> allStep P v w As ≡ false
-             -> Σ[ A ∈ Formula ] A ∈ As × stepAt P v w A ≡ false
-allStep-false P v w []       ()
-allStep-false P v w (B ∷ Bs) e =
-  sumElim (λ e1 -> B , here , e1)
-          (λ e2 -> shift (allStep-false P v w Bs e2))
-          (andFalse (stepAt P v w B) (allStep P v w Bs) e)
-  where
-    shift : (Σ[ A ∈ Formula ] A ∈ Bs × stepAt P v w A ≡ false)
-         -> Σ[ A ∈ Formula ] A ∈ B ∷ Bs × stepAt P v w A ≡ false
-    shift (A , m , q) = A , there m , q
-
-------------------------------------------------------------------------
 -- Closing the (T1) case, uniformly in the bit
 
 refute○ : {R B : Formula} (c : Bool)
@@ -56,7 +40,7 @@ notSucc : (P : Formula) (v w : Val)
        -> length w ≡ length (sub P)
        -> step P v w ≡ false
        -> ⊢ ¬ ((chi P v) ∧ ○ (chi P w))
-notSucc P v w lenv lenw e = sigElim (allStep-false P v w (sub P) e)
+notSucc P v w lenv lenw e = sigElim (all-false (stepAt P v w) (sub P) e)
   where
     R : Formula
     R = (chi P v) ∧ ○ (chi P w)
@@ -163,12 +147,6 @@ allLen-filter p {v ∷ vs} (alCons e al) = aux (p v)
     aux true  = alCons e (allLen-filter p al)
     aux false = allLen-filter p al
 
-map-filterCons2 : (P : Formula) (b : Bool) (w : Val) (L : List Val)
-               -> map ○_ (map (chi P) (filterCons b w L)) ≡
-                  filterCons b (○ (chi P w)) (map ○_ (map (chi P) L))
-map-filterCons2 P true  w L = refl
-map-filterCons2 P false w L = refl
-
 filter⇒ : (P : Formula) (v : Val) (Q : Formula) (ws : List Val)
        -> AllLen (length (sub P)) ws
        -> ((w : Val) -> length w ≡ length (sub P) -> step P v w ≡ false
@@ -177,29 +155,12 @@ filter⇒ : (P : Formula) (v : Val) (Q : Formula) (ws : List Val)
                 ⇒ ⋁ (map ○_ (map (chi P)
                          (filter (step P v) ws)))
 filter⇒ P v Q []       alNil           bad = liftP ⇒Refl
-filter⇒ P v Q (w ∷ ws) (alCons lenw al) bad =
-  subst (λ L -> ⊢ Q ⇒ ⋁ (○ (chi P w) ∷ map ○_ (map (chi P) ws))
-                      ⇒ ⋁ L)
-        (sym (map-filterCons2 P (step P v w) w (filter (step P v) ws)))
-        (onStep (step P v w) refl)
-  where
-    ih : ⊢ Q ⇒ ⋁ (map ○_ (map (chi P) ws))
-               ⇒ ⋁ (map ○_ (map (chi P) (filter (step P v) ws)))
-    ih = filter⇒ P v Q ws al bad
-
-    X : Formula
-    X = ○ (chi P w)
-
-    onStep : (b : Bool) -> step P v w ≡ b
-          -> ⊢ Q ⇒ ⋁ (X ∷ map ○_ (map (chi P) ws))
-                   ⇒ ⋁ (filterCons b X
-                           (map ○_ (map (chi P)
-                              (filter (step P v) ws))))
-    -- kept: compose under the same antecedent ¬ X
-    onStep true  e = mpU (liftP p2) (⇒Trans ih p1)
-    -- dropped: ¬ X is available, so the antecedent ¬ X can be discharged
-    onStep false e =
-      ⇒TransU (⇒Trans (bad w lenw e) (⇒Swap ⇒Refl)) ih
+filter⇒ P v Q (w ∷ ws) (alCons lenw al) bad with step P v w in e
+-- kept: compose under the same antecedent ¬ ○ (chi P w)
+... | true  = mpU (liftP p2) (⇒Trans (filter⇒ P v Q ws al bad) p1)
+-- dropped: ¬ ○ (chi P w) is available, so that antecedent can be discharged
+... | false =
+  ⇒TransU (⇒Trans (bad w lenw e) (⇒Swap ⇒Refl)) (filter⇒ P v Q ws al bad)
 
 ------------------------------------------------------------------------
 -- Lemma 2.7

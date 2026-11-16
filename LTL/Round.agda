@@ -49,7 +49,7 @@ roundBody : (P : Formula) (As : List Formula)
          -> ({A : Formula} -> A ∈ As -> A ∈ □Args (sub P))
          -> (u : Val) -> u ∈ Uinf P -> RoundB P As u
 roundBody P []       sbA u mu = mkRoundB [] u wnil mu (nilFul P u)
-roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
+roundBody P (A ∷ As) sbA u mu = byPend
   where
     -- ws1 takes u to x1, and deals with A if A was pending at u; the recursion
     -- then deals with As from x1.
@@ -73,13 +73,14 @@ roundBody P (A ∷ As) sbA u mu = onPend (valOf P u (□ A)) refl
                       (walkPersist P (Uinf P) B (□Args-mem (sub P) (sbA (there m)))
                                    wk1 pd)
 
-    onPend : (b : Bool) -> valOf P u (□ A) ≡ b -> RoundB P (A ∷ As) u
+    byPend : RoundB P (A ∷ As) u
+    byPend with valOf P u (□ A) in ep
     -- not pending at u: the empty path, and the obligation is vacuous
-    onPend true  ep =
+    ... | true  =
       combine [] u wnil mu
               (λ pd -> emptyElim (true≢false (trans (sym ep) pd)))
     -- pending at u: Lemma 5.1 supplies a walk to a state fulfilling it
-    onPend false ep = fromEsc (uinfFulfil P u mu A (sbA here) ep)
+    ... | false = fromEsc (uinfFulfil P u mu A (sbA here) ep)
       where
         fromEsc : Escape P (Uinf P) A u -> RoundB P (A ∷ As) u
         fromEsc (esc ws1 x1 wk1 mx1 ex) =
@@ -98,24 +99,26 @@ record Round (P : Formula) (u : Val) : Set where
     nonEmpty  : null visited ≡ false
     fulfilled : FulfilledAt P u visited u
 
-roundOf : (P : Formula) (u : Val) -> u ∈ Uinf P -> Round P u
-roundOf P u mu = fromBody (roundBody P (□Args (sub P)) (λ m -> m) u mu)
-  where
-    fromBody : RoundB P (□Args (sub P)) u -> Round P u
-    fromBody (mkRoundB ws x wk mx h) = fromSucc (uinfSucc P x mx)
-      where
-        fromSucc : SuccInUinf P x -> Round P u
-        fromSucc (succInUinf y my st) =
-          mkRound (ws ++ y ∷ []) y
-                  (walkApp P (Uinf P) wk (wcons my st wnil)) my
-                  (null-appR ws y [])
-                  (λ A mA pd -> fulfilPrefix ws (y ∷ []) (h A mA pd))
+module _ (P : Formula) where
 
-------------------------------------------------------------------------
--- The list the note calls the round
+  roundOf : (u : Val) -> u ∈ Uinf P -> Round P u
+  roundOf u mu = fromBody (roundBody P (□Args (sub P)) (λ m -> m) u mu)
+    where
+      fromBody : RoundB P (□Args (sub P)) u -> Round P u
+      fromBody (mkRoundB ws x wk mx h) = fromSucc (uinfSucc P x mx)
+        where
+          fromSucc : SuccInUinf P x -> Round P u
+          fromSucc (succInUinf y my st) =
+            mkRound (ws ++ y ∷ []) y
+                    (walkApp P (Uinf P) wk (wcons my st wnil)) my
+                    (null-appR ws y [])
+                    (λ A mA pd -> fulfilPrefix ws (y ∷ []) (h A mA pd))
 
-roundList : (P : Formula) (u : Val) -> Round P u -> List Val
-roundList P u r = Round.visited r
+  ------------------------------------------------------------------------
+  -- The list the note calls the round
 
-round : (P : Formula) (u : Val) -> u ∈ Uinf P -> List Val
-round P u mu = roundList P u (roundOf P u mu)
+  roundList : (u : Val) -> Round P u -> List Val
+  roundList u r = Round.visited r
+
+  round : (u : Val) -> u ∈ Uinf P -> List Val
+  round u mu = roundList u (roundOf u mu)

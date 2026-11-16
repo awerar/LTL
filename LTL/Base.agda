@@ -10,6 +10,10 @@
 -- through Agda.Builtin.Nat.  This is Agda's builtin library, not the standard
 -- library, and the module is --safe.
 --
+-- Propositional equality is Agda.Builtin.Equality's _≡_ for the same reason:
+-- with ... in eq  needs the EQUALITY builtin, and Agda.Builtin.String binds it
+-- to that type, so a local copy could not be bound as well.
+--
 -- BRA3.Base was pure ASCII (Eq x y, eqSym, ...).  The notation here follows
 -- Agda's standard library instead -- x ≡ y, sym, trans, cong, subst -- since
 -- that is what readers of Agda expect, and so do if_then_else_ and the
@@ -65,10 +69,7 @@ record Unit : Set where
 ------------------------------------------------------------------------
 -- Propositional equality
 
-infix 4 _≡_
-
-data _≡_ {A : Set} (x : A) : A -> Set where
-  refl : x ≡ x
+open import Agda.Builtin.Equality public using (_≡_; refl)
 
 sym : {A : Set} {x y : A} -> x ≡ y -> y ≡ x
 sym refl = refl

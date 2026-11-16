@@ -111,15 +111,14 @@ availCons : (P : Formula) {E : Pred} (bs : List Val) -> Avail E (Uinf P) bs
 availCons P {E} bs av cur z mz e =
   andIntro (E z) (cur ≢ᵛ z)
            (av z mz (orFalseR (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
-           (cong ¬ᵇ_ (onEq (cur ≡ᵛ z) refl))
+           (cong ¬ᵇ_ onEq)
   where
-    onEq : (c : Bool) -> cur ≡ᵛ z ≡ c -> cur ≡ᵛ z ≡ false
-    onEq false ec = ec
-    onEq true  ec =
-      emptyElim (true≢false (trans (sym (subst (λ u -> u ≡ᵛ cur ≡ true)
-                                               (≡ᵛ-sound cur z ec)
-                                               (≡ᵛ-refl cur)))
-                                   (orFalseL (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e)))
+    onEq : cur ≡ᵛ z ≡ false
+    onEq = refuteTrue (cur ≡ᵛ z) λ ec ->
+      true≢false (trans (sym (subst (λ u -> u ≡ᵛ cur ≡ true)
+                                    (≡ᵛ-sound cur z ec)
+                                    (≡ᵛ-refl cur)))
+                        (orFalseL (z ≡ᵛ cur) (any (z ≡ᵛ_) bs) e))
 
 module _ (P : Formula) (v0 : Val) where
 
@@ -160,34 +159,37 @@ module _ (P : Formula) (v0 : Val) where
 ------------------------------------------------------------------------
 -- Proposition 5.3
 
-lasso : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
-lasso P v0 m =
-  lassoSearch P v0 (listBar (Uinf P)) v0 m [] wnil [] noSeen
-              (λ z mz e -> ∈ᵛ-complete z (Uinf P) mz)
-  where
-    noSeen : (b : Val) -> b ∈ [] {A = Val} -> Seen P v0 v0 b
-    noSeen b ()
+module _ (P : Formula) where
 
-------------------------------------------------------------------------
--- Projections, so that a lasso can be looked at
+  lasso : (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
+  lasso v0 m =
+    lassoSearch P v0 (listBar (Uinf P)) v0 m [] wnil [] noSeen
+                (λ z mz e -> ∈ᵛ-complete z (Uinf P) mz)
+    where
+      noSeen : (b : Val) -> b ∈ [] {A = Val} -> Seen P v0 v0 b
+      noSeen b ()
 
-lassoStem : (P : Formula) (v0 : Val) -> Lasso P v0 -> List Val
-lassoStem P v0 l = Lasso.stem l
+  ------------------------------------------------------------------------
+  -- Projections, so that a lasso can be looked at
 
-lassoCycle : (P : Formula) (v0 : Val) -> Lasso P v0 -> List Val
-lassoCycle P v0 l = Lasso.cycle l
+  lassoStem : (v0 : Val) -> Lasso P v0 -> List Val
+  lassoStem v0 l = Lasso.stem l
 
--- The lasso from a NAMED surviving state.  Taking whichever state U_inf happens
--- to list first is no use as an illustration once the state set is generated
--- from atom assignments and closed up from a seed (G30): the order is not the
--- order of allVecs, and the interesting state need not be the first one.
+  lassoCycle : (v0 : Val) -> Lasso P v0 -> List Val
+  lassoCycle v0 l = Lasso.cycle l
 
-lassoAt : (P : Formula) (v : Val) -> v ∈ᵛ Uinf P ≡ true
-       -> List Val × List Val
-lassoAt P v e = lassoStem P v (lasso P v m) , lassoCycle P v (lasso P v m)
-  where
-    m : v ∈ Uinf P
-    m = ∈ᵛ-sound v (Uinf P) e
+  -- The lasso from a NAMED surviving state.  Taking whichever state U_inf
+  -- happens to list first is no use as an illustration once the state set is
+  -- generated from atom assignments and closed up from a seed (G30): the order
+  -- is not the order of allVecs, and the interesting state need not be the
+  -- first one.
+
+  lassoAt : (v : Val) -> v ∈ᵛ Uinf P ≡ true
+         -> List Val × List Val
+  lassoAt v e = lassoStem v (lasso v m) , lassoCycle v (lasso v m)
+    where
+      m : v ∈ Uinf P
+      m = ∈ᵛ-sound v (Uinf P) e
 
 ------------------------------------------------------------------------
 -- The lasso, computed.

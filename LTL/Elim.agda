@@ -65,97 +65,100 @@ pending P v A = ¬ᵇ valOf P v (□ A)
 Ev : Set
 Ev = Formula × List Val
 
-evList : Formula -> List Val -> List Ev
-evList P us = map (λ A -> A , gfpW P us A) (□Args (sub P))
+module _ (P : Formula) where
 
-evList-mem : (P : Formula) (us : List Val) {A : Formula}
-          -> A ∈ □Args (sub P) -> (A , gfpW P us A) ∈ evList P us
-evList-mem P us m = memMap (λ A -> A , gfpW P us A) m
+  evList : List Val -> List Ev
+  evList us = map (λ A -> A , gfpW P us A) (□Args (sub P))
 
-evList-of : (P : Formula) (us : List Val) {A : Formula} {W : List Val}
-         -> (A , W) ∈ evList P us
-         -> A ∈ □Args (sub P) × W ≡ gfpW P us A
-evList-of P us {A} {W} m =
-  fromSig (map-mem-inv (λ B -> B , gfpW P us B) (□Args (sub P)) m)
-  where
-    fromSig : (Σ[ B ∈ Formula ] B ∈ □Args (sub P) ×
-                                (A , W) ≡ (B , gfpW P us B))
+  evList-mem : (us : List Val) {A : Formula}
+            -> A ∈ □Args (sub P) -> (A , gfpW P us A) ∈ evList us
+  evList-mem us m = memMap (λ A -> A , gfpW P us A) m
+
+  evList-of : (us : List Val) {A : Formula} {W : List Val}
+           -> (A , W) ∈ evList us
            -> A ∈ □Args (sub P) × W ≡ gfpW P us A
-    fromSig (B , mB , e) =
-      subst (λ C -> C ∈ □Args (sub P) × W ≡ gfpW P us C)
-            (sym (cong fst e))
-            (mB , cong snd e)
+  evList-of us {A} {W} m =
+    fromSig (map-mem-inv (λ B -> B , gfpW P us B) (□Args (sub P)) m)
+    where
+      fromSig : (Σ[ B ∈ Formula ] B ∈ □Args (sub P) ×
+                                  (A , W) ≡ (B , gfpW P us B))
+             -> A ∈ □Args (sub P) × W ≡ gfpW P us A
+      fromSig (B , mB , e) =
+        subst (λ C -> C ∈ □Args (sub P) × W ≡ gfpW P us C)
+              (sym (cong fst e))
+              (mB , cong snd e)
 
--- (R2) fires at v for this eventuality: □A is pending at v and v ∈ W_A.
+  -- (R2) fires at v for this eventuality: □A is pending at v and v ∈ W_A.
 
-badEv : Formula -> Val -> Ev -> Bool
-badEv P v (A , W) = pending P v A ∧ᵇ (v ∈ᵛ W)
+  badEv : Val -> Ev -> Bool
+  badEv v (A , W) = pending P v A ∧ᵇ (v ∈ᵛ W)
 
-r2 : Formula -> List Ev -> Val -> Bool
-r2 P gs v = any (badEv P v) gs
+  r2 : List Ev -> Val -> Bool
+  r2 gs v = any (badEv v) gs
 
-------------------------------------------------------------------------
--- One round
+  ------------------------------------------------------------------------
+  -- One round
 
-keep : Formula -> List Val -> List Ev -> Val -> Bool
-keep P us gs v = ¬ᵇ (r1 P us v ∨ᵇ r2 P gs v)
+  keep : List Val -> List Ev -> Val -> Bool
+  keep us gs v = ¬ᵇ (r1 P us v ∨ᵇ r2 gs v)
 
-elimRound : Formula -> List Val -> List Val
-elimRound P us = filter (keep P us (evList P us)) us
+  elimRound : List Val -> List Val
+  elimRound us = filter (keep us (evList us)) us
 
-------------------------------------------------------------------------
--- The elimination, run until a round removes nothing.
---
--- findFalse asks whether any state of us fails keep.  If none does, us is the
--- answer: that is Definition 3.1's stopping condition, read directly rather
--- than recovered from a fixed-point equation.  If one does, it is dropped from
--- the Bar's predicate along with the round, which is what makes the recursive
--- call structurally smaller.
+  ------------------------------------------------------------------------
+  -- The elimination, run until a round removes nothing.
+  --
+  -- findFalse asks whether any state of us fails keep.  If none does, us is the
+  -- answer: that is Definition 3.1's stopping condition, read directly rather
+  -- than recovered from a fixed-point equation.  If one does, it is dropped
+  -- from the Bar's predicate along with the round, which is what makes the
+  -- recursive call structurally smaller.
 
-elimGo   : (P : Formula) {E : Pred} (us : List Val)
-        -> AllSat E us -> IFin E -> List Val
-elimFind : (P : Formula) {E : Pred} (us : List Val)
-        -> AllSat E us -> IFin E
-        -> FindResult (keep P us (evList P us)) us -> List Val
+  elimGo   : {E : Pred} (us : List Val)
+          -> AllSat E us -> IFin E -> List Val
+  elimFind : {E : Pred} (us : List Val)
+          -> AllSat E us -> IFin E
+          -> FindResult (keep us (evList us)) us -> List Val
 
-elimGo P us sb bar =
-  elimFind P us sb bar (findFalse (keep P us (evList P us)) us)
+  elimGo us sb bar =
+    elimFind us sb bar (findFalse (keep us (evList us)) us)
 
-elimFind P us sb bar      (allTrue f)   = us
-elimFind P us sb (cBar h) (found x m q) =
-  elimGo P (elimRound P us)
-         (dropAllSat (keep P us (evList P us)) us sb x q) (h x (sb x m))
+  elimFind us sb bar      (allTrue f)   = us
+  elimFind us sb (cBar h) (found x m q) =
+    elimGo (elimRound us)
+           (dropAllSat (keep us (evList us)) us sb x q) (h x (sb x m))
 
-------------------------------------------------------------------------
--- U_infinity.
---
--- The elimination starts from Ust P, the set LTL.Closure gives the search, not
--- from the complete state list St P, which is left to the derivations (G30).
--- Its Bar is guardedVecBar: the states have length |sub P|, and the vectors of
--- a given length are inductively finite by induction on the length, so nothing
--- here needs the enumeration allVecs -- nor even  length (Ust P) , which the
--- fuel of the old elimIter forced.  guardBar (siles.pdf section 5) is what
--- keeps the finiteness proof from being forced as the search runs.
+  ------------------------------------------------------------------------
+  -- U_infinity.
+  --
+  -- The elimination starts from Ust P, the set LTL.Closure gives the search,
+  -- not from the complete state list St P, which is left to the derivations
+  -- (G30).  Its Bar is guardedVecBar: the states have length |sub P|, and the
+  -- vectors of a given length are inductively finite by induction on the
+  -- length, so nothing here needs the enumeration allVecs -- nor even
+  -- length (Ust P) , which the fuel of the old elimIter forced.  guardBar
+  -- (siles.pdf section 5) is what keeps the finiteness proof from being forced
+  -- as the search runs.
 
--- Uinf P is U_inf of m4.tex: what is left of Ust P when (R1) and (R2) no
--- longer remove anything.
+  -- Uinf P is U_inf of m4.tex: what is left of Ust P when (R1) and (R2) no
+  -- longer remove anything.
 
-Uinf : Formula -> List Val
-Uinf P = elimGo P (Ust P) (ustAllSat P) (ustBar P)
+  Uinf : List Val
+  Uinf = elimGo (Ust P) (ustAllSat P) (ustBar P)
 
--- The states the elimination removed: R = U_st minus U_inf (m4.tex section 4).
+  -- The states the elimination removed: R = U_st minus U_inf (m4.tex §4).
 
-removed : Formula -> List Val
-removed P = filter (λ v -> ¬ᵇ (v ∈ᵛ Uinf P)) (Ust P)
+  removed : List Val
+  removed = filter (λ v -> ¬ᵇ (v ∈ᵛ Uinf)) (Ust P)
 
-------------------------------------------------------------------------
--- The decision, as a boolean.
---
--- This is the test of Theorem 6.1: is there a surviving state in which the
--- input formula holds?  Run on ¬ P, "no" means P is provable.
+  ------------------------------------------------------------------------
+  -- The decision, as a boolean.
+  --
+  -- This is the test of Theorem 6.1: is there a surviving state in which the
+  -- input formula holds?  Run on ¬ P, "no" means P is provable.
 
-satB : Formula -> Bool
-satB P = any (λ v -> valOf P v P) (Uinf P)
+  satB : Bool
+  satB = any (λ v -> valOf P v P) Uinf
 
 ------------------------------------------------------------------------
 -- Checkpoint C1.

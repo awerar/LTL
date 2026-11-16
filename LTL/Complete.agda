@@ -90,32 +90,15 @@ allVecs-allLen (suc n) =
 ------------------------------------------------------------------------
 -- Dropping the non-states
 
-map-filterCons : (P : Formula) (b : Bool) (v : Val) (L : List Val)
-              -> map (chi P) (filterCons b v L) ≡
-                 filterCons b (chi P v) (map (chi P) L)
-map-filterCons P true  v L = refl
-map-filterCons P false v L = refl
-
 ⋁Filter : (P : Formula) (vs : List Val)
        -> AllLen (length (sub P)) vs
        -> ⊢ ⋁ (map (chi P) vs)
             ⇒ ⋁ (map (chi P) (filter (isState P) vs))
 ⋁Filter P []       alNil          = ⇒Refl
-⋁Filter P (v ∷ vs) (alCons len al) =
-  subst (λ L -> ⊢ ⋁ (chi P v ∷ map (chi P) vs) ⇒ ⋁ L)
-        (sym (map-filterCons P (isState P v) v (filter (isState P) vs)))
-        (onState (isState P v) refl)
-  where
-    ih : ⊢ ⋁ (map (chi P) vs) ⇒ ⋁ (map (chi P) (filter (isState P) vs))
-    ih = ⋁Filter P vs al
-
-    onState : (b : Bool) -> isState P v ≡ b
-           -> ⊢ ⋁ (chi P v ∷ map (chi P) vs)
-                ⇒ ⋁ (filterCons b (chi P v)
-                        (map (chi P) (filter (isState P) vs)))
-    onState true  e = ∨MonoR ih
-    onState false e =
-      ⇒Trans (⋁Drop (map (chi P) vs) (nonState P v len e)) ih
+⋁Filter P (v ∷ vs) (alCons len al) with isState P v in e
+... | true  = ∨MonoR (⋁Filter P vs al)
+... | false =
+  ⇒Trans (⋁Drop (map (chi P) vs) (nonState P v len e)) (⋁Filter P vs al)
 
 ------------------------------------------------------------------------
 -- Lemma 2.6

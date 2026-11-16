@@ -100,171 +100,173 @@ open import LTL.Extract  public
 -- by the induction.  What is left is the Ust-membership, so that is what R
 -- carries.
 
-UstRef : Formula -> Val -> Set
-UstRef P z = z ∈ Ust P -> ⊢ ¬ (chi P z)
+module _ (P : Formula) where
 
-refutedOf : (P : Formula) (ws : List Val)
-         -> HoldsOutside (UstRef P) ws -> Refuted P ws
-refutedOf P ws ih u mu e = ih u e mu
+  UstRef : Val -> Set
+  UstRef z = z ∈ Ust P -> ⊢ ¬ (chi P z)
 
-------------------------------------------------------------------------
--- The block case: (R2) against a component instead of against gfpW.
---
--- This is extractR2 of LTL.Extract with its three uses of the fixed point --
--- gfpIn, gfpHolds, gfpClosed -- turned into the three hypotheses cUst, cHold,
--- cCl, and with the closure stated in the form the proof actually uses: the
--- successor offered by the step lemma is already known to be a state, and the
--- only question is whether it is still inside ws.  The body is otherwise the
--- note's argument unchanged: (i) B ⇒ A by (L2) and (L5), (ii) B ⇒ ○ B by
--- the step lemma, dropping the successors outside ws by the induction
--- hypothesis and keeping the rest by closure, (iii) B ⇒ □ A by (Ind).
+  refutedOf : (ws : List Val)
+           -> HoldsOutside UstRef ws -> Refuted P ws
+  refutedOf ws ih u mu e = ih u e mu
 
-extractBlock : (P : Formula) (ws C : List Val) (u : Val)
-            -> u ∈ Ust P -> Refuted P ws
-            -> (A : Formula) -> □ A ∈ sub P
-            -> C ⊆ Ust P
-            -> ((z y : Val) -> z ∈ C -> y ∈ St P -> y ∈ᵛ ws ≡ true
-                  -> step P z y ≡ true -> y ∈ C)
-            -> ((z : Val) -> z ∈ C -> valOf P z A ≡ true)
-            -> valOf P u (□ A) ≡ false -> u ∈ C
-            -> ⊢ ¬ (chi P u)
-extractBlock P ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
-  where
-    lenC : (w : Val) -> w ∈ C -> length w ≡ length (sub P)
-    lenC w m = stLen P (ustSt P (cUst w m))
+  ------------------------------------------------------------------------
+  -- The block case: (R2) against a component instead of against gfpW.
+  --
+  -- This is extractR2 of LTL.Extract with its three uses of the fixed point --
+  -- gfpIn, gfpHolds, gfpClosed -- turned into the three hypotheses cUst, cHold,
+  -- cCl, and with the closure stated in the form the proof actually uses: the
+  -- successor offered by the step lemma is already known to be a state, and the
+  -- only question is whether it is still inside ws.  The body is otherwise the
+  -- note's argument unchanged: (i) B ⇒ A by (L2) and (L5), (ii) B ⇒ ○ B by
+  -- the step lemma, dropping the successors outside ws by the induction
+  -- hypothesis and keeping the rest by closure, (iii) B ⇒ □ A by (Ind).
 
-    -- (i)
-    bA : ⊢ (beta P C) ⇒ A
-    bA = betaElim P C eachA
-      where
-        eachA : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ A
-        eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b)) (cHold w m)
-                          (chiProjVal P w (lenC w m) (sub-□ P mbox))
+  extractBlock : (ws C : List Val) (u : Val)
+              -> u ∈ Ust P -> Refuted P ws
+              -> (A : Formula) -> □ A ∈ sub P
+              -> C ⊆ Ust P
+              -> ((z y : Val) -> z ∈ C -> y ∈ St P -> y ∈ᵛ ws ≡ true
+                    -> step P z y ≡ true -> y ∈ C)
+              -> ((z : Val) -> z ∈ C -> valOf P z A ≡ true)
+              -> valOf P u (□ A) ≡ false -> u ∈ C
+              -> ⊢ ¬ (chi P u)
+  extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
+    where
+      lenC : (w : Val) -> w ∈ C -> length w ≡ length (sub P)
+      lenC w m = stLen P (ustSt P (cUst w m))
 
-    -- (ii)
-    toC : (w : Val) -> w ∈ C
-       -> ⊢ (beta P (succs P (St P) w)) ⇒ (beta P C)
-    toC w m = betaElim P (succs P (St P) w) eachS
-      where
-        eachS : (w' : Val) -> w' ∈ succs P (St P) w
-             -> ⊢ (chi P w') ⇒ (beta P C)
-        eachS w' m' = go (w' ∈ᵛ ws) refl
-          where
-            pr : w' ∈ St P × step P w w' ≡ true
-            pr = succsMem P (St P) w m'
+      -- (i)
+      bA : ⊢ (beta P C) ⇒ A
+      bA = betaElim P C eachA
+        where
+          eachA : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ A
+          eachA w m = subst (λ b -> ⊢ (chi P w) ⇒ (lit A b)) (cHold w m)
+                            (chiProjVal P w (lenC w m) (sub-□ P mbox))
 
-            go : (b : Bool) -> w' ∈ᵛ ws ≡ b
-              -> ⊢ (chi P w') ⇒ (beta P C)
-            go false eb =
-              mp ¬Elim (ih w' (ustClosed P (cUst w m) (fst pr) (snd pr)) eb)
-            go true  eb = betaIntro P C (cCl w w' m (fst pr) eb (snd pr))
+      -- (ii)
+      toC : (w : Val) -> w ∈ C
+         -> ⊢ (beta P (succs P (St P) w)) ⇒ (beta P C)
+      toC w m = betaElim P (succs P (St P) w) eachS
+        where
+          eachS : (w' : Val) -> w' ∈ succs P (St P) w
+               -> ⊢ (chi P w') ⇒ (beta P C)
+          eachS w' m' = byMem
+            where
+              pr : w' ∈ St P × step P w w' ≡ true
+              pr = succsMem P (St P) w m'
 
-    bNext : ⊢ (beta P C) ⇒ ○ (beta P C)
-    bNext = betaElim P C eachN
-      where
-        eachN : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ ○ (beta P C)
-        eachN w m = ⇒Trans (stepLemma P w (lenC w m)) (○Mono (toC w m))
+              byMem : ⊢ (chi P w') ⇒ (beta P C)
+              byMem with w' ∈ᵛ ws in eb
+              ... | false =
+                mp ¬Elim (ih w' (ustClosed P (cUst w m) (fst pr) (snd pr)) eb)
+              ... | true  = betaIntro P C (cCl w w' m (fst pr) eb (snd pr))
 
-    -- (iii)
-    chi□ : ⊢ (chi P u) ⇒ □ A
-    chi□ = ⇒Trans (betaIntro P C mc) (⇒Trans (indRule bNext) (□Mono bA))
+      bNext : ⊢ (beta P C) ⇒ ○ (beta P C)
+      bNext = betaElim P C eachN
+        where
+          eachN : (w : Val) -> w ∈ C -> ⊢ (chi P w) ⇒ ○ (beta P C)
+          eachN w m = ⇒Trans (stepLemma P w (lenC w m)) (○Mono (toC w m))
 
-    chi¬□ : ⊢ (chi P u) ⇒ ¬ □ A
-    chi¬□ = subst (λ b -> ⊢ (chi P u) ⇒ (lit (□ A) b)) pend
-                        (chiProjVal P u (stLen P (ustSt P mu)) mbox)
+      -- (iii)
+      chi□ : ⊢ (chi P u) ⇒ □ A
+      chi□ = ⇒Trans (betaIntro P C mc) (⇒Trans (indRule bNext) (□Mono bA))
 
-------------------------------------------------------------------------
--- certAll's two hypotheses.
+      chi¬□ : ⊢ (chi P u) ⇒ ¬ □ A
+      chi¬□ = subst (λ b -> ⊢ (chi P u) ⇒ (lit (□ A) b)) pend
+                          (chiProjVal P u (stLen P (ustSt P mu)) mbox)
 
--- The sink.  null (outs ws (step P) x) ≡ true  IS  r1 P ws x ≡ true .
+  ------------------------------------------------------------------------
+  -- certAll's two hypotheses.
 
-sinkStep : (P : Formula) (ws : List Val) (x : Val) -> x ∈ ws
-        -> null (outs ws (step P) x) ≡ true
-        -> HoldsOutside (UstRef P) ws
-        -> UstRef P x
-sinkStep P ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf P ws ih) e1
+  -- The sink.  null (outs ws (step P) x) ≡ true  IS  r1 P ws x ≡ true .
 
--- The block.  The fairness predicate is read back as an eventuality by
--- evPredsInv, its falsity on C is split into the two hypotheses of (R2), and
--- the component is intersected with Ust P.
+  sinkStep : (ws : List Val) (x : Val) -> x ∈ ws
+          -> null (outs ws (step P) x) ≡ true
+          -> HoldsOutside UstRef ws
+          -> UstRef x
+  sinkStep ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf ws ih) e1
 
-blockStep : (P : Formula) (ws C : List Val) (f : Pred) -> f ∈ evPreds P
-         -> C ⊆ ws -> Closed ws (step P) C -> NoneSat f C
-         -> HoldsOutside (UstRef P) ws
-         -> (z : Val) -> z ∈ C -> UstRef P z
-blockStep P ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
-  where
-    onA : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × f ≡ evPred P A)
-       -> ⊢ ¬ (chi P z)
-    onA (A , mA , ef) =
-      extractBlock P ws D z mzU (refutedOf P ws ih) A (□Args-mem (sub P) mA)
-                   dUst dCl dHold pend mzD
-      where
-        missA : (y : Val) -> y ∈ C -> evPred P A y ≡ false
-        missA y my = subst (λ h -> h y ≡ false) ef (mis y my)
+  -- The block.  The fairness predicate is read back as an eventuality by
+  -- evPredsInv, its falsity on C is split into the two hypotheses of (R2), and
+  -- the component is intersected with Ust P.
 
-        -- the component, cut down to the states chi is stated for
-        D : List Val
-        D = filter (λ y -> y ∈ᵛ Ust P) C
+  blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds P
+           -> C ⊆ ws -> Closed ws (step P) C -> NoneSat f C
+           -> HoldsOutside UstRef ws
+           -> (z : Val) -> z ∈ C -> UstRef z
+  blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv P mf)
+    where
+      onA : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × f ≡ evPred P A)
+         -> ⊢ ¬ (chi P z)
+      onA (A , mA , ef) =
+        extractBlock ws D z mzU (refutedOf ws ih) A (□Args-mem (sub P) mA)
+                     dUst dCl dHold pend mzD
+        where
+          missA : (y : Val) -> y ∈ C -> evPred P A y ≡ false
+          missA y my = subst (λ h -> h y ≡ false) ef (mis y my)
 
-        dC : (y : Val) -> y ∈ D -> y ∈ C
-        dC y m = filter-sub (λ t -> t ∈ᵛ Ust P) C m
+          -- the component, cut down to the states chi is stated for
+          D : List Val
+          D = filter (λ y -> y ∈ᵛ Ust P) C
 
-        dUst : (y : Val) -> y ∈ D -> y ∈ Ust P
-        dUst y m = ∈ᵛ-sound y (Ust P) (filter-prop (λ t -> t ∈ᵛ Ust P) C m)
+          dC : (y : Val) -> y ∈ D -> y ∈ C
+          dC y m = filter-sub (λ t -> t ∈ᵛ Ust P) C m
 
-        into : (y : Val) -> y ∈ C -> y ∈ Ust P -> y ∈ D
-        into y my mu =
-          filter-true (λ t -> t ∈ᵛ Ust P) C my (∈ᵛ-complete y (Ust P) mu)
+          dUst : (y : Val) -> y ∈ D -> y ∈ Ust P
+          dUst y m = ∈ᵛ-sound y (Ust P) (filter-prop (λ t -> t ∈ᵛ Ust P) C m)
 
-        -- still closed: C's closure puts the successor in C, ustClosed puts it
-        -- in Ust P, and D is the intersection
-        dCl : (y y' : Val) -> y ∈ D -> y' ∈ St P -> y' ∈ᵛ ws ≡ true
-           -> step P y y' ≡ true -> y' ∈ D
-        dCl y y' my my' ew st =
-          into y' (cl y y' (dC y my) (∈ᵛ-sound y' ws ew) st)
-                  (ustClosed P (dUst y my) my' st)
+          into : (y : Val) -> y ∈ C -> y ∈ Ust P -> y ∈ D
+          into y my mu =
+            filter-true (λ t -> t ∈ᵛ Ust P) C my (∈ᵛ-complete y (Ust P) mu)
 
-        dHold : (y : Val) -> y ∈ D -> valOf P y A ≡ true
-        dHold y my =
-          notFalse (valOf P y A)
-                   (orFalseR (valOf P y (□ A)) (¬ᵇ valOf P y A)
-                             (missA y (dC y my)))
+          -- still closed: C's closure puts the successor in C, ustClosed puts
+          -- it in Ust P, and D is the intersection
+          dCl : (y y' : Val) -> y ∈ D -> y' ∈ St P -> y' ∈ᵛ ws ≡ true
+             -> step P y y' ≡ true -> y' ∈ D
+          dCl y y' my my' ew st =
+            into y' (cl y y' (dC y my) (∈ᵛ-sound y' ws ew) st)
+                    (ustClosed P (dUst y my) my' st)
 
-        pend : valOf P z (□ A) ≡ false
-        pend = orFalseL (valOf P z (□ A)) (¬ᵇ valOf P z A) (missA z mz)
+          dHold : (y : Val) -> y ∈ D -> valOf P y A ≡ true
+          dHold y my =
+            notFalse (valOf P y A)
+                     (orFalseR (valOf P y (□ A)) (¬ᵇ valOf P y A)
+                               (missA y (dC y my)))
 
-        mzD : z ∈ D
-        mzD = into z mz mzU
+          pend : valOf P z (□ A) ≡ false
+          pend = orFalseL (valOf P z (□ A)) (¬ᵇ valOf P z A) (missA z mz)
 
-------------------------------------------------------------------------
--- G39: a certificate refutes everything it covers.
+          mzD : z ∈ D
+          mzD = into z mz mzU
 
-certRefuted : (P : Formula) {ws : List Val}
-           -> Cert (step P) (evPreds P) ws -> Refuted P ws
-           -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
-certRefuted P {ws} c ih =
-  certAll (step P) (evPreds P) (UstRef P) (sinkStep P) (blockStep P) c
-          (λ z e mu -> ih z mu e)
+  ------------------------------------------------------------------------
+  -- G39: a certificate refutes everything it covers.
 
--- Over Ust P itself the seed is vacuous: nothing is outside.
+  certRefuted : {ws : List Val}
+             -> Cert (step P) (evPreds P) ws -> Refuted P ws
+             -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
+  certRefuted {ws} c ih =
+    certAll (step P) (evPreds P) UstRef sinkStep blockStep c
+            (λ z e mu -> ih z mu e)
 
-ustCertRefuted : (P : Formula) -> Cert (step P) (evPreds P) (Ust P)
-              -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
-ustCertRefuted P c = certRefuted P c (ustRefuted P)
+  -- Over Ust P itself the seed is vacuous: nothing is outside.
 
-------------------------------------------------------------------------
--- The search, run on the whole state set.
---
--- graphGo rather than fairGraph: fairGraph is v-centred and certifies only the
--- reachable set of v, while the refutation branch has to account for every
--- state of Ust P at once.  The vertex list is Ust P and the Bar is its own
--- listBar, exactly as fairGraph does for reachSet.
+  ustCertRefuted : Cert (step P) (evPreds P) (Ust P)
+                -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
+  ustCertRefuted c = certRefuted c (ustRefuted P)
 
-sccGraph : (P : Formula)
-        -> FairIn (Ust P) (step P) (evPreds P) ⊎
-           Cert (step P) (evPreds P) (Ust P)
-sccGraph P = graphGo (step P) (evPreds P) (Ust P) (memAllSat (Ust P)) (listBar (Ust P))
+  ------------------------------------------------------------------------
+  -- The search, run on the whole state set.
+  --
+  -- graphGo rather than fairGraph: fairGraph is v-centred and certifies only
+  -- the reachable set of v, while the refutation branch has to account for
+  -- every state of Ust P at once.  The vertex list is Ust P and the Bar is its
+  -- own listBar, exactly as fairGraph does for reachSet.
+
+  sccGraph : FairIn (Ust P) (step P) (evPreds P) ⊎
+             Cert (step P) (evPreds P) (Ust P)
+  sccGraph =
+    graphGo (step P) (evPreds P) (Ust P) (memAllSat (Ust P)) (listBar (Ust P))
 
 ------------------------------------------------------------------------
 -- The refutation branch of Theorem 6.1, by the SCC route.
@@ -279,7 +281,7 @@ sccGraph P = graphGo (step P) (evPreds P) (Ust P) (memAllSat (Ust P)) (listBar (
 provableEachSCC : (Q : Formula)
                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
                -> (w : Val) -> w ∈ St (¬ Q) -> ⊢ (chi (¬ Q) w) ⇒ Q
-provableEachSCC Q c w m = outer (w ∈ᵛ Ust R) refl
+provableEachSCC Q c w m = byPosition
   where
     R : Formula
     R = ¬ Q
@@ -290,14 +292,12 @@ provableEachSCC Q c w m = outer (w ∈ᵛ Ust R) refl
                         (chiProjVal R w (stLen R m) (sub-self R)))
                dne
 
-    outer : (b : Bool) -> w ∈ᵛ Ust R ≡ b -> ⊢ (chi R w) ⇒ Q
-    outer false ec = fromR (notIn (valOf R w R) refl)
-      where
-        notIn : (d : Bool) -> valOf R w R ≡ d -> valOf R w R ≡ false
-        notIn false ed = ed
-        notIn true  ed =
-          emptyElim (∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
-    outer true  ec = mp ¬Elim (ustCertRefuted R c w (∈ᵛ-sound w (Ust R) ec))
+    byPosition : ⊢ (chi R w) ⇒ Q
+    byPosition with w ∈ᵛ Ust R in ec
+    ... | false =
+      fromR (refuteTrue (valOf R w R) λ ed ->
+               ∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
+    ... | true = mp ¬Elim (ustCertRefuted R c w (∈ᵛ-sound w (Ust R) ec))
 
 provableSCC : (Q : Formula)
            -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q)) -> ⊢ Q

@@ -49,41 +49,43 @@ data Reason (P : Formula) (us : List Val) (v : Val) : Set where
 -- own gfp set.  That is the only trace of the hoisting of LTL.Elim in the
 -- proofs.
 
-dropped : (P : Formula) (us : List Val) (v : Val)
-       -> keep P us (evList P us) v ≡ false -> Reason P us v
-dropped P us v e =
-  sumElim byR1 fromR2
-          (orTrue (r1 P us v) (r2 P (evList P us) v)
-                  (notFalse (r1 P us v ∨ᵇ r2 P (evList P us) v) e))
-  where
-    fromPair : (g : Ev) -> g ∈ evList P us -> badEv P v g ≡ true
-            -> Reason P us v
-    fromPair (A , W) mg q =
-      byR2 A (□Args-mem (sub P) (fst (evList-of P us mg)))
-           (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (v ∈ᵛ W) q))
-           (subst (λ Z -> v ∈ Z) (snd (evList-of P us mg))
-                  (∈ᵛ-sound v W (andTrueR (pending P v A) (v ∈ᵛ W) q)))
+module _ (P : Formula) where
 
-    fromSig : (Σ[ g ∈ Ev ] g ∈ evList P us × badEv P v g ≡ true)
-           -> Reason P us v
-    fromSig (g , m , q) = fromPair g m q
+  dropped : (us : List Val) (v : Val)
+         -> keep P us (evList P us) v ≡ false -> Reason P us v
+  dropped us v e =
+    sumElim byR1 fromR2
+            (orTrue (r1 P us v) (r2 P (evList P us) v)
+                    (notFalse (r1 P us v ∨ᵇ r2 P (evList P us) v) e))
+    where
+      fromPair : (g : Ev) -> g ∈ evList P us -> badEv P v g ≡ true
+              -> Reason P us v
+      fromPair (A , W) mg q =
+        byR2 A (□Args-mem (sub P) (fst (evList-of P us mg)))
+             (notTrue (valOf P v (□ A)) (andTrueL (pending P v A) (v ∈ᵛ W) q))
+             (subst (λ Z -> v ∈ Z) (snd (evList-of P us mg))
+                    (∈ᵛ-sound v W (andTrueR (pending P v A) (v ∈ᵛ W) q)))
 
-    fromR2 : r2 P (evList P us) v ≡ true -> Reason P us v
-    fromR2 e2 = fromSig (any-true (badEv P v) (evList P us) e2)
+      fromSig : (Σ[ g ∈ Ev ] g ∈ evList P us × badEv P v g ≡ true)
+             -> Reason P us v
+      fromSig (g , m , q) = fromPair g m q
 
-------------------------------------------------------------------------
--- The printed form.
---
--- One entry per state removed in the round, paired with the boolean r1: true
--- means the state went by (R1), false that (R1) did not fire and so (R2) did.
+      fromR2 : r2 P (evList P us) v ≡ true -> Reason P us v
+      fromR2 e2 = fromSig (any-true (badEv P v) (evList P us) e2)
 
-elimTrace : Formula -> List Val -> List (Val × Bool)
-elimTrace P us =
-  map (λ v -> v , r1 P us v)
-      (filter (λ v -> ¬ᵇ keep P us (evList P us) v) us)
+  ------------------------------------------------------------------------
+  -- The printed form.
+  --
+  -- One entry per state removed in the round, paired with the boolean r1: true
+  -- means the state went by (R1), false that (R1) did not fire and so (R2) did.
 
-reasons : Formula -> List Val -> List Bool
-reasons P us = map snd (elimTrace P us)
+  elimTrace : List Val -> List (Val × Bool)
+  elimTrace us =
+    map (λ v -> v , r1 P us v)
+        (filter (λ v -> ¬ᵇ keep P us (evList P us) v) us)
+
+  reasons : List Val -> List Bool
+  reasons us = map snd (elimTrace us)
 
 ------------------------------------------------------------------------
 -- Observation.
