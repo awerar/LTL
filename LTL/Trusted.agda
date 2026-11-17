@@ -1,0 +1,84 @@
+{-# OPTIONS --safe --without-K --exact-split #-}
+
+module LTL.Trusted where
+  open import Agda.Builtin.Equality
+  open import Agda.Builtin.Bool
+  open import Agda.Builtin.List
+  open import Agda.Builtin.Nat
+
+  Var : Set
+  Var = Nat
+
+  data Empty : Set where
+
+  data Formula : Set where
+    var : Var -> Formula
+    ¬_  : Formula -> Formula
+    _⇒_ : Formula -> Formula -> Formula
+    ○_  : Formula -> Formula
+    □_  : Formula -> Formula
+
+  Instant : Set
+  Instant = Var -> Bool
+
+  Interpretation : Set
+  Interpretation = Nat -> Instant
+
+  Period : Set
+  Period = List Instant
+
+  record Lasso : Set where
+    field
+      start    : Period
+      loopHead : Instant
+      loopTail : Period
+  open Lasso
+
+  record Position : Set where
+    constructor at
+    field
+      now  : Instant
+      rest : Period
+  open Position
+
+  loopBack : Lasso -> Position
+  loopBack l = at (loopHead l) (loopTail l)
+
+  initial : Lasso -> Position
+  initial l with start l
+  ... | []     = loopBack l
+  ... | x ∷ xs = at x xs
+
+  step : Lasso -> Position -> Position
+  step l (at _ (y ∷ ys)) = at y ys
+  step l (at _ [])       = loopBack l
+
+  position : Lasso -> Nat -> Position
+  position l zero    = initial l
+  position l (suc n) = step l (position l n)
+
+  interpret : Lasso -> Interpretation
+  interpret l n = now (position l n)
+
+  infixr 8 _⇒_
+  infix  9 ¬_ ○_ □_
+  infix  4 _,_⊨_
+
+  _,_⊨_ : Interpretation -> Nat -> Formula -> Set
+  σ , n ⊨ var x = σ n x ≡ true
+  σ , n ⊨ ¬ A   = σ , n ⊨ A -> Empty
+  σ , n ⊨ A ⇒ B = σ , n ⊨ A -> σ , n ⊨ B
+  σ , n ⊨ ○ A   = σ , suc n ⊨ A
+  σ , n ⊨ □ A   = (k : Nat) -> σ , k + n ⊨ A
+
+  valid : Formula -> Set
+  valid f = (lasso : Lasso) -> (interpret lasso) , 0 ⊨ f
+
+  data LassoCounterModel (f : Formula) : Set where
+    counter : (lasso : Lasso) -> (interpret lasso) , 0 ⊨ (¬ f) -> LassoCounterModel f
+
+  record DecisionProcedure : Set where
+    field
+      decideValid : Formula -> Bool
+      validIfTrue : (f : Formula) -> decideValid f ≡ true -> valid f
+      counterIfFalse : (f : Formula) -> decideValid f ≡ false -> LassoCounterModel f
