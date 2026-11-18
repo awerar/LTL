@@ -32,9 +32,9 @@ not reproduced here.
 | G21 | Theorem 4.1: extraction | `Extract` |
 | G22 | rounds | `Round`, `Walk` |
 | G23 | Proposition 5.3: the lasso | `Lasso`, `Walk` |
-| G24 | Lemma 5.4; runs | `Global`, `Run` |
-| G25 | evaluation on a run | `Eval` |
-| G26 | soundness | `Sound` |
+| G24 | Lemma 5.4; runs and their orbits | `Global`, `Run`, `Orbit` |
+| G25 | evaluation on a run, and on any lasso | `Eval`, `LassoEval` |
+| G26 | soundness; against `Trusted`'s semantics | `Sound`, `LassoEval`, `Semantics` |
 | G27 | Hintikka's lemma | `Hintikka` |
 | G28 | Theorem 6.1: `decide` | `Decide` |
 | G29 | searches by recursion on a Bar | `Bar`, `Nodes`, `Gfp`, `Elim`, `Fix`, `Lasso` |

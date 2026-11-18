@@ -62,7 +62,6 @@ module LTL.Pretty where
 open import LTL.ShortPC public
 open import Agda.Builtin.String public using (String)
 open import Agda.Builtin.String using (primStringAppend; primShowNat; primStringToList)
-import Agda.Builtin.List as B
 
 ------------------------------------------------------------------------
 -- Strings and numbers
@@ -79,15 +78,8 @@ show s = s
 showNat : Nat -> String
 showNat = primShowNat
 
--- Length of a builtin list (primStringToList gives one; it is not
--- LTL.Prelude's List).
-
-blen : {A : Set} -> B.List A -> Nat
-blen B.[]       = zero
-blen (_ B.∷ xs) = suc (blen xs)
-
 strLen : String -> Nat
-strLen s = blen (primStringToList s)
+strLen s = length (primStringToList s)
 
 infix  4.5 _≤ⁿ_
 infixl 6   _⊔_

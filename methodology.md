@@ -33,4 +33,4 @@ This is how I plan to proceed from here.
 
 ### Trusted core
 
-Agda ensures that the proofs produced by AI are correct, but if the theorem is wrongly stated this means nothing. I will thus manually create a "Trusted" module that contains the theorem specification: what this project aims to prove. This module should be self-sufficient, and the AI will never be allowed to change it. It should be as small and readable as possible to ensure correctness.
+Agda ensures that the proofs produced by AI are correct, but if the theorem is wrongly stated this means nothing. I will thus create a "Trusted" module that contains the theorem specification: what this project aims to prove. This module should be self-sufficient, and the AI will never be allowed to change it. It should be as small and readable as possible to ensure correctness. I may use AI to help write and improve and the this module, but it should be under high scrutony.

@@ -2,8 +2,9 @@
 
 -- LTL.Formula -- G1 of FORMALISATION-PLAN.md.
 --
--- The language of m4.tex section 1: formulas built from propositional
--- variables (var n) by negation ¬, implication ⇒, next ○ and always □.
+-- The language of m4.tex section 1 (the datatype of LTL.Trusted): formulas
+-- built from propositional variables (var n) by negation ¬, implication ⇒,
+-- next ○ and always □.
 -- Conjunction ∧, disjunction ∨, equivalence ⇔, eventually ◇ and the constants
 -- ⊤ and ⊥ are abbreviations, exactly as in the note.  Implication is ⇒
 -- rather than → because Agda reserves → for function types.
@@ -19,20 +20,22 @@ open import LTL.Prelude public
 
 ------------------------------------------------------------------------
 -- Formulas
-
-data Formula : Set where
-  var : Nat -> Formula
-  ¬_  : Formula -> Formula
-  _⇒_ : Formula -> Formula -> Formula
-  ○_  : Formula -> Formula
-  □_  : Formula -> Formula
-
--- The prefix operators bind tightest, then ∧, ∨, ⇒ and ⇔; so
+--
+-- The datatype is LTL.Trusted's, so the decision procedures run on exactly the
+-- formulas the trusted statement talks about and LTL.Correct needs no
+-- translation.  Its constructors are re-exported with this development's
+-- fixities, which place the abbreviations below between them: the prefix
+-- operators bind tightest, then ∧, ∨, ⇒ and ⇔; so
 -- □ A ⇒ A ∧ ○ □ A  is  (□ A) ⇒ (A ∧ (○ (□ A))).
-infix  30 ¬_ ○_ □_ ◇_
+
+open import LTL.Trusted public
+  using (Formula; var)
+  renaming (¬_ to infix 30 ¬_; _⇒_ to infixr 20 _⇒_;
+            ○_ to infix 30 ○_; □_ to infix 30 □_)
+
+infix  30 ◇_
 infixr 22 _∧_
 infixr 21 _∨_
-infixr 20 _⇒_
 infix  19 _⇔_
 
 ------------------------------------------------------------------------

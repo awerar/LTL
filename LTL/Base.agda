@@ -8,7 +8,10 @@
 -- development, and Agda.Builtin.String (needed by LTL.Pretty, the proof
 -- printer) makes it through Agda.Builtin.Nat.  Propositional equality is
 -- Agda.Builtin.Equality's _≡_ for the same reason:  with ... in eq  needs the
--- EQUALITY builtin, and Agda.Builtin.String binds it to that type.
+-- EQUALITY builtin, and Agda.Builtin.String binds it to that type.  Bool is
+-- Agda.Builtin.Bool's, which is also the Bool of LTL.Trusted: an Instant there
+-- is a Var -> Bool, and the evaluation of LTL.LassoEval must return the same
+-- type for LTL.Semantics to compare the two.
 --
 -- The notation follows Agda's standard library -- x ≡ y, sym, trans, cong,
 -- subst, if_then_else_, and the builtin _+_ and _∸_ (Agda.Builtin.Nat's _-_)
@@ -32,9 +35,7 @@ open import Agda.Builtin.Nat public using (Nat; zero; suc; _+_)
 ------------------------------------------------------------------------
 -- Bool
 
-data Bool : Set where
-  true  : Bool
-  false : Bool
+open import Agda.Builtin.Bool public using (Bool; true; false)
 
 infix 0 if_then_else_
 

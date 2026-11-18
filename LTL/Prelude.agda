@@ -62,6 +62,10 @@ false ⇔ᵇ b = ¬ᵇ b
 sucInj : {n m : Nat} -> suc n ≡ suc m -> n ≡ m
 sucInj refl = refl
 
++-identityʳ : (m : Nat) -> m + zero ≡ m
++-identityʳ zero    = refl
++-identityʳ (suc m) = cong suc (+-identityʳ m)
+
 ------------------------------------------------------------------------
 -- Sums
 
@@ -290,11 +294,12 @@ refuteTrue false no = refl
 ------------------------------------------------------------------------
 -- Lists
 
-infixr 5 _∷_ _++_
+-- Agda.Builtin.List's, which is also the List of LTL.Trusted (a Period there
+-- is a List Instant); it declares _∷_ infixr 5 itself.
 
-data List (A : Set) : Set where
-  []  : List A
-  _∷_ : A -> List A -> List A
+open import Agda.Builtin.List public using (List; []; _∷_)
+
+infixr 5 _++_
 
 _++_ : {A : Set} -> List A -> List A -> List A
 []       ++ ys = ys

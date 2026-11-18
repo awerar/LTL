@@ -14,6 +14,8 @@ module LTL.Checks where
 
 open import LTL.Pretty    public
 open import LTL.DecideSCC public
+open import LTL.Correct   public
+import LTL.Trusted as T
 
 ------------------------------------------------------------------------
 -- LTL.Sub
@@ -672,3 +674,17 @@ pretty-sugar = refl
 pretty-countermodel : prove (var 0 ⇒ □ var 0) ≡
   "⊬ p ⇒ □ p\n\nCountermodel: the formula is false at time 0.  Variables true at each time:\n    0  {p}\n    1  {}\n    2  {p}\n    3  {p}\nthen repeating forever:\n    4  {p}\n  (back to time 4)\n"
 pretty-countermodel = refl
+
+------------------------------------------------------------------------
+-- LTL.Correct
+
+-- The Boolean answer of each DecisionProcedure: (Exp)'s first conjunct is
+-- valid, ◇ p is not.
+
+correct-answers :
+  map (λ D -> T.DecisionProcedure.decideValid D (□ var 0 ⇒ var 0))
+      (decideCorrect ∷ decideSCCCorrect ∷ decidePCCorrect ∷ [])
+  ++ map (λ D -> T.DecisionProcedure.decideValid D (◇ var 0))
+         (decideCorrect ∷ decideSCCCorrect ∷ decidePCCorrect ∷ [])
+  ≡ true ∷ true ∷ true ∷ false ∷ false ∷ false ∷ []
+correct-answers = refl

@@ -6,11 +6,17 @@ derivation or a certified finite lasso countermodel.
 
 ## Ground rules
 
+- `LTL/Trusted.agda` is the user's hand-checked specification (LTL
+  semantics, `valid`, `LassoCounterModel`, `DecisionProcedure`). **Never edit
+  it**; if it needs a change, tell the user. `Formula` is its datatype
+  (re-exported by `LTL/Formula.agda` with this development's fixities), and
+  `Bool`/`List` are Agda's builtins, so its `Instant`/`Period` use our types.
+  Import it qualified (`import LTL.Trusted as T`) because its other names clash.
 - Agda 2.8.0, **no standard library**. Every file starts with
   `{-# OPTIONS --safe --without-K --exact-split #-}`. Keep it that way: no
   postulates, holes, or termination pragmas. Agda's own `Agda.Builtin.*`
   modules are fine (`Base` re-exports `Agda.Builtin.Nat`).
-- Typecheck from the repository root, e.g. `agda -i . LTL/DecideSCC.agda`
+- Typecheck from the repository root, e.g. `agda -i . LTL/Correct.agda`
   (see README for the full list). `Examples`, `Compare`, `Lecture`, `Proofs`
   are benchmarks and are slow; the core proof modules should stay fast.
 - Language: `var n`, `¬ A`, `A ⇒ B`, `○ A` (next), `□ A` (always). `A ∧ B`,
@@ -67,17 +73,18 @@ derivation or a certified finite lasso countermodel.
 
 ## Module index (`LTL/`, in dependency order)
 
-1. **Foundations** — `Base` (Nat, Bool, Empty, Unit, `≡`); `Prelude` (`⊎`,
-   `Σ`, `×`, List, `∈`, `⊆`, `<`, index/nth, Boolean connectives and all
-   Boolean lemmas, `refuteTrue`).
+0. **Specification** — `Trusted` (read-only, see above).
+1. **Foundations** — `Base` (Nat and Bool from `Agda.Builtin`, Empty, Unit,
+   `≡`); `Prelude` (`⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
+   `<`, index/nth, Boolean connectives and all Boolean lemmas, `refuteTrue`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
    any node type: `Sets` (`≤`, `FindResult`, filter/any/all lemmas); `Bar`
    (inductively finite sets after Coquand–Siles, closure lemmas; all searches
    recurse on a Bar); `Nodes` (parameterised by a node type and a sound,
    reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the
    hypothesis names).
-2. **Syntax and proof system** — `Formula` (datatype, abbreviations, decidable
-   `≡ᶠ`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
+2. **Syntax and proof system** — `Formula` (`Trusted`'s datatype,
+   abbreviations, decidable `≡ᶠ`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
    `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
@@ -93,8 +100,12 @@ derivation or a certified finite lasso countermodel.
 6. **Elimination / provable branch (m4 §3–4)** — `Gfp` (set W, `Path`);
    `Elim` (R1/R2, `Uinf`, `satB`); `Trace` (removal reasons); `Extract`
    (`extract`, `provable`, Thm 4.1).
-7. **Lasso countermodel branch (m4 §5)** — `Walk`; `Fix` (Lemma 5.1); `Round`;
-   `Lasso` (Prop 5.3); `Run`; `Global` (Lemma 5.4); `Eval`; `Sound`; `Hintikka`.
+7. **Lasso countermodel branch (m4 §5)** — `Orbit` (positions `(s , rest)`,
+   `nextPos`, forward orbits; parameterised by the state type, mirroring
+   `Trusted`'s `Position`/`step`); `LassoEval` (Boolean `evalAt` and its
+   soundness on a lasso of any state type, parameterised by `read`); `Walk`;
+   `Fix` (Lemma 5.1); `Round`; `Lasso` (Prop 5.3); `Run` (`Orbit` at `Val`);
+   `Global` (Lemma 5.4); `Eval` (`LassoEval` at `Val`); `Sound`; `Hintikka`.
 8. **Decision procedures** — `Decide` (`decide`, Thm 6.1); `Graph` (the
    `fairGraph` certificate theorem, largest module; parameterised like `Nodes`,
    imports only the generic layer, instantiated at `Val` in `SccLasso`);
@@ -102,7 +113,9 @@ derivation or a certified finite lasso countermodel.
    `SccLasso`, `SccExtract`, `SccTrap` (graph ↔ logic translation);
    `DecideSCC` (`decideSCC`); `CompletePC`, `ShortPC` (`decidePC`, short
    certificates via (PC)). `Decide` also holds `derivCounts` (size, MP, Gen,
-   Ind, PC counts of a derivation).
+   Ind, PC counts of a derivation). `Semantics` (`evalAt` agrees with
+   `Trusted`'s `⊨`; `⊢-valid`, `toCounterModel`, `fromDecider`); `Correct`
+   (the three procedures as `Trusted.DecisionProcedure`s).
 9. **Examples and benchmarks** — `Checks` (the core modules' `refl` checks
    and example formulas: `benAri`, `◇P`, `bnb`, `c5`, …); `Examples` (46 formulas, Schmitt &
    Goubault-Larrecq Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`); `Compare`
@@ -119,9 +132,13 @@ derivation or a certified finite lasso countermodel.
 - `decide` (`LTL/Decide.agda`), `decideSCC` (`LTL/DecideSCC.agda`),
   `decidePC` (`LTL/ShortPC.agda`) — all of type
   `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q`.
+- `decideCorrect`, `decideSCCCorrect`, `decidePCCorrect` (`LTL/Correct.agda`)
+  — the same procedures as `Trusted.DecisionProcedure`. Any procedure of the
+  type above gets one from `fromDecider` (`LTL/Semantics.agda`).
 
 ## Adding Until (expected touch points)
 
-`Formula` → `Sub` → `Deriv` → `State`/`Step` → eventualities in `Elim`
-(currently indexed by box-subformulas) → `Eval`/`Sound`/`Hintikka` → the SCC
-fairness predicates in `SccLasso`.
+`Trusted` (the constructor and its `⊨` clause; the user must make that change)
+→ `Formula` → `Sub` → `Deriv` → `State`/`Step` → eventualities in `Elim`
+(currently indexed by box-subformulas) → `LassoEval`/`Semantics`/`Hintikka` →
+the SCC fairness predicates in `SccLasso`.

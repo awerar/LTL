@@ -19,6 +19,10 @@ implemented.**
   ([LaTeX](m4.tex)): the state-elimination argument.
 - [The SCC decision procedure](m5.pdf)
   ([LaTeX](m5.tex)): the graph certificate argument and comparison.
+- [LTL/Trusted.agda](LTL/Trusted.agda): the specification, a small
+  hand-checked module stating the LTL semantics and what a decision procedure
+  must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for all three
+  procedures.
 - [LTL/Decide.agda](LTL/Decide.agda) and
   [LTL/DecideSCC.agda](LTL/DecideSCC.agda): the two public decision procedures.
 - [LTL/ShortPC.agda](LTL/ShortPC.agda): shorter derivations using a checked
@@ -30,6 +34,7 @@ Tested with **Agda 2.8.0**. No Agda standard library is needed. From the reposit
 root:
 
 ```sh
+agda -i . LTL/Correct.agda
 agda -i . LTL/DecideSCC.agda
 agda -i . LTL/ShortPC.agda
 agda -i . LTL/Checks.agda
@@ -47,10 +52,13 @@ The source comments include historical timings; those depend on the machine and
 evaluation method.
 
 The files use `--safe --without-K --exact-split`. There are no postulates,
-unfinished goals, or termination overrides. The result is expressed in terms
-of derivability and finite lasso countermodels. Its relationship to semantic
-validity on arbitrary infinite words requires careful specification of the
-semantics and constructive assumptions; the proposal discusses this distinction.
+unfinished goals, or termination overrides. The procedures return a derivation
+or a finite lasso countermodel. `LTL/Correct.agda` connects this to the
+semantics of `LTL/Trusted.agda`: each procedure is a `DecisionProcedure`.
+When it answers true, the formula is valid, meaning true at time 0 of every
+lasso (ultimately periodic) interpretation. When it answers false, it returns a
+lasso on which the formula is false. Validity on arbitrary infinite words is
+not stated. The proposal discusses that distinction.
 
 ## Viewing proofs
 
@@ -120,7 +128,12 @@ are far too large to render; see `LTL/Proofs.agda`.
 derivations from eliminated states.
 
 `Lasso`, `Run`, `Eval`, `Sound`, `Hintikka`: finite countermodels and their
-correctness.
+correctness. `Orbit` and `LassoEval` hold the positions, Boolean evaluation and
+soundness for a lasso with any type of states.
+
+`Trusted`, `Semantics`, `Correct`: the specification, the proof that the
+Boolean evaluation is its semantics (hence that derivable formulas are valid),
+and the three procedures as `DecisionProcedure`s.
 
 `Graph`, `SccLasso`, `SccExtract`, `SccTrap`: graph certificates and their
 application to temporal logic.
