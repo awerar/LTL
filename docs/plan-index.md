@@ -53,10 +53,10 @@ No module cites G33 or G36.
 
 | Checkpoint | Where it is checked |
 |---|---|
-| C1 | the elimination on small examples (`Checks`, section `LTL.Elim`) |
+| C1 | the elimination on small examples (`Checks`, section `LTL.Elimination.Elim`) |
 | C2 | double negation as a derivation (`Proofs`) |
-| C4 | `decide` on Ben-Ari's formula and `□ p ⇒ □ ○ p` (`Checks`, section `LTL.Decide`) |
-| C5 | the C5 formula, decided by computation (`Checks`, section `LTL.Decide`) |
+| C4 | `decide` on Ben-Ari's formula and `□ p ⇒ □ ○ p` (`Checks`, section `LTL.Procedures.Decide`) |
+| C5 | the C5 formula, decided by computation (`Checks`, section `LTL.Procedures.Decide`) |
 | C6 | `decide` against `decidePC` certificates (`Proofs`) |
 | C8 | `decide` against `decideSCC` (`Compare`) |
 

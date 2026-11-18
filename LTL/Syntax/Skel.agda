@@ -1,0 +1,260 @@
+{-# OPTIONS --safe --without-K --exact-split #-}
+
+-- LTL.Syntax.Skel -- the propositional skeleton of a formula, and the decidable
+-- tautology test that (PC) needs.
+--
+-- Ben-Ari's system (Mathematical Logic for Computer Science, 3rd edition,
+-- Definition 12.1) takes as Axiom 0
+--
+--     PC     any substitution instance of a valid propositional formula
+--
+-- and then writes "PC" for every propositional step.  m4.tex Remark 6.4 rejects
+-- it and uses (P1)-(P3) instead, on the ground that "substitution instance of a
+-- propositional tautology" carries a side condition, so a formalisation would
+-- have to define a tautology checker AND the substitution relation before it
+-- can say what a derivation is, and then prove a substitution lemma to get
+-- soundness.
+--
+-- Half of that objection is avoidable.  The substitution relation is not
+-- needed: instead of asking whether A is an instance of a tautology, ask
+-- whether A is a tautology OF ITS OWN SKELETON -- treat its var, ○ and □
+-- subformulas as atoms and run the truth table.  That is the same class of
+-- formulas, it is decidable, it is a boolean condition on A alone, and ⊢_
+-- stays a plain inductive family.
+--
+-- The apparatus is already here.  atoms and valFrom were written for G30, where
+-- mkV builds a state from an assignment to the atoms of Sub P; the skeleton
+-- evaluation is that same function read as a truth-table row.  What this module
+-- adds is skelEval, which says the skeleton evaluation agrees with ANY boolean
+-- reading of formulas that is compositional on ¬ and ⇒ -- and there are two
+-- such readings in the development, valOf at a state (compositional by (S1))
+-- and evalAt at a position (compositional by definition).  So one lemma serves
+-- both LTL.States.Closure and the soundness of (PC).
+
+module LTL.Syntax.Skel where
+
+open import LTL.Syntax.Sub public
+
+------------------------------------------------------------------------
+-- Valuations, as bit vectors, and their enumeration
+
+Val : Set
+Val = List Bool
+
+bitAt : Val -> Nat -> Bool
+bitAt v i = nth v i false
+
+allVecs : Nat -> List Val
+allVecs zero    = [] ∷ []
+allVecs (suc n) = map (λ bs -> true ∷  bs) (allVecs n) ++
+                  map (λ bs -> false ∷ bs) (allVecs n)
+
+allVecs-complete : (n : Nat) (v : Val) -> length v ≡ n -> v ∈ allVecs n
+allVecs-complete zero    []           e  = here
+allVecs-complete zero    (b ∷ v)      ()
+allVecs-complete (suc n) []           ()
+allVecs-complete (suc n) (true  ∷ v)  e  =
+  memAppL (map (λ bs -> true ∷ bs) (allVecs n))
+          (map (λ bs -> false ∷ bs) (allVecs n))
+          (memMap (λ bs -> true ∷ bs) (allVecs-complete n v (sucInj e)))
+allVecs-complete (suc n) (false ∷ v)  e  =
+  memAppR (map (λ bs -> true ∷ bs) (allVecs n))
+          (map (λ bs -> false ∷ bs) (allVecs n))
+          (memMap (λ bs -> false ∷ bs) (allVecs-complete n v (sucInj e)))
+
+------------------------------------------------------------------------
+-- Lookup by first occurrence
+
+indexOfCons : Bool -> Nat -> Nat
+indexOfCons true  n = zero
+indexOfCons false n = suc n
+
+indexOf : List Formula -> Formula -> Nat
+indexOf []       A = zero
+indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
+
+------------------------------------------------------------------------
+-- Formula membership as a boolean, and the idx/nth round-trip for it.
+--
+-- indexOf locates the FIRST occurrence of a formula by ≡ᶠ, so this is the
+-- round-trip of FORMALISATION-PLAN.md G2 once more, for lookup by formula
+-- rather than by position.
+
+infix 4.5 _∈ᶠ_
+
+_∈ᶠ_ : Formula -> List Formula -> Bool
+A ∈ᶠ []       = false
+A ∈ᶠ (B ∷ Bs) = (B ≡ᶠ A) ∨ᵇ (A ∈ᶠ Bs)
+
+-- (The F in indexOf-nthF, indexOf-ltF: from the Boolean A ∈ᶠ As, where
+-- LTL.Proj's indexOf-nth, indexOf-lt start from a proof of A ∈ As.)
+
+indexOf-nthF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
+            -> nth As (indexOf As A) ⊥ ≡ A
+indexOf-nthF []       A ()
+indexOf-nthF (B ∷ Bs) A e with B ≡ᶠ A in eb
+... | true  = ≡ᶠ-sound B A eb
+... | false = indexOf-nthF Bs A e
+
+indexOf-ltF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
+           -> indexOf As A < length As
+indexOf-ltF []       A ()
+indexOf-ltF (B ∷ Bs) A e with B ≡ᶠ A
+... | true  = ltZero
+... | false = ltSuc (indexOf-ltF Bs A e)
+
+------------------------------------------------------------------------
+-- The atoms of a list of formulas.
+--
+-- Insertion keeps the list free of ≡ᶠ-duplicates: Sub P repeats (see
+-- subBenAri-dup in LTL.Tests.Checks), and a repeated atom would double the truth
+-- table for nothing.
+
+isAtomB : Formula -> Bool
+isAtomB (var n) = true
+isAtomB (¬ A)   = false
+isAtomB (A ⇒ B) = false
+isAtomB (○ A)   = true
+isAtomB (□ A)   = true
+
+insF : Formula -> List Formula -> List Formula
+insF A Bs = filterCons (¬ᵇ (A ∈ᶠ Bs)) A Bs
+
+insF-self : (A : Formula) (Bs : List Formula) -> A ∈ᶠ insF A Bs ≡ true
+insF-self A Bs with A ∈ᶠ Bs in e
+... | true  = e
+... | false = ∨ᵇ-introˡ (A ≡ᶠ A) _ (≡ᶠ-refl A)
+
+insF-mono : (A : Formula) (Bs : List Formula) (X : Formula)
+         -> X ∈ᶠ Bs ≡ true -> X ∈ᶠ insF A Bs ≡ true
+insF-mono A Bs X e with A ∈ᶠ Bs
+... | true  = e
+... | false = ∨ᵇ-introʳ (A ≡ᶠ X) (X ∈ᶠ Bs) e
+
+atoms : List Formula -> List Formula
+atoms []           = []
+atoms (var n ∷ As) = insF (var n) (atoms As)
+atoms (¬ A   ∷ As) = atoms As
+atoms (A ⇒ B ∷ As) = atoms As
+atoms (○ A   ∷ As) = insF (○ A) (atoms As)
+atoms (□ A   ∷ As) = insF (□ A) (atoms As)
+
+atomMem : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
+       -> A ∈ᶠ atoms As ≡ true
+atomMem []           ()        e
+atomMem (var n ∷ As) here      e = insF-self (var n) (atoms As)
+atomMem (var n ∷ As) (there m) e = insF-mono (var n) (atoms As) _ (atomMem As m e)
+atomMem (¬ B   ∷ As) here      ()
+atomMem (¬ B   ∷ As) (there m) e = atomMem As m e
+atomMem (B ⇒ C ∷ As) here      ()
+atomMem (B ⇒ C ∷ As) (there m) e = atomMem As m e
+atomMem (○ B   ∷ As) here      e = insF-self (○ B) (atoms As)
+atomMem (○ B   ∷ As) (there m) e = insF-mono (○ B) (atoms As) _ (atomMem As m e)
+atomMem (□ B   ∷ As) here      e = insF-self (□ B) (atoms As)
+atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem As m e)
+
+------------------------------------------------------------------------
+-- The arguments of the box-subformulas.
+--
+-- □Args collects the A for which □ A occurs in the list: the eventualities of
+-- LTL.Elimination.Elim.  It is defined here, below Deriv, because the short Lemma 2.6
+-- (LTL.Procedures.CompletePC) needs it as well, and that is on the other branch of the
+-- import graph: its (S2) premise is a conjunction of  □ A -> A  over □Args.
+-- □Args-mem is in LTL.Elimination.Trace, the only place that needs it.
+
+□Args : List Formula -> List Formula
+□Args []           = []
+□Args (var n ∷ As) = □Args As
+□Args (¬ A   ∷ As) = □Args As
+□Args (A ⇒ B ∷ As) = □Args As
+□Args (○ A   ∷ As) = □Args As
+□Args (□ A   ∷ As) = A ∷ □Args As
+
+□Args-of : (As : List Formula) {A : Formula}
+        -> □ A ∈ As -> A ∈ □Args As
+□Args-of []           ()
+□Args-of (var n ∷ As) (there m) = □Args-of As m
+□Args-of (¬ B   ∷ As) (there m) = □Args-of As m
+□Args-of (B ⇒ C ∷ As) (there m) = □Args-of As m
+□Args-of (○ B   ∷ As) (there m) = □Args-of As m
+□Args-of (□ B   ∷ As) here      = here
+□Args-of (□ B   ∷ As) (there m) = there (□Args-of As m)
+
+------------------------------------------------------------------------
+-- The skeleton evaluation.
+--
+-- valFrom Ats a A reads A with the bits a assigned to the atoms Ats: ¬ and
+-- ⇒ are interpreted, everything else is looked up.  For G30 this builds a
+-- state out of an assignment; here it is one row of a truth table.
+
+valFrom : List Formula -> Val -> Formula -> Bool
+valFrom Ats a (var n) = bitAt a (indexOf Ats (var n))
+valFrom Ats a (¬ A)   = ¬ᵇ valFrom Ats a A
+valFrom Ats a (A ⇒ B) = valFrom Ats a A ⇒ᵇ valFrom Ats a B
+valFrom Ats a (○ A)   = bitAt a (indexOf Ats (○ A))
+valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
+
+------------------------------------------------------------------------
+-- The skeleton evaluation agrees with any compositional reading.
+--
+-- f is an arbitrary assignment of booleans to formulas that respects ¬ and
+-- ⇒ on the subformulas of P.  Then reading A through f is the same as
+-- reading it through the skeleton with the atoms interpreted by f.  Two
+-- instances are used: valOf at a state, where the hypotheses are (S1) --
+-- LTL.States.Closure -- and evalAt at a position, where they are refl, since evalAt is
+-- DEFINED by ¬ᵇ and ⇒ᵇ at ¬ and ⇒ -- LTL.Countermodel.Sound.
+
+atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
+        -> X ∈ᶠ Ats ≡ true
+        -> bitAt (map f Ats) (indexOf Ats X) ≡ f X
+atomLook f Ats X mX =
+  trans (nth-map f Ats (indexOf Ats X) (indexOf-ltF Ats X mX) ⊥ false)
+        (cong f (indexOf-nthF Ats X mX))
+
+skelEval : (f : Formula -> Bool) (Ats : List Formula) (P : Formula)
+        -> ((X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
+              -> X ∈ᶠ Ats ≡ true)
+        -> ((X : Formula) -> ¬ X ∈ sub P
+              -> f (¬ X) ≡ ¬ᵇ f X)
+        -> ((X Y : Formula) -> X ⇒ Y ∈ sub P
+              -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
+        -> (A : Formula) -> A ∈ sub P
+        -> valFrom Ats (map f Ats) A ≡ f A
+skelEval f Ats P at fn fi (var n) m = atomLook f Ats (var n) (at (var n) m refl)
+skelEval f Ats P at fn fi (○ A)   m = atomLook f Ats (○ A) (at (○ A) m refl)
+skelEval f Ats P at fn fi (□ A)   m = atomLook f Ats (□ A) (at (□ A) m refl)
+skelEval f Ats P at fn fi (¬ A)   m =
+  trans (cong ¬ᵇ_ (skelEval f Ats P at fn fi A (sub-¬ P m)))
+        (sym (fn A m))
+skelEval f Ats P at fn fi (A ⇒ B) m =
+  trans (cong₂ _⇒ᵇ_ (skelEval f Ats P at fn fi A (sub-⇒L P m))
+                    (skelEval f Ats P at fn fi B (sub-⇒R P m)))
+        (sym (fi A B m))
+
+------------------------------------------------------------------------
+-- (PC), as a decidable condition on A alone
+
+atomsOf : Formula -> List Formula
+atomsOf A = atoms (sub A)
+
+isTaut : Formula -> Bool
+isTaut A = all (λ a -> valFrom (atomsOf A) a A)
+               (allVecs (length (atomsOf A)))
+
+-- and its soundness: any compositional reading of a skeleton tautology is true
+
+tautSound : (f : Formula -> Bool) (A : Formula)
+         -> ((X : Formula) -> ¬ X ∈ sub A
+               -> f (¬ X) ≡ ¬ᵇ f X)
+         -> ((X Y : Formula) -> X ⇒ Y ∈ sub A
+               -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
+         -> isTaut A ≡ true -> f A ≡ true
+tautSound f A fn fi e =
+  trans (sym (skelEval f (atomsOf A) A
+                       (λ X mX aX -> atomMem (sub A) mX aX) fn fi A
+                       (sub-self A)))
+        (all-at (λ a -> valFrom (atomsOf A) a A)
+                (allVecs (length (atomsOf A)))
+                (allVecs-complete (length (atomsOf A)) (map f (atomsOf A))
+                                  (map-length f (atomsOf A)))
+                e)

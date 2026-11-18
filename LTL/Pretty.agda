@@ -3,9 +3,9 @@
 -- LTL.Pretty -- the answers of the decision procedures, as text one can read.
 --
 -- A derivation is a finite tree and a countermodel is a finite lasso, so both
--- can be written down.  LTL.Proofs does that with the datatypes DTree / RTree,
+-- can be written down.  LTL.Benchmarks.Proofs does that with the datatypes DTree / RTree,
 -- and C-c C-n then prints the TERM: every constructor fully qualified, every
--- abbreviation of LTL.Formula unfolded (A ∧ B appears as ¬ (A ⇒ ¬ B)), and
+-- abbreviation of LTL.Syntax.Formula unfolded (A ∧ B appears as ¬ (A ⇒ ¬ B)), and
 -- the tree laid out as nested applications.  That is right for checking a
 -- shape by refl and useless for reading a proof.
 --
@@ -23,16 +23,16 @@
 --
 -- and the entry points
 --
---   prove Q          renders decidePC Q (LTL.ShortPC), whose certificates
+--   prove Q          renders decidePC Q (LTL.Procedures.ShortPC), whose certificates
 --                    are short.  proveWith decide Q renders decide's
 --                    certificate instead, but that is not practical: it is
---                    82357 constructors already for p ⇒ p (LTL.Proofs), and
+--                    82357 constructors already for p ⇒ p (LTL.Benchmarks.Proofs), and
 --                    rendering it did not finish in six minutes.
 --   proveLines Q     prove Q as one String per line, for editors that only
 --                    offer plain C-c C-n (see below).
 --   proveTree n Q    the tree view of decidePC Q.
 --
--- Formulas are printed with the fixities of LTL.Formula and minimal
+-- Formulas are printed with the fixities of LTL.Syntax.Formula and minimal
 -- parentheses.  Of the abbreviations, ∧, ⇔ and ◇ are put back: their unfolded
 -- shapes ¬ (A ⇒ ¬ B) and ¬ □ ¬ A are rarely meant literally.  ∨, ⊤ and ⊥ are
 -- NOT: ¬ A ⇒ B is the antecedent of (P3) and p ⇒ p is the identity theorem,
@@ -45,7 +45,7 @@
 -- with \n escapes.  C-u C-u C-c C-n (Agda's "use show instance" mode) instead
 -- evaluates  show (expr)  and prints the resulting string raw, with real line
 -- breaks; show below is the identity on String, which is all that mode needs.
--- So, with this module (or LTL.Proofs) loaded:
+-- So, with this module (or LTL.Benchmarks.Proofs) loaded:
 --
 --   C-u C-u C-c C-n   prove (□ pv ⇒ pv)
 --
@@ -54,12 +54,12 @@
 -- those, plain C-c C-n on  proveLines Q  shows one quoted line per row.
 --
 -- Strings are Agda.Builtin.String, which binds the NATURAL builtin through
--- Agda.Builtin.Nat; that is why LTL.Base takes its Nat from there.  Nothing in
+-- Agda.Builtin.Nat; that is why LTL.Lib.Base takes its Nat from there.  Nothing in
 -- the development depends on this module.
 
 module LTL.Pretty where
 
-open import LTL.ShortPC public
+open import LTL.Procedures.ShortPC public
 open import Agda.Builtin.String public using (String)
 open import Agda.Builtin.String using (primStringAppend; primShowNat; primStringToList)
 
@@ -118,7 +118,7 @@ commaSep (s ∷ t ∷ ss) = s <> ", " <> commaSep (t ∷ ss)
 -- Formulas
 --
 -- fm c A prints A in a context of precedence c: A is parenthesised when its
--- own precedence is below c.  Precedences are those of LTL.Formula: the prefix
+-- own precedence is below c.  Precedences are those of LTL.Syntax.Formula: the prefix
 -- operators 30, ∧ 22, ⇒ 20 (both right associative), ⇔ 19 (non-associative).
 -- The helpers take the pieces of the formula already split, never a rebuilt
 -- formula, so every recursive call is on a subterm.
@@ -374,7 +374,7 @@ renderTree n d = unlines (treeLines n d)
 --   v0, rest            (a walk from v0 ending at b)
 --   c0, c1, c0, c1, ... (a cycle from b back to b, repeated forever)
 -- and Q is false at time 0.  Each time point is shown as the set of
--- variables true there; by Hintikka's lemma (LTL.Hintikka) that set of
+-- variables true there; by Hintikka's lemma (LTL.Countermodel.Hintikka) that set of
 -- variables is all of the model that matters.
 
 isVar : Formula -> Bool

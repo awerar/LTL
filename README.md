@@ -15,17 +15,17 @@ implemented.**
 - [Master's thesis proposal](docs/ltl-master-thesis.pdf)
   ([LaTeX source](docs/ltl-master-thesis.tex)): learn LTL, understand the existing
   proof, extend it with Until, and study execution and readable certificates.
-- [Proof extraction from a failed LTL tableau](m4.pdf)
-  ([LaTeX](m4.tex)): the state-elimination argument.
-- [The SCC decision procedure](m5.pdf)
-  ([LaTeX](m5.tex)): the graph certificate argument and comparison.
+- [Proof extraction from a failed LTL tableau](docs/m4.pdf)
+  ([LaTeX](docs/m4.tex)): the state-elimination argument.
+- [The SCC decision procedure](docs/m5.pdf)
+  ([LaTeX](docs/m5.tex)): the graph certificate argument and comparison.
 - [LTL/Trusted.agda](LTL/Trusted.agda): the specification, a small
   hand-checked module stating the LTL semantics and what a decision procedure
   must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for all three
   procedures.
-- [LTL/Decide.agda](LTL/Decide.agda) and
-  [LTL/DecideSCC.agda](LTL/DecideSCC.agda): the two public decision procedures.
-- [LTL/ShortPC.agda](LTL/ShortPC.agda): shorter derivations using a checked
+- [LTL/Procedures/Decide.agda](LTL/Procedures/Decide.agda) and
+  [LTL/Procedures/DecideSCC.agda](LTL/Procedures/DecideSCC.agda): the two public decision procedures.
+- [LTL/Procedures/ShortPC.agda](LTL/Procedures/ShortPC.agda): shorter derivations using a checked
   propositional-consequence rule.
 
 ## Check the development
@@ -35,13 +35,13 @@ root:
 
 ```sh
 agda -i . LTL/Correct.agda
-agda -i . LTL/DecideSCC.agda
-agda -i . LTL/ShortPC.agda
-agda -i . LTL/Checks.agda
-agda -i . LTL/GraphExamples.agda
-agda -i . LTL/Compare.agda
-agda -i . LTL/Lecture.agda
-agda -i . LTL/Proofs.agda
+agda -i . LTL/Procedures/DecideSCC.agda
+agda -i . LTL/Procedures/ShortPC.agda
+agda -i . LTL/Tests/Checks.agda
+agda -i . LTL/Tests/GraphExamples.agda
+agda -i . LTL/Benchmarks/Compare.agda
+agda -i . LTL/Benchmarks/Lecture.agda
+agda -i . LTL/Benchmarks/Proofs.agda
 ```
 
 `Checks` and `GraphExamples` hold the computational checks of the core
@@ -99,11 +99,11 @@ ASCII forms are:
 The variables `p q r s t` and `x0`, `x1`, … are `var 0` to `var 4` and `var N`,
 which are also the names used in the output. Precedence is Agda's: prefix
 operators bind tightest, then `∧`, `∨`, `⇒` (right associative), `⇔`. The
-formula is evaluated with `LTL.Pretty` and `LTL.Examples` open, so `pv`, `qv`,
+formula is evaluated with `LTL.Pretty` and `LTL.Benchmarks.Examples` open, so `pv`, `qv`,
 `axT`, … can also be used. `tools/show-proof --help` lists all of this. Set
 `AGDA` to choose the Agda binary.
 
-In an editor, load `LTL/Pretty.agda` or `LTL/Proofs.agda`, then:
+In an editor, load `LTL/Pretty.agda` or `LTL/Benchmarks/Proofs.agda`, then:
 
 - Emacs: `C-u C-u C-c C-n prove (□ pv ⇒ pv)` prints the text with real line
   breaks. Plain `C-c C-n` shows a quoted string with `\n` escapes.
@@ -118,25 +118,28 @@ Limitations: rendering is computed by Agda's normaliser, so it is only
 practical for small certificates. `p ⇒ p`, `□ p ⇒ p` and the countermodel
 examples take about a second. Some formulas, such as `□ pv ⇒ ○ pv`, did not
 finish within 90 seconds. `decide`'s own certificates (`proveWith decide Q`)
-are far too large to render; see `LTL/Proofs.agda`.
+are far too large to render; see `LTL/Benchmarks/Proofs.agda`.
 
-## Mathematical entry points
+## Repository layout
 
-`Formula`, `Deriv`: syntax and deductive rules (`⊢ A`: A is derivable).
+The notes (`m4`, `m5`), the thesis proposal and the methodology are in
+[docs/](docs). The Agda modules are grouped by the part of the argument they
+formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
+`LTL.Syntax.Formula`.
 
-`Closure`, `Gfp`, `Elim`, `Trace`, `Extract`: the finite search and extraction of
-derivations from eliminated states.
-
-`Lasso`, `Run`, `Eval`, `Sound`, `Hintikka`: finite countermodels and their
-correctness. `Orbit` and `LassoEval` hold the positions, Boolean evaluation and
-soundness for a lasso with any type of states.
-
-`Trusted`, `Semantics`, `Correct`: the specification, the proof that the
-Boolean evaluation is its semantics (hence that derivable formulas are valid),
-and the three procedures as `DecisionProcedure`s.
-
-`Graph`, `SccLasso`, `SccExtract`, `SccTrap`: graph certificates and their
-application to temporal logic.
+| Folder | Modules | What it is |
+|---|---|---|
+| `LTL/` | `Trusted`, `Semantics`, `Correct`, `Pretty` | the specification, the proof that the Boolean evaluation is its semantics (so derivable formulas are valid), the three procedures as `DecisionProcedure`s, and readable output |
+| `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes` | foundations without the standard library; inductively finite sets |
+| `LTL/Syntax/` | `Formula`, `Sub`, `Skel`, `Deriv` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
+| `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
+| `LTL/States/` | `Val`, `State`, `Step`, `Taut`, `Proj`, `NonState`, `Complete`, `StepLemma`, `Reach`, `VecBar`, `Closure` | states, transitions and the finite state space, m4 §2 |
+| `LTL/Elimination/` | `Gfp`, `Elim`, `Trace`, `Extract` | elimination and extraction of derivations, m4 §3–4 |
+| `LTL/Countermodel/` | `Orbit`, `LassoEval`, `Walk`, `Fix`, `Round`, `Lasso`, `Run`, `Global`, `Eval`, `Sound`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
+| `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccTrap` | graph certificates and their application to temporal logic, m5 |
+| `LTL/Procedures/` | `Decide`, `DecideSCC`, `CompletePC`, `ShortPC` | the decision procedures, m4 Thm 6.1 |
+| `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
+| `LTL/Benchmarks/` | `Examples`, `Lecture`, `Compare`, `Proofs` | slow benchmarks and certificate measurements |
 
 The source comments cite goals (G1–G40), phases and checkpoints of the plans
 of the original development, which are not in this repository;

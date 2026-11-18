@@ -19,6 +19,4 @@ _build/
 /SIEFKES-*.md
 /notes
 /*.pdf
-!/m4.pdf
-!/m5.pdf
 !/docs/

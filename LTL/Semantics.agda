@@ -17,7 +17,7 @@
 --   * the run of a LassoCountermodel is a lasso of LTL.Trusted on which Q is
 --     false at time 0 (toCounterModel).
 --
--- Both go through the Boolean evaluation of LTL.LassoEval, which already
+-- Both go through the Boolean evaluation of LTL.Countermodel.LassoEval, which already
 -- satisfies the first fact (its sound) and in which the second is stated
 -- (falseAtStart).  What is left is that the Boolean evaluation IS the
 -- semantics: evalAt-holds and holds-evalAt, by induction on the formula.  The
@@ -28,7 +28,7 @@
 -- times at □, and it is the finiteness of the orbit that makes it decidable on
 -- a lasso, which (P3) and (PC) need.
 --
--- The comparison is made at positions (LTL.Orbit), which are LTL.Trusted's
+-- The comparison is made at positions (LTL.Countermodel.Orbit), which are LTL.Trusted's
 -- Position and step for any type of states: positionAgree says that the
 -- positions of a Trusted lasso are the iterates of nextPos, once the two
 -- successors agree.  LTL.Trusted is imported qualified as T, since its names
@@ -37,10 +37,10 @@
 
 module LTL.Semantics where
 
-open import LTL.Decide public
+open import LTL.Procedures.Decide public
 import LTL.Trusted as T
-import LTL.Orbit
-import LTL.LassoEval
+import LTL.Countermodel.Orbit
+import LTL.Countermodel.LassoEval
 
 ------------------------------------------------------------------------
 -- Truth in LTL.Trusted, written prefix
@@ -58,11 +58,11 @@ emptyElimT ()
 module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
 
   private
-    module O = LTL.Orbit S
-    module E = LTL.LassoEval S read
+    module O = LTL.Countermodel.Orbit S
+    module E = LTL.Countermodel.LassoEval S read
 
   -- The positions of a Trusted lasso L are the iterates of nextPos, once f
-  -- turns the successor of LTL.Orbit into T.step and the start into
+  -- turns the successor of LTL.Countermodel.Orbit into T.step and the start into
   -- T.initial.
 
   positionAgree : (L : T.Lasso) (f : O.Pos -> T.Position) (pos0 : O.Pos)
@@ -144,16 +144,16 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
 ------------------------------------------------------------------------
 -- Soundness: a derivable formula is valid.
 --
--- A Trusted lasso l is itself a lasso of LTL.Orbit at S = Instant, starting
+-- A Trusted lasso l is itself a lasso of LTL.Countermodel.Orbit at S = Instant, starting
 -- from the position T.initial l; LassoEval's soundness holds there, and the
 -- evaluation is the semantics.
 
 ⊢-valid : {A : Formula} -> ⊢ A -> T.valid A
 ⊢-valid {A} d l =
   evalAt-holds read c0 c1 pos0 (T.interpret l) agree A zero
-               (LTL.LassoEval.sound T.Instant read c0 c1 d pos0)
+               (LTL.Countermodel.LassoEval.sound T.Instant read c0 c1 d pos0)
   where
-    module O = LTL.Orbit T.Instant
+    module O = LTL.Countermodel.Orbit T.Instant
 
     read : T.Instant -> T.Instant
     read i = i
