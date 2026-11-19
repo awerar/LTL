@@ -23,8 +23,8 @@ data ValidPos (P : Formula) (b : Val) : Pos -> Set where
 posStep : (P : Formula) (b c0 : Val) (c1 : List Val)
        -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
        -> {pos : Pos} -> ValidPos P b pos
-       -> ValidPos P b (nextPos c0 c1 pos) ×
-          step P (posState pos) (posState (nextPos c0 c1 pos)) ≡ true
+       -> ValidPos P b (nextPos (c0 , c1) pos) ×
+          step P (posState pos) (posState (nextPos (c0 , c1) pos)) ≡ true
 posStep P b c0 c1 mc0 wc stb (vpos s []        ms wnil) =
   vpos c0 c1 mc0 wc , stb
 posStep P b c0 c1 mc0 wc stb (vpos s (w ∷ ws) ms (wcons mw st wk)) =
@@ -56,6 +56,10 @@ record Run (P : Formula) (v0 : Val) : Set where
     startIn     : v0 ∈ Uinf P
     restWalk    : Walk P (Uinf P) v0 rest b
 
+  -- the position the run loops back to
+  loop : Pos
+  loop = c0 , c1
+
 runOf : (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0 -> Run P v0
 runOf P v0 mv0 (mkLasso b mb ps wp []       wq () cyc)
 runOf P v0 mv0 (mkLasso b mb ps wp (q ∷ qs) (wcons mq st wqs) nn cyc) =
@@ -71,25 +75,25 @@ module _ (P : Formula) where
   posIterValid : (b c0 : Val) (c1 : List Val)
               -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
               -> (t : Nat) (pos : Pos) -> ValidPos P b pos
-              -> ValidPos P b (posIter c0 c1 t pos)
+              -> ValidPos P b (posIter (c0 , c1) t pos)
   posIterValid b c0 c1 mc0 wc stb zero    pos vp = vp
   posIterValid b c0 c1 mc0 wc stb (suc t) pos vp =
-    posIterValid b c0 c1 mc0 wc stb t (nextPos c0 c1 pos)
+    posIterValid b c0 c1 mc0 wc stb t (nextPos (c0 , c1) pos)
                  (fst (posStep P b c0 c1 mc0 wc stb vp))
 
   orbitValid : (b c0 : Val) (c1 : List Val)
             -> c0 ∈ Uinf P -> Walk P (Uinf P) c0 c1 b -> step P b c0 ≡ true
-            -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbitOf c0 c1 pos
+            -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbit (c0 , c1) pos
             -> ValidPos P b q
   orbitValid b c0 c1 mc0 wc stb pos q vp m =
-    fromIter (orbitOf-iter c0 c1 pos q m)
+    fromIter (∈orbit-iter (c0 , c1) pos q m)
     where
-      fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q) -> ValidPos P b q
+      fromIter : (Σ[ t ∈ Nat ] posIter (c0 , c1) t pos ≡ q) -> ValidPos P b q
       fromIter (t , et) =
         subst (λ r -> ValidPos P b r) et
               (posIterValid b c0 c1 mc0 wc stb t pos vp)
 
   -- the state of the run at stage i
   stateAt : (v0 : Val) -> Run P v0 -> Nat -> Val
-  stateAt v0 r i = posState (posIter c0 c1 i (v0 , rest))
+  stateAt v0 r i = posState (posIter loop i (v0 , rest))
     where open Run r

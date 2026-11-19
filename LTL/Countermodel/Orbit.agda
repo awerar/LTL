@@ -4,14 +4,19 @@
 -- any type S of states.
 --
 -- A position is a pair (s , rest): the current state, and the states still to
--- come before the cycle (c0 , c1) starts again.  The successor is
+-- come before the lasso loops back.  Given the position loop it loops back
+-- to, the successor is
 --
 --    (s , w ∷ ws)  |->  (w , ws)          walk on
---    (s , [])       |->  (c0 , c1)         wrap to the head of the cycle
+--    (s , [])      |->  loop              loop back
 --
--- which is Position and step of LTL.Trusted.  This avoids index arithmetic:
--- the forward orbit of (s , rest) is literally  posList s rest ++ posList c0
--- c1  (orbitN-split), and everything about orbits follows from that equation.
+-- which is Position, step and loopBack of LTL.Trusted.  This avoids index
+-- arithmetic: the forward orbit of pos is literally  stretch pos ++ cycle
+-- (orbit-split), and everything about orbits follows from that equation.
+--
+-- Positions and stretches do not depend on the lasso; everything else sits in
+-- a block parameterised by loop, which callers pass first.  Σ has no eta
+-- rule, so definitions that inspect a Pos match it as a pair.
 --
 -- LTL.Countermodel.Run instantiates S at valuations, and LTL.Semantics at
 -- LTL.Trusted's Instant; LTL.Countermodel.LassoEval evaluates formulas on
@@ -22,7 +27,7 @@ module LTL.Countermodel.Orbit (S : Set) where
 open import LTL.Lib.Prelude
 
 ------------------------------------------------------------------------
--- Positions and the successor function
+-- Positions and stretches
 
 Pos : Set
 Pos = S × List S
@@ -30,192 +35,190 @@ Pos = S × List S
 posState : Pos -> S
 posState (s , rest) = s
 
-nextPos : S -> List S -> Pos -> Pos
-nextPos c0 c1 (s , [])     = c0 , c1
-nextPos c0 c1 (s , w ∷ ws) = w , ws
+-- The states met walking from pos to the end of its stretch.
 
-posIter : S -> List S -> Nat -> Pos -> Pos
-posIter c0 c1 zero    pos = pos
-posIter c0 c1 (suc i) pos = posIter c0 c1 i (nextPos c0 c1 pos)
+stretchStates : Pos -> List S
+stretchStates (s , rest) = s ∷ rest
 
-posIter-plus : (c0 : S) (c1 : List S) (i t : Nat) (pos : Pos)
-            -> posIter c0 c1 (i + t) pos ≡
-               posIter c0 c1 t (posIter c0 c1 i pos)
-posIter-plus c0 c1 zero    t pos = refl
-posIter-plus c0 c1 (suc i) t pos = posIter-plus c0 c1 i t (nextPos c0 c1 pos)
+-- The positions met walking from pos to the end of its stretch.  The
+-- recursion is on the list, since (w , ws) is not structurally smaller than
+-- (s , w ∷ ws).
 
-------------------------------------------------------------------------
--- The forward orbit
+stretch : Pos -> List Pos
+stretch (s , rest) = go s rest
+  where
+    go : S -> List S -> List Pos
+    go s []       = (s , []) ∷ []
+    go s (w ∷ ws) = (s , w ∷ ws) ∷ go w ws
 
-posList : S -> List S -> List Pos
-posList s []       = (s , []) ∷ []
-posList s (w ∷ ws) = (s , w ∷ ws) ∷ posList w ws
-
--- The first n positions of the orbit from pos.
-
-orbitN : S -> List S -> Nat -> Pos -> List Pos
-orbitN c0 c1 zero    pos = []
-orbitN c0 c1 (suc n) pos = pos ∷ orbitN c0 c1 n (nextPos c0 c1 pos)
-
--- The equation everything rests on.
-orbitN-split : (c0 : S) (c1 : List S) (s : S) (rest : List S) (n : Nat)
-            -> orbitN c0 c1 (suc (length rest + n)) (s , rest) ≡
-               posList s rest ++ orbitN c0 c1 n (c0 , c1)
-orbitN-split c0 c1 s []       n = refl
-orbitN-split c0 c1 s (w ∷ ws) n =
-  cong (λ L -> (s , w ∷ ws) ∷ L) (orbitN-split c0 c1 w ws n)
-
-orbitOf : S -> List S -> Pos -> List Pos
-orbitOf c0 c1 (s , rest) =
-  orbitN c0 c1 (suc (length rest + suc (length c1))) (s , rest)
-
--- One full turn from the head of the cycle visits posList c0 c1.
-
-cycOrbit : (c0 : S) (c1 : List S)
-        -> orbitN c0 c1 (suc (length c1)) (c0 , c1) ≡
-           posList c0 c1 ++ []
-cycOrbit c0 c1 =
-  subst (λ k -> orbitN c0 c1 (suc k) (c0 , c1) ≡
-                posList c0 c1 ++ [])
-        (+-identityʳ (length c1))
-        (orbitN-split c0 c1 c0 c1 zero)
-
-orbitStem : (c0 : S) (c1 : List S) (s : S) (rest : List S) (q : Pos)
-         -> q ∈ posList s rest -> q ∈ orbitOf c0 c1 (s , rest)
-orbitStem c0 c1 s rest q m =
-  subst (λ L -> q ∈ L)
-        (sym (orbitN-split c0 c1 s rest (suc (length c1))))
-        (memAppL (posList s rest) (orbitN c0 c1 (suc (length c1)) (c0 , c1)) m)
-
-orbitCycle : (c0 : S) (c1 : List S) (s : S) (rest : List S) (q : Pos)
-          -> q ∈ posList c0 c1 -> q ∈ orbitOf c0 c1 (s , rest)
-orbitCycle c0 c1 s rest q m =
-  subst (λ L -> q ∈ L)
-        (sym (orbitN-split c0 c1 s rest (suc (length c1))))
-        (memAppR (posList s rest) (orbitN c0 c1 (suc (length c1)) (c0 , c1))
-                 (subst (λ L -> q ∈ L) (sym (cycOrbit c0 c1))
-                        (memAppL (posList c0 c1) [] m)))
+stretch-head : (pos : Pos) -> pos ∈ stretch pos
+stretch-head (s , [])     = here
+stretch-head (s , w ∷ ws) = here
 
 -- A state visited on a stretch is the state of a position on it.
 
-posShift : {s w : S} {ws : List S} {z : S}
-        -> Σ[ q ∈ Pos ] q ∈ posList w ws × posState q ≡ z
-        -> Σ[ q ∈ Pos ] q ∈ posList s (w ∷ ws) × posState q ≡ z
-posShift (q , mq , eq) = q , there mq , eq
-
-posList-mem : (s : S) (rest : List S) {z : S} -> z ∈ s ∷ rest
-           -> Σ[ q ∈ Pos ] q ∈ posList s rest × posState q ≡ z
-posList-mem s []       here      = (s , []) , here , refl
-posList-mem s []       (there ())
-posList-mem s (w ∷ ws) here      = (s , w ∷ ws) , here , refl
-posList-mem s (w ∷ ws) (there m) = posShift (posList-mem w ws m)
-
--- Every position of an orbit is reached from its start by iterating.
-
-posBump : {c0 : S} {c1 : List S} {pos q : Pos}
-       -> Σ[ t ∈ Nat ] posIter c0 c1 t (nextPos c0 c1 pos) ≡ q
-       -> Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q
-posBump (t , e) = suc t , e
-
-orbitN-iter : (c0 : S) (c1 : List S) (n : Nat) (pos q : Pos)
-           -> q ∈ orbitN c0 c1 n pos
-           -> Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q
-orbitN-iter c0 c1 zero    pos q ()
-orbitN-iter c0 c1 (suc n) pos q here      = zero , refl
-orbitN-iter c0 c1 (suc n) pos q (there m) =
-  posBump (orbitN-iter c0 c1 n (nextPos c0 c1 pos) q m)
-
-orbitOf-iter : (c0 : S) (c1 : List S) (pos q : Pos)
-            -> q ∈ orbitOf c0 c1 pos
-            -> Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q
-orbitOf-iter c0 c1 (s , rest) q m =
-  orbitN-iter c0 c1 (suc (length rest + suc (length c1))) (s , rest) q m
+stretch-mem : (pos : Pos) {z : S} -> z ∈ stretchStates pos
+           -> Σ[ q ∈ Pos ] q ∈ stretch pos × posState q ≡ z
+stretch-mem (s , [])     here      = (s , []) , here , refl
+stretch-mem (s , [])     (there ())
+stretch-mem (s , w ∷ ws) here      = (s , w ∷ ws) , here , refl
+stretch-mem (s , w ∷ ws) (there m) with stretch-mem (w , ws) m
+... | q , mq , eq = q , there mq , eq
 
 ------------------------------------------------------------------------
--- The orbit as a plain concatenation: the rest of the walk, then one turn of
--- the cycle.  Everything below is read off this equation.
+-- The successor function and its iterates, on the lasso that loops back to
+-- the position loop
 
-orbitEq : (c0 : S) (c1 : List S) (s : S) (rest : List S)
-       -> orbitOf c0 c1 (s , rest) ≡
-          posList s rest ++ posList c0 c1
-orbitEq c0 c1 s rest =
-  trans (orbitN-split c0 c1 s rest (suc (length c1)))
-        (cong (λ L -> posList s rest ++ L)
-              (trans (cycOrbit c0 c1) (++-identityʳ (posList c0 c1))))
+module _ (loop : Pos) where
 
-orbitHead : (c0 : S) (c1 : List S) (pos : Pos) -> pos ∈ orbitOf c0 c1 pos
-orbitHead c0 c1 (s , rest) = here
+  nextPos : Pos -> Pos
+  nextPos (s , [])     = loop
+  nextPos (s , w ∷ ws) = w , ws
 
-posList-hd : (s : S) (rest : List S) -> (s , rest) ∈ posList s rest
-posList-hd s []       = here
-posList-hd s (w ∷ ws) = here
+  posIter : Nat -> Pos -> Pos
+  posIter zero    pos = pos
+  posIter (suc i) pos = posIter i (nextPos pos)
 
-------------------------------------------------------------------------
--- The orbit is closed under the successor: walking on stays in the same
--- stretch until it runs out, then lands on the head of the cycle.
+  -- Iterating i + t times is iterating i times and then t more.
 
-posList-next : (c0 : S) (c1 : List S) (s : S) (rest : List S) (q : Pos)
-            -> q ∈ posList s rest
-            -> nextPos c0 c1 q ∈ posList s rest ⊎
-               nextPos c0 c1 q ≡ (c0 , c1)
-posList-next c0 c1 s []       q here      = inr refl
-posList-next c0 c1 s []       q (there ())
-posList-next c0 c1 s (w ∷ ws) q here      = inl (there (posList-hd w ws))
-posList-next c0 c1 s (w ∷ ws) q (there m) =
-  sumElim (λ mm -> inl (there mm)) inr (posList-next c0 c1 w ws q m)
+  posIter-+ˡ : (i t : Nat) (pos : Pos)
+            -> posIter (i + t) pos ≡ posIter t (posIter i pos)
+  posIter-+ˡ zero    t pos = refl
+  posIter-+ˡ (suc i) t pos = posIter-+ˡ i t (nextPos pos)
 
-orbitClosed : (c0 : S) (c1 : List S) (pos q : Pos)
-           -> q ∈ orbitOf c0 c1 pos -> nextPos c0 c1 q ∈ orbitOf c0 c1 pos
-orbitClosed c0 c1 (s , rest) q m =
-  subst (λ L -> nextPos c0 c1 q ∈ L) (sym (orbitEq c0 c1 s rest))
-        (sumElim onStem onCyc
-                 (memAppCase (posList s rest) (posList c0 c1)
-                             (subst (λ L -> q ∈ L) (orbitEq c0 c1 s rest) m)))
-  where
-    intoCyc : nextPos c0 c1 q ≡ (c0 , c1)
-           -> nextPos c0 c1 q ∈ posList s rest ++ posList c0 c1
-    intoCyc e =
-      subst (λ r -> r ∈ posList s rest ++ posList c0 c1) (sym e)
-            (memAppR (posList s rest) (posList c0 c1) (posList-hd c0 c1))
+  posIter-suc : (t : Nat) (pos : Pos)
+             -> posIter (suc t) pos ≡ nextPos (posIter t pos)
+  posIter-suc zero    pos = refl
+  posIter-suc (suc t) pos = posIter-suc t (nextPos pos)
 
-    onStem : q ∈ posList s rest
-          -> nextPos c0 c1 q ∈ posList s rest ++ posList c0 c1
-    onStem mq = sumElim (λ mm -> memAppL (posList s rest) (posList c0 c1) mm)
-                        intoCyc (posList-next c0 c1 s rest q mq)
+  -- Iterating k + n times is iterating n times and then k more.
 
-    onCyc : q ∈ posList c0 c1
-         -> nextPos c0 c1 q ∈ posList s rest ++ posList c0 c1
-    onCyc mq = sumElim (λ mm -> memAppR (posList s rest) (posList c0 c1) mm)
-                       intoCyc (posList-next c0 c1 c0 c1 q mq)
+  posIter-+ʳ : (k n : Nat) (pos : Pos)
+            -> posIter (k + n) pos ≡ posIter k (posIter n pos)
+  posIter-+ʳ zero    n pos = refl
+  posIter-+ʳ (suc k) n pos =
+    trans (posIter-suc (k + n) pos)
+          (trans (cong nextPos (posIter-+ʳ k n pos))
+                 (sym (posIter-suc k (posIter n pos))))
 
-posIter-suc : (c0 : S) (c1 : List S) (t : Nat) (pos : Pos)
-           -> posIter c0 c1 (suc t) pos ≡ nextPos c0 c1 (posIter c0 c1 t pos)
-posIter-suc c0 c1 zero    pos = refl
-posIter-suc c0 c1 (suc t) pos = posIter-suc c0 c1 t (nextPos c0 c1 pos)
+  ------------------------------------------------------------------------
+  -- The forward orbit
 
-orbitIter : (c0 : S) (c1 : List S) (t : Nat) (pos : Pos)
-         -> posIter c0 c1 t pos ∈ orbitOf c0 c1 pos
-orbitIter c0 c1 zero    pos = orbitHead c0 c1 pos
-orbitIter c0 c1 (suc t) pos =
-  subst (λ r -> r ∈ orbitOf c0 c1 pos) (sym (posIter-suc c0 c1 t pos))
-        (orbitClosed c0 c1 pos (posIter c0 c1 t pos) (orbitIter c0 c1 t pos))
+  -- One turn of the cycle, from loop.
 
--- so the orbit of a successor is contained in the orbit
-orbitSub : (c0 : S) (c1 : List S) (pos q : Pos)
-        -> q ∈ orbitOf c0 c1 (nextPos c0 c1 pos) -> q ∈ orbitOf c0 c1 pos
-orbitSub c0 c1 pos q m = fromIter (orbitOf-iter c0 c1 (nextPos c0 c1 pos) q m)
-  where
-    fromIter : (Σ[ t ∈ Nat ] posIter c0 c1 t (nextPos c0 c1 pos) ≡ q)
-            -> q ∈ orbitOf c0 c1 pos
-    fromIter (t , et) =
-      subst (λ r -> r ∈ orbitOf c0 c1 pos) et (orbitIter c0 c1 (suc t) pos)
+  cycle : List Pos
+  cycle = stretch loop
 
--- Iterating k + n times is iterating n times and then k more.
+  -- The first n positions of the orbit from pos.
 
-posIter-+ : (c0 : S) (c1 : List S) (k n : Nat) (pos : Pos)
-         -> posIter c0 c1 (k + n) pos ≡ posIter c0 c1 k (posIter c0 c1 n pos)
-posIter-+ c0 c1 zero    n pos = refl
-posIter-+ c0 c1 (suc k) n pos =
-  trans (posIter-suc c0 c1 (k + n) pos)
-        (trans (cong (nextPos c0 c1) (posIter-+ c0 c1 k n pos))
-               (sym (posIter-suc c0 c1 k (posIter c0 c1 n pos))))
+  orbitN : Nat -> Pos -> List Pos
+  orbitN zero    pos = []
+  orbitN (suc n) pos = pos ∷ orbitN n (nextPos pos)
+
+  -- The equation everything rests on: walking past the end of a stretch
+  -- lands on loop.
+  orbitN-split : (pos : Pos) (n : Nat)
+              -> orbitN (length (stretch pos) + n) pos ≡
+                 stretch pos ++ orbitN n loop
+  orbitN-split (s , rest) n = go s rest
+    where
+      go : (s : S) (rest : List S)
+        -> orbitN (length (stretch (s , rest)) + n) (s , rest) ≡
+           stretch (s , rest) ++ orbitN n loop
+      go s []       = refl
+      go s (w ∷ ws) = cong (λ L -> (s , w ∷ ws) ∷ L) (go w ws)
+
+  orbitN-cycle : orbitN (length cycle) loop ≡ cycle ++ []
+  orbitN-cycle =
+    subst (λ k -> orbitN k loop ≡ cycle ++ [])
+          (+-identityʳ (length cycle))
+          (orbitN-split loop zero)
+
+  -- The rest of the stretch from pos, then one turn of the cycle.
+
+  orbit : Pos -> List Pos
+  orbit pos = orbitN (length (stretch pos) + length cycle) pos
+
+  -- Every position of an orbit is reached from its start by iterating.
+
+  ∈orbitN-iter : (n : Nat) (pos q : Pos)
+              -> q ∈ orbitN n pos
+              -> Σ[ t ∈ Nat ] posIter t pos ≡ q
+  ∈orbitN-iter zero    pos q ()
+  ∈orbitN-iter (suc n) pos q here      = zero , refl
+  ∈orbitN-iter (suc n) pos q (there m) with ∈orbitN-iter n (nextPos pos) q m
+  ... | t , e = suc t , e
+
+  ∈orbit-iter : (pos q : Pos)
+             -> q ∈ orbit pos
+             -> Σ[ t ∈ Nat ] posIter t pos ≡ q
+  ∈orbit-iter pos q m =
+    ∈orbitN-iter (length (stretch pos) + length cycle) pos q m
+
+  ------------------------------------------------------------------------
+  -- The orbit as a plain concatenation: the rest of the stretch, then one
+  -- turn of the cycle.  Everything below is read off this equation.
+
+  orbit-split : (pos : Pos) -> orbit pos ≡ stretch pos ++ cycle
+  orbit-split pos =
+    trans (orbitN-split pos (length cycle))
+          (cong (λ L -> stretch pos ++ L)
+                (trans orbitN-cycle (++-identityʳ cycle)))
+
+  stretch⊆orbit : (pos : Pos) -> stretch pos ⊆ orbit pos
+  stretch⊆orbit pos q m =
+    subst (λ L -> q ∈ L) (sym (orbit-split pos))
+          (memAppL (stretch pos) cycle m)
+
+  cycle⊆orbit : (pos : Pos) -> cycle ⊆ orbit pos
+  cycle⊆orbit pos q m =
+    subst (λ L -> q ∈ L) (sym (orbit-split pos))
+          (memAppR (stretch pos) cycle m)
+
+  orbitHead : (pos : Pos) -> pos ∈ orbit pos
+  orbitHead pos = stretch⊆orbit pos pos (stretch-head pos)
+
+  ------------------------------------------------------------------------
+  -- The orbit is closed under the successor: walking on stays in the same
+  -- stretch until it runs out, then lands on loop.
+
+  stretch-next : (pos q : Pos)
+              -> q ∈ stretch pos
+              -> nextPos q ∈ stretch pos ⊎ nextPos q ≡ loop
+  stretch-next (s , [])     q here      = inr refl
+  stretch-next (s , [])     q (there ())
+  stretch-next (s , w ∷ ws) q here      = inl (there (stretch-head (w , ws)))
+  stretch-next (s , w ∷ ws) q (there m) =
+    sumElim (λ mm -> inl (there mm)) inr (stretch-next (w , ws) q m)
+
+  orbitClosed : (pos q : Pos)
+             -> q ∈ orbit pos -> nextPos q ∈ orbit pos
+  orbitClosed pos q m =
+    subst (λ L -> nextPos q ∈ L) (sym (orbit-split pos))
+          (sumElim onStretch onCycle
+                   (memAppCase (stretch pos) cycle
+                               (subst (λ L -> q ∈ L) (orbit-split pos) m)))
+    where
+      intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ cycle
+      intoCycle e =
+        subst (λ r -> r ∈ stretch pos ++ cycle) (sym e)
+              (memAppR (stretch pos) cycle (stretch-head loop))
+
+      onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ cycle
+      onStretch mq = sumElim (λ mm -> memAppL (stretch pos) cycle mm)
+                             intoCycle (stretch-next pos q mq)
+
+      onCycle : q ∈ cycle -> nextPos q ∈ stretch pos ++ cycle
+      onCycle mq = sumElim (λ mm -> memAppR (stretch pos) cycle mm)
+                           intoCycle (stretch-next loop q mq)
+
+  iter∈orbit : (t : Nat) (pos : Pos) -> posIter t pos ∈ orbit pos
+  iter∈orbit zero    pos = orbitHead pos
+  iter∈orbit (suc t) pos =
+    subst (λ r -> r ∈ orbit pos) (sym (posIter-suc t pos))
+          (orbitClosed pos (posIter t pos) (iter∈orbit t pos))
+
+  -- so the orbit of a successor is contained in the orbit
+  nextOrbit⊆orbit : (pos : Pos) -> orbit (nextPos pos) ⊆ orbit pos
+  nextOrbit⊆orbit pos q m with ∈orbit-iter (nextPos pos) q m
+  ... | t , et = subst (λ r -> r ∈ orbit pos) et (iter∈orbit (suc t) pos)

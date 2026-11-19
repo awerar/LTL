@@ -37,10 +37,10 @@ emptyElimT : {X : Set} -> T.Empty -> X
 emptyElimT ()
 
 ------------------------------------------------------------------------
--- A lasso with states of type S, its cycle (c0 , c1), and read giving the
--- instant of a state.
+-- A lasso with states of type S, the position loop it loops back to, and read
+-- giving the instant of a state.
 
-module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
+module _ {S : Set} (read : S -> T.Instant) (loop : S × List S) where
 
   private
     module O = LTL.Countermodel.Orbit S
@@ -50,14 +50,14 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
   -- turns nextPos into T.step and the start into T.initial.
 
   positionAgree : (L : T.Lasso) (f : O.Pos -> T.Position) (pos0 : O.Pos)
-               -> ((q : O.Pos) -> T.step L (f q) ≡ f (O.nextPos c0 c1 q))
+               -> ((q : O.Pos) -> T.step L (f q) ≡ f (O.nextPos loop q))
                -> T.initial L ≡ f pos0
-               -> (n : Nat) -> T.position L n ≡ f (O.posIter c0 c1 n pos0)
+               -> (n : Nat) -> T.position L n ≡ f (O.posIter loop n pos0)
   positionAgree L f pos0 st ini zero    = ini
   positionAgree L f pos0 st ini (suc n) =
     trans (cong (T.step L) (positionAgree L f pos0 st ini n))
-          (trans (st (O.posIter c0 c1 n pos0))
-                 (cong f (sym (O.posIter-suc c0 c1 n pos0))))
+          (trans (st (O.posIter loop n pos0))
+                 (cong f (sym (O.posIter-suc loop n pos0))))
 
   ------------------------------------------------------------------------
   -- The Boolean evaluation is the semantics.  σ agrees with the lasso from
@@ -66,15 +66,15 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
   -- first argument.
 
   module _ (pos0 : O.Pos) (σ : T.Interpretation)
-           (agree : (n : Nat) -> σ n ≡ read (O.posState (O.posIter c0 c1 n pos0)))
+           (agree : (n : Nat) -> σ n ≡ read (O.posState (O.posIter loop n pos0)))
            where
 
     private
       stage : Nat -> O.Pos
-      stage n = O.posIter c0 c1 n pos0
+      stage n = O.posIter loop n pos0
 
       True : Formula -> O.Pos -> Set
-      True A q = E.evalAt c0 c1 A q ≡ true
+      True A q = E.evalAt loop A q ≡ true
 
     evalAt-holds : (A : Formula) (n : Nat) -> True A (stage n) -> Holds σ n A
     holds-evalAt : (A : Formula) (n : Nat) -> Holds σ n A -> True A (stage n)
@@ -84,44 +84,44 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
     evalAt-holds (¬ A) n e h =
       emptyElim (true≢false
                    (trans (sym (holds-evalAt A n h))
-                          (¬ᵇ-true (E.evalAt c0 c1 A (stage n)) e)))
+                          (¬ᵇ-true (E.evalAt loop A (stage n)) e)))
 
     evalAt-holds (A ⇒ B) n e h =
       evalAt-holds B n
-        (⇒ᵇ-mp (E.evalAt c0 c1 A (stage n)) (E.evalAt c0 c1 B (stage n))
+        (⇒ᵇ-mp (E.evalAt loop A (stage n)) (E.evalAt loop B (stage n))
                e (holds-evalAt A n h))
 
     evalAt-holds (○ A) n e =
       evalAt-holds A (suc n)
-        (subst (True A) (sym (O.posIter-suc c0 c1 n pos0)) e)
+        (subst (True A) (sym (O.posIter-suc loop n pos0)) e)
 
     evalAt-holds (□ A) n e k =
       evalAt-holds A (k + n)
-        (subst (True A) (sym (O.posIter-+ c0 c1 k n pos0))
-               (E.eval□-at c0 c1 A (stage n) (O.posIter c0 c1 k (stage n)) e
-                           (O.orbitIter c0 c1 k (stage n))))
+        (subst (True A) (sym (O.posIter-+ʳ loop k n pos0))
+               (E.eval□-at loop A (stage n) (O.posIter loop k (stage n)) e
+                           (O.iter∈orbit loop k (stage n))))
 
     holds-evalAt (var x) n h = subst (λ i -> i x ≡ true) (agree n) h
 
-    holds-evalAt (¬ A) n h with E.evalAt c0 c1 A (stage n) in ea
+    holds-evalAt (¬ A) n h with E.evalAt loop A (stage n) in ea
     ... | true  = emptyElimT (h (evalAt-holds A n ea))
     ... | false = refl
 
     holds-evalAt (A ⇒ B) n h =
-      ⇒ᵇ-intro (E.evalAt c0 c1 A (stage n)) (E.evalAt c0 c1 B (stage n))
+      ⇒ᵇ-intro (E.evalAt loop A (stage n)) (E.evalAt loop B (stage n))
                (λ ea -> holds-evalAt B n (h (evalAt-holds A n ea)))
 
     holds-evalAt (○ A) n h =
-      subst (True A) (O.posIter-suc c0 c1 n pos0) (holds-evalAt A (suc n) h)
+      subst (True A) (O.posIter-suc loop n pos0) (holds-evalAt A (suc n) h)
 
     holds-evalAt (□ A) n h =
-      E.eval□-intro c0 c1 A (stage n)
-        (λ q m -> fromIter q (O.orbitOf-iter c0 c1 (stage n) q m))
+      E.eval□-intro loop A (stage n)
+        (λ q m -> fromIter q (O.∈orbit-iter loop (stage n) q m))
       where
-        fromIter : (q : O.Pos) -> Σ[ t ∈ Nat ] O.posIter c0 c1 t (stage n) ≡ q
+        fromIter : (q : O.Pos) -> Σ[ t ∈ Nat ] O.posIter loop t (stage n) ≡ q
                 -> True A q
         fromIter q (t , et) =
-          subst (True A) (trans (O.posIter-+ c0 c1 t n pos0) et)
+          subst (True A) (trans (O.posIter-+ʳ loop t n pos0) et)
                 (holds-evalAt A (t + n) (h t))
 
 ------------------------------------------------------------------------
@@ -131,19 +131,16 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
 
 ⊢-valid : {A : Formula} -> ⊢ A -> T.valid A
 ⊢-valid {A} d l =
-  evalAt-holds read c0 c1 pos0 (T.interpret l) agree A zero
-               (LTL.Countermodel.LassoEval.sound T.Instant read c0 c1 d pos0)
+  evalAt-holds read loop pos0 (T.interpret l) agree A zero
+               (LTL.Countermodel.LassoEval.sound T.Instant read loop d pos0)
   where
     module O = LTL.Countermodel.Orbit T.Instant
 
     read : T.Instant -> T.Instant
     read i = i
 
-    c0 : T.Instant
-    c0 = T.Lasso.loopHead l
-
-    c1 : List T.Instant
-    c1 = T.Lasso.loopTail l
+    loop : O.Pos
+    loop = T.Lasso.loopHead l , T.Lasso.loopTail l
 
     pos0 : O.Pos
     pos0 = T.Position.now (T.initial l) , T.Position.rest (T.initial l)
@@ -151,16 +148,16 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
     f : O.Pos -> T.Position
     f (s , ws) = T.at s ws
 
-    st : (q : O.Pos) -> T.step l (f q) ≡ f (O.nextPos c0 c1 q)
+    st : (q : O.Pos) -> T.step l (f q) ≡ f (O.nextPos loop q)
     st (s , [])     = refl
     st (s , w ∷ ws) = refl
 
     nowF : (q : O.Pos) -> T.Position.now (f q) ≡ O.posState q
     nowF (s , ws) = refl
 
-    agree : (n : Nat) -> T.interpret l n ≡ O.posState (O.posIter c0 c1 n pos0)
-    agree n = trans (cong T.Position.now (positionAgree read c0 c1 l f pos0 st refl n))
-                    (nowF (O.posIter c0 c1 n pos0))
+    agree : (n : Nat) -> T.interpret l n ≡ O.posState (O.posIter loop n pos0)
+    agree n = trans (cong T.Position.now (positionAgree read loop l f pos0 st refl n))
+                    (nowF (O.posIter loop n pos0))
 
 ------------------------------------------------------------------------
 -- A countermodel is a Trusted countermodel.  Its run, read through readVal
@@ -183,21 +180,21 @@ toCounterModel Q (countermodel v0 r mv0 falseQ noDeriv) = T.counter L qFalse
     f : Pos -> T.Position
     f (s , ws) = T.at (rd s) (map rd ws)
 
-    st : (q : Pos) -> T.step L (f q) ≡ f (nextPos c0 c1 q)
+    st : (q : Pos) -> T.step L (f q) ≡ f (nextPos loop q)
     st (s , [])     = refl
     st (s , w ∷ ws) = refl
 
     nowF : (q : Pos) -> T.Position.now (f q) ≡ rd (posState q)
     nowF (s , ws) = refl
 
-    agree : (n : Nat) -> T.interpret L n ≡ rd (posState (posIter c0 c1 n (v0 , rest)))
-    agree n = trans (cong T.Position.now (positionAgree rd c0 c1 L f (v0 , rest) st refl n))
-                    (nowF (posIter c0 c1 n (v0 , rest)))
+    agree : (n : Nat) -> T.interpret L n ≡ rd (posState (posIter loop n (v0 , rest)))
+    agree n = trans (cong T.Position.now (positionAgree rd loop L f (v0 , rest) st refl n))
+                    (nowF (posIter loop n (v0 , rest)))
 
     qFalse : Holds (T.interpret L) zero (¬ Q)
     qFalse h =
       emptyElim (true≢false
-                   (trans (sym (holds-evalAt rd c0 c1 (v0 , rest) (T.interpret L)
+                   (trans (sym (holds-evalAt rd loop (v0 , rest) (T.interpret L)
                                              agree Q zero h))
                           falseQ))
 

@@ -29,5 +29,5 @@ module _ (P : Formula) where
   -- The evaluation on a run, at stage i
 
   eval : (v0 : Val) -> Run P v0 -> Formula -> Nat -> Bool
-  eval v0 r A i = evalAt c0 c1 A (posIter c0 c1 i (v0 , rest))
+  eval v0 r A i = evalAt loop A (posIter loop i (v0 , rest))
     where open Run r

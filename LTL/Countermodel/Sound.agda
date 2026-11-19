@@ -17,5 +17,5 @@ module _ (P : Formula) where
   soundRun : (v0 : Val) (r : Run P v0) {C : Formula} -> ⊢ C
           -> (i : Nat) -> eval P v0 r C i ≡ true
   soundRun v0 r d i =
-    LTL.Countermodel.LassoEval.sound Val (readVal P) c0 c1 d (posIter c0 c1 i (v0 , rest))
+    LTL.Countermodel.LassoEval.sound Val (readVal P) loop d (posIter loop i (v0 , rest))
     where open Run r

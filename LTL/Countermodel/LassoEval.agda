@@ -15,46 +15,15 @@
 -- In soundness, (P1)-(P3) are Boolean tautologies, and (K ○) and (Lin) hold
 -- because evalAt commutes with ○ definitionally.  (K □) is pointwise on one
 -- orbit; (Exp) needs the orbit to contain the position, its successor and the
--- successor's orbit (orbitIter).  (Ind) is the one with content: A propagates
+-- successor's orbit (iter∈orbit).  (Ind) is the one with content: A propagates
 -- along posIter t pos by induction on t, and every member of the orbit is
--- such a posIter (orbitOf-iter).
+-- such a posIter (∈orbit-iter).
 
 open import LTL.Syntax.Deriv
 
 module LTL.Countermodel.LassoEval (S : Set) (read : S -> Nat -> Bool) where
 
 open import LTL.Countermodel.Orbit S
-
-------------------------------------------------------------------------
--- The Boolean evaluation at a position
-
-evalAt : (c0 : S) (c1 : List S) -> Formula -> Pos -> Bool
-evalAt c0 c1 (var n) pos = read (posState pos) n
-evalAt c0 c1 (¬ A)   pos = ¬ᵇ evalAt c0 c1 A pos
-evalAt c0 c1 (A ⇒ B) pos = evalAt c0 c1 A pos ⇒ᵇ evalAt c0 c1 B pos
-evalAt c0 c1 (○ A)   pos = evalAt c0 c1 A (nextPos c0 c1 pos)
-evalAt c0 c1 (□ A)   pos = all (evalAt c0 c1 A) (orbitOf c0 c1 pos)
-
-------------------------------------------------------------------------
--- The two ways of using it
-
-eval□-at : (c0 : S) (c1 : List S) (A : Formula) (pos q : Pos)
-        -> evalAt c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
-        -> evalAt c0 c1 A q ≡ true
-eval□-at c0 c1 A pos q e m =
-  all-at (evalAt c0 c1 A) (orbitOf c0 c1 pos) m e
-
-eval□-intro : (c0 : S) (c1 : List S) (A : Formula) (pos : Pos)
-           -> ((q : Pos) -> q ∈ orbitOf c0 c1 pos -> evalAt c0 c1 A q ≡ true)
-           -> evalAt c0 c1 (□ A) pos ≡ true
-eval□-intro c0 c1 A pos f =
-  all-intro (evalAt c0 c1 A) (orbitOf c0 c1 pos) (λ {q} m -> f q m)
-
-eval□-false : (c0 : S) (c1 : List S) (A : Formula) (pos q : Pos)
-           -> q ∈ orbitOf c0 c1 pos -> evalAt c0 c1 A q ≡ false
-           -> evalAt c0 c1 (□ A) pos ≡ false
-eval□-false c0 c1 A pos q m e =
-  all-atFalse (evalAt c0 c1 A) (orbitOf c0 c1 pos) m e
 
 ------------------------------------------------------------------------
 -- The Boolean tautologies behind (P1), (P2), (P3) and the identity
@@ -79,147 +48,180 @@ tautP3 true  false = refl
 tautP3 false true  = refl
 tautP3 false false = refl
 
-------------------------------------------------------------------------
--- Conjunction, as (Exp) and (Lin) need it
+module _ (loop : Pos) where
 
-∧True : (c0 : S) (c1 : List S) (X Y : Formula) (pos : Pos)
-     -> evalAt c0 c1 X pos ≡ true -> evalAt c0 c1 Y pos ≡ true
-     -> evalAt c0 c1 (X ∧ Y) pos ≡ true
-∧True c0 c1 X Y pos ex ey =
-  aux (evalAt c0 c1 X pos) (evalAt c0 c1 Y pos) ex ey
-  where
-    aux : (x y : Bool) -> x ≡ true -> y ≡ true
-       -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
-    aux true  true  ex' ey' = refl
-    aux true  false ex' ()
-    aux false y     ()  ey'
+  ------------------------------------------------------------------------
+  -- The Boolean evaluation at a position
 
-------------------------------------------------------------------------
--- (K □)
+  evalAt : Formula -> Pos -> Bool
+  evalAt (var n) pos = read (posState pos) n
+  evalAt (¬ A)   pos = ¬ᵇ evalAt A pos
+  evalAt (A ⇒ B) pos = evalAt A pos ⇒ᵇ evalAt B pos
+  evalAt (○ A)   pos = evalAt A (nextPos loop pos)
+  evalAt (□ A)   pos = all (evalAt A) (orbit loop pos)
 
-k□Sound : (c0 : S) (c1 : List S) (A B : Formula) (pos : Pos)
-       -> evalAt c0 c1 (□ (A ⇒ B)) pos ≡ true
-       -> evalAt c0 c1 (□ A) pos ≡ true
-       -> evalAt c0 c1 (□ B) pos ≡ true
-k□Sound c0 c1 A B pos e1 e2 =
-  all-intro (evalAt c0 c1 B) (orbitOf c0 c1 pos)
-    (λ {q} m ->
-       ⇒ᵇ-mp (evalAt c0 c1 A q) (evalAt c0 c1 B q)
-             (all-at (evalAt c0 c1 (A ⇒ B)) (orbitOf c0 c1 pos) m e1)
-             (all-at (evalAt c0 c1 A) (orbitOf c0 c1 pos) m e2))
+  ------------------------------------------------------------------------
+  -- The two ways of using it
 
-------------------------------------------------------------------------
--- (Exp)
+  eval□-at : (A : Formula) (pos q : Pos)
+          -> evalAt (□ A) pos ≡ true -> q ∈ orbit loop pos
+          -> evalAt A q ≡ true
+  eval□-at A pos q e m =
+    all-at (evalAt A) (orbit loop pos) m e
 
-expSound : (c0 : S) (c1 : List S) (A : Formula) (pos : Pos)
-        -> evalAt c0 c1 (□ A ⇒ A ∧ ○ A ∧ ○ □ A) pos ≡
-           true
-expSound c0 c1 A pos =
-  ⇒ᵇ-intro (evalAt c0 c1 (□ A) pos)
-            (evalAt c0 c1 (A ∧ ○ A ∧ ○ □ A) pos) body
-  where
-    body : evalAt c0 c1 (□ A) pos ≡ true
-        -> evalAt c0 c1 (A ∧ ○ A ∧ ○ □ A) pos ≡ true
-    body eb =
-      ∧True c0 c1 A (○ A ∧ ○ □ A) pos
-            (all-at (evalAt c0 c1 A) (orbitOf c0 c1 pos)
-                      (orbitIter c0 c1 zero pos) eb)
-              (∧True c0 c1 (○ A) (○ □ A) pos
-                     (all-at (evalAt c0 c1 A) (orbitOf c0 c1 pos)
-                               (orbitIter c0 c1 (suc zero) pos) eb)
-                       (all-intro (evalAt c0 c1 A)
-                                  (orbitOf c0 c1 (nextPos c0 c1 pos))
-                                  (λ {q} m ->
-                                     all-at (evalAt c0 c1 A)
-                                            (orbitOf c0 c1 pos)
-                                            (orbitSub c0 c1 pos q m) eb)))
+  eval□-intro : (A : Formula) (pos : Pos)
+             -> ((q : Pos) -> q ∈ orbit loop pos -> evalAt A q ≡ true)
+             -> evalAt (□ A) pos ≡ true
+  eval□-intro A pos f =
+    all-intro (evalAt A) (orbit loop pos) (λ {q} m -> f q m)
 
-------------------------------------------------------------------------
--- (Ind): A propagates along the run, since the hypothesis is available at
--- every stage and the orbit consists exactly of those stages.
+  eval□-false : (A : Formula) (pos q : Pos)
+             -> q ∈ orbit loop pos -> evalAt A q ≡ false
+             -> evalAt (□ A) pos ≡ false
+  eval□-false A pos q m e =
+    all-atFalse (evalAt A) (orbit loop pos) m e
 
-indSound : (c0 : S) (c1 : List S) (A : Formula) (pos : Pos)
-        -> evalAt c0 c1 (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos ≡ true
-indSound c0 c1 A pos =
-  ⇒ᵇ-intro (evalAt c0 c1 (□ (A ⇒ ○ A)) pos)
-           (evalAt c0 c1 A pos ⇒ᵇ evalAt c0 c1 (□ A) pos)
-           (λ e1 -> ⇒ᵇ-intro (evalAt c0 c1 A pos)
-                             (evalAt c0 c1 (□ A) pos) (body e1))
-  where
-    body : evalAt c0 c1 (□ (A ⇒ ○ A)) pos ≡ true
-        -> evalAt c0 c1 A pos ≡ true
-        -> evalAt c0 c1 (□ A) pos ≡ true
-    body e1 e2 =
-      all-intro (evalAt c0 c1 A) (orbitOf c0 c1 pos)
-                (λ {q} m -> fromIter q (orbitOf-iter c0 c1 pos q m))
-      where
-        along : (t : Nat) -> evalAt c0 c1 A (posIter c0 c1 t pos) ≡ true
-        along zero    = e2
-        along (suc t) =
-          subst (λ r -> evalAt c0 c1 A r ≡ true)
-                (sym (posIter-suc c0 c1 t pos))
-                (⇒ᵇ-mp (evalAt c0 c1 A (posIter c0 c1 t pos))
-                          (evalAt c0 c1 A
-                                  (nextPos c0 c1 (posIter c0 c1 t pos)))
-                          (all-at (evalAt c0 c1 (A ⇒ ○ A))
-                                  (orbitOf c0 c1 pos)
-                                  (orbitIter c0 c1 t pos) e1)
-                          (along t))
+  ------------------------------------------------------------------------
+  -- Conjunction, as (Exp) and (Lin) need it
 
-        fromIter : (q : Pos) -> (Σ[ t ∈ Nat ] posIter c0 c1 t pos ≡ q)
-                -> evalAt c0 c1 A q ≡ true
-        fromIter q (t , et) =
-          subst (λ r -> evalAt c0 c1 A r ≡ true) et (along t)
+  ∧True : (X Y : Formula) (pos : Pos)
+       -> evalAt X pos ≡ true -> evalAt Y pos ≡ true
+       -> evalAt (X ∧ Y) pos ≡ true
+  ∧True X Y pos ex ey =
+    aux (evalAt X pos) (evalAt Y pos) ex ey
+    where
+      aux : (x y : Bool) -> x ≡ true -> y ≡ true
+         -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
+      aux true  true  ex' ey' = refl
+      aux true  false ex' ()
+      aux false y     ()  ey'
 
-------------------------------------------------------------------------
--- Soundness
+  ------------------------------------------------------------------------
+  -- (K □)
 
-sound : (c0 : S) (c1 : List S) {C : Formula} -> ⊢ C
-     -> (pos : Pos) -> evalAt c0 c1 C pos ≡ true
+  k□Sound : (A B : Formula) (pos : Pos)
+         -> evalAt (□ (A ⇒ B)) pos ≡ true
+         -> evalAt (□ A) pos ≡ true
+         -> evalAt (□ B) pos ≡ true
+  k□Sound A B pos e1 e2 =
+    all-intro (evalAt B) (orbit loop pos)
+      (λ {q} m ->
+         ⇒ᵇ-mp (evalAt A q) (evalAt B q)
+               (all-at (evalAt (A ⇒ B)) (orbit loop pos) m e1)
+               (all-at (evalAt A) (orbit loop pos) m e2))
 
-sound c0 c1 (p1 {A} {B}) pos =
-  tautP1 (evalAt c0 c1 A pos) (evalAt c0 c1 B pos)
+  ------------------------------------------------------------------------
+  -- (Exp)
 
-sound c0 c1 (p2 {A} {B} {C}) pos =
-  tautP2 (evalAt c0 c1 A pos) (evalAt c0 c1 B pos) (evalAt c0 c1 C pos)
+  expSound : (A : Formula) (pos : Pos)
+          -> evalAt (□ A ⇒ A ∧ ○ A ∧ ○ □ A) pos ≡
+             true
+  expSound A pos =
+    ⇒ᵇ-intro (evalAt (□ A) pos)
+              (evalAt (A ∧ ○ A ∧ ○ □ A) pos) body
+    where
+      body : evalAt (□ A) pos ≡ true
+          -> evalAt (A ∧ ○ A ∧ ○ □ A) pos ≡ true
+      body eb =
+        ∧True A (○ A ∧ ○ □ A) pos
+              (all-at (evalAt A) (orbit loop pos)
+                        (iter∈orbit loop zero pos) eb)
+                (∧True (○ A) (○ □ A) pos
+                       (all-at (evalAt A) (orbit loop pos)
+                                 (iter∈orbit loop (suc zero) pos) eb)
+                         (all-intro (evalAt A)
+                                    (orbit loop (nextPos loop pos))
+                                    (λ {q} m ->
+                                       all-at (evalAt A)
+                                              (orbit loop pos)
+                                              (nextOrbit⊆orbit loop pos q m) eb)))
 
-sound c0 c1 (p3 {A} {B}) pos =
-  tautP3 (evalAt c0 c1 A pos) (evalAt c0 c1 B pos)
+  ------------------------------------------------------------------------
+  -- (Ind): A propagates along the run, since the hypothesis is available at
+  -- every stage and the orbit consists exactly of those stages.
 
-sound c0 c1 (k□ {A} {B}) pos =
-  ⇒ᵇ-intro (evalAt c0 c1 (□ (A ⇒ B)) pos)
-            (evalAt c0 c1 (□ A) pos ⇒ᵇ evalAt c0 c1 (□ B) pos)
-            (λ e1 -> ⇒ᵇ-intro (evalAt c0 c1 (□ A) pos)
-                               (evalAt c0 c1 (□ B) pos)
-                               (λ e2 -> k□Sound c0 c1 A B pos e1 e2))
+  indSound : (A : Formula) (pos : Pos)
+          -> evalAt (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos ≡ true
+  indSound A pos =
+    ⇒ᵇ-intro (evalAt (□ (A ⇒ ○ A)) pos)
+             (evalAt A pos ⇒ᵇ evalAt (□ A) pos)
+             (λ e1 -> ⇒ᵇ-intro (evalAt A pos)
+                               (evalAt (□ A) pos) (body e1))
+    where
+      body : evalAt (□ (A ⇒ ○ A)) pos ≡ true
+          -> evalAt A pos ≡ true
+          -> evalAt (□ A) pos ≡ true
+      body e1 e2 =
+        all-intro (evalAt A) (orbit loop pos)
+                  (λ {q} m -> fromIter q (∈orbit-iter loop pos q m))
+        where
+          along : (t : Nat) -> evalAt A (posIter loop t pos) ≡ true
+          along zero    = e2
+          along (suc t) =
+            subst (λ r -> evalAt A r ≡ true)
+                  (sym (posIter-suc loop t pos))
+                  (⇒ᵇ-mp (evalAt A (posIter loop t pos))
+                            (evalAt A
+                                    (nextPos loop (posIter loop t pos)))
+                            (all-at (evalAt (A ⇒ ○ A))
+                                    (orbit loop pos)
+                                    (iter∈orbit loop t pos) e1)
+                            (along t))
 
--- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
-sound c0 c1 (k○ {A} {B}) pos =
-  ⇒ᵇ-refl (evalAt c0 c1 A (nextPos c0 c1 pos) ⇒ᵇ
-           evalAt c0 c1 B (nextPos c0 c1 pos))
+          fromIter : (q : Pos) -> (Σ[ t ∈ Nat ] posIter loop t pos ≡ q)
+                  -> evalAt A q ≡ true
+          fromIter q (t , et) =
+            subst (λ r -> evalAt A r ≡ true) et (along t)
 
-sound c0 c1 (exp {A}) pos = expSound c0 c1 A pos
+  ------------------------------------------------------------------------
+  -- Soundness
 
-sound c0 c1 (ind {A}) pos = indSound c0 c1 A pos
+  sound : {C : Formula} -> ⊢ C
+       -> (pos : Pos) -> evalAt C pos ≡ true
 
--- ○ ¬ A and ¬ ○ A evaluate to the same Boolean, so both halves of
--- the biconditional are z ⇒ᵇ z
-sound c0 c1 (lin {A}) pos =
-  ∧True c0 c1 (○ ¬ A ⇒ ¬ ○ A) (¬ ○ A ⇒ ○ ¬ A) pos
-        (⇒ᵇ-refl (¬ᵇ evalAt c0 c1 A (nextPos c0 c1 pos)))
-        (⇒ᵇ-refl (¬ᵇ evalAt c0 c1 A (nextPos c0 c1 pos)))
+  sound (p1 {A} {B}) pos =
+    tautP1 (evalAt A pos) (evalAt B pos)
 
--- (PC): evalAt is DEFINED by ¬ᵇ at ¬ and ⇒ᵇ at ⇒, so the two hypotheses
--- of tautSound are refl.
-sound c0 c1 (pc {C} e) pos =
-  tautSound (λ X -> evalAt c0 c1 X pos) C
-            (λ X m -> refl) (λ X Y m -> refl) e
+  sound (p2 {A} {B} {C}) pos =
+    tautP2 (evalAt A pos) (evalAt B pos) (evalAt C pos)
 
-sound c0 c1 (mp {A} {B} d e) pos =
-  ⇒ᵇ-mp (evalAt c0 c1 A pos) (evalAt c0 c1 B pos)
-           (sound c0 c1 d pos)
-           (sound c0 c1 e pos)
+  sound (p3 {A} {B}) pos =
+    tautP3 (evalAt A pos) (evalAt B pos)
 
-sound c0 c1 (gen {A} d) pos =
-  all-intro (evalAt c0 c1 A) (orbitOf c0 c1 pos)
-            (λ {q} m -> sound c0 c1 d q)
+  sound (k□ {A} {B}) pos =
+    ⇒ᵇ-intro (evalAt (□ (A ⇒ B)) pos)
+              (evalAt (□ A) pos ⇒ᵇ evalAt (□ B) pos)
+              (λ e1 -> ⇒ᵇ-intro (evalAt (□ A) pos)
+                                 (evalAt (□ B) pos)
+                                 (λ e2 -> k□Sound A B pos e1 e2))
+
+  -- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
+  sound (k○ {A} {B}) pos =
+    ⇒ᵇ-refl (evalAt A (nextPos loop pos) ⇒ᵇ
+             evalAt B (nextPos loop pos))
+
+  sound (exp {A}) pos = expSound A pos
+
+  sound (ind {A}) pos = indSound A pos
+
+  -- ○ ¬ A and ¬ ○ A evaluate to the same Boolean, so both halves of
+  -- the biconditional are z ⇒ᵇ z
+  sound (lin {A}) pos =
+    ∧True (○ ¬ A ⇒ ¬ ○ A) (¬ ○ A ⇒ ○ ¬ A) pos
+          (⇒ᵇ-refl (¬ᵇ evalAt A (nextPos loop pos)))
+          (⇒ᵇ-refl (¬ᵇ evalAt A (nextPos loop pos)))
+
+  -- (PC): evalAt is DEFINED by ¬ᵇ at ¬ and ⇒ᵇ at ⇒, so the two hypotheses
+  -- of tautSound are refl.
+  sound (pc {C} e) pos =
+    tautSound (λ X -> evalAt X pos) C
+              (λ X m -> refl) (λ X Y m -> refl) e
+
+  sound (mp {A} {B} d e) pos =
+    ⇒ᵇ-mp (evalAt A pos) (evalAt B pos)
+             (sound d pos)
+             (sound e pos)
+
+  sound (gen {A} d) pos =
+    all-intro (evalAt A) (orbit loop pos)
+              (λ {q} m -> sound d q)
