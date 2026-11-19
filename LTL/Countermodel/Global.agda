@@ -6,8 +6,7 @@
 -- A valid position (s , rest) carries a walk from s to b, the cycle's end,
 -- wherever on the lasso s sits.  walkPersist along that walk gives either a
 -- fulfilling state among s ∷ rest, or the eventuality still pending at b,
--- where the lasso's cycle-fulfilment field finishes it.  So stem and cycle need
--- no separate cases.
+-- where fairness finishes it.  So stem and cycle need no separate cases.
 --
 -- The conclusion is membership in the forward orbit, the form Hintikka's
 -- lemma needs: □ A evaluates as a conjunction over the orbit, so a false
@@ -18,27 +17,20 @@ module LTL.Countermodel.Global where
 open import LTL.Countermodel.Lasso public
 
 ------------------------------------------------------------------------
--- b is a state of the cycle, so the two readings of "on the cycle" agree
+-- b is a state of the cycle, so a state met from b is a state of the cycle
 
-cycMem : {b z : Val} {c0 : Val} {c1 : List Val}
-      -> b ∈ c0 ∷ c1 -> z ∈ b ∷ c0 ∷ c1 -> z ∈ c0 ∷ c1
+cycMem : {b z : Val} {qs : List Val} -> b ∈ qs -> z ∈ b ∷ qs -> z ∈ qs
 cycMem mb here      = mb
 cycMem mb (there m) = m
 
 ------------------------------------------------------------------------
 -- Fulfilment along the orbit
 
--- Both lemmas are about a lasso whose cycle c0 ∷ c1 passes through b, with
--- every box pending on b ∷ c0 ∷ c1 fulfilled on the cycle (the fulfilled
--- field of Lasso).
+-- Both lemmas are about a fair cycle.
 
-module _ (P : Formula) (b c0 : Val) (c1 : List Val)
-         (mbc : b ∈ c0 ∷ c1) (cyc : AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1))
-         where
+module _ (P : Formula) (cy : Cycle P) (fair : Fair P cy) where
 
-  private
-    loop : Pos
-    loop = c0 , c1
+  open Cycle cy
 
   globalFulfil : {pos : Pos} -> ValidPos P b pos
               -> (A : Formula) -> A ∈ □Args (sub P)
@@ -68,23 +60,24 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
           fromStretch (q , mq , eq) =
             place q (stretch⊆orbit loop (s , rest) q mq) eq ez
 
-      -- still pending at b: the cycle-fulfilment field fulfils it on the cycle
+      -- still pending at b: fairness fulfils it on the cycle
       onCycle : valOf P b (□ A) ≡ false
              -> Σ[ q ∈ Pos ] q ∈ orbit loop (s , rest) ×
                                  valOf P (posState q) A ≡ false
-      onCycle pb = fromFul (cyc b here A mA pb)
+      onCycle pb = fromFul (fair A mA pb)
         where
-          fromFul : Fulfil P A b (c0 ∷ c1)
+          fromFul : Fulfil P A b (stretchStates loop)
                  -> Σ[ q ∈ Pos ] q ∈ orbit loop (s , rest) ×
                                      valOf P (posState q) A ≡ false
-          fromFul (ful z mz ez) = fromStretch (stretch-mem loop (cycMem mbc mz))
+          fromFul (ful z mz ez) =
+            fromStretch (stretch-mem loop (cycMem (endOnCycle P cy) mz))
             where
-              fromStretch : (Σ[ q ∈ Pos ] q ∈ cycle loop ×
+              fromStretch : (Σ[ q ∈ Pos ] q ∈ loopStretch loop ×
                                          posState q ≡ z)
                     -> Σ[ q ∈ Pos ] q ∈ orbit loop (s , rest) ×
                                         valOf P (posState q) A ≡ false
               fromStretch (q , mq , eq) =
-                place q (cycle⊆orbit loop (s , rest) q mq) eq ez
+                place q (loopStretch⊆orbit loop (s , rest) q mq) eq ez
 
   ------------------------------------------------------------------------
   -- Some LATER stage of the run fulfils it: j = i + t, so j >= i is built

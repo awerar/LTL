@@ -14,10 +14,9 @@
 -- visits a state where the eventuality is not pending (and then, by
 -- persistence, it is pending nowhere on the cycle) or one where A fails.
 --
--- Cycle fulfilment: given □ A pending at a state s of the cycle, walkPersist
--- from s to the base point r either fulfils it or leaves it pending at r;
--- persistTo from r to the witness z then either fulfils it or leaves it
--- pending at z, where evPred says A fails.
+-- Fairness of the cycle: given □ A pending at the base point r, persistTo
+-- from r to the witness z either fulfils it or leaves it pending at z, where
+-- evPred says A fails.
 --
 -- A Lasso's states must lie in Uinf P, but the graph search runs on Ust P.  So
 -- sccLasso takes any vertex list with an inclusion into Uinf P as a
@@ -102,8 +101,8 @@ module _ (P : Formula) where
           -> FairLoop vs (step P) evPreds v0 -> Lasso P v0
   sccLasso vs sb v0 mv0 (fairLoop r st [] ts tc () wit)
   sccLasso vs sb v0 mv0 (fairLoop r st cy@(q ∷ qs) ts (tCons mq e tqs) nn wit) =
-    mkLasso r q qs (sb q mq) wqs e (walkEnd P (Uinf P) wqs) cyc
-            (st ++ cy) mv0 (walkApp P (Uinf P) wst wcy)
+    mkLasso cyc fair (st ++ cy)
+            (vpos v0 (st ++ cy) mv0 (walkApp P (Uinf P) wst wcy))
     where
       wst : Walk P (Uinf P) v0 st r
       wst = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb ts)
@@ -114,28 +113,17 @@ module _ (P : Formula) where
       wcy : Walk P (Uinf P) r cy r
       wcy = wcons (sb q mq) e wqs
 
-      cyc : AllFulfilled P r cy (r ∷ cy)
-      cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
+      cyc : Cycle P
+      cyc = mkCycle r (q , qs) (vpos q qs (sb q mq) wqs) e
+
+      -- Pending at the base point: go out to the witness the graph layer
+      -- chose for evPred P A.
+      fair : Fair P cyc
+      fair A mA pr = onW (wit (evPred A) (evPredsMem mA))
         where
-          mbx : □ A ∈ sub P
-          mbx = □Args-mem (sub P) mA
-
-          -- Still pending at the base point: go out to the witness the graph
-          -- layer chose for evPred P A.
-          atR : valOf P r (□ A) ≡ false -> Fulfil P A r cy
-          atR pr = onW (wit (evPred A) (evPredsMem mA))
-            where
-              onW : (Σ[ z ∈ Val ] z ∈ cy × evPred A z ≡ true)
-                 -> Fulfil P A r cy
-              onW (z , mz , ez) =
-                sumElim (λ f -> f)
-                        (λ pz -> ful z (there mz) (evWitness A z ez pz))
-                        (persistTo (Uinf P) A mbx wcy pr mz)
-
-          -- Travelling along the cycle from s.
-          fromSub : SubWalk P (Uinf P) s r r cy -> Fulfil P A r cy
-          fromSub (subWalk zs wz f) =
-            sumElim mapFul atR (walkPersist P (Uinf P) A mbx wz pd)
-            where
-              mapFul : Fulfil P A s zs -> Fulfil P A r cy
-              mapFul (ful z m x) = ful z (f m) x
+          onW : (Σ[ z ∈ Val ] z ∈ cy × evPred A z ≡ true)
+             -> Fulfil P A r cy
+          onW (z , mz , ez) =
+            sumElim (λ f -> f)
+                    (λ pz -> ful z (there mz) (evWitness A z ez pz))
+                    (persistTo (Uinf P) A (□Args-mem (sub P) mA) wcy pr mz)

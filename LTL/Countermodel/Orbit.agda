@@ -11,7 +11,7 @@
 --    (s , [])      |->  loop              loop back
 --
 -- which is Position, step and loopBack of LTL.Trusted.  This avoids index
--- arithmetic: the forward orbit of pos is literally  stretch pos ++ cycle
+-- arithmetic: the forward orbit of pos is literally  stretch pos ++ loopStretch
 -- (orbit-split), and everything about orbits follows from that equation.
 --
 -- Positions and stretches do not depend on the lasso; everything else sits in
@@ -106,8 +106,8 @@ module _ (loop : Pos) where
 
   -- One turn of the cycle, from loop.
 
-  cycle : List Pos
-  cycle = stretch loop
+  loopStretch : List Pos
+  loopStretch = stretch loop
 
   -- The first n positions of the orbit from pos.
 
@@ -128,16 +128,16 @@ module _ (loop : Pos) where
       go s []       = refl
       go s (w ∷ ws) = cong (λ L -> (s , w ∷ ws) ∷ L) (go w ws)
 
-  orbitN-cycle : orbitN (length cycle) loop ≡ cycle ++ []
-  orbitN-cycle =
-    subst (λ k -> orbitN k loop ≡ cycle ++ [])
-          (+-identityʳ (length cycle))
+  orbitN-loopStretch : orbitN (length loopStretch) loop ≡ loopStretch ++ []
+  orbitN-loopStretch =
+    subst (λ k -> orbitN k loop ≡ loopStretch ++ [])
+          (+-identityʳ (length loopStretch))
           (orbitN-split loop zero)
 
   -- The rest of the stretch from pos, then one turn of the cycle.
 
   orbit : Pos -> List Pos
-  orbit pos = orbitN (length (stretch pos) + length cycle) pos
+  orbit pos = orbitN (length (stretch pos) + length loopStretch) pos
 
   -- Every position of an orbit is reached from its start by iterating.
 
@@ -153,27 +153,27 @@ module _ (loop : Pos) where
              -> q ∈ orbit pos
              -> Σ[ t ∈ Nat ] posIter t pos ≡ q
   ∈orbit-iter pos q m =
-    ∈orbitN-iter (length (stretch pos) + length cycle) pos q m
+    ∈orbitN-iter (length (stretch pos) + length loopStretch) pos q m
 
   ------------------------------------------------------------------------
   -- The orbit as a plain concatenation: the rest of the stretch, then one
   -- turn of the cycle.  Everything below is read off this equation.
 
-  orbit-split : (pos : Pos) -> orbit pos ≡ stretch pos ++ cycle
+  orbit-split : (pos : Pos) -> orbit pos ≡ stretch pos ++ loopStretch
   orbit-split pos =
-    trans (orbitN-split pos (length cycle))
+    trans (orbitN-split pos (length loopStretch))
           (cong (λ L -> stretch pos ++ L)
-                (trans orbitN-cycle (++-identityʳ cycle)))
+                (trans orbitN-loopStretch (++-identityʳ loopStretch)))
 
   stretch⊆orbit : (pos : Pos) -> stretch pos ⊆ orbit pos
   stretch⊆orbit pos q m =
     subst (λ L -> q ∈ L) (sym (orbit-split pos))
-          (memAppL (stretch pos) cycle m)
+          (memAppL (stretch pos) loopStretch m)
 
-  cycle⊆orbit : (pos : Pos) -> cycle ⊆ orbit pos
-  cycle⊆orbit pos q m =
+  loopStretch⊆orbit : (pos : Pos) -> loopStretch ⊆ orbit pos
+  loopStretch⊆orbit pos q m =
     subst (λ L -> q ∈ L) (sym (orbit-split pos))
-          (memAppR (stretch pos) cycle m)
+          (memAppR (stretch pos) loopStretch m)
 
   orbitHead : (pos : Pos) -> pos ∈ orbit pos
   orbitHead pos = stretch⊆orbit pos pos (stretch-head pos)
@@ -196,20 +196,20 @@ module _ (loop : Pos) where
   orbitClosed pos q m =
     subst (λ L -> nextPos q ∈ L) (sym (orbit-split pos))
           (sumElim onStretch onCycle
-                   (memAppCase (stretch pos) cycle
+                   (memAppCase (stretch pos) loopStretch
                                (subst (λ L -> q ∈ L) (orbit-split pos) m)))
     where
-      intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ cycle
+      intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ loopStretch
       intoCycle e =
-        subst (λ r -> r ∈ stretch pos ++ cycle) (sym e)
-              (memAppR (stretch pos) cycle (stretch-head loop))
+        subst (λ r -> r ∈ stretch pos ++ loopStretch) (sym e)
+              (memAppR (stretch pos) loopStretch (stretch-head loop))
 
-      onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ cycle
-      onStretch mq = sumElim (λ mm -> memAppL (stretch pos) cycle mm)
+      onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ loopStretch
+      onStretch mq = sumElim (λ mm -> memAppL (stretch pos) loopStretch mm)
                              intoCycle (stretch-next pos q mq)
 
-      onCycle : q ∈ cycle -> nextPos q ∈ stretch pos ++ cycle
-      onCycle mq = sumElim (λ mm -> memAppR (stretch pos) cycle mm)
+      onCycle : q ∈ loopStretch -> nextPos q ∈ stretch pos ++ loopStretch
+      onCycle mq = sumElim (λ mm -> memAppR (stretch pos) loopStretch mm)
                            intoCycle (stretch-next loop q mq)
 
   iter∈orbit : (t : Nat) (pos : Pos) -> posIter t pos ∈ orbit pos

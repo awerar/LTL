@@ -54,8 +54,7 @@ cmRest : (Q : Formula) -> LassoCountermodel Q -> List Val
 cmRest Q c = Lasso.rest (LassoCountermodel.lasso c)
 
 cmCycle : (Q : Formula) -> LassoCountermodel Q -> List Val
-cmCycle Q c = Lasso.c0 l ∷ Lasso.c1 l
-  where l = LassoCountermodel.lasso c
+cmCycle Q c = stretchStates (Lasso.loop (LassoCountermodel.lasso c))
 
 cmStart : (Q : Formula) -> LassoCountermodel Q -> Val
 cmStart Q c = LassoCountermodel.start c

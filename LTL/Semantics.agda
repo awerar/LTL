@@ -162,12 +162,16 @@ module _ {S : Set} (read : S -> T.Instant) (loop : S × List S) where
 ------------------------------------------------------------------------
 -- A countermodel is a Trusted countermodel.  Its lasso, read through readVal
 -- (¬ Q), is a Trusted lasso: v0 followed by rest, then the cycle c0 ∷ c1 for
--- ever.  Q is false at stage 0 (falseAtStart), so it is not true at time 0.
+-- ever, where loop = c0 , c1 .  Q is false at stage 0 (falseAtStart), so it is
+-- not true at time 0.
 
 toCounterModel : (Q : Formula) -> LassoCountermodel Q -> T.LassoCounterModel Q
-toCounterModel Q (countermodel v0 lasso falseQ) = T.counter L qFalse
+toCounterModel Q
+  (countermodel v0 (mkLasso (mkCycle b (c0 , c1) lv stb) fair rest sv) falseQ) =
+  T.counter L qFalse
   where
-    open Lasso lasso
+    loop : Pos
+    loop = c0 , c1
 
     rd : Val -> T.Instant
     rd = readVal (¬ Q)

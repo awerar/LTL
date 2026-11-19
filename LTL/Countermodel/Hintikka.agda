@@ -5,7 +5,7 @@
 --
 --   valOf P (state at pos) A  =  evalAt P loop A pos        for A in sub P,
 --
--- where loop = c0 , c1 is the position the lasso loops back to.
+-- where loop is the position the lasso loops back to.
 --
 -- By induction on A:
 --
@@ -45,16 +45,11 @@ stateOk P s m mA =
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
 
--- The lemmas below share the cycle of a lasso: c0 ∷ c1 is a walk in U_inf
--- that ends at b, and b steps back to c0.
+-- The lemmas below share the cycle of a lasso.
 
-module _ (P : Formula) (b c0 : Val) (c1 : List Val)
-         (mc0 : c0 ∈ Uinf P) (wc : Walk P (Uinf P) c0 c1 b) (stb : step P b c0 ≡ true)
-         where
+module _ (P : Formula) (cy : Cycle P) where
 
-  private
-    loop : Pos
-    loop = c0 , c1
+  open Cycle cy
 
   □Along : (B : Formula) -> □ B ∈ sub P
         -> (t : Nat) (pos : Pos) -> ValidPos P b pos
@@ -63,9 +58,9 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
   □Along B mb zero    pos vp e = e
   □Along B mb (suc t) pos vp e =
     □Along B mb t (nextPos loop pos)
-             (fst (posStep P b c0 c1 mc0 wc stb vp))
+             (fst (posStep P cy vp))
              (carry P (posState pos) (posState (nextPos loop pos)) B mb
-                    (snd (posStep P b c0 c1 mc0 wc stb vp)) e)
+                    (snd (posStep P cy vp)) e)
 
   □True : (B : Formula) -> □ B ∈ sub P
        -> (pos q : Pos) -> ValidPos P b pos -> q ∈ orbit loop pos
@@ -79,47 +74,46 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
       fromIter (t , et) =
         subst (λ r -> valOf P (posState r) B ≡ true) et
               (□S2 P (posState (posIter loop t pos))
-                     (posIn P b (posIterValid P b c0 c1 mc0 wc stb t pos vp))
+                     (posIn P b (posIterValid P cy t pos vp))
                      B mb (□Along B mb t pos vp e))
 
   ------------------------------------------------------------------------
   -- Hintikka's lemma
 
-  hintikka : b ∈ c0 ∷ c1 -> AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1)
-          -> (A : Formula) -> A ∈ sub P
+  hintikka : Fair P cy -> (A : Formula) -> A ∈ sub P
           -> (pos : Pos) -> ValidPos P b pos
           -> valOf P (posState pos) A ≡ evalAt P loop A pos
 
-  hintikka mbc cyc (var n) mA pos vp = refl
+  hintikka fair (var n) mA pos vp = refl
 
-  hintikka mbc cyc (¬ B) mA pos vp =
+  hintikka fair (¬ B) mA pos vp =
     trans (⇔ᵇ-sound (valOf P (posState pos) (¬ B))
                     (¬ᵇ valOf P (posState pos) B)
                         (stateOk P (posState pos) (posIn P b vp) mA))
           (cong ¬ᵇ_
-                (hintikka mbc cyc B (sub-¬ P mA) pos vp))
+                (hintikka fair B (sub-¬ P mA) pos vp))
 
-  hintikka mbc cyc (B ⇒ C) mA pos vp =
+  hintikka fair (B ⇒ C) mA pos vp =
     trans (⇔ᵇ-sound (valOf P (posState pos) (B ⇒ C))
                     (valOf P (posState pos) B ⇒ᵇ valOf P (posState pos) C)
                     (stateOk P (posState pos) (posIn P b vp) mA))
-          (⇒Cong (hintikka mbc cyc B (sub-⇒L P mA) pos vp)
-                   (hintikka mbc cyc C (sub-⇒R P mA) pos vp))
+          (⇒Cong (hintikka fair B (sub-⇒L P mA) pos vp)
+                   (hintikka fair C (sub-⇒R P mA) pos vp))
 
-  hintikka mbc cyc (○ B) mA pos vp =
+  hintikka fair (○ B) mA pos vp =
     trans (⇔ᵇ-sound (valOf P (posState pos) (○ B))
                     (valOf P (posState (nextPos loop pos)) B)
                     (all-at (stepAt P (posState pos)
                                     (posState (nextPos loop pos))) (sub P) mA
-                                (snd (posStep P b c0 c1 mc0 wc stb vp))))
-          (hintikka mbc cyc B (sub-○ P mA)
-                    (nextPos loop pos) (fst (posStep P b c0 c1 mc0 wc stb vp)))
+                                (snd (posStep P cy vp))))
+          (hintikka fair B (sub-○ P mA)
+                    (nextPos loop pos) (fst (posStep P cy vp)))
 
-  hintikka mbc cyc (□ B) mA pos vp = by□
+  hintikka fair (□ B) mA pos vp = by□
     where
       ih : (q : Pos) -> ValidPos P b q
         -> valOf P (posState q) B ≡ evalAt P loop B q
-      ih q vq = hintikka mbc cyc B (sub-□ P mA) q vq
+      ih q vq = hintikka fair B (sub-□ P mA) q vq
 
       -- □ B holds: (T2) carries it, (S2) delivers B at every stage
       □Holds : valOf P (posState pos) (□ B) ≡ true
@@ -129,21 +123,21 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
         where
           atQ : (q : Pos) -> q ∈ orbit loop pos -> evalAt P loop B q ≡ true
           atQ q m =
-            trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp m)))
+            trans (sym (ih q (orbitValid P cy pos q vp m)))
                   (□True B mA pos q vp m e)
 
       -- □ B fails: globalFulfil supplies the false conjunct
       allFalse : valOf P (posState pos) (□ B) ≡ false
               -> evalAt P loop (□ B) pos ≡ false
       allFalse e =
-        fromGF (globalFulfil P b c0 c1 mbc cyc vp B (□Args-of (sub P) mA) e)
+        fromGF (globalFulfil P cy fair vp B (□Args-of (sub P) mA) e)
         where
           fromGF : (Σ[ q ∈ Pos ] q ∈ orbit loop pos ×
                                      valOf P (posState q) B ≡ false)
                 -> evalAt P loop (□ B) pos ≡ false
           fromGF (q , mq , eq) =
             eval□-false P loop B pos q mq
-              (trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp mq)))
+              (trans (sym (ih q (orbitValid P cy pos q vp mq)))
                      eq)
 
       by□ : valOf P (posState pos) (□ B) ≡ evalAt P loop (□ B) pos
@@ -156,12 +150,11 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
 
 hintLasso : (P : Formula) (v0 : Val) (l : Lasso P v0) (A : Formula) -> A ∈ sub P
        -> (i : Nat) -> valOf P (stateAt P v0 l i) A ≡ eval P v0 l A i
-hintLasso P v0 (mkLasso b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA i =
-  hintikka P b c0 c1 mc0 wc stb mbc cyc A mA
-           (posIter (c0 , c1) i (v0 , rest))
-           (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest) (vpos v0 rest mv0 wr))
+hintLasso P v0 (mkLasso cy fair rest sv) A mA i =
+  hintikka P cy fair A mA (posIter (Cycle.loop cy) i (v0 , rest))
+           (posIterValid P cy i (v0 , rest) sv)
 
 hintStart : (P : Formula) (v0 : Val) (l : Lasso P v0) (A : Formula) -> A ∈ sub P
          -> valOf P v0 A ≡ eval P v0 l A 0
-hintStart P v0 (mkLasso b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
-  hintikka P b c0 c1 mc0 wc stb mbc cyc A mA (v0 , rest) (vpos v0 rest mv0 wr)
+hintStart P v0 (mkLasso cy fair rest sv) A mA =
+  hintikka P cy fair A mA (v0 , rest) sv

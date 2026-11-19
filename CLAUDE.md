@@ -46,8 +46,8 @@ derivation or a certified finite lasso countermodel.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
   `Closed ws G C`, `NoneSat f C`, `HoldsOutside R ws`, `AllSat`/`Avail`
-  (all `LTL/Lib/Nodes.agda`), `FulfilledAt`/`AllFulfilled`
-  (`LTL/Countermodel/Walk.agda`). A run of lemmas that share leading arguments, passed on
+  (all `LTL/Lib/Nodes.agda`), `Fair P cy` (`LTL/Countermodel/Lasso.agda`).
+  A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
@@ -116,8 +116,9 @@ a module name.
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Trusted`'s `Position`/`step`); `LassoEval` (Boolean `evalAt` and its
    soundness on a lasso of any state type, parameterised by `read`); `Walk`;
-   `Lasso` (the record of Prop 5.3, its cycle split at the head as in
-   `Trusted`'s `Lasso`; `Orbit` at `Val`, valid positions);
+   `Lasso` (the record of Prop 5.3: a `Cycle` whose head `loop` is a valid
+   position, as in `Trusted`'s `Lasso`, fairness at its end `b`, and a valid
+   start; `Orbit` at `Val`);
    `Global` (Lemma 5.4); `Eval` (`LassoEval` at `Val`); `Sound`; `Hintikka`.
 8. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes`, imports
