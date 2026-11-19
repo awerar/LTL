@@ -1,11 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Hintikka -- Hintikka's lemma: on a run, the state's bit for
--- a subformula agrees with its evaluation,
+-- LTL.Countermodel.Hintikka -- Hintikka's lemma: on a lasso, the state's bit
+-- for a subformula agrees with its evaluation,
 --
 --   valOf P (state at pos) A  =  evalAt P loop A pos        for A in sub P,
 --
--- where loop = c0 , c1 is the position the run loops back to.
+-- where loop = c0 , c1 is the position the lasso loops back to.
 --
 -- By induction on A:
 --
@@ -45,8 +45,8 @@ stateOk P s m mA =
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
 
--- The lemmas below share the cycle of a run: c0 ∷ c1 is a walk in U_inf that
--- ends at b, and b steps back to c0.
+-- The lemmas below share the cycle of a lasso: c0 ∷ c1 is a walk in U_inf
+-- that ends at b, and b steps back to c0.
 
 module _ (P : Formula) (b c0 : Val) (c1 : List Val)
          (mc0 : c0 ∈ Uinf P) (wc : Walk P (Uinf P) c0 c1 b) (stb : step P b c0 ≡ true)
@@ -152,16 +152,16 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
       ... | false = sym (allFalse e)
 
 ------------------------------------------------------------------------
--- Hintikka's lemma on a run, at every stage and at the start
+-- Hintikka's lemma on a lasso, at every stage and at the start
 
-hintRun : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> A ∈ sub P
-       -> (i : Nat) -> valOf P (stateAt P v0 r i) A ≡ eval P v0 r A i
-hintRun P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA i =
+hintLasso : (P : Formula) (v0 : Val) (l : Lasso P v0) (A : Formula) -> A ∈ sub P
+       -> (i : Nat) -> valOf P (stateAt P v0 l i) A ≡ eval P v0 l A i
+hintLasso P v0 (mkLasso b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA i =
   hintikka P b c0 c1 mc0 wc stb mbc cyc A mA
            (posIter (c0 , c1) i (v0 , rest))
            (posIterValid P b c0 c1 mc0 wc stb i (v0 , rest) (vpos v0 rest mv0 wr))
 
-hintStart : (P : Formula) (v0 : Val) (r : Run P v0) (A : Formula) -> A ∈ sub P
-         -> valOf P v0 A ≡ eval P v0 r A 0
-hintStart P v0 (mkRun b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
+hintStart : (P : Formula) (v0 : Val) (l : Lasso P v0) (A : Formula) -> A ∈ sub P
+         -> valOf P v0 A ≡ eval P v0 l A 0
+hintStart P v0 (mkLasso b c0 c1 mc0 wc stb mbc cyc rest mv0 wr) A mA =
   hintikka P b c0 c1 mc0 wc stb mbc cyc A mA (v0 , rest) (vpos v0 rest mv0 wr)

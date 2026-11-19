@@ -18,7 +18,7 @@
 -- a block parameterised by loop, which callers pass first.  Σ has no eta
 -- rule, so definitions that inspect a Pos match it as a pair.
 --
--- LTL.Countermodel.Run instantiates S at valuations, and LTL.Semantics at
+-- LTL.Countermodel.Lasso instantiates S at valuations, and LTL.Semantics at
 -- LTL.Trusted's Instant; LTL.Countermodel.LassoEval evaluates formulas on
 -- either.
 

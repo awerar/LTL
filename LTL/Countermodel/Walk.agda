@@ -73,7 +73,7 @@ data Fulfil (P : Formula) (A : Formula) (v : Val) (ws : List Val) : Set where
   ful : (z : Val) -> z ∈ v ∷ ws -> valOf P z A ≡ false -> Fulfil P A v ws
 
 -- FulfilledAt P b qs s: every box pending at s is fulfilled on the cycle
--- b ∷ qs.  AllFulfilled P b qs ss: this holds at every s in ss.  Lasso, Run
+-- b ∷ qs.  AllFulfilled P b qs ss: this holds at every s in ss.  Lasso
 -- and LTL.Countermodel.Global use them.
 
 FulfilledAt : Formula -> Val -> List Val -> Val -> Set

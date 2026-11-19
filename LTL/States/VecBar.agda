@@ -119,9 +119,9 @@ guardBar n (suc k) w =
 -- The guard depth is n itself.  A search choosing distinct vectors of length n
 -- runs at most 2^n steps, so k = n is exactly enough.  A literal depth would
 -- be worse: guardBar k unfolds to 2^k copies, and Agda normalises the
--- constructor types of data types that mention U_inf (Walk, Lasso, Run,
--- ValidPos).  With k = n and P a variable the match on k is blocked and the
--- guard stays folded; on a closed formula n reduces and the guard does its
+-- constructor types of data types that mention U_inf (Walk, Lasso, ValidPos).
+-- With k = n and P a variable the match on k is blocked and the guard stays
+-- folded; on a closed formula n reduces and the guard does its
 -- job.
 
 guardedVecBar : (n : Nat) -> AllBar n

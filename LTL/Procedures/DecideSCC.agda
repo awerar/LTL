@@ -16,7 +16,7 @@
 --      graph search chose, and read evPred there).
 --   3. uinfTrap: C survives the elimination, so C lies in Uinf (¬ Q), as
 --      sccLasso requires.
---   4. sccRun, then buildCM: Hintikka's lemma at stage 0, and soundness.
+--   4. sccLasso, then buildCM: Hintikka's lemma at stage 0, and soundness.
 --
 -- The search runs on all of Ust (¬ Q), not from one vertex, because the
 -- certificate has to cover every state.  The elimination is computed only in
@@ -146,10 +146,10 @@ fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
 
 -- and then the trap survives the elimination, so sccLasso applies.
 
-trapLoopRun : (P : Formula) (v0 : Val) -> TrapLoop P v0
-           -> v0 ∈ Uinf P × Run P v0
-trapLoopRun P v0 (trapLoop C mv0 inU tr flC) =
-  mv0U , sccRun P C intoU v0 mv0U flC
+trapLoopLasso : (P : Formula) (v0 : Val) -> TrapLoop P v0
+             -> v0 ∈ Uinf P × Lasso P v0
+trapLoopLasso P v0 (trapLoop C mv0 inU tr flC) =
+  mv0U , sccLasso P C intoU v0 mv0U flC
   where
     intoU : (z : Val) -> z ∈ C -> z ∈ Uinf P
     intoU = uinfTrap P C tr inU
@@ -158,16 +158,16 @@ trapLoopRun P v0 (trapLoop C mv0 inU tr flC) =
     mv0U = intoU v0 mv0
 
 ------------------------------------------------------------------------
--- A countermodel from a run.
+-- A countermodel from a lasso.
 --
 -- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
 -- Hintikka's lemma at stage 0 transfers that to the evaluation, and soundness
 -- says a derivation of Q would evaluate it to 1.
 
 buildCM : (Q : Formula) (v0 : Val) -> v0 ∈ Uinf (¬ Q)
-           -> Run (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
+           -> Lasso (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
            -> LassoCountermodel Q
-buildCM Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
+buildCM Q v0 m l ev = countermodel v0 l m evalFalse noDeriv
   where
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
@@ -177,12 +177,12 @@ buildCM Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
                                   (stateOk (¬ Q) v0 m (sub-self (¬ Q)))))
                ev)
 
-    evalFalse : eval (¬ Q) v0 r Q 0 ≡ false
+    evalFalse : eval (¬ Q) v0 l Q 0 ≡ false
     evalFalse =
-      trans (sym (hintStart (¬ Q) v0 r Q (there (sub-self Q)))) valQ
+      trans (sym (hintStart (¬ Q) v0 l Q (there (sub-self Q)))) valQ
 
     noDeriv : ⊢ Q -> Empty
-    noDeriv d = true≢false (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
+    noDeriv d = true≢false (trans (sym (soundLasso (¬ Q) v0 l d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- The decision
@@ -193,10 +193,10 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
     R : Formula
     R = ¬ Q
 
-    fromRun : (s : Val) -> valOf R s R ≡ true
-           -> s ∈ Uinf R × Run R s
-           -> ⊢ Q ⊎ LassoCountermodel Q
-    fromRun s es (mu , rn) = inr (buildCM Q s mu rn es)
+    fromLasso : (s : Val) -> valOf R s R ≡ true
+             -> s ∈ Uinf R × Lasso R s
+             -> ⊢ Q ⊎ LassoCountermodel Q
+    fromLasso s es (mu , l) = inr (buildCM Q s mu l es)
 
     onFair : FairIn (Ust R) (step R) (evPreds R)
           -> ⊢ Q ⊎ LassoCountermodel Q
@@ -208,9 +208,9 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
           where
             onSeed : SeedTo R r -> ⊢ Q ⊎ LassoCountermodel Q
             onSeed (seedTo s st ms es ts) =
-              fromRun s es
-                      (trapLoopRun R s (fairTrapLoop R s ms
-                                                     (fairLoop r st cy ts tc nn wit)))
+              fromLasso s es
+                (trapLoopLasso R s
+                   (fairTrapLoop R s ms (fairLoop r st cy ts tc nn wit)))
 
 ------------------------------------------------------------------------
 -- Reading the answer of decideSCC.
@@ -225,7 +225,7 @@ traceOf Q A n = onDec (decideSCC Q)
     onDec (inl d) = []
     onDec (inr c) = cmFrom Q c A zero n
 
--- and the shape of the lasso: the run is v0 followed by cmRest, whose tail is
+-- and the shape of the lasso: its run is v0 followed by cmRest, whose tail is
 -- the cycle, so it is periodic from stage  1 + |cmRest| - |cmCycle|  on, with
 -- period |cmCycle|.
 

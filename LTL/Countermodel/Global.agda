@@ -1,12 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Global -- every eventuality pending at a position of a run
+-- LTL.Countermodel.Global -- every eventuality pending at a position of a lasso
 -- is fulfilled at a position of its forward orbit.
 --
 -- A valid position (s , rest) carries a walk from s to b, the cycle's end,
--- wherever on the run s sits.  walkPersist along that walk gives either a
+-- wherever on the lasso s sits.  walkPersist along that walk gives either a
 -- fulfilling state among s ∷ rest, or the eventuality still pending at b,
--- where the run's cycle-fulfilment field finishes it.  So stem and cycle need
+-- where the lasso's cycle-fulfilment field finishes it.  So stem and cycle need
 -- no separate cases.
 --
 -- The conclusion is membership in the forward orbit, the form Hintikka's
@@ -15,7 +15,7 @@
 
 module LTL.Countermodel.Global where
 
-open import LTL.Countermodel.Run public
+open import LTL.Countermodel.Lasso public
 
 ------------------------------------------------------------------------
 -- b is a state of the cycle, so the two readings of "on the cycle" agree
@@ -28,8 +28,9 @@ cycMem mb (there m) = m
 ------------------------------------------------------------------------
 -- Fulfilment along the orbit
 
--- Both lemmas are about a run whose cycle c0 ∷ c1 passes through b, with every
--- box pending on b ∷ c0 ∷ c1 fulfilled on the cycle (the cyc field of Run).
+-- Both lemmas are about a lasso whose cycle c0 ∷ c1 passes through b, with
+-- every box pending on b ∷ c0 ∷ c1 fulfilled on the cycle (the fulfilled
+-- field of Lasso).
 
 module _ (P : Formula) (b c0 : Val) (c1 : List Val)
          (mbc : b ∈ c0 ∷ c1) (cyc : AllFulfilled P b (c0 ∷ c1) (b ∷ c0 ∷ c1))

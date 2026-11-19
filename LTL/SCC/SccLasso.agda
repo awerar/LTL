@@ -4,7 +4,7 @@
 --
 -- LTL.SCC.Graph knows nothing about formulas; this module reads its positive
 -- answer, a FairLoop (a stem, a non-empty cycle, and a witness on the cycle
--- for every fairness predicate), as a Lasso and hence as a Run.
+-- for every fairness predicate), as a Lasso.
 --
 -- The fairness predicate for the eventuality □ A is
 --
@@ -25,7 +25,7 @@
 
 module LTL.SCC.SccLasso where
 
-open import LTL.Countermodel.Run   public
+open import LTL.Countermodel.Lasso public
 open import LTL.SCC.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
 
 ------------------------------------------------------------------------
@@ -92,24 +92,27 @@ module _ (P : Formula) where
                 (persistTo us A mb wk (persist P v w A mb st e ea) k)
 
   ------------------------------------------------------------------------
-  -- A FairLoop inside any vertex list contained in Uinf P is a Lasso.
+  -- A FairLoop inside any vertex list contained in Uinf P is a Lasso.  The
+  -- cycle is non-empty, so it splits at its head q, and the first edge of its
+  -- trail is the lasso's closing step from the base point r to q.
 
   sccLasso : (vs : List Val)
           -> vs ⊆ Uinf P
-          -> (v0 : Val) -> FairLoop vs (step P) evPreds v0 -> Lasso P v0
-  sccLasso vs sb v0 (fairLoop r st cy ts tc nn wit) =
-    mkLasso r mr st wst cy wcy nn cyc
+          -> (v0 : Val) -> v0 ∈ Uinf P
+          -> FairLoop vs (step P) evPreds v0 -> Lasso P v0
+  sccLasso vs sb v0 mv0 (fairLoop r st [] ts tc () wit)
+  sccLasso vs sb v0 mv0 (fairLoop r st cy@(q ∷ qs) ts (tCons mq e tqs) nn wit) =
+    mkLasso r q qs (sb q mq) wqs e (walkEnd P (Uinf P) wqs) cyc
+            (st ++ cy) mv0 (walkApp P (Uinf P) wst wcy)
     where
-      -- The cycle is non-empty, so its base point is a state it visits, and
-      -- every state it visits lies in the vertex list.
-      mr : r ∈ Uinf P
-      mr = sb r (trailIn vs (step P) tc (trailLast vs (step P) tc nn))
-
       wst : Walk P (Uinf P) v0 st r
       wst = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb ts)
 
+      wqs : Walk P (Uinf P) q qs r
+      wqs = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb tqs)
+
       wcy : Walk P (Uinf P) r cy r
-      wcy = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb tc)
+      wcy = wcons (sb q mq) e wqs
 
       cyc : AllFulfilled P r cy (r ∷ cy)
       cyc s ms A mA pd = fromSub (walkFrom P (Uinf P) wcy ms)
@@ -135,12 +138,4 @@ module _ (P : Formula) where
             sumElim mapFul atR (walkPersist P (Uinf P) A mbx wz pd)
             where
               mapFul : Fulfil P A s zs -> Fulfil P A r cy
-              mapFul (ful z m q) = ful z (f m) q
-
-  -- and hence a Run.
-
-  sccRun : (vs : List Val)
-        -> vs ⊆ Uinf P
-        -> (v0 : Val) -> v0 ∈ Uinf P
-        -> FairLoop vs (step P) evPreds v0 -> Run P v0
-  sccRun vs sb v0 mv0 fl = runOf P v0 mv0 (sccLasso vs sb v0 fl)
+              mapFul (ful z m x) = ful z (f m) x

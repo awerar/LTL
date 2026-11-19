@@ -8,8 +8,8 @@
 -- LassoCountermodel Q , connected to it by
 --
 --   ⊢-valid         a derivable formula is valid, and
---   toCounterModel  the run of a LassoCountermodel is a Trusted lasso on which
---                   Q is false at time 0;
+--   toCounterModel  the lasso of a LassoCountermodel is a Trusted lasso on
+--                   which Q is false at time 0;
 --
 -- and fromDecider packages the two.  Both go through the evaluation of
 -- LTL.Countermodel.LassoEval; what this module adds is that evalAt IS ⊨
@@ -160,14 +160,14 @@ module _ {S : Set} (read : S -> T.Instant) (loop : S × List S) where
                     (nowF (O.posIter loop n pos0))
 
 ------------------------------------------------------------------------
--- A countermodel is a Trusted countermodel.  Its run, read through readVal
+-- A countermodel is a Trusted countermodel.  Its lasso, read through readVal
 -- (¬ Q), is a Trusted lasso: v0 followed by rest, then the cycle c0 ∷ c1 for
 -- ever.  Q is false at stage 0 (falseAtStart), so it is not true at time 0.
 
 toCounterModel : (Q : Formula) -> LassoCountermodel Q -> T.LassoCounterModel Q
-toCounterModel Q (countermodel v0 r mv0 falseQ noDeriv) = T.counter L qFalse
+toCounterModel Q (countermodel v0 lasso mv0 falseQ noDeriv) = T.counter L qFalse
   where
-    open Run r
+    open Lasso lasso
 
     rd : Val -> T.Instant
     rd = readVal (¬ Q)

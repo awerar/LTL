@@ -116,7 +116,8 @@ a module name.
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Trusted`'s `Position`/`step`); `LassoEval` (Boolean `evalAt` and its
    soundness on a lasso of any state type, parameterised by `read`); `Walk`;
-   `Lasso` (the record of Prop 5.3); `Run` (`Orbit` at `Val`);
+   `Lasso` (the record of Prop 5.3, its cycle split at the head as in
+   `Trusted`'s `Lasso`; `Orbit` at `Val`, valid positions);
    `Global` (Lemma 5.4); `Eval` (`LassoEval` at `Val`); `Sound`; `Hintikka`.
 8. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes`, imports

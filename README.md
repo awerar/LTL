@@ -130,7 +130,7 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
 | `LTL/States/` | `Val`, `State`, `Step`, `Taut`, `Proj`, `NonState`, `Complete`, `StepLemma`, `Reach`, `VecBar`, `Closure` | states, transitions and the finite state space, m4 §2 |
 | `LTL/Elimination/` | `Gfp`, `Elim`, `Extract` | the elimination (it places countermodels in `Uinf`) and the building blocks of extraction, m4 §3–4 |
-| `LTL/Countermodel/` | `Orbit`, `LassoEval`, `Walk`, `Lasso`, `Run`, `Global`, `Eval`, `Sound`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
+| `LTL/Countermodel/` | `Orbit`, `LassoEval`, `Walk`, `Lasso`, `Global`, `Eval`, `Sound`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccTrap` | graph certificates and their application to temporal logic, m5 |
 | `LTL/Procedures/` | `Answer`, `CompletePC`, `DecideSCC` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |

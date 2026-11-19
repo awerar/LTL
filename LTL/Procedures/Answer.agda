@@ -4,7 +4,7 @@
 --
 --   ⊢ Q ⊎ LassoCountermodel Q
 --
--- a derivation of Q, or a lasso countermodel: a run through states of Uinf
+-- a derivation of Q, or a lasso countermodel: a lasso through states of Uinf
 -- (¬ Q) on which Q evaluates to false at stage 0, together with a function
 -- turning any derivation of Q into Empty.  Neither branch is obtained by
 -- refuting the other, so no classical step is involved.
@@ -25,9 +25,9 @@ record LassoCountermodel (Q : Formula) : Set where
   constructor countermodel
   field
     start        : Val
-    run          : Run (¬ Q) start
+    lasso        : Lasso (¬ Q) start
     startIn      : start ∈ Uinf (¬ Q)
-    falseAtStart : eval (¬ Q) start run Q 0 ≡ false
+    falseAtStart : eval (¬ Q) start lasso Q 0 ≡ false
     underivable  : ⊢ Q -> Empty
 
 ------------------------------------------------------------------------
@@ -43,16 +43,16 @@ countermodelFrom : {Q : Formula} (s : ⊢ Q ⊎ LassoCountermodel Q)
 countermodelFrom (inl d) ()
 countermodelFrom (inr c) e = c
 
--- The run stores the states still to come before the cycle restarts, which is
--- the lasso's stem followed by its cycle; so the stem has length
+-- The lasso stores the states still to come before the cycle restarts, which
+-- is its stem followed by its cycle; so the stem has length
 -- length (cmRest Q c) - length (cmCycle Q c), and is empty exactly when the two
 -- agree.
 cmRest : (Q : Formula) -> LassoCountermodel Q -> List Val
-cmRest Q c = Run.rest (LassoCountermodel.run c)
+cmRest Q c = Lasso.rest (LassoCountermodel.lasso c)
 
 cmCycle : (Q : Formula) -> LassoCountermodel Q -> List Val
-cmCycle Q c = Run.c0 r ∷ Run.c1 r
-  where r = LassoCountermodel.run c
+cmCycle Q c = Lasso.c0 l ∷ Lasso.c1 l
+  where l = LassoCountermodel.lasso c
 
 cmStart : (Q : Formula) -> LassoCountermodel Q -> Val
 cmStart Q c = LassoCountermodel.start c
@@ -107,7 +107,7 @@ derivPC   d = DerivCounts.pcs  (derivCounts d)
 -- since evalAt is total on all formulas.
 
 cmEval : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Bool
-cmEval Q c A i = eval (¬ Q) start run A i
+cmEval Q c A i = eval (¬ Q) start lasso A i
   where open LassoCountermodel c
 
 -- The values of A at the n stages i, i+1, ..., i+n-1.

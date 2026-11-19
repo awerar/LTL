@@ -1,8 +1,8 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Sound -- soundness on a run: a derivable formula evaluates
+-- LTL.Countermodel.Sound -- soundness on a lasso: a derivable formula evaluates
 -- to true at every stage.  It is sound of LTL.Countermodel.LassoEval, taken at
--- the runs of LTL.Countermodel.Run.
+-- the lassos of LTL.Countermodel.Lasso.
 
 module LTL.Countermodel.Sound where
 
@@ -10,12 +10,12 @@ open import LTL.Countermodel.Eval public
 import LTL.Countermodel.LassoEval
 
 ------------------------------------------------------------------------
--- Soundness on a run, at every stage
+-- Soundness on a lasso, at every stage
 
 module _ (P : Formula) where
 
-  soundRun : (v0 : Val) (r : Run P v0) {C : Formula} -> ⊢ C
-          -> (i : Nat) -> eval P v0 r C i ≡ true
-  soundRun v0 r d i =
+  soundLasso : (v0 : Val) (l : Lasso P v0) {C : Formula} -> ⊢ C
+          -> (i : Nat) -> eval P v0 l C i ≡ true
+  soundLasso v0 l d i =
     LTL.Countermodel.LassoEval.sound Val (readVal P) loop d (posIter loop i (v0 , rest))
-    where open Run r
+    where open Lasso l
