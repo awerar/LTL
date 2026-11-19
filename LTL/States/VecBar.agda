@@ -1,21 +1,17 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.VecBar -- valuations of a given length are inductively finite, and the
--- guard that makes the searches over them cheap.  This is the Val-specific half
--- of what was LTL.Lib.Bar: the generic half (Bar and its closure lemmas) is
--- LTL.Lib.Bar, and the inductive finiteness of a list (barOfList, listBar) is
--- LTL.Lib.Nodes, instantiated at Val in LTL.States.Reach.
+-- LTL.States.VecBar -- valuations of a given length are inductively finite,
+-- and the guard that keeps the searches over them cheap.
 
 module LTL.States.VecBar where
 
 open import LTL.States.Reach public
 
 ------------------------------------------------------------------------
--- Vectors of a given length are inductively finite -- in O(n), not 2^n.
---
--- This is the point of the file.  A valuation of length n+1 is a Bool paired
--- with a valuation of length n, so barProd applies, and barPull transports the
--- result back along uncons.  The recursion is on n; allVecs never appears.
+-- Vectors of a given length are inductively finite -- in O(n), not 2^n.  A
+-- valuation of length n+1 is a Bool paired with one of length n, so barProd
+-- applies, and barPull transports the result back along uncons.  allVecs never
+-- appears.
 
 -- v has length n, as a boolean predicate (so that it can be a Bar's E).
 
@@ -72,11 +68,8 @@ vecIFin (suc m) =
 
 
 ------------------------------------------------------------------------
--- Members of allVecs n have length n.
---
--- Needed to hand guardedVecBar the states: St P is a subset of allVecs
--- (length (sub P)), so the length-n predicate is a correct E for it, and then
--- the search never touches the enumeration.
+-- Members of allVecs n have length n, so the length-n predicate is a correct
+-- Bar predicate for St P, and the search never touches the enumeration.
 
 allVecs-len : (n : Nat) {v : Val} -> v ∈ allVecs n -> hasLength n v ≡ true
 allVecs-len zero    here      = refl
@@ -101,23 +94,12 @@ stAllSat P x m =
               (filter-sub (isState P) (allVecs (length (sub P))) m)
 
 ------------------------------------------------------------------------
--- The guard of Barras, refined by Gonthier (Coquand and Siles, CPP 2011,
--- section 5).
+-- The guard of Barras, refined by Gonthier (Coquand and Siles, section 5).
 --
--- The paper's point is that one computes with the decision procedure DIRECTLY,
--- as a type-theoretic boolean function, without extracting to ML.  It also
--- records the price: a function defined by recursion on a well-foundedness
--- proof forces that proof as it runs, "and this computation is heavy, and
--- furthermore seems irrelevant, since the accessibility predicate has only one
--- constructor".
---
--- Their fix transfers, and the reason it transfers is worth stating.  Barras's
--- guard works on `well_founded`, a Pi-type, so a guarded proof can produce a
--- constructor without ever applying the proof it wraps.  Bar R E at a FIXED E
--- is a tree, not a function, and admits no such trick -- but vecIFin gives the
--- Pi-form we need, since every subset of the length-n vectors is Bar by
--- barMono.  guardBar k then supplies 2^k constructors lazily, so a search of
--- depth below 2^k never touches vecIFin at all.
+-- A function defined by recursion on a Bar forces the Bar as it runs.  vecIFin
+-- gives the Pi-form a guard needs (every subset of the length-n vectors is Bar
+-- by barMono), and guardBar k supplies 2^k constructors lazily, so a search of
+-- depth below 2^k never touches vecIFin.
 
 AllBar : Nat -> Set
 AllBar n = (E : Pred)
@@ -134,21 +116,13 @@ guardBar n (suc k) w =
              (λ y -> E y ∧ᵇ (x ≢ᵛ y))
              (λ v ev -> sb v (∧ᵇ-trueˡ (E v) (x ≢ᵛ v) ev)))
 
--- The guard depth is n itself, and that is not a cosmetic choice.
---
--- Two things fix it.  A search that keeps choosing DISTINCT vectors of length n
--- runs for at most 2^n steps, and guardBar n k supplies 2^k constructors, so
--- k = n is exactly enough: for |Sub P| = 13 the guard alone carries 8192 peels
--- and vecIFin is never reached.
---
--- More importantly, a literal depth is unusable.  guardBar n k unfolds to 2^k
--- copies of what it wraps, so with k a literal the NORMAL FORM of the guarded
--- Bar has 2^k nodes -- and Agda normalises the constructor types of a data
--- declaration, so every data type whose constructors mention U_infinity
--- (Walk, Lasso, Run, ValidPos) would normalise it.  With k = n and P a variable the match on k is
--- blocked, the guard stays folded, and the explosion cannot happen; on a closed
--- formula n reduces and the guard does its job.  Laziness has to be arranged
--- in the term, not merely relied on in the evaluator.
+-- The guard depth is n itself.  A search choosing distinct vectors of length n
+-- runs at most 2^n steps, so k = n is exactly enough.  A literal depth would
+-- be worse: guardBar k unfolds to 2^k copies, and Agda normalises the
+-- constructor types of data types that mention U_inf (Walk, Lasso, Run,
+-- ValidPos).  With k = n and P a variable the match on k is blocked and the
+-- guard stays folded; on a closed formula n reduces and the guard does its
+-- job.
 
 guardedVecBar : (n : Nat) -> AllBar n
 guardedVecBar n = guardBar n n (allVecBar n)

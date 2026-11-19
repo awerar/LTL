@@ -1,36 +1,20 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Benchmarks.Examples -- Figure 11 of Schmitt and Goubault-Larrecq, "Linear Temporal
--- Logic" (page 14), run through decideSCC.
+-- LTL.Benchmarks.Examples -- Figure 11 of Schmitt and Goubault-Larrecq, "Linear
+-- Temporal Logic" (page 14), run through decideSCC.
 --
--- Forty-six named modal and temporal statements, in the box/diamond fragment
--- -- no ○ occurs in any of them.  The figure's last column marks the ones its
--- procedure reports valid; here each is a checked equation instead, and the
--- checkmark is the BRANCH decideSCC takes:
+-- Forty-six named modal and temporal statements in the box/diamond fragment.
+-- Each check states the branch decideSCC takes: isProof = true means it
+-- returned a derivation, false a lasso countermodel with  ⊢ X -> Empty.  So
+-- every line is a theorem, certified by the type of decideSCC.  The
+-- twenty-two marked valid in the figure (T, G, pb5, lin1, Dum, Dum1-4, D, 4,
+-- 4M, G0, H, H+, L, L+, L++, X, K3, K4, K5) are exactly the twenty-two that
+-- come out true here.
 --
---   isProof (decideSCC X) = true    decideSCC returned inl, a derivation of X
---                                   in L
---   isProof (decideSCC X) = false   decideSCC returned inr, a lasso
---                                   countermodel together with  ⊢ X -> Empty
---
--- So the file is not a comparison of two programs' outputs.  Every line below
--- is a theorem: the true ones assert that a derivation exists, the false ones
--- that none does, and both are certified by the type of decideSCC
--- (LTL.Procedures.DecideSCC).
---
--- The twenty-two marked in the figure are T, G, pb5, lin1, Dum, Dum1, Dum2,
--- Dum3, Dum4, D, 4, 4M, G0, H, H+, L, L+, L++, X, K3, K4, K5, and those are
--- exactly the twenty-two that come out true here.
---
--- The names are the figure's, with ax- prefixed where the figure's name is not
--- an Agda identifier (4, 5, 4M, 5M, +, ++).
---
--- The file is slow because it is forty-six decision problems, not because of
--- any one proof: the 5 s rule of FORMALISATION-PLAN.md section 4a is a detector for
--- proofs that have drifted from the note, and does not apply to a benchmark.
--- The figure's own times are 0.017-0.083 s per formula for a procedure written
--- in ML; these run inside Agda's evaluator, on the decision procedure as a
--- type-theoretic boolean function, with no extraction anywhere.
+-- Names are the figure's, prefixed with ax- where the figure's name is not an
+-- Agda identifier (4, 5, 4M, 5M, +, ++).  The file takes about 26 s to check;
+-- the figure reports 0.017-0.083 s per formula for a procedure written in ML,
+-- while these run in Agda's evaluator with no extraction.
 
 module LTL.Benchmarks.Examples where
 
@@ -338,39 +322,28 @@ check-K5 : isProof (decideSCC axK5) ≡ true
 check-K5 = refl
 
 ------------------------------------------------------------------------
+------------------------------------------------------------------------
 -- Two of the countermodels, read off.
 --
--- decideSCC returns the lasso as a record; cmStart, cmRest and cmCycle give the
--- states as the procedure stores them, but a bit vector read against
--- sub (¬ Q) is not something one wants to look at.  traceOf evaluates a
--- chosen formula at the successive stages of the run instead, and shapeOf says
--- where the run starts repeating: with shapeOf Q = r , c the run is
---
---    v0 , rest_0 , ... , rest_{r-1} , then the last c of those, forever
---
--- so it is periodic from stage  1 + r - c  on, with period c.
---
--- Nothing here is an extra assumption.  traceOf goes through eval of LTL.Countermodel.Eval,
--- which is the semantics soundness (G26) is proved against, so
--- "traceOf Q Q 1 = false ∷ []" below and the ⊢ Q -> Empty field of the
--- record are the same fact seen from the two ends.
+-- traceOf evaluates a chosen formula at the successive stages of the run, and
+-- shapeOf says where the run starts repeating: with shapeOf Q = r , c the run
+-- is  v0 , rest_0 , ... , rest_{r-1} , then the last c of those forever, so it
+-- is periodic from stage  1 + r - c  with period c.  traceOf uses the
+-- evaluation soundness is proved against, so "traceOf Q Q 1 = false ∷ []"
+-- and the ⊢ Q -> Empty field of the record are the same fact.
 
 ------------------------------------------------------------------------
--- pb2 = p ⇒ □ p.
---
--- shapeOf pb2 = 4 , 2: four states after the start, the last two of them the
--- cycle, so the run is periodic from stage 3 with period 2 --
+-- pb2 = p ⇒ □ p.  shapeOf pb2 = 4 , 2, so the run is periodic from stage 3
+-- with period 2:
 --
 --    p       1  0  1  1  1  1  1  1  ...
---    □ p   0  0  1  1
+--    □ p     0  0  1  1
 --    pb2     0  1  1  1
 --
--- p holds now and fails at the next stage, which refutes □ p now; from
--- stage 2 on p holds forever, so □ p holds and pb2 holds at every stage but
--- the first.  That single false at stage 0 is the countermodel.  The cycle
--- has two states where one would do: the SCC construction starts from the
--- bare loop and prepends a leg for each eventuality (LTL.SCC.Graph), and does
--- not look for the shortest fair cycle.
+-- p holds now and fails next, which refutes □ p now; from stage 2 on p holds
+-- forever.  The single false at stage 0 is the countermodel.  The cycle has
+-- two states where one would do: the SCC construction prepends a leg per
+-- eventuality to the bare loop.
 
 pb2-shape : shapeOf pb2 ≡ (4 , 2)
 pb2-shape = refl
@@ -386,21 +359,16 @@ pb2-input : traceOf pb2 pb2 4 ≡ false ∷ true ∷ true ∷ true ∷ []
 pb2-input = refl
 
 ------------------------------------------------------------------------
--- axM2 = ◇ □ (p ⇒ □ p).
---
--- shapeOf axM2 = 8 , 8: the cycle has eight states and the stem is empty, so
--- the run is periodic from stage 1 with period 8 --
+-- axM2 = ◇ □ (p ⇒ □ p).  shapeOf axM2 = 8 , 8: the stem is empty and the run
+-- is periodic from stage 1 with period 8:
 --
 --    p            1  1  0  1  1  1  0  1  ...
 --    p ⇒ □ p      0  0  1  0  0  0  1  0
 --    axM2         0  0  0  0
 --
--- p fails at stages 2, 6, 10, ... and holds everywhere else, so □ p is false
--- at every stage, so p ⇒ □ p fails at exactly the stages where p holds --
--- infinitely often.  Hence
--- □ (p ⇒ □ p) holds nowhere and its diamond is false at every stage: the
--- alternating run refutes axM2 not just at stage 0 but everywhere, which is
--- what an eventuality being unfulfillable on a cycle looks like.
+-- p fails at stages 2, 6, 10, ..., so □ p is false everywhere and p ⇒ □ p
+-- fails wherever p holds, infinitely often.  So □ (p ⇒ □ p) holds nowhere and
+-- axM2 is false at every stage, not just at stage 0.
 
 axM2-shape : shapeOf axM2 ≡ (8 , 8)
 axM2-shape = refl
@@ -417,38 +385,21 @@ axM2-input : traceOf axM2 axM2 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 axM2-input = refl
 
 ------------------------------------------------------------------------
--- The half of K5 that carries the content.
+-- The half of K5 that carries the content:
 --
 --   □ ◇ (p ∨ q)  ⇒  □ ◇ p  ∨  □ ◇ q
 --
--- The figure lists K5 as the equivalence; this is its left-to-right half, and
--- it is the only half that is not immediate.  Semantically it is the statement
--- that if p or q holds infinitely often then one of the two does, which on
--- paper is a pigeonhole argument about an infinite run.  Formally there is no
--- infinite run and no pigeonhole: nothing here is coinductive, and the argument
--- is the SCC certificate of m5.tex followed by the extraction of Theorem 4.1.
+-- if p or q holds infinitely often, then one of them does.  On paper this is a
+-- pigeonhole argument about an infinite run; here nothing is coinductive.
 --
--- Measured.  Sub of the negation has length 22, so the naive state space is
--- 2^22 = 4194304 vectors.  The atoms are p, q and the six box-subformulas
+-- sub of the negation has length 22, so the naive state space is 2^22 vectors.
+-- The atoms are p, q and the six box-subformulas
 --
---    □ ¬ (p ∨ q) , □ ◇ (p ∨ q) , □ ¬ p , □ ◇ p ,
---    □ ¬ q , □ ◇ q
+--    □ ¬ (p ∨ q) , □ ◇ (p ∨ q) , □ ¬ p , □ ◇ p , □ ¬ q , □ ◇ q
 --
--- so 2^8 = 256 assignments are built, 59 of them are states, and the closure of
--- the ones containing the negation has 9 members.  The elimination of
--- Definition 3.1 would run
---
---    9  ->  8  ->  4  ->  0
---
--- and EVERY removal goes by (R2).  Not one state is dropped for want of a
--- successor: the whole refutation is the loop-invariant case, which is what one
--- would expect of a formula that says an eventuality recurring forever must
--- recur in one of two ways.  The SCC certificate (LTL.SCC.SccExtract) agrees:
--- it removes the nine states in four blocks and no sinks, so every step of the
--- refutation is extractBlock -- the invariant B = beta of the block, (Ind)
--- through indRule -- where bnb exercises it once.  It is the atom generator
--- of G30 that makes the example reachable at all: the naive state list would
--- be 2^22 vectors filtered one at a time.
+-- so 256 candidates are built, 59 of them are states, and the closure of those
+-- containing the negation has 9 members.  The certificate removes them in four
+-- blocks and no sinks, so every step of the refutation is extractBlock.
 
 axK5fwd : Formula
 axK5fwd = □ ◇ (pv ∨ qv) ⇒ □ ◇ pv ∨ □ ◇ qv

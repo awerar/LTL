@@ -1,38 +1,23 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Semantics -- the Boolean evaluation of m4.tex section 5 against the
--- semantics of LTL.Trusted.
+-- LTL.Semantics -- the Boolean evaluation agrees with the semantics of
+-- LTL.Trusted, and so the procedure meets the trusted specification.
 --
--- LTL.Trusted states what the development proves: truth  σ , n ⊨ A  of a
--- formula at a time of an interpretation, valid A  as truth at time 0 of every
--- lasso interpretation, and a DecisionProcedure as a Boolean test that is valid
--- when it says true and comes with a LassoCounterModel when it says false.  The
--- procedures answer with  ⊢ Q ⊎ LassoCountermodel Q  instead, so two facts
--- connect them to it:
+-- LTL.Trusted defines truth  σ , n ⊨ A , validity (truth at time 0 of every
+-- lasso), and a DecisionProcedure.  The procedure answers with  ⊢ Q ⊎
+-- LassoCountermodel Q , connected to it by
 --
---   * a derivation is valid (⊢-valid): "one checks by induction on derivations
---     that |- C implies [[C]]_s = 1 at every state of every lasso" (m4.tex
---     section 5), and
+--   ⊢-valid         a derivable formula is valid, and
+--   toCounterModel  the run of a LassoCountermodel is a Trusted lasso on which
+--                   Q is false at time 0;
 --
---   * the run of a LassoCountermodel is a lasso of LTL.Trusted on which Q is
---     false at time 0 (toCounterModel).
+-- and fromDecider packages the two.  Both go through the evaluation of
+-- LTL.Countermodel.LassoEval; what this module adds is that evalAt IS ⊨
+-- (evalAt-holds, holds-evalAt), by induction on the formula.  The □ case uses
+-- the finite forward orbit: every iterate of a position is in its orbit, and
+-- every member of the orbit is an iterate.
 --
--- Both go through the Boolean evaluation of LTL.Countermodel.LassoEval, which already
--- satisfies the first fact (its sound) and in which the second is stated
--- (falseAtStart).  What is left is that the Boolean evaluation IS the
--- semantics: evalAt-holds and holds-evalAt, by induction on the formula.  The
--- connectives split on the Boolean, ○ is posIter-suc, and □ is the forward
--- orbit once more -- every iterate of a position is in its orbit (orbitIter),
--- and every member of the orbit is an iterate (orbitOf-iter).  Constructively
--- this is the only place that needs care: ⊨ is a Set, quantifying over all
--- times at □, and it is the finiteness of the orbit that makes it decidable on
--- a lasso, which (P3) and (PC) need.
---
--- The comparison is made at positions (LTL.Countermodel.Orbit), which are LTL.Trusted's
--- Position and step for any type of states: positionAgree says that the
--- positions of a Trusted lasso are the iterates of nextPos, once the two
--- successors agree.  LTL.Trusted is imported qualified as T, since its names
--- (step, Lasso, Empty, the fixities of the connectives) clash with this
+-- LTL.Trusted is imported qualified as T, since its names clash with this
 -- development's.
 
 module LTL.Semantics where
@@ -62,8 +47,7 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
     module E = LTL.Countermodel.LassoEval S read
 
   -- The positions of a Trusted lasso L are the iterates of nextPos, once f
-  -- turns the successor of LTL.Countermodel.Orbit into T.step and the start into
-  -- T.initial.
+  -- turns nextPos into T.step and the start into T.initial.
 
   positionAgree : (L : T.Lasso) (f : O.Pos -> T.Position) (pos0 : O.Pos)
                -> ((q : O.Pos) -> T.step L (f q) ≡ f (O.nextPos c0 c1 q))
@@ -76,11 +60,10 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
                  (cong f (sym (O.posIter-suc c0 c1 n pos0))))
 
   ------------------------------------------------------------------------
-  -- The Boolean evaluation is the semantics.
-  --
-  -- σ agrees with the lasso from pos0 when its instant at time n is the one
-  -- read off stage n.  Both directions are needed at once: ¬ and ⇒ are
-  -- contravariant in their first argument.
+  -- The Boolean evaluation is the semantics.  σ agrees with the lasso from
+  -- pos0 when its instant at time n is the one read off stage n.  Both
+  -- directions are proved together, since ¬ and ⇒ are contravariant in their
+  -- first argument.
 
   module _ (pos0 : O.Pos) (σ : T.Interpretation)
            (agree : (n : Nat) -> σ n ≡ read (O.posState (O.posIter c0 c1 n pos0)))
@@ -142,11 +125,9 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
                 (holds-evalAt A (t + n) (h t))
 
 ------------------------------------------------------------------------
--- Soundness: a derivable formula is valid.
---
--- A Trusted lasso l is itself a lasso of LTL.Countermodel.Orbit at S = Instant, starting
--- from the position T.initial l; LassoEval's soundness holds there, and the
--- evaluation is the semantics.
+-- Soundness: a derivable formula is valid.  A Trusted lasso is a lasso of
+-- LTL.Countermodel.Orbit at S = Instant, from the position T.initial l;
+-- LassoEval's soundness holds there, and the evaluation is the semantics.
 
 ⊢-valid : {A : Formula} -> ⊢ A -> T.valid A
 ⊢-valid {A} d l =
@@ -182,11 +163,9 @@ module _ {S : Set} (read : S -> T.Instant) (c0 : S) (c1 : List S) where
                     (nowF (O.posIter c0 c1 n pos0))
 
 ------------------------------------------------------------------------
--- A countermodel is a Trusted countermodel.
---
--- The run of the countermodel, read through readVal (¬ Q), is a Trusted lasso:
--- the start v0 followed by rest, then the cycle c0 ∷ c1 for ever.  Q evaluates
--- to false at stage 0 (falseAtStart), so it is not true at time 0.
+-- A countermodel is a Trusted countermodel.  Its run, read through readVal
+-- (¬ Q), is a Trusted lasso: v0 followed by rest, then the cycle c0 ∷ c1 for
+-- ever.  Q is false at stage 0 (falseAtStart), so it is not true at time 0.
 
 toCounterModel : (Q : Formula) -> LassoCountermodel Q -> T.LassoCounterModel Q
 toCounterModel Q (countermodel v0 r mv0 falseQ noDeriv) = T.counter L qFalse
@@ -223,11 +202,9 @@ toCounterModel Q (countermodel v0 r mv0 falseQ noDeriv) = T.counter L qFalse
                           falseQ))
 
 ------------------------------------------------------------------------
--- Every procedure of the shape of decideSCC is a Trusted DecisionProcedure.
---
--- The test is which branch the procedure took.  When it took the derivation,
--- ⊢-valid makes it valid; when it took the countermodel, toCounterModel
--- translates it; the other two combinations make the test true ≡ false.
+-- Every procedure of the type of decideSCC is a Trusted DecisionProcedure.  The
+-- test is which branch it took: a derivation is valid by ⊢-valid, and a
+-- countermodel translates by toCounterModel.
 
 fromDecider : ((Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q)
            -> T.DecisionProcedure

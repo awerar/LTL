@@ -1,35 +1,18 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Syntax.Skel -- the propositional skeleton of a formula, and the decidable
--- tautology test that (PC) needs.
+-- LTL.Syntax.Skel -- the propositional skeleton of a formula, and the
+-- decidable tautology test isTaut that the (PC) rule of LTL.Syntax.Deriv uses.
 --
--- Ben-Ari's system (Mathematical Logic for Computer Science, 3rd edition,
--- Definition 12.1) takes as Axiom 0
+-- A formula is a tautology of its skeleton when it is true in every row of the
+-- truth table that treats its var, ○ and □ subformulas as atoms.  This is a
+-- Boolean condition on the formula alone, so (PC) needs no substitution
+-- relation.
 --
---     PC     any substitution instance of a valid propositional formula
---
--- and then writes "PC" for every propositional step.  m4.tex Remark 6.4 rejects
--- it and uses (P1)-(P3) instead, on the ground that "substitution instance of a
--- propositional tautology" carries a side condition, so a formalisation would
--- have to define a tautology checker AND the substitution relation before it
--- can say what a derivation is, and then prove a substitution lemma to get
--- soundness.
---
--- Half of that objection is avoidable.  The substitution relation is not
--- needed: instead of asking whether A is an instance of a tautology, ask
--- whether A is a tautology OF ITS OWN SKELETON -- treat its var, ○ and □
--- subformulas as atoms and run the truth table.  That is the same class of
--- formulas, it is decidable, it is a boolean condition on A alone, and ⊢_
--- stays a plain inductive family.
---
--- The apparatus is already here.  atoms and valFrom were written for G30, where
--- mkV builds a state from an assignment to the atoms of Sub P; the skeleton
--- evaluation is that same function read as a truth-table row.  What this module
--- adds is skelEval, which says the skeleton evaluation agrees with ANY boolean
--- reading of formulas that is compositional on ¬ and ⇒ -- and there are two
--- such readings in the development, valOf at a state (compositional by (S1))
--- and evalAt at a position (compositional by definition).  So one lemma serves
--- both LTL.States.Closure and the soundness of (PC).
+-- valFrom reads a formula from an assignment to atoms; LTL.States.Closure uses
+-- it to build states.  skelEval says it agrees with any reading that is
+-- compositional on ¬ and ⇒: valOf at a state, and evalAt at a position of a
+-- lasso.  That one lemma serves both state construction and the soundness of
+-- (PC).
 
 module LTL.Syntax.Skel where
 
@@ -74,11 +57,8 @@ indexOf []       A = zero
 indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
 
 ------------------------------------------------------------------------
--- Formula membership as a boolean, and the idx/nth round-trip for it.
---
--- indexOf locates the FIRST occurrence of a formula by ≡ᶠ, so this is the
--- round-trip of FORMALISATION-PLAN.md G2 once more, for lookup by formula
--- rather than by position.
+-- Formula membership as a boolean, and the index/nth round-trip for lookup by
+-- formula.  indexOf finds the FIRST occurrence.
 
 infix 4.5 _∈ᶠ_
 
@@ -86,8 +66,8 @@ _∈ᶠ_ : Formula -> List Formula -> Bool
 A ∈ᶠ []       = false
 A ∈ᶠ (B ∷ Bs) = (B ≡ᶠ A) ∨ᵇ (A ∈ᶠ Bs)
 
--- (The F in indexOf-nthF, indexOf-ltF: from the Boolean A ∈ᶠ As, where
--- LTL.Proj's indexOf-nth, indexOf-lt start from a proof of A ∈ As.)
+-- (The F in indexOf-nthF, indexOf-ltF: these start from the Boolean A ∈ᶠ As,
+-- where indexOf-nth, indexOf-lt of LTL.States.Proj start from A ∈ As.)
 
 indexOf-nthF : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true
             -> nth As (indexOf As A) ⊥ ≡ A
@@ -104,11 +84,8 @@ indexOf-ltF (B ∷ Bs) A e with B ≡ᶠ A
 ... | false = ltSuc (indexOf-ltF Bs A e)
 
 ------------------------------------------------------------------------
--- The atoms of a list of formulas.
---
--- Insertion keeps the list free of ≡ᶠ-duplicates: Sub P repeats (see
--- subBenAri-dup in LTL.Tests.Checks), and a repeated atom would double the truth
--- table for nothing.
+-- The atoms of a list of formulas.  Insertion keeps the list free of
+-- duplicates: sub P repeats, and a repeated atom would double the truth table.
 
 isAtomB : Formula -> Bool
 isAtomB (var n) = true
@@ -156,10 +133,9 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 ------------------------------------------------------------------------
 -- The arguments of the box-subformulas.
 --
--- □Args collects the A for which □ A occurs in the list: the eventualities of
--- LTL.Elimination.Elim.  It is defined here, below Deriv, because the short Lemma 2.6
--- (LTL.Procedures.CompletePC) needs it as well, and that is on the other branch of the
--- import graph: its (S2) premise is a conjunction of  □ A -> A  over □Args.
+-- □Args collects the A for which □ A occurs in the list: these are the
+-- eventualities.  It lives here, below Deriv, because both the elimination and
+-- LTL.Procedures.CompletePC need it.
 
 □Args : List Formula -> List Formula
 □Args []           = []
@@ -192,11 +168,8 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 □Args-mem (□ B   ∷ As) (there m) = there (□Args-mem As m)
 
 ------------------------------------------------------------------------
--- The skeleton evaluation.
---
--- valFrom Ats a A reads A with the bits a assigned to the atoms Ats: ¬ and
--- ⇒ are interpreted, everything else is looked up.  For G30 this builds a
--- state out of an assignment; here it is one row of a truth table.
+-- The skeleton evaluation.  valFrom Ats a A reads A with the bits a assigned
+-- to the atoms Ats: ¬ and ⇒ are interpreted, everything else is looked up.
 
 valFrom : List Formula -> Val -> Formula -> Bool
 valFrom Ats a (var n) = bitAt a (indexOf Ats (var n))
@@ -206,14 +179,10 @@ valFrom Ats a (○ A)   = bitAt a (indexOf Ats (○ A))
 valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
 
 ------------------------------------------------------------------------
--- The skeleton evaluation agrees with any compositional reading.
---
--- f is an arbitrary assignment of booleans to formulas that respects ¬ and
--- ⇒ on the subformulas of P.  Then reading A through f is the same as
--- reading it through the skeleton with the atoms interpreted by f.  Two
--- instances are used: valOf at a state, where the hypotheses are (S1) --
--- LTL.States.Closure -- and evalAt at a position, where they are refl, since evalAt is
--- DEFINED by ¬ᵇ and ⇒ᵇ at ¬ and ⇒ -- LTL.Countermodel.Sound.
+-- The skeleton evaluation agrees with any reading f that respects ¬ and ⇒ on
+-- the subformulas of P.  Two instances are used: valOf at a state, where the
+-- hypotheses are (S1) (LTL.States.Closure), and evalAt at a position, where
+-- they hold by definition (LTL.Countermodel.Sound).
 
 atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
         -> X ∈ᶠ Ats ≡ true

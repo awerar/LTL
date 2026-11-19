@@ -1,48 +1,31 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Elimination.Gfp -- the set W of Theorem 4.1, case (R2), and the only property of it
--- the proof uses: that it is CLOSED under ->-steps inside U_k.
+-- LTL.Elimination.Gfp -- gfpW P us A, the largest set of states of us that is
+-- closed under successors inside us and at which A holds throughout.
 --
--- m4.tex writes the invariant as B = beta_W with W = Reach_{U_k}(v).  The two
--- facts wanted are that every state of W leaves the j-th eventuality pending
--- (step (i)) and that W is closed under successors lying in U_k (step (ii)).
--- Taking W to be the reachable set makes closure a theorem about the fixed
--- point of an ACCUMULATING iteration: acc grows, and one has to know that
--- |U_k| rounds are enough, which is a pigeonhole argument over a duplicate-free
--- accumulator.
+-- It is computed by a REMOVING iteration,
 --
--- Take instead the largest ->-closed set of states at which A still holds:
+--    W_0 := { w in us : A in w },   W_{i+1} := { w in W_i : succ_us(w) subset W_i },
 --
---    W_0 := { w in U_k : A in w },     W_{i+1} := { w in W_i : succ_{U_k}(w) subset W_i }
---
--- and W := the first W_i that is already closed.  This is a REMOVING
--- iteration, so closure comes out with no counting at all.  The price is that
--- (R2) now reads "v lies in W" rather than "A holds throughout Reach_{U_k}(v)";
--- gfpSound and gfpComplete at the end of this file show the two are the same
--- condition, with Reach given by its proper definition, the inductive type Path
--- of ->-paths inside U_k.
---
--- G29 of FORMALISATION-PLAN.md: the iteration runs until a round finds
--- nothing to remove and STOPS THERE, with termination by recursion on a Bar.
--- So the search does one pass once it has converged, the closed case returns W
--- itself, and no fixed-point equation or ≤ measure is needed.
+-- stopping at the first W_i that is closed, by recursion on a Bar.  Closure
+-- therefore comes for free, which is what the elimination's (R2) needs.
+-- gfpSound and gfpComplete show that v lies in gfpW exactly when A holds at
+-- every state reachable from v inside us (the inductive type Path).
 
 module LTL.Elimination.Gfp where
 
 open import LTL.States.Closure public
 
 ------------------------------------------------------------------------
--- The greatest closed set of states at which A still holds.
---
--- holdsAt P A w says that the eventuality  □ A  is NOT fulfilled at w, in the
--- terminology of m4.tex section 3: fulfilment is  A not in w .
+-- The greatest closed set of states at which A still holds.  holdsAt P A w
+-- says the eventuality □ A is NOT fulfilled at w (A is in w).
 
 module _ (P : Formula) where
 
   holdsAt : Formula -> Val -> Bool
   holdsAt A w = valOf P w A
 
-  -- W_0 of the header: the states of us at which A holds.
+  -- W_0: the states of us at which A holds.
 
   wZero : List Val -> Formula -> List Val
   wZero us A = filter (holdsAt A) us
@@ -57,13 +40,10 @@ module _ (P : Formula) where
   shrink us W = filter (succsInside us W) W
 
   ------------------------------------------------------------------------
-  -- The iteration, run until it stops.
-  --
-  -- findFalse asks the one question the round needs: is there a state of W with
-  -- a successor in us that has already left W?  If there is not, W is closed
-  -- and is the answer.  If there is, that state leaves W -- and it leaves the
-  -- Bar's predicate with it, which is what dropAllSat says and what makes the
-  -- recursive call structurally smaller.
+  -- The iteration, run until it stops.  findFalse looks for a state of W with
+  -- a successor in us that has already left W.  If there is none, W is closed
+  -- and is the answer; if there is, that state leaves W and the Bar's
+  -- predicate (dropAllSat), which makes the recursive call smaller.
 
   shrinkGo   : (us : List Val) {E : Pred} (W : List Val)
             -> AllSat E W -> IFin E -> List Val
@@ -83,7 +63,7 @@ module _ (P : Formula) where
                        (listBar (wZero us A))
 
   ------------------------------------------------------------------------
-  -- Closure, which is what step (ii) of Theorem 4.1 needs
+  -- Closure under successors inside us
 
   ClosedIn : List Val -> List Val -> Set
   ClosedIn us W =
@@ -127,7 +107,7 @@ module _ (P : Formula) where
                    (listBar (wZero us A))
 
   ------------------------------------------------------------------------
-  -- The other two properties: W sits inside U_k, and A holds throughout it
+  -- The other two properties: W sits inside us, and A holds throughout it
 
   shrinkGoSub   : (us : List Val) {E : Pred} (W : List Val)
                   (sb : AllSat E W) (bar : IFin E)
@@ -159,9 +139,8 @@ module _ (P : Formula) where
 
 ------------------------------------------------------------------------
 -- Greatest: any closed family of states at which A holds is inside gfpW.
---
--- Stated for a family X : Val -> Set rather than a list, which is what lets
--- gfpComplete below instantiate it at Path.
+-- Stated for a family X : Val -> Set so that gfpComplete can instantiate it at
+-- Path.
 
 module _ (P : Formula) (us : List Val) where
 
@@ -205,7 +184,7 @@ gfpGreatest P us A X inUs hol cl =
                    (λ w x -> filter-true (holdsAt P A) us (inUs w x) (hol w x)) cl
 
 ------------------------------------------------------------------------
--- Reach_U(v) of m4.tex section 3, as an inductive type of ->-paths inside U.
+-- The states reachable from v inside U, as an inductive type of paths.
 
 data Path (P : Formula) (us : List Val) : Val -> Val -> Set where
   pnil  : {v : Val} -> Path P us v v
@@ -225,7 +204,7 @@ module _ (P : Formula) where
   pathSnoc us (pcons mw st p) mw' st' = pcons mw st (pathSnoc us p mw' st')
 
   ------------------------------------------------------------------------
-  -- (R2), the note's way and this one, are the same condition.
+  -- Membership in gfpW is "A holds at every reachable state".
 
   gfpPath : (us : List Val) (A : Formula) {v w : Val}
          -> v ∈ gfpW P us A -> Path P us v w -> w ∈ gfpW P us A

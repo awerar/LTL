@@ -1,37 +1,21 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Orbit -- positions on a lasso and their forward orbits, for any type S
--- of states.
+-- LTL.Countermodel.Orbit -- positions on a lasso and their forward orbits, for
+-- any type S of states.
 --
--- m4.tex unwinds a lasso into the infinite sequence v_0,v_1,v_2,... with
--- v_i = v_{p+((i-p) mod (q-p))} for i >= p, and then says: "the lasso is a
--- finite structure with a total successor function, so Always and Eventually
--- evaluate on it by conjunction and disjunction over the finite forward orbit
--- of a state".
---
--- Taken literally that asks for indices into a flat list of states, a successor
--- function  k |-> k+1 wrapping at the end, and a forward orbit obtained by
--- iterating it -- and then for arithmetic: that consecutive indices step, that
--- the wrap lands on the right index, that the orbit from any index covers the
--- whole cycle.  None of that is necessary.
---
--- A POSITION is instead a pair (s , rest): the current state, and the states
--- still to come before the cycle starts again.  The successor is
+-- A position is a pair (s , rest): the current state, and the states still to
+-- come before the cycle (c0 , c1) starts again.  The successor is
 --
 --    (s , w ∷ ws)  |->  (w , ws)          walk on
 --    (s , [])       |->  (c0 , c1)         wrap to the head of the cycle
 --
--- which is Position and step of LTL.Trusted, with c0 and c1 its loopHead and
--- loopTail.  The forward orbit of (s , rest), with the fuel that is obviously
--- enough, is LITERALLY  posList s rest ++ posList c0 c1  -- walk out the
--- remaining rest, then walk once round the cycle -- which is orbitN-split
--- below, proved by a three-line induction.  Everything about orbits follows
--- from that one equation by memAppL and memAppR.
+-- which is Position and step of LTL.Trusted.  This avoids index arithmetic:
+-- the forward orbit of (s , rest) is literally  posList s rest ++ posList c0
+-- c1  (orbitN-split), and everything about orbits follows from that equation.
 --
--- The module is parameterised by the type of states, like LTL.Lib.Nodes by its
--- nodes.  LTL.Countermodel.Run instantiates it at valuations, for the runs the elimination
--- builds, and LTL.Semantics at LTL.Trusted's Instant, for an arbitrary lasso;
--- LTL.Countermodel.LassoEval evaluates formulas on either.
+-- LTL.Countermodel.Run instantiates S at valuations, and LTL.Semantics at
+-- LTL.Trusted's Instant; LTL.Countermodel.LassoEval evaluates formulas on
+-- either.
 
 module LTL.Countermodel.Orbit (S : Set) where
 
@@ -148,10 +132,8 @@ orbitOf-iter c0 c1 (s , rest) q m =
   orbitN-iter c0 c1 (suc (length rest + suc (length c1))) (s , rest) q m
 
 ------------------------------------------------------------------------
--- The orbit, once more, as a plain concatenation.
---
--- Everything below is read off this equation: the orbit of (s , rest) is the
--- rest of the walk followed by one turn of the cycle.
+-- The orbit as a plain concatenation: the rest of the walk, then one turn of
+-- the cycle.  Everything below is read off this equation.
 
 orbitEq : (c0 : S) (c1 : List S) (s : S) (rest : List S)
        -> orbitOf c0 c1 (s , rest) ≡
@@ -169,10 +151,8 @@ posList-hd s []       = here
 posList-hd s (w ∷ ws) = here
 
 ------------------------------------------------------------------------
--- The orbit is closed under the successor.
---
--- Walking on stays inside the same stretch until the stretch runs out, and
--- then lands on the head of the cycle, which is in the orbit either way.
+-- The orbit is closed under the successor: walking on stays in the same
+-- stretch until it runs out, then lands on the head of the cycle.
 
 posList-next : (c0 : S) (c1 : List S) (s : S) (rest : List S) (q : Pos)
             -> q ∈ posList s rest

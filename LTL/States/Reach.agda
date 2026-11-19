@@ -2,20 +2,10 @@
 
 -- LTL.States.Reach -- valuations as a set, and successor lists.
 --
--- Here the generic set layer meets valuations.  LTL.Lib.Sets and LTL.Lib.Bar are
--- stated for any element type, and LTL.Lib.Nodes for any node type with an
--- equality test; below,  _≡ᵛ_  is defined, proved sound and reflexive, and
--- LTL.Lib.Nodes is instantiated at Val with it.  That instance supplies ∈ᵛ ≢ᵛ,
--- the hypothesis names (Closed, AllSat, ...) and listBar to the whole
--- development.  LTL.SCC.SccLasso instantiates LTL.SCC.Graph with the same three
--- arguments.
---
--- G7 of FORMALISATION-PLAN.md is Reach_U(v) of m4.tex section 3, the states
--- reachable from v by ->-steps inside U.  The elimination does not compute it:
--- (R2) uses the largest closed set of unfulfilling states instead (LTL.Elimination.Gfp),
--- and gfpSound/gfpComplete there show that this is the note's condition, with
--- Reach_U(v) in its exact sense as the inductive type Path.  The SCC procedure
--- computes reachable sets in LTL.SCC.Graph (reachSet).
+-- Defines the equality test _≡ᵛ_ on valuations, proves it sound and reflexive,
+-- and instantiates LTL.Lib.Nodes at Val with it.  That instance supplies ∈ᵛ,
+-- ≢ᵛ, the hypothesis names (Closed, AllSat, ...) and listBar to the rest of
+-- the development; LTL.SCC.SccLasso instantiates LTL.SCC.Graph the same way.
 
 module LTL.States.Reach where
 

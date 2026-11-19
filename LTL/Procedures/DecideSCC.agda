@@ -1,49 +1,26 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Procedures.DecideSCC -- G40 of PHASE11-PLAN.md: the two branches joined.
+-- LTL.Procedures.DecideSCC -- the decision procedure:
 --
 --   decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 --
--- Theorem 6.1 of m4.tex, decided by the graph search of m5.tex: is there a
--- fair component in Ust (¬ Q)?
+-- It searches Ust (¬ Q) for a fair component (sccGraph).  A certificate gives
+-- a derivation (provableSCC, LTL.SCC.SccExtract).  A fair component gives a
+-- countermodel, in four steps:
 --
---     sccGraph (¬ Q)  --  a FairIn, or a Cert covering all of Ust (¬ Q)
+--   1. ustSeedTo: the component's representative is reached by a trail from a
+--      state s containing ¬ Q.  Stem and cycle form a FairLoop from s.
+--   2. The loop is cut down to the vertices it uses, C = s ∷ stem ++ cycle,
+--      and C is a Trap: every vertex has a successor in C, and every pending
+--      eventuality fails somewhere reachable in C (walk to the witness the
+--      graph search chose, and read evPred there).
+--   3. uinfTrap: C survives the elimination, so C lies in Uinf (¬ Q), as
+--      sccLasso requires.
+--   4. sccRun, then buildCM: Hintikka's lemma at stage 0, and soundness.
 --
--- Neither branch is obtained by refuting the other: the certificate branch
--- returns a derivation built by G39 (provableSCC, LTL.SCC.SccExtract) and never
--- mentions a lasso, and the fair branch returns a lasso built by G38 and
--- mentions a derivation only to consume one.
---
--- Why the search is run on all of Ust P and not from a vertex.  fairGraph is
--- v-centred and certifies only  reachSet vs G v ; the refutation branch has to
--- account for every state at once, so graphGo over Ust P is what G39 consumes.
--- Asking the question there is legitimate BECAUSE of the first lemma of
--- LTL.SCC.SccTrap: every state of Ust P is reached from a state containing P, so a
--- fair component anywhere in Ust P is a fair component reachable from a seed,
--- and the seed is what a countermodel needs.  Without that lemma the fair
--- branch would exhibit a loop that is a countermodel to nothing.
---
--- The route from a fair component to a countermodel, in four steps.
---
---   1. ustSeedTo -- the component's representative r is reached by a trail from
---      a state s with  ¬ Q  in it.  Stem and cycle together are a FairLoop
---      from s (LTL.SCC.Graph), still inside Ust P.
---   2. The loop is restricted to the list of vertices it actually uses,
---      C = s ∷ stem ++ cycle .  This is where the Trap is built: every vertex
---      of C has a successor in C -- the next one along, and for the cycle's
---      base point its own first step -- and every eventuality pending at a
---      vertex of C fails somewhere reachable inside C, by walking to the
---      witness the graph layer chose and reading evPred there.  Those are the
---      negations of (R1) and (R2).
---   3. uinfTrap -- so C survives the elimination and lies in Uinf P.  This is
---      the step that lets the positive tail be used: sccLasso of G38 takes
---      exactly the inclusion  C subset Uinf P  as its hypothesis.
---   4. sccRun, then buildCM -- Hintikka's lemma at stage 0 and soundness.
---
--- So the elimination is still COMPUTED in the fair branch -- uinfTrap runs
--- elimGo -- but it is not what decides, and it produces no lasso: the lasso is
--- the SCC construction's.  In the certificate branch the elimination is not
--- computed at all.
+-- The search runs on all of Ust (¬ Q), not from one vertex, because the
+-- certificate has to cover every state.  The elimination is computed only in
+-- the fair branch.
 
 module LTL.Procedures.DecideSCC where
 
@@ -64,11 +41,10 @@ module _ (P : Formula) where
            -> Reaches C (step P) v w -> Path P C v w
   reachPath C (reachesBy zs t) = trailPath C t
 
-  -- Walking from a pending eventuality to a state where it fails.  Along the
-  -- way either it is already fulfilled -- and the prefix of the trail to that
-  -- state is the path -- or it is still pending at the far end, where the
-  -- caller's hypothesis (for us, evWitness at the graph layer's witness) says
-  -- it fails.
+  -- Walking from a pending eventuality to a state where it fails.  Either it
+  -- is fulfilled on the way, and the prefix of the trail is the path, or it is
+  -- still pending at the far end, where the caller's hypothesis (evWitness at
+  -- the chosen witness) says it fails.
 
   trapFail : (C : List Val) (A : Formula) -> □ A ∈ sub P
           -> (z w : Val) -> Reaches C (step P) z w
@@ -168,7 +144,7 @@ fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
           trapFail P C A (□Args-mem (sub P) mA) z w (reachW z mz w mw) pd
                    (evWitness P A w ew)
 
--- and then the trap survives the elimination, so G38 applies.
+-- and then the trap survives the elimination, so sccLasso applies.
 
 trapLoopRun : (P : Formula) (v0 : Val) -> TrapLoop P v0
            -> v0 ∈ Uinf P × Run P v0
@@ -209,7 +185,7 @@ buildCM Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
     noDeriv d = true≢false (trans (sym (soundRun (¬ Q) v0 r d 0)) evalFalse)
 
 ------------------------------------------------------------------------
--- Theorem 6.1, by the SCC route.
+-- The decision
 
 decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
@@ -249,7 +225,7 @@ traceOf Q A n = onDec (decideSCC Q)
     onDec (inl d) = []
     onDec (inr c) = cmFrom Q c A zero n
 
--- and the shape of the lasso: the run is  v0  followed by cmRest, whose tail is
+-- and the shape of the lasso: the run is v0 followed by cmRest, whose tail is
 -- the cycle, so it is periodic from stage  1 + |cmRest| - |cmCycle|  on, with
 -- period |cmCycle|.
 

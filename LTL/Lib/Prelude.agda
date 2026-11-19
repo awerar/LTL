@@ -1,14 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Lib.Prelude -- the small amount of infrastructure beyond LTL.Lib.Base that the
--- development needs: boolean connectives and their lemmas,
--- soundness/reflexivity of ≡ⁿ, sums, Σ-types and products, lists with
--- membership, and the index/nth round-trip of FORMALISATION-PLAN.md G2.
+-- LTL.Lib.Prelude -- Boolean connectives and their lemmas, sums, Σ-types and
+-- products, and lists with membership, inclusion and indexing.
 --
--- The notation is that of Agda's standard library: A ⊎ B, Σ[ x ∈ A ] B,
--- A × B (with pairs  a , b), x ∷ xs, xs ++ ys, x ∈ xs (constructors here and
--- there), m < n.  The boolean connectives carry a superscript b (∧ᵇ, ∨ᵇ, ¬ᵇ,
--- ⇒ᵇ, ⇔ᵇ), because the plain symbols are the LTL connectives of LTL.Syntax.Formula.
+-- The notation is that of Agda's standard library.  The Boolean connectives
+-- carry a superscript b (∧ᵇ, ∨ᵇ, ¬ᵇ, ⇒ᵇ, ⇔ᵇ) because the plain symbols are
+-- the LTL connectives.
 
 module LTL.Lib.Prelude where
 
@@ -79,8 +76,8 @@ sumElim : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
 sumElim f g (inl a) = f a
 sumElim f g (inr b) = g b
 
--- Does a sum hold its left alternative?  (decideSCC's results are proofs on
--- the left, so LTL.Procedures.Answer calls this isProof.)
+-- Does a sum hold its left alternative?  (LTL.Procedures.Answer calls this
+-- isProof, since a procedure's proofs are on the left.)
 
 isInl : {A B : Set} -> A ⊎ B -> Bool
 isInl (inl _) = true
@@ -342,8 +339,7 @@ there-Σ : {A : Set} {P : A -> Set} {y : A} {ys : List A}
        -> Σ[ x ∈ A ] x ∈ ys × P x -> Σ[ x ∈ A ] x ∈ y ∷ ys × P x
 there-Σ (x , m , p) = x , there m , p
 
--- Inclusion of lists as sets.  The element is explicit, as in the lemmas that
--- use it (LTL.Elimination.Extract).
+-- Inclusion of lists as sets, with the element explicit.
 
 infix 4 _⊆_
 
@@ -399,10 +395,8 @@ memAppCase (z ∷ xs) ys (there h) =
   sumElim (λ k -> inl (there k)) (λ k -> inr k) (memAppCase xs ys h)
 
 ------------------------------------------------------------------------
--- The index / nth round-trip.
---
--- Every projection of a conjunct out of  chi v  goes through this pair, so it
--- is proved once, here, in both directions.
+-- The index / nth round-trip.  Every projection of a conjunct out of  chi v
+-- goes through this pair.
 
 index : {A : Set} {x : A} {xs : List A} -> x ∈ xs -> Nat
 index here      = zero

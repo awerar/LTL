@@ -1,14 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Run -- the lasso unwound, as the finite structure G24 and G25 run on.
+-- LTL.Countermodel.Run -- a lasso unwound into a run: the positions of
+-- LTL.Countermodel.Orbit at valuations, with the cycle (c0 , c1).
 --
--- The positions, successor and forward orbits of LTL.Countermodel.Orbit, taken at
--- valuations: a position (s , rest) is the current state and the states still
--- to come before the cycle (c0 , c1) starts again.
---
--- A position is VALID when rest is a walk from s back to the cycle's end b.
--- Validity is preserved by the successor, and the step proof falls out of the
--- Walk constructor being consumed: no arithmetic at all.
+-- A position (s , rest) is VALID when rest is a walk from s back to the
+-- cycle's end b.  The successor preserves validity, and the step proof falls
+-- out of consuming the Walk constructor: no arithmetic.
 
 module LTL.Countermodel.Run where
 
@@ -16,10 +13,8 @@ open import LTL.Countermodel.Lasso public
 open import LTL.Countermodel.Orbit Val public
 
 ------------------------------------------------------------------------
--- Valid positions.
---
--- rest is a walk from s back to b, the end of the cycle.  This is the whole
--- invariant; the transition relation of the run is a consequence of it.
+-- Valid positions.  This is the whole invariant; that consecutive positions
+-- are transitions follows from it.
 
 data ValidPos (P : Formula) (b : Val) : Pos -> Set where
   vpos : (s : Val) (rest : List Val) -> s ∈ Uinf P
@@ -40,15 +35,11 @@ posIn : (P : Formula) (b : Val) {pos : Pos}
 posIn P b (vpos s rest ms wk) = ms
 
 ------------------------------------------------------------------------
--- The run, extracted from a lasso.
---
--- The cycle is split once and for all into its head c0 and tail c1, which is
--- what makes nextPos total; the lasso's cycleNonEmpty is what licenses the
--- split.
---
--- rest is everything after v0 up to the first return to b: the lasso's stem
--- followed by one turn of its cycle.  Where a Run is taken apart whole, its
--- fields are bound, in order, as  b c0 c1 mc0 wc stb mbc cyc rest mv0 wr .
+-- The run of a lasso.  The cycle is split into its head c0 and tail c1, which
+-- makes nextPos total; the lasso's cycleNonEmpty licenses the split.  rest is
+-- everything after v0 up to the first return to b: the stem followed by one
+-- turn of the cycle.  Where a Run is taken apart whole, its fields are bound
+-- in order as  b c0 c1 mc0 wc stb mbc cyc rest mv0 wr .
 
 record Run (P : Formula) (v0 : Val) : Set where
   constructor mkRun

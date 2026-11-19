@@ -1,18 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Proj -- the bridge from the boolean world to the derivation world.
+-- LTL.States.Proj -- from Boolean facts about a valuation to derivations.
 --
--- Every refutation of m4.tex section 2 has the same shape: a boolean condition
+-- Every refutation of a valuation has the same shape: a Boolean condition
 -- fails, so some conjunct of chi P v carries a particular literal, so chi P v
--- is refutable.  The three ingredients are here:
---
---   * searching a false conjunction for the offending index (all-false for
---     allOk, allCoh-false in LTL.States.State), and the corresponding projections;
---   * cohLookup, which says that under coherence the bit at ANY occurrence of
---     a formula equals valOf, so positional chi and lookup-based conditions
---     talk about the same bits;
---   * chiProj / chiProjPos, which turn a membership proof or a position into
---     ⊢ chi P v ⇒ <literal>.
+-- is refutable.  This module supplies the projections ⊢ chi P v ⇒ literal
+-- (chiProj, chiProjPos, chiProjVal), and cohLookup: under coherence, the bit
+-- at ANY occurrence of a formula equals valOf.
 
 module LTL.States.Proj where
 
@@ -62,8 +56,8 @@ module _ (P : Formula) where
           (chiProjRaw v len h)
 
 ------------------------------------------------------------------------
--- Positional projection, for the coherence-failure case, where cohLookup is
--- exactly what is NOT available.
+-- Positional projection, for the case where coherence fails and cohLookup is
+-- not available.
 
 litList-nth : (As : List Formula) (v : Val) (i : Nat)
            -> i < length As -> length v ≡ length As
@@ -82,11 +76,9 @@ chiProjPos P v len i lt =
   ⋀Proj (litList (sub P) v) (litList-nth (sub P) v i lt len)
 
 ------------------------------------------------------------------------
--- The first-occurrence index is a genuine position carrying its formula.
---
--- valOf P v X is the bit at position  indexOf (sub P) X , so to project the
--- literal of X signed by valOf, without coherence, we need that this position
--- is in range and carries X.
+-- The first-occurrence index is a position in range that carries its formula.
+-- This is what projecting the literal signed by valOf needs without
+-- coherence.
 
 indexOf-lt : (xs : List Formula) {X : Formula} -> X ∈ xs -> indexOf xs X < length xs
 indexOf-lt []       ()

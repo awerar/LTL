@@ -1,15 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Val -- G4 of FORMALISATION-PLAN.md.
+-- LTL.States.Val -- valuations, the characteristic formula chi P v, and
+-- beta P U, the disjunction of chi over a list of valuations.
 --
--- Valuations, the characteristic formula chi_v of Definition 2.4 of m4.tex, and
--- beta_U.  A valuation is a List Bool read against sub P positionally, so a
--- state is only a genuine function on the SET Sub(phi) once the duplicate
--- coherence clause of G5 is imposed (see FORMALISATION-PLAN.md section 0).
---
--- The empty disjunction is ⊥ and the empty conjunction is ⊤, which is the
--- convention fixed after Lemma 1.1 of the note; (L0) and (L5) then agree at
--- n = 0.
+-- A valuation is a List Bool read positionally against sub P.  Since sub P may
+-- repeat formulas, LTL.States.State adds a coherence clause.  The empty
+-- disjunction is ⊥ and the empty conjunction is ⊤.
 
 module LTL.States.Val where
 
@@ -47,12 +43,9 @@ beta : Formula -> List Val -> Formula
 beta P vs = ⋁ (map (chi P) vs)
 
 ------------------------------------------------------------------------
--- The projection lemma.
---
--- This is where the index/nth round-trip of G2 is paid off: a membership
--- proof for A in sub P locates the literal of A inside chi P v, signed by the
--- bit that v gives at that position.  Every projection of a conjunct of chi
--- goes through it.
+-- The projection lemma: a membership proof for A in sub P locates the literal
+-- of A inside chi P v, signed by v's bit at that position.  Every projection of
+-- a conjunct of chi goes through it.
 
 litList-mem : {A : Formula} (As : List Formula) (v : Val)
            -> length v ≡ length As

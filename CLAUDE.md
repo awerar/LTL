@@ -54,12 +54,15 @@ derivation or a certified finite lasso countermodel.
   (`St`, `Ust`, `Uinf`, `r1`/`r2`, `gfpW`, `wZero`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
   `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/Lib/Nodes.agda`.
-- Module headers cite goals G1–G40 of `FORMALISATION-PLAN.md` /
-  `PHASE11-PLAN.md` (gitignored, not in the repo; `docs/plan-index.md` lists
-  where each goal and checkpoint lives) and the lemma/theorem numbers of
-  `m4.tex` / `m5.tex`. Keep that comment style: long header comments that tie
-  the code to the note. Describe the code as it is, not how it got there:
-  development history belongs in git, not in comments.
+- Comments explain the code as it is today. A module header is about 5–15
+  lines: what the module provides and its one or two non-obvious design
+  choices. A comment above a definition is 1–4 lines, longer only for a subtle
+  proof step. No references to development goals (G1, G2, …), plans, phases,
+  checkpoints, or the lemma/theorem numbering of `m4.tex`/`m5.tex`; no history
+  ("used to", "now", "before …"), which belongs in git. The labels of axioms,
+  rules and conditions — (P1)–(P3), (L0)–(L7), (D1)–(D6), (S1)/(S2),
+  (T1)–(T3), (R1)/(R2), (Ind), (Lin), (Exp), (PC) — are the code's own
+  vocabulary and stay.
 - Computational `refl` checks go in `LTL/Tests/Checks.agda` (one section per module)
   or `LTL/Tests/GraphExamples.agda`, not in the proof modules.
 

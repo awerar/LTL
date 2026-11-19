@@ -1,18 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Tests.GraphExamples -- the computational checks of LTL.SCC.Graph, run on natural
--- numbers.
+-- LTL.Tests.GraphExamples -- the computational checks of LTL.SCC.Graph, at
+-- Node = Nat with _≡ⁿ_.
 --
--- LTL.SCC.Graph is parameterised by its node type, so it cannot run its own
--- checks; they live here, at  Node = Nat  with  _≡ⁿ_ .  That is also the point
--- of the module: the same fairGraph that LTL.SCC.SccLasso runs on valuations runs
--- here on numbers, with the same answers, because nothing in the graph layer
--- reads a node except through the equality test.  The vertices were one- and
--- two-bit valuations before the graph layer was made generic; the lists below
--- are unchanged, since the searches depend only on the order of the vertex
--- list.
---
--- Fast; nothing else imports it.
+-- LTL.SCC.Graph is parameterised by its node type, so its checks live here.
+-- Nothing in the graph layer reads a node except through the equality test,
+-- so the same fairGraph that runs on valuations runs here on numbers.
 
 module LTL.Tests.GraphExamples where
 
@@ -21,12 +14,9 @@ open import LTL.SCC.Graph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
 open import LTL.Lib.Nodes _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl using (_∈ᵛ_; Edges; Pred)
 
 ------------------------------------------------------------------------
--- The first graph.
---
--- Two vertices,  a = 0  and  b = 1 , with every edge pointing at b: a -> b and
--- b -> b.  So b's component is terminal and non-trivial, a's is not terminal,
--- and the answer depends only on which vertex the fairness predicate asks for.
--- The g in gA, gB, gVs, gE, ... stands for "graph"; they are test data only.
+-- The first graph: a = 0 and b = 1, with a -> b and b -> b.  b's component
+-- is terminal and non-trivial, a's is not, so the answer depends only on which
+-- vertex the fairness predicate asks for.
 
 gA : Nat
 gA = 0
@@ -64,16 +54,11 @@ fair-gA : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gA) ∷ []) gA here) ≡ fa
 fair-gA = refl
 
 ------------------------------------------------------------------------
--- A second graph, which exercises everything the first does not.
+-- A second graph:  p -> q ,  q -> s ,  s -> q .
 --
---   p -> q ,  q -> s ,  s -> q
---
--- p is transient and {q,s} is a two-vertex recurrent component, so: findTerm
--- has to move the representative once (p's component is not terminal), the
--- circuit has two legs to concatenate rather than none, and on the unfair side
--- the certificate uses all three of its constructors -- cBlock removes {q,s},
--- then cSink removes p, which only becomes a sink once the component is gone,
--- then cNil.
+-- p is transient and {q,s} is recurrent, so findTerm moves the representative
+-- once, the circuit has two legs, and the certificate uses all three of its
+-- constructors: cBlock removes {q,s}, then p is a sink (cSink), then cNil.
 
 gP : Nat
 gP = 0
@@ -101,21 +86,15 @@ term-gQ = refl
 scc-gQ : map (λ z -> z ∈ᵛ sccOf gVs2 gE2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
 scc-gQ = refl
 
--- The lasso the fair branch returns, read off in full.
---
--- findTerm settles on s as the representative, so the stem is  p -> q -> s  and
--- the loop is  s -> q -> s .  Two fairness predicates, "is q" and "is s"; the
--- cycle is one leg per predicate followed by the bare loop, each leg being the
--- loop again then out to the witness and back --
+-- The lasso the fair branch returns.  findTerm settles on s, so the stem is
+-- p -> q -> s and the loop is s -> q -> s.  With the predicates "is q" and "is
+-- s", the cycle is one leg per predicate followed by the bare loop, each leg
+-- the loop again then out to the witness and back:
 --
 --   q s q s   for "is q" ,   q s   for "is s" ,   q s   the loop
 --
--- and the leg carries the loop in FRONT precisely so that the out-half is
--- non-empty and the witness is therefore a vertex the leg VISITS, not merely an
--- endpoint; for "is s" the out-half and the back-half are both empty, since the
--- witness is the representative, and only the leading loop makes that leg a
--- cycle through s at all.  This is the SCC construction choosing witnesses in
--- its own order, and it is not the shortest fair cycle -- q s would do.
+-- The loop goes in FRONT so that the witness is a vertex the leg visits.  It
+-- is not the shortest fair cycle; q s would do.
 
 loopCycle : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
          -> FairLoop vs G fs v -> List Nat
@@ -150,13 +129,9 @@ cycle-QS = refl
 fair-P : isInl (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
 fair-P = refl
 
--- The certificate it returns instead, as the list of its steps: 2 for cBlock,
--- 1 for cSink, 0 for cNil.  It is  cBlock, cSink, cNil  -- the component {q,s}
--- is refuted first because it misses "is p", and only then is p a sink, which is
--- the whole point of the backwards induction: p is refuted BECAUSE its successor
--- already was.  Reading this off is what certAll does with a formula attached.
--- certShape is LTL.Graph's, since LTL.SCC.SccExtract reads certificates the same
--- way.
+-- The certificate it returns instead, as the list of its steps:  cBlock,
+-- cSink, cNil .  The component {q,s} misses "is p" and is refuted first, and
+-- only then is p a sink: p is refuted because its successor already was.
 
 certSteps : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
          -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List CertStep

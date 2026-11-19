@@ -1,32 +1,19 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Hintikka -- G27 of FORMALISATION-PLAN.md.
+-- LTL.Countermodel.Hintikka -- Hintikka's lemma: on a run, the state's bit for
+-- a subformula agrees with its evaluation,
 --
---   "and by induction on formulas, using (T1) for Next, (S2) and (T2) for
---    Always A in v_i, and Lemma 5.4 for Always A not in v_i, that
---    A in v_i  iff  [[A]]_{v_i} = 1   (A in Sub(phi)),
---    which is Hintikka's lemma."                           -- m4.tex section 5
+--   valOf P (state at pos) A  =  evalAt P c0 c1 A pos       for A in sub P.
 --
--- Stated as an equality of Booleans rather than as a biconditional, which is
--- the same thing here and saves carrying two implications through five cases:
+-- By induction on A:
 --
---   valOf P (state at pos) A  =  evalAt P c0 c1 A pos       for A in Sub(P).
---
--- The five cases are the note's, one apparatus each:
---
---   var       nothing to do -- evalAt reads the state through valOf.
---   ¬, ⇒      (S1), through okAt at a state of U_inf.
---   ○         (T1), through all-at of stepAt at the transition posStep
---             supplies.
---   □         both halves.  If □ A is in the state, (T2) carries it along the
---             run -- □Along -- and (S2) turns it into A at each stage, and
---             every position of the orbit is such a stage.  If □ A is not in
---             the state, Lemma 5.4 hands over a position of the orbit at which
---             A fails, and one false conjunct refutes the conjunction.
---
--- Both halves of the □ case use exactly one lemma each: carry (T2, LTL.States.Step)
--- and globalFulfil (G24, LTL.Countermodel.Global).  Nothing else in the development is
--- needed.
+--   var       evalAt reads the state through valOf.
+--   ¬, ⇒      (S1), at a state of Uinf.
+--   ○         (T1), at the transition posStep supplies.
+--   □         If □ A is in the state, (T2) carries it along the run (carry)
+--             and (S2) gives A at every stage of the orbit.  If not,
+--             globalFulfil (LTL.Countermodel.Global) gives a position of the
+--             orbit where A fails, which refutes the conjunction.
 
 module LTL.Countermodel.Hintikka where
 
@@ -139,7 +126,7 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
             trans (sym (ih q (orbitValid P b c0 c1 mc0 wc stb pos q vp m)))
                   (□True B mA pos q vp m e)
 
-      -- □ B fails: Lemma 5.4 supplies the false conjunct
+      -- □ B fails: globalFulfil supplies the false conjunct
       allFalse : valOf P (posState pos) (□ B) ≡ false
               -> evalAt P c0 c1 (□ B) pos ≡ false
       allFalse e =

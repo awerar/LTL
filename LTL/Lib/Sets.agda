@@ -1,23 +1,16 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Lib.Sets -- lists as finite sets, over any element type: the searching,
--- filtering and counting lemmas the searches run on.  It imports only the
--- prelude.  The part that needs an equality TEST on the elements -- ∈ᵛ and the
--- hypothesis names Closed, NoneSat, HoldsOutside -- is LTL.Lib.Nodes, which is
--- parameterised by one.
---
--- _≤_ is used only inside barOfList (LTL.Lib.Nodes), the bridge from a Kuratowski
--- finite list to an inductively finite predicate (LTL.Lib.Bar); no search counts.
+-- LTL.Lib.Sets -- lists as finite sets over any element type: the searching,
+-- filtering and counting lemmas the searches run on.  The part that needs an
+-- equality test on the elements is LTL.Lib.Nodes.
 
 module LTL.Lib.Sets where
 
 open import LTL.Lib.Prelude public
 
 ------------------------------------------------------------------------
--- Order on Nat.
---
--- Only needed to say that filter shortens a list, which is what makes the
--- iteration below terminate.
+-- Order on Nat.  Only barOfList (LTL.Lib.Nodes) uses it, to bound the length
+-- of a list.
 
 infix 4 _≤_
 
@@ -41,11 +34,9 @@ lePred : {a b : Nat} -> suc a ≤ suc b -> a ≤ b
 lePred (leSuc l) = l
 
 ------------------------------------------------------------------------
--- Searching a list for a member that fails a boolean test.
---
--- This is the one case analysis the removing iteration performs: either some
--- state of W_i has a successor outside W_i, and the round removes it, or none
--- has and W_i is already closed.
+-- Searching a list for a member that fails a boolean test.  This is the case
+-- split every removing search makes: either some member fails and is removed,
+-- or all pass and the search stops.
 
 data FindResult {A : Set} (p : A -> Bool) (xs : List A) : Set where
   found   : (x : A) -> x ∈ xs -> p x ≡ false -> FindResult p xs
@@ -101,7 +92,7 @@ filter-prop p (y ∷ ys) m =
   filterCons-prop (p y) refl (filter p ys) m (filter-prop p ys)
 
 ------------------------------------------------------------------------
--- filter against length.  This is the whole termination argument.
+-- filter against length
 
 filter-le : {A : Set} (p : A -> Bool) (xs : List A)
          -> length (filter p xs) ≤ length xs

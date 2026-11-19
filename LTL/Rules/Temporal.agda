@@ -1,13 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Rules.Temporal -- G14 and G15 of FORMALISATION-PLAN.md.
+-- LTL.Rules.Temporal -- the derived temporal rules (D1)-(D6), and the list
+-- forms of (D4) that the step lemma needs.
 --
--- Lemma 1.2 of m4.tex, the derived temporal rules (D1)-(D6), together with the
--- list forms of (D4) that Lemma 2.7 needs.
---
--- (D6) is the one to watch: it is the converse of the □ A ⇒ A ∧ ○ □ A
--- half of (Exp), and it is load-bearing twice over -- in Lemma 2.5, to refute
--- valuations violating (S2), and in Lemma 2.7, for the (T3) case.
+-- (D6) is the converse of the  □ A ⇒ A ∧ ○ □ A  half of (Exp).  The
+-- refutation of non-states violating (S2) and the (T3) case of the step lemma
+-- both rely on it.
 
 module LTL.Rules.Temporal where
 
@@ -75,11 +73,9 @@ linBwd = mp ∧Snd lin
 ∨MonoR d = mp p2 (liftP d)
 
 ------------------------------------------------------------------------
--- (D4) for disjunction, over a list.
---
--- These are what Lemma 2.7 uses at both ends: ○⋁L1 to pass from
--- |- ○ (beta St) to |- ⋁ (map ○_ (map chi St)), and ○⋁L2 to come
--- back to |- chi v ⇒ ○ (beta (succs v)).
+-- (D4) for disjunction, over a list.  The step lemma uses ○⋁L1 to pass from
+-- ⊢ ○ (beta St) to ⊢ ⋁ (map ○_ (map chi St)), and ○⋁L2 to come back to
+-- ⊢ chi v ⇒ ○ (beta (succs v)).
 
 ○⋁L1 : (As : List Formula)
     -> ⊢ ○ ⋁ As ⇒ ⋁ (map ○_ As)
@@ -92,11 +88,8 @@ linBwd = mp ∧Snd lin
 ○⋁L2 (A ∷ As) = ⇒Trans (∨MonoR (○⋁L2 As)) ○∨2
 
 ------------------------------------------------------------------------
--- (D4) for conjunction, the direction (D6) needs.
---
--- Derived without a formula-level conjunction introduction: ○ (A ∧ B) is
--- ○ ¬ X with X = A ⇒ ¬ B, which by (Lin) is ¬ ○ X, and
--- ○ X together with ○ A gives ○ ¬ B, hence ¬ ○ B.
+-- (D4) for conjunction, the direction (D6) needs.  ○ (A ∧ B) is ○ ¬ X with
+-- X = A ⇒ ¬ B, which by (Lin) is ¬ ○ X; and ○ X with ○ A gives ○ ¬ B.
 
 ○∧Intro : {A B : Formula}
        -> ⊢ ○ A ∧ ○ B ⇒ ○ (A ∧ B)
@@ -115,7 +108,7 @@ linBwd = mp ∧Snd lin
     hNB = ⇒TransU (mpU2 (liftP k○) (⇒Trans ∧Fst p1)) (liftP linFwd)
 
 ------------------------------------------------------------------------
--- G15 : (D5) and (D6)
+-- (D5) and (D6)
 
 indRule : {A : Formula}
        -> ⊢ A ⇒ ○ A -> ⊢ A ⇒ □ A

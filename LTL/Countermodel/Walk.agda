@@ -1,24 +1,16 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Walk -- finite ->-paths, materialised as lists.
---
--- LTL.Elimination.Gfp already has Path, which is what Reach_U(v) is in m4.tex section 3;
--- that is the right form for gfpSound and gfpComplete, where nothing is ever
--- built.  The lasso branch builds: a lasso is two paths, and the evaluation of
--- G25 indexes into them.  So the same relation is given again
--- carrying the list of states it visits, and indexed by its endpoint:
+-- LTL.Countermodel.Walk -- finite paths of the transition relation, carrying
+-- the list of states they visit:
 --
 --   Walk P us v ws x   --  v -> ws_1 -> ... -> ws_n = x, every ws_i in us
 --
--- Indexing by the endpoint rather than computing it with a "last" function is
--- what keeps the concatenations below free of equational bookkeeping.
+-- Indexing by the endpoint keeps concatenation free of bookkeeping.  (Path of
+-- LTL.Elimination.Gfp is the same relation without the list, for proofs that
+-- build nothing.)
 --
--- The one substantial lemma is walkPersist: along a walk, an eventuality
--- pending at the start is either fulfilled at a state visited, or still pending
--- at the endpoint.  That is Lemma 2.8 of the note (persistence, discharged in
--- LTL.States.Step as `persist`) propagated along a path, and it is what the
--- cycle-fulfilment property of a lasso (LTL.SCC.SccLasso) and the trap of
--- LTL.Procedures.DecideSCC turn on.
+-- The main lemma is walkPersist: along a walk, an eventuality pending at the
+-- start is either fulfilled at a state visited, or still pending at the end.
 
 module LTL.Countermodel.Walk where
 
@@ -54,10 +46,8 @@ module _ (P : Formula) where
   walkIn us (wcons mw st wk) (there m) = walkIn us wk m
 
 ------------------------------------------------------------------------
--- The tail of a walk starting at any state it visits.
---
--- Needed for the cycle-fulfilment property: "travelling along the cycle from
--- s" of the proof of Proposition 5.3.
+-- The tail of a walk from any state it visits.  The cycle-fulfilment proof of
+-- sccLasso walks along the cycle from an arbitrary state with it.
 
 data SubWalk (P : Formula) (us : List Val) (s x v : Val) (ws : List Val) : Set where
   subWalk : (zs : List Val) -> Walk P us s zs x
@@ -83,8 +73,8 @@ data Fulfil (P : Formula) (A : Formula) (v : Val) (ws : List Val) : Set where
   ful : (z : Val) -> z ∈ v ∷ ws -> valOf P z A ≡ false -> Fulfil P A v ws
 
 -- FulfilledAt P b qs s: every box pending at s is fulfilled on the cycle
--- b ∷ qs.  AllFulfilled P b qs ss: this holds at every s in ss.  These are the
--- fulfilment hypotheses of Lasso, Run and Lemma 5.4.
+-- b ∷ qs.  AllFulfilled P b qs ss: this holds at every s in ss.  Lasso, Run
+-- and LTL.Countermodel.Global use them.
 
 FulfilledAt : Formula -> Val -> List Val -> Val -> Set
 FulfilledAt P b qs s =
@@ -100,12 +90,9 @@ fulfilCons : {P A : Formula} {v w : Val} {ws : List Val}
 fulfilCons (ful z m q) = ful z (there m) q
 
 ------------------------------------------------------------------------
--- Persistence along a walk (Lemma 2.8, propagated).
---
--- If □ A is pending at v then, walking to x, either A fails somewhere along
--- the way -- the eventuality is fulfilled -- or □ A is still pending at x.
--- The step is exactly `persist`: □ A pending at v together with A holding at
--- v forces □ A pending at the successor, which is (T3).
+-- Persistence along a walk.  If □ A is pending at v then, walking to x,
+-- either A fails somewhere on the way (the eventuality is fulfilled) or □ A
+-- is still pending at x.  Each step is `persist`, i.e. (T3).
 
 walkPersist : (P : Formula) (us : List Val) (A : Formula) -> □ A ∈ sub P
            -> {v : Val} {ws : List Val} {x : Val} -> Walk P us v ws x

@@ -1,40 +1,19 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.Lib.Bar -- inductively finite sets, after Coquand and Siles, "A Decision
--- Procedure for Regular Expression Equivalence in Type Theory" (CPP 2011), §1.
+-- Procedure for Regular Expression Equivalence in Type Theory" (CPP 2011).
 --
 --   Bar R E   holds when, starting from E and repeatedly picking an x and
 --             passing to  E intersect (R x) , one always stops.
 --
--- With R the complement of equality this says: one cannot go on choosing
--- DISTINCT elements of E forever.  Every search of the development recurses on
--- a Bar (G29): shrinkGo (LTL.Elimination.Gfp), elimGo (LTL.Elimination.Elim), lassoSearch (LTL.Countermodel.Lasso),
--- and closeGo (LTL.States.Closure, G30), whose accumulator GROWS, so that no
--- decreasing length would justify it at all.
+-- With R the complement of equality: one cannot choose distinct elements of E
+-- forever.  Every search in the development recurses on a Bar, including
+-- closeGo (LTL.States.Closure), whose accumulator grows and so has no
+-- decreasing measure.  Subsets are Boolean predicates, which keeps Bar in Set.
 --
--- Subsets are taken DECIDABLE, as boolean predicates, rather than as
--- Prop-valued ones.  Everything this development quantifies over is decidable,
--- and it keeps Bar in Set rather than Set1.
---
--- This module is the generic half: Bar and its closure under union, product
--- and pullback, for any element type.  It imports only LTL.Lib.Sets, so the graph
--- layer (LTL.SCC.Graph) can use it at any node type.  The two suppliers of Bars
--- live elsewhere, and they are used for different things.
---
---   barOfList / listBar (LTL.Lib.Nodes) -- a Kuratowski finite list gives a
---     Bar.  Right when the search removes from a list that is already in hand
---     and whose length one is willing to pay for once: W_0 in LTL.Elimination.Gfp, U_inf
---     in LTL.Countermodel.Lasso.
---
---   vecIFin / guardedVecBar (LTL.States.VecBar) -- the vectors of a given length
---     are inductively finite, by induction on the length, in O(n) rather than
---     2^n.  Right when there is no such list: the elimination, which is not to force
---     length (Ust P) merely to bound itself, and above all the closure of
---     LTL.States.Closure, which GROWS and so has no decreasing measure at all.
---
--- The second is the useful direction and the hard one: the paper notes that the
--- product lemma is essentially the proof that a product of well-quasi-orderings
--- is one.
+-- This module is generic: Bar and its closure under union, product and
+-- pullback.  Bars are supplied by listBar (LTL.Lib.Nodes, from a list in hand)
+-- and guardedVecBar (LTL.States.VecBar, the vectors of a given length).
 
 module LTL.Lib.Bar where
 
@@ -95,11 +74,9 @@ barMono {R = R} {E = E} {F = F} sb (cBar h) =
 ∧∨-split false f     r     s ()
 
 ------------------------------------------------------------------------
--- Union.  Lemma 1, second bullet.
---
--- Double induction: on the first witness for the G-case, on the second for
--- the H-case.  barMono does the work that would otherwise need funext, since
--- Bar is indexed by the predicate and the two sides are only pointwise equal.
+-- Union.  Double induction: on the first witness for the G-case, on the
+-- second for the H-case.  barMono replaces funext, since the two sides are
+-- only pointwise equal predicates.
 
 barUnion : {A : Set} {T : A -> A -> Bool} {G H : A -> Bool}
         -> Bar T G -> Bar T H -> Bar T (λ y -> G y ∨ᵇ H y)
@@ -127,7 +104,7 @@ barUnion {A} {T} {G} {H} (cBar hg) bh = inner H bh
                       (inner (λ y -> H' y ∧ᵇ T x y) (hh x eh))
 
 ------------------------------------------------------------------------
--- Product.  Lemma 1, fourth bullet -- the load-bearing one.
+-- Product: the load-bearing closure lemma.
 
 prodPred : {A B : Set} -> (A -> Bool) -> (B -> Bool) -> A × B -> Bool
 prodPred E F (x , y) = E x ∧ᵇ F y

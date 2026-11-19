@@ -1,18 +1,13 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Complete -- G17 of FORMALISATION-PLAN.md, Lemma 2.6 of m4.tex.
+-- LTL.States.Complete -- state completeness: ⊢ beta P (St P).
 --
---   stateComplete : ⊢ beta P (St P)
---
--- Two steps.  First the disjunction over ALL valuations, by structural
--- induction along sub P: each step splits on the next formula with splitD
--- (L6).  Then the non-states are dropped by ⋁Drop, using nonState (G16).
---
--- The work is in lining up the shapes: allVecs (suc n) is built by consing
--- true and false onto allVecs n and appending, while splitOn conjoins A and
--- ¬ A onto a list of formulas and appends.  stepEq says these agree once
--- chi is applied, and it holds because  ⋀ (litList (A ∷ As) (b ∷ w))
--- reduces to  (lit A b) ∧ ⋀ (litList As w).
+-- First the disjunction over ALL valuations, by induction along sub P,
+-- splitting on the next formula with (L6) (splitD).  Then the non-states are
+-- dropped with ⋁Drop and nonState.  stepEq lines up the shapes: allVecs
+-- (suc n) and splitOn both cons onto a list and append, and agree once chi is
+-- applied.  The proof is exponential in |sub P|; LTL.Procedures.CompletePC
+-- proves the same formula with (PC).
 
 module LTL.States.Complete where
 
@@ -101,7 +96,7 @@ allVecs-allLen (suc n) =
   ⇒Trans (⋁Drop (map (chi P) vs) (nonState P v len e)) (⋁Filter P vs al)
 
 ------------------------------------------------------------------------
--- Lemma 2.6
+-- State completeness
 
 stateComplete : (P : Formula) -> ⊢ beta P (St P)
 stateComplete P =

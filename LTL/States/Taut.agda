@@ -1,52 +1,28 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Taut -- G32 of FORMALISATION-PLAN.md and G34 of PHASE10-PLAN.md,
--- boolean half.
+-- LTL.States.Taut -- Boolean facts about how the skeleton evaluation valFrom
+-- reads lit, ⋀, ⋁, chi and beta.  They are the side conditions of the pc
+-- nodes built in LTL.Procedures.CompletePC and LTL.SCC.SccExtract; no
+-- derivation appears here.
 --
--- (PC) asks that a formula be a tautology of its own skeleton: isTaut A runs
--- valFrom over the truth table of atomsOf A (LTL.Syntax.Skel).  The two formulas
--- LTL.Procedures.CompletePC feeds it are built by the list constructions of LTL.States.Val --
--- lit, ⋀, ⋁, chi and beta -- so what is needed is how valFrom reads
--- those, and that is all this module is.  No derivation appears in it.
+-- Every lemma fixes one atom list Ats and one row a.  valFrom depends on Ats,
+-- so readings under different atom lists are unrelated, and each caller uses
+-- atomsOf of the one formula its pc node proves.  (The mkV lemmas of
+-- LTL.States.Closure use atoms (sub P), a different list, and do not apply.)
 --
--- Two things to keep in mind while reading, both of them warnings.
---
--- ONE ATOM LIST.  valFrom Ats a X depends on Ats: indexOf picks a FIRST
--- occurrence, so two atom lists give two different readings of the same formula
--- and there is no transport between them.  Every lemma here therefore takes
--- Ats and a as parameters and fixes them; each caller in LTL.Procedures.CompletePC
--- instantiates them with atomsOf of the single formula its pc step is about,
--- and nothing is ever moved from one atom list to another.
---
--- NOT mkV.  LTL.States.Closure does the same construction with Ats := atoms (sub P) --
--- mkV, atomBits, valFromEq, mkV-id -- and those are the wrong lemmas here: the
--- atom list of a (PC) formula is a different, larger list, if only because
--- ⋀ [] is ⊤ and so contributes var 0.  They would appear to typecheck and
--- then fail on an indexOf.  valOfSkelVec below is the bridge that is actually
--- wanted, and it is one instance of atomLook.
---
--- The last section is the point.  Fix Ats and a; then
---
---     skelVec Ats a P  =  map (valFrom Ats a) (sub P)
---
--- is a STATE of P as soon as the (S2) instances hold under the same reading:
--- (S1) and coherence come for free, because valFrom is compositional on ¬ and
--- ⇒ BY DEFINITION and because valOfSkelVec makes the bit at a position depend
--- on the formula there rather than on the position.  That is the whole content
--- of the short Lemma 2.6, and the (S2) proviso is exactly the premise -- the E
--- P of section 7 -- that LTL.Procedures.CompletePC discharges with |□Args| instances of
--- (T), one modus ponens each.
+-- The central fact: skelVec Ats a P = map (valFrom Ats a) (sub P) is a state
+-- of P as soon as the (S2) instances hold in row a.  (S1) and coherence are
+-- free, since valFrom is compositional on ¬ and ⇒ by definition.  So beta P
+-- (St P) is true in every row satisfying (S2), which is state completeness as
+-- a Boolean fact.
 
 module LTL.States.Taut where
 
 open import LTL.States.State public
 
 ------------------------------------------------------------------------
--- Membership, as a boolean.
---
--- From a membership proof to the Boolean A ∈ᶠ As.  It is what turns a
--- membership proof into the side condition of atomLook, so it is the only thing
--- standing between A ∈ sub P and the bridge below.
+-- Membership, as a boolean: what turns a membership proof into the side
+-- condition of atomLook.
 
 ∈ᶠ-mem : (As : List Formula) {A : Formula} -> A ∈ As -> A ∈ᶠ As ≡ true
 ∈ᶠ-mem []       ()
@@ -55,12 +31,9 @@ open import LTL.States.State public
   ∨ᵇ-introʳ (B ≡ᶠ A) (A ∈ᶠ Bs) (∈ᶠ-mem Bs m)
 
 ------------------------------------------------------------------------
--- The skeleton reads ∨ and ∧ as one expects.
---
--- C ∨ D is ¬ C ⇒ D and C ∧ D is ¬ (C ⇒ ¬ D), so these two are
--- boolean identities and not inductions; they are stated at the shapes the list
--- constructions produce, so that ⋁True and ⋀True below are two lines
--- each.
+-- The skeleton reads ∨ and ∧ as expected.  C ∨ D is ¬ C ⇒ D and C ∧ D is
+-- ¬ (C ⇒ ¬ D), so these are Boolean identities, stated at the shapes the
+-- list constructions produce.
 
 skel∨Inl : (x y : Bool) -> x ≡ true -> ¬ᵇ x ⇒ᵇ y ≡ true
 skel∨Inl true  y e = refl
@@ -73,12 +46,8 @@ skel∧Intro true  false e1 ()
 skel∧Intro false y     () e2
 
 ------------------------------------------------------------------------
--- ⋁ and ⋀ under the skeleton.
---
--- ⋁ is true as soon as one disjunct is and ⋀ as soon as all conjuncts
--- are.  The empty cases are the convention of Lemma 1.1: ⋁ [] is ⊥, which
--- never has to be true, and ⋀ [] is ⊤, which is  var 0 ⇒ var 0  and so
--- true by ⇒ᵇ-refl whatever the atom list makes of var 0.
+-- ⋁ is true as soon as one disjunct is, ⋀ as soon as all conjuncts are.  The
+-- empty ⋀ is ⊤, which is  var 0 ⇒ var 0  and true whatever the row says.
 
 ⋁True : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
      -> C ∈ Cs -> valFrom Ats a C ≡ true
@@ -99,13 +68,9 @@ skel∧Intro false y     () e2
              (h here) (⋀True Ats a Cs (λ m -> h (there m)))
 
 ------------------------------------------------------------------------
--- The characteristic formula of the row the assignment itself gives.
---
--- Read the atoms by a, read every formula of As by the skeleton, and collect
--- the answers: the literals of the resulting chi are true one by one, since
--- lit A true is A and lit A false is ¬ A and valFrom is ¬ᵇ at ¬.  So
--- chi of that row is true -- which is the witness disjunct for both of the
--- tautologies of LTL.Procedures.CompletePC.
+-- The chi of the row the assignment itself gives is true: its literals are
+-- true one by one.  This is the witness disjunct for the tautologies of
+-- LTL.Procedures.CompletePC.
 
 litTrue : (Ats : List Formula) (a : Val) (A : Formula)
        -> valFrom Ats a (lit A (valFrom Ats a A)) ≡ true
@@ -127,13 +92,9 @@ chiRowTrue Ats a As =
            (λ m -> litListTrue Ats a As m)
 
 ------------------------------------------------------------------------
--- The bridge: the vector a truth-table row gives, read by valOf.
---
--- skelVec is mkV of LTL.States.Closure with the atom list left free, and valOfSkelVec
--- is the corresponding valFromEq.  The proof is not an induction at all: valOf
--- looks a formula up by indexOf, skelVec is a map, and atomLook (LTL.Syntax.Skel) is
--- exactly the round trip between those two, needing only that the formula
--- occurs -- which ∈ᶠ-mem supplies.
+-- The bridge: the vector a truth-table row gives, read by valOf.  skelVec is
+-- mkV of LTL.States.Closure with the atom list left free; valOfSkelVec is
+-- atomLook (LTL.Syntax.Skel), needing only that the formula occurs.
 
 skelVec : List Formula -> Val -> Formula -> Val
 skelVec Ats a P = map (valFrom Ats a) (sub P)
@@ -145,17 +106,10 @@ valOfSkelVec P Ats a A m =
   atomLook (valFrom Ats a) (sub P) A (∈ᶠ-mem (sub P) m)
 
 ------------------------------------------------------------------------
--- skelVec is a state, given (S2).
---
--- (S1) at ¬ and at ⇒, and coherence at every position, hold for no reason
--- at all: valOfSkelVec says the bit at A is valFrom's reading of A, and valFrom
--- IS ¬ᵇ at ¬ and ⇒ᵇ at ⇒.  This is the same observation that makes the
--- (PC) case of soundness one line (LTL.Countermodel.Sound) -- there against evalAt, here
--- against the vector's own valOf.
---
--- (S2) is the one clause that is not free, and it is not free because it is not
--- true of an arbitrary row: □ A and A are two independent atoms of the
--- skeleton.  So it is assumed, as □Ok, and the caller pays for it.
+-- skelVec is a state, given (S2).  (S1) and coherence hold because the bit at
+-- A is valFrom's reading of A (valOfSkelVec), and valFrom is ¬ᵇ at ¬ and ⇒ᵇ
+-- at ⇒.  (S2) does not hold in an arbitrary row, since □ A and A are
+-- independent atoms; it is assumed, as □Ok, and the caller pays for it.
 
 -- The instance □ A ⇒ A of (S2) as a formula.
 
@@ -197,10 +151,8 @@ allOkSkel Ats a P As sb boxOk =
             (λ {A} m -> okAtSkel Ats a P A (sb m) boxOk)
 
 -- Coherence.  The bit at position i is the skeleton's reading of the formula
--- AT position i, by nth-map, and the bit at the first occurrence of that same
--- formula is the same reading, by valOfSkelVec.  So the two agree, which is
--- what cohAt asks; the vector represents a function on the SET Sub(P), which is
--- the clause of FORMALISATION-PLAN.md section 0.
+-- there (nth-map), and so is the bit at that formula's first occurrence
+-- (valOfSkelVec), so the two agree.
 
 cohAtSkel : (Ats : List Formula) (a : Val) (P : Formula) (i : Nat)
          -> i < length (sub P)
@@ -238,11 +190,9 @@ memStSkel Ats a P boxOk =
               (isStateSkel Ats a P boxOk)
 
 ------------------------------------------------------------------------
--- Hence beta_{St P} is true under any row satisfying (S2).
---
--- chi P (skelVec Ats a P) is one of its disjuncts, by memStSkel, and it is
--- true, by chiRowTrue at As := sub P.  That is Lemma 2.6 as a boolean fact,
--- and LTL.Procedures.CompletePC turns it into a one-node derivation.
+-- Hence beta P (St P) is true in any row satisfying (S2): chi P (skelVec Ats
+-- a P) is a disjunct (memStSkel) and is true (chiRowTrue).
+-- LTL.Procedures.CompletePC turns this into a one-node derivation.
 
 betaSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
         -> valFrom Ats a (beta P (St P)) ≡ true
@@ -254,24 +204,15 @@ betaSkel Ats a P boxOk =
 ------------------------------------------------------------------------
 -- The (S2) instances, discharged one at a time.
 --
--- (S2) is assumed above, so it has to appear as a premise of the formula the
--- pc node proves.  section 7 makes it a CONJUNCTION over □Args (sub P); an
--- implication chain is better, and measurably so.  A conjunction has to be
--- built by (L2), and ⋀Intro goes through ∧Pair, which goes through
--- ¬IntroU and dne: 239 constructors to conjoin a single instance of (T)
--- against the 47 the instance itself costs.  An iterated implication is
--- discharged by one modus ponens per premise, so the certificate is
+-- (S2) is assumed above, so it is a premise of the formula the pc node
+-- proves.  It is an implication chain rather than a conjunction: a conjunction
+-- is built by (L2) through ∧Pair, about 239 constructors per instance of (T),
+-- while each premise of a chain is discharged by one modus ponens.  The
+-- certificate is then  |□Args (sub P)| * (1 + |□Elim|) + 1  exactly.
 --
---     |□Args (sub P)| * (1 + |□Elim|) + 1
---
--- exactly, with no propositional glue at all.  That is the linear-in-the-
--- eventualities figure the phase is after, and it is why ⋀ does not appear
--- here even though the note's (L2) would have supplied it.
---
--- ⇒Chain is the boolean half, and it says the only thing an implication
--- chain ever says: reading it as true is the same as assuming its premises.
--- □Chain is that at As := map s2Fml (□Args (sub P)), where the premises are
--- (S2); the caller turns a box-subformula into a member with □Args-of.
+-- ⇒Chain says that reading a chain as true is assuming its premises; □Chain is
+-- that at the (S2) instances.  The caller turns a box-subformula into a member
+-- with □Args-of.
 
 ⇒List : List Formula -> Formula -> Formula
 ⇒List []       C = C
@@ -292,8 +233,7 @@ betaSkel Ats a P boxOk =
     more eA g here      = eA
     more eA g (there m) = g m
 
--- (S2) holds in row a at each B of As: □ B true implies B true.  It is □Ok
--- indexed by a list.
+-- (S2) holds in row a at each B of As: □ B true implies B true.
 
 S2At : List Formula -> Val -> List Formula -> Set
 S2At Ats a As = (B : Formula) -> B ∈ As
@@ -308,20 +248,12 @@ S2At Ats a As = (B : Formula) -> B ∈ As
 ------------------------------------------------------------------------
 -- (L5), as a boolean.
 --
--- This is the same move again, one level down, and it is where the certificate
--- actually is.  ⋁Elim (LTL.Rules.PropList) proves  (C1 ∨ ... ∨ Cn) ⇒ C  from
--- the n implications Ci -> C, and it is the note's own (L5): A ∨ B is
--- ¬ A ⇒ B, so the elimination has to contrapose and double-negate at every
--- cons, which measures 426 constructors PER DISJUNCT.  For the certificate that
--- is the dominant cost -- 1280 of the 1529 for □ p ⇒ p -- and it grows with
--- the number of states.
---
--- But the implication it proves is a tautology of its own skeleton, exactly as
--- Lemma 2.6's is, so it can be one pc node with the n branches discharged by
--- modus ponens.  What follows is its truth: given the premises and a true
--- disjunction, walk the disjunction until a true disjunct is found and use the
--- premise there.  The empty case is (L0) -- ⋁ [] is ⊥, which cannot be
--- true, and ⇒ᵇ-refl is what says so.
+-- ⋁Elim (LTL.Rules.PropList) derives  (C1 ∨ ... ∨ Cn) ⇒ C  from the n
+-- implications at about 426 constructors per disjunct, which would dominate a
+-- certificate.  The implication is a tautology of its skeleton, so it can be
+-- one pc node with the n branches discharged by modus ponens (betaElimPC).
+-- This is its truth: walk the disjunction to a true disjunct and use the
+-- premise there.
 
 infixl 20 _⇐_
 
@@ -348,28 +280,16 @@ C ⇐ D = D ⇒ C
     ... | false = go Ds (λ m -> k (there m)) e
 
 ------------------------------------------------------------------------
--- G34 of PHASE10-PLAN.md: the branch as one node.
+-- A state not containing ¬ Q, as one node.
 --
--- The last term of the certificate that is neither constant nor linear-with-
--- constant-one is the 67 constructors per state that does not contain ¬ Q
--- (provableEachSCC, LTL.SCC.SccExtract), if derived: project  ¬ ¬ Q  out of
--- chi_w by (L2), 39, then cancel the double negation, 23, then (L1), 5.
---
--- But  chi_w ⇒ Q  is a TAUTOLOGY OF ITS OWN SKELETON whenever w does not
--- contain ¬ Q, and for the same reason the derivation works: chi_w is a
--- conjunction one of whose conjuncts is  lit (¬ Q) (valOf (¬ Q) w (¬ Q))
--- -- and the hypothesis says that bit is false, so the conjunct is
--- ¬ ¬ Q.  A conjunction implies its conjuncts, and valFrom is ¬ᵇ at
--- ¬ by definition, so a row making chi_w true makes  not not Q  true and
--- hence Q.  Nothing about Q's own structure is used; Q is read by the skeleton
--- like anything else.
---
--- So this is the same move as G32 one more time, at the last place it had not
--- been made: a propositional step DECIDED rather than derived.
+-- For a state w of ¬ Q with the bit at ¬ Q false,  chi_w ⇒ Q  is a skeleton
+-- tautology: chi_w has the conjunct  lit (¬ Q) false = ¬ ¬ Q , and valFrom is
+-- ¬ᵇ at ¬.  So (PC) proves it in one node where projecting and cancelling the
+-- double negation takes 67 constructors.
 
 ------------------------------------------------------------------------
--- ∧, read out rather than built up.  skel∧Intro above is the introduction; a
--- projection needs the two eliminations.
+-- ∧, read out: a projection needs the two eliminations (skel∧Intro above is
+-- the introduction).
 
 skel∧Fst : (x y : Bool) -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
         -> x ≡ true
@@ -395,12 +315,8 @@ skel∧Snd false y     ()
                (skel∧Snd (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e)
 
 ------------------------------------------------------------------------
--- The literal of P itself inside chi P w.
---
--- sub P begins with P (LTL.Syntax.Sub) and P ≡ᶠ P is true, so indexOf finds it at
--- position zero, which is also where sub-self points.  The five clauses are
--- the five clauses of sub-self, and each is the same one line: nothing is
--- proved by induction, only that the head of sub P is P.
+-- The literal of P itself inside chi P w.  sub P begins with P, and P ≡ᶠ P is
+-- true, so indexOf finds it at position zero, where sub-self points.
 
 idxSelf : (P : Formula) -> indexOf (sub P) P ≡ index (sub-self P)
 idxSelf (var n) = cong (λ b -> indexOfCons b (indexOf [] (var n))) (≡ᶠ-refl (var n))
@@ -419,11 +335,7 @@ litSelf P w len =
         (litList-mem (sub P) w len (sub-self P))
 
 ------------------------------------------------------------------------
--- G34.
---
--- The state w is one of Sub (¬ Q)'s valuations and it does not contain
--- ¬ Q; then  chi_w ⇒ Q  is a skeleton tautology, so (PC) proves it in one
--- node where the projection-and-double-negation proof takes 67.
+-- chi_w ⇒ Q is a skeleton tautology when w does not contain ¬ Q.
 
 tautChi : (Q : Formula) (w : Val) -> length w ≡ length (sub (¬ Q))
        -> valOf (¬ Q) w (¬ Q) ≡ false
@@ -452,86 +364,3 @@ tautChi Q w len ev =
         step ec =
           ¬ᵇ¬ᵇ-true (valFrom Ats a Q)
                     (⋀ProjTrue Ats a (litList (sub R) w) mneg ec)
-
-------------------------------------------------------------------------
--- G35 of PHASE10-PLAN.md: chi over atoms, boolean half.
---
--- chi P v is a conjunction of |Sub P| literals where |atoms (sub P)| would do:
--- (S1) determines the bit at ¬ A from the bit at A and the bit at A ⇒ B
--- from those at A and B, so the literals at the non-atomic positions are
--- redundant.  For ¬ (□ p ⇒ □ ○ p) that is 7 conjuncts against 4, with
--- ¬ bnb listed twice and p twice; for ¬ axK5fwd it is 22 against 8.
---
--- What is needed to exploit that is one fact -- a row of the skeleton table
--- that agrees with a state on the ATOMS agrees with it everywhere -- and it is
--- skelEval (LTL.Syntax.Skel) with the assignment left free instead of being map f Ats.
--- The five clauses are skelEval's five clauses; only the hypothesis changes.
-
-∈ᶠ-sound : (As : List Formula) (A : Formula) -> A ∈ᶠ As ≡ true -> A ∈ As
-∈ᶠ-sound []       A ()
-∈ᶠ-sound (B ∷ Bs) A e with B ≡ᶠ A in eb
-... | true  = subst (λ X -> X ∈ B ∷ Bs) (≡ᶠ-sound B A eb) here
-... | false = there (∈ᶠ-sound Bs A e)   -- e now says A ∈ᶠ Bs ≡ true
-
--- the atoms of a list are members of it
-
-insFIn : (A : Formula) (Bs : List Formula) {X : Formula}
-      -> X ∈ insF A Bs -> X ≡ A ⊎ X ∈ Bs
-insFIn A Bs {X} m with A ∈ᶠ Bs
-... | true  = inr m   -- A was already there, so m : X ∈ Bs
-... | false = onM m   -- A was inserted, so m : X ∈ A ∷ Bs
-  where
-    onM : X ∈ A ∷ Bs -> X ≡ A ⊎ X ∈ Bs
-    onM here      = inl refl
-    onM (there k) = inr k
-
-atomsIn : (As : List Formula) {X : Formula} -> X ∈ atoms As -> X ∈ As
-atomsIn []           ()
-atomsIn (var n ∷ As) {X} m =
-  sumElim (λ e -> subst (λ Y -> Y ∈ var n ∷ As) (sym e) here)
-          (λ k -> there (atomsIn As k)) (insFIn (var n) (atoms As) m)
-atomsIn (¬ B   ∷ As) m = there (atomsIn As m)
-atomsIn (B ⇒ C ∷ As) m = there (atomsIn As m)
-atomsIn (○ B   ∷ As) {X} m =
-  sumElim (λ e -> subst (λ Y -> Y ∈ ○ B ∷ As) (sym e) here)
-          (λ k -> there (atomsIn As k)) (insFIn (○ B) (atoms As) m)
-atomsIn (□ B   ∷ As) {X} m =
-  sumElim (λ e -> subst (λ Y -> Y ∈ □ B ∷ As) (sym e) here)
-          (λ k -> there (atomsIn As k)) (insFIn (□ B) (atoms As) m)
-
-------------------------------------------------------------------------
--- Literals, read in both directions.
-
-litMapMem : (f : Formula -> Bool) (As : List Formula) {X : Formula}
-         -> X ∈ As -> lit X (f X) ∈ litList As (map f As)
-litMapMem f []       ()
-litMapMem f (A ∷ As) here      = here
-litMapMem f (A ∷ As) (there m) = there (litMapMem f As m)
-
-------------------------------------------------------------------------
--- The fact G35 turns on.
---
--- A row that agrees with a state on the atoms of Sub P agrees with it on all of
--- Sub P.  This is skelEval with the assignment a free rather than map f Ats:
--- the induction is the same, and the two non-atomic clauses are (S1) read out
--- of allOk, exactly as valFromEq (LTL.States.Closure) does.
-
-skelAgree : (Ats : List Formula) (a : Val) (P : Formula) (v : Val)
-         -> allOk P v (sub P) ≡ true
-         -> ((X : Formula) -> X ∈ sub P -> isAtomB X ≡ true
-               -> valFrom Ats a X ≡ valOf P v X)
-         -> (A : Formula) -> A ∈ sub P
-         -> valFrom Ats a A ≡ valOf P v A
-skelAgree Ats a P v ok at (var n) m = at (var n) m refl
-skelAgree Ats a P v ok at (○ A)   m = at (○ A) m refl
-skelAgree Ats a P v ok at (□ A)   m = at (□ A) m refl
-skelAgree Ats a P v ok at (¬ A)   m =
-  trans (cong ¬ᵇ_ (skelAgree Ats a P v ok at A (sub-¬ P m)))
-        (sym (⇔ᵇ-sound (valOf P v (¬ A)) (¬ᵇ valOf P v A)
-                       (all-at (okAt P v) (sub P) m ok)))
-skelAgree Ats a P v ok at (A ⇒ B) m =
-  trans (cong₂ _⇒ᵇ_ (skelAgree Ats a P v ok at A (sub-⇒L P m))
-                    (skelAgree Ats a P v ok at B (sub-⇒R P m)))
-        (sym (⇔ᵇ-sound (valOf P v (A ⇒ B))
-                       (valOf P v A ⇒ᵇ valOf P v B)
-                       (all-at (okAt P v) (sub P) m ok)))

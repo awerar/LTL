@@ -1,22 +1,17 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Procedures.Answer -- what a decision procedure returns, Theorem 6.1 of
--- m4.tex.
+-- LTL.Procedures.Answer -- what the decision procedure returns,
 --
 --   ⊢ Q ⊎ LassoCountermodel Q
 --
--- Either a derivation of Q, or a lasso countermodel: a run through states that
--- survive the elimination, on which Q evaluates to 0 at stage 0, together with
--- the function turning any derivation of Q into Empty.  Neither branch is
--- obtained by refuting the other: the derivation never mentions a lasso, and
--- the countermodel mentions a derivation only to consume one.  In particular
--- the provable branch returns a DERIVATION rather than an assertion of
--- unsatisfiability, which is what removes the classical step.
+-- a derivation of Q, or a lasso countermodel: a run through states of Uinf
+-- (¬ Q) on which Q evaluates to false at stage 0, together with a function
+-- turning any derivation of Q into Empty.  Neither branch is obtained by
+-- refuting the other, so no classical step is involved.
 --
--- This module holds the record and the functions that read an answer: which
--- branch it is, the shape of the lasso, the truth values of a formula along the
--- run, and the size of a derivation.  LTL.Procedures.DecideSCC builds answers,
--- and LTL.Semantics reads them against LTL.Trusted.
+-- Also the functions that read an answer: which branch it is, the shape of
+-- the lasso, the truth values of a formula along the run, and the size of a
+-- derivation.
 
 module LTL.Procedures.Answer where
 
@@ -69,19 +64,10 @@ lassoOf Q (inl d) = [] , [] , []
 lassoOf Q (inr c) = cmStart Q c , cmRest Q c , cmCycle Q c
 
 ------------------------------------------------------------------------
--- Looking at a derivation.
---
--- A derivation is a finite tree -- eleven constructors, of which only pc
--- carries a side condition, and that one a decidable boolean -- so one can
--- simply count it.  What a procedure returns on a provable formula is not the
--- assertion that it is provable but the proof, and this is how one looks at
--- it.
---
--- One pass over the tree counts everything at once: the number of nodes, and
--- how many of them are modus ponens, generalisation, (Ind) and (PC).  (Ind)
--- is the interesting axiom: it is the one place the temporal argument enters
--- (extractBlock of LTL.SCC.SccExtract), so counting it says whether a
--- certificate needed the loop invariant at all.
+-- Looking at a derivation.  One pass over the tree counts the nodes, and how
+-- many are modus ponens, generalisation, (Ind) and (PC).  (Ind) only enters
+-- through extractBlock, so its count says whether a certificate needed a loop
+-- invariant at all.
 
 record DerivCounts : Set where
   constructor counts
@@ -116,17 +102,9 @@ derivInd  d = DerivCounts.inds (derivCounts d)
 derivPC   d = DerivCounts.pcs  (derivCounts d)
 
 ------------------------------------------------------------------------
--- Looking at a countermodel.
---
--- The states are bit vectors read against sub (¬ Q); they say everything but
--- say it unreadably.  What one actually wants to see is the truth value of a
--- chosen formula at each stage of the run, and the record already carries the
--- run, so this is eval of LTL.Countermodel.Eval applied at the successive
--- stages.
---
--- The formula being evaluated is arbitrary: evalAt is total on all of Formula,
--- not only on sub (¬ Q), so one may ask about a variable, about Q itself, or
--- about anything else.
+-- Looking at a countermodel: the truth value of a chosen formula at each stage
+-- of the run, by eval of LTL.Countermodel.Eval.  The formula is arbitrary,
+-- since evalAt is total on all formulas.
 
 cmEval : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Bool
 cmEval Q c A i = eval (¬ Q) start run A i

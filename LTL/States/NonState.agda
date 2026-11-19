@@ -1,15 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.NonState -- G16 of FORMALISATION-PLAN.md, Lemma 2.5 of m4.tex.
+-- LTL.States.NonState -- a valuation that is not a state is refutable:
+-- ⊢ ¬ (chi P v).
 --
--- A valuation that is not a state is refutable.  Each violation is a
--- contradiction among finitely many conjuncts of chi P v, and each is a fixed
--- shape; nothing here needs a tautology checker.
---
--- Order of business matters: coherence is examined FIRST.  If it fails we
--- refute positionally, which is the one case where cohLookup is unavailable.
--- If it holds, isState reduces to allOk, and every later projection may be
--- signed by valOf.
+-- Each violation is a contradiction among finitely many conjuncts of chi P v.
+-- Coherence is examined first: if it fails the refutation is positional; if it
+-- holds, every later projection may be signed by valOf.
 
 module LTL.States.NonState where
 
@@ -31,7 +27,7 @@ refute¬ true  f g = refute f g
 refute¬ false f g = refute f g
 
 ------------------------------------------------------------------------
--- Lemma 2.5
+-- Non-states are refutable
 
 nonState : (P : Formula) (v : Val)
         -> length v ≡ length (sub P)

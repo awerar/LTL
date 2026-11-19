@@ -1,13 +1,8 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Sound -- G26 of FORMALISATION-PLAN.md.
---
---   "One checks by induction on derivations that |- C implies [[C]]_s = 1 at
---    every state of every lasso."                          -- m4.tex section 5
---
--- The induction is LTL.LassoEval's sound, which holds on every lasso with
--- states of any type and at every position.  Here it is taken at the runs of
--- LTL.Countermodel.Run, at every stage.
+-- LTL.Countermodel.Sound -- soundness on a run: a derivable formula evaluates
+-- to true at every stage.  It is sound of LTL.Countermodel.LassoEval, taken at
+-- the runs of LTL.Countermodel.Run.
 
 module LTL.Countermodel.Sound where
 

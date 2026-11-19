@@ -1,62 +1,34 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Closure -- G30 of FORMALISATION-PLAN.md: the set the SEARCH explores, as
--- opposed to the list the DERIVATIONS quantify over.
+-- LTL.States.Closure -- Ust P, the set of states the searches explore.
 --
--- The two are different lists.
+-- St P (all states, filtered from all 2^|sub P| valuations) is what the
+-- derivations quantify over: ⊢ beta P (St P) is state completeness.  The
+-- searches are computed, so they run on a smaller set Ust P with three
+-- properties:
 --
---   St P is  filter (isState P) (allVecs |Sub P|) , and it has to stay that
---   way: state completeness (G17) is proved by splitting the disjunction over
---   ALL 2^|Sub P| valuations and then dropping the non-states, so  beta (St P)
---   being a theorem IS the fact that the state set is complete.  That term is
---   typechecked and never normalised, so its 2^|Sub P| costs nothing.
+--   ustSt      every member is a state;
+--   ustSeed    every state containing P is a member;
+--   ustClosed  the successors of a member are members.
 --
---   The graph search, the elimination and the lasso, on the other hand, ARE
---   normalised -- computing with the decision procedure directly is the point
---   (Coquand and Siles, section 6) -- and they do not need every state.  They
---   need a set U of states that is closed under ->-successors and contains
---   every state containing P, and nothing else.
+-- ustClosed lets a refutation of u use all state-successors of u; ustSeed lets
+-- a state outside Ust P be disposed of by (S1), since it cannot contain P.
 --
--- This module builds such a U and proves the three properties, ustSt, ustSeed
--- and ustClosed, that everything downstream is stated against.
---
--- Why exactly those three.  ustClosed is what the refutation of a state needs
--- (extractR1 and extractBlock, the two cases of Theorem 4.1):
--- the step lemma offers ALL state-successors of u, and each has to be either
--- already refuted or still inside the set being eliminated.  ustSeed is what
--- the provable branch needs: a state outside U cannot contain P, so by (S1) it
--- contains ¬ P and chi_w yields the conclusion with no elimination at all.
--- ustSt keeps every member of U a state.
---
--- U is built in two steps.
---
--- 1. The candidates.  A state is not an arbitrary vector: (S1) determines the
---    bit at  ¬ A  and at  A ⇒ B  from the bits at A and at B, and coherence
---    makes the bit depend on the formula rather than on the position.  So a
---    state is determined by its bits at the ATOMS of Sub P -- the var, ○ and
---    □ entries -- and mkV builds the whole vector from such an assignment.
---    That replaces 2^|Sub P| candidates by 2^|atoms|; for the C5 formula, 8192
---    by 128.  stCandSt and stStCand show the resulting StCand P (St P built
---    from the CANDIDATES) has exactly the members of St P, so nothing is lost
---    and nothing is gained but speed.
---
--- 2. The closure.  U need not be all of StCand P either: it is enough to
---    take the ->-closure of the states containing P.  That is a LEAST fixed
---    point, the one place in the development where the removing iteration of
---    section 4b does not apply -- the accumulator grows -- and it is why Bar is
---    needed rather than another decreasing length.  Each round adds a state
---    that was not there before, so the vectors chosen are distinct, and vecIFin
---    says one cannot go on choosing distinct vectors of length n forever.
+-- Ust P is built in two steps.  First the candidates: a state is determined by
+-- its bits at the ATOMS of sub P (the var, ○ and □ entries), so mkV builds
+-- it from an assignment to the atoms, and StCand P has exactly the members of
+-- St P (8192 candidates become 128 for c5 of LTL.Tests.Checks).
+-- Then the successor closure of the states containing P.  That search GROWS
+-- its accumulator, so it recurses on a Bar (vecIFin) rather than a length.
 
 module LTL.States.Closure where
 
 open import LTL.States.VecBar public
 
 ------------------------------------------------------------------------
--- Extensionality for bit vectors, and the assignment a state induces.
---
--- The skeleton evaluation (∈ᶠ, insF, atoms, valFrom; LTL.Syntax.Skel) is shared with
--- the tautology test of (PC): mkV builds a state from a truth-table row.
+-- Extensionality for bit vectors, and the assignment a state induces.  The
+-- skeleton evaluation of LTL.Syntax.Skel is shared with the (PC) test: mkV
+-- builds a state from a truth-table row.
 
 valExt : (v w : Val) -> length v ≡ length w
       -> ((i : Nat) -> i < length v -> bitAt v i ≡ bitAt w i) -> v ≡ w
@@ -80,13 +52,8 @@ module _ (P : Formula) where
   atomBits v = map (valOf P v) (atoms (sub P))
 
   ------------------------------------------------------------------------
-  -- A state is the vector its own atom bits determine.
-  --
-  -- This is one instance of skelEval (LTL.Syntax.Skel): valOf at a state is a
-  -- COMPOSITIONAL reading of formulas, which is exactly what (S1) says, and
-  -- skelEval says any such reading agrees with the skeleton evaluation.  The
-  -- other instance of the same lemma is the soundness of (PC) in LTL.Countermodel.Sound,
-  -- where the two hypotheses are refl because evalAt is defined by ¬ᵇ and ⇒ᵇ.
+  -- A state is the vector its own atom bits determine.  This is skelEval
+  -- (LTL.Syntax.Skel) at valOf, which is compositional by (S1).
 
   valFromEq : (v : Val) -> allOk P v (sub P) ≡ true
            -> (A : Formula) -> A ∈ sub P
@@ -188,20 +155,13 @@ module _ (P : Formula) where
                          (map-length (valOf P v) (atoms (sub P)))))
 
   ------------------------------------------------------------------------
-  -- The ->-closure of the states containing P.
+  -- The successor closure of the states containing P.
   --
-  -- Step 2.  The accumulator acc starts empty and each round adds every state
-  -- of StCand P that is WANTED -- contains P, or is a ->-successor of something
-  -- already in acc -- and is not there yet.  When a round finds nothing to add,
-  -- acc contains every wanted state, which is ustSeed and ustClosed together.
-  --
-  -- This is the one search in the development that GROWS, so the removing
-  -- iteration of FORMALISATION-PLAN.md section 4b does not apply and there is
-  -- no decreasing length to run on.  What there is instead: each round adds at
-  -- least one state that was not there before, that state is a vector of length
-  -- |Sub P|, and one cannot go on choosing distinct vectors of a fixed length
-  -- forever.  That is vecIFin exactly, guarded so that it is not forced as the
-  -- search runs, and it is why Bar is needed here and not merely convenient.
+  -- The accumulator starts empty, and each round adds every state of StCand P
+  -- that is WANTED -- contains P, or is a successor of something already in --
+  -- and is not there yet.  When a round adds nothing, the accumulator contains
+  -- every wanted state.  Each round adds a new vector of length |sub P|, and
+  -- vecIFin says that cannot go on forever.
 
   vecBar : IFin (hasLength (length (sub P)))
   vecBar = guardedVecBar (length (sub P)) (hasLength (length (sub P)))
@@ -353,8 +313,8 @@ module _ (P : Formula) where
   emptyAcc : (z : Val) -> z ∈ [] {A = Val} -> z ∈ StCand
   emptyAcc z ()
 
-  -- Ust P is the set U of m5.tex (U_st in m4.tex): the ->-closure of the states
-  -- that contain P.  It is the state set every later search runs on.
+  -- Ust P: the successor closure of the states that contain P.  Every search
+  -- runs on it.
 
   Ust : List Val
   Ust = closeGo [] (λ z mz e -> stAllSat P z (stCandSt mz)) vecBar

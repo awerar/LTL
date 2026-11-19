@@ -1,40 +1,21 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Procedures.CompletePC -- G32 of FORMALISATION-PLAN.md: Lemma 2.6 again,
--- with the propositional bookkeeping discharged by (PC) instead of enumerated.
+-- LTL.Procedures.CompletePC -- state completeness and (L5) with the
+-- propositional bookkeeping discharged by (PC).
 --
--- stateComplete (LTL.States.Complete) proves  ⊢ beta P (St P)  by a case
--- split over the 2^|Sub P| valuations and the one-by-one refutation of the
--- non-states, and that is almost all of a certificate that uses it.  Both are
--- propositional, so Ben-Ari writes PC beside them (his Definition 12.1,
--- Axiom 0) and never writes them out.  With the eleventh constructor of
--- LTL.Syntax.Deriv available they can be discharged the same way and, unlike
--- Ben-Ari's, CHECKED: pc takes isTaut A ≡ true, a decidable condition on A
--- alone, with no substitution relation anywhere.
+--   stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 --
---   G32   stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
+-- proves ⊢ beta P (St P) in  1 + 46 |□Args (sub P)|  constructors: one pc
+-- node, and one modus ponens against an instance of (T) per eventuality.
+-- stateComplete (LTL.States.Complete), which splits over all 2^|sub P|
+-- valuations, has 296839 for □ p ⇒ p.  betaElimPC does the same for the
+-- elimination of beta over its disjuncts.  Both close the derivation of
+-- provableSCC (LTL.SCC.SccExtract).
 --
--- The chain is the |□Args (sub P)| instances of (T), one modus ponens each,
--- so G32 is  1 + 46 |□Args (sub P)|  constructors exactly: 1 for p ⇒ p,
--- 47 for □ p ⇒ p where LTL.States.Complete's proof is 296839.  It is linear
--- in the number of eventualities where stateComplete is exponential in
--- |Sub P|.  betaElimPC does the same for (L5), the elimination of beta_U
--- over its disjuncts.  Both close the certificate branch of decideSCC
--- (provableSCC, LTL.SCC.SccExtract).
---
--- Two choices, both simplifications of section 7.
---
--- 1.  The tautology is proved by BUILDING the witness state out of the
---     truth-table row -- skelVec of LTL.States.Taut, which is a state as soon
---     as (S2) holds -- rather than by SELECTING it from the full disjunction
---     over all valuations.  Carrying that disjunction as a premise would put a
---     formula of size 2^|Sub P| inside the side condition, and the side
---     condition is the one thing (PC) adds that a machine may have to
---     evaluate.  Without it the side condition is small enough to check by
---     refl.
---
--- 2.  Section 7 makes E P a conjunction, assembled by (L2).  An implication
---     chain is cheaper by a factor of five per eventuality; see LTL.States.Taut.
+-- The tautology is proved by BUILDING the witness state from the truth-table
+-- row (skelVec, LTL.States.Taut), not by selecting it from the disjunction
+-- over all valuations, which keeps the side condition small enough to check
+-- by refl.
 
 module LTL.Procedures.CompletePC where
 
@@ -42,27 +23,17 @@ open import LTL.States.Complete public
 open import LTL.States.Taut     public
 
 ------------------------------------------------------------------------
--- The (S2) premise.
---
--- E P of section 7:  □ A ⇒ A  for every box-subformula of P, as the premises
--- of an implication chain rather than as a conjunction -- see LTL.States.Taut for the
--- factor of five that costs.  Each premise is an instance of (T), □Elim of
--- LTL.Rules.Temporal, itself (Exp) followed by (L3); together they are the whole of
--- the new Lemma 2.6 beyond its single pc node.
---
--- It is needed because it is the one clause of Definition 2.2 that a
--- truth-table row does not satisfy for free: the skeleton reads □ A and A as
--- two unrelated atoms, which is exactly why  □ p ⇒ p  is not a skeleton
--- tautology.  (S1) and coherence, by contrast,
--- cost nothing at all -- see LTL.States.Taut.
+-- The (S2) premise: □ A ⇒ A for every box-subformula of P, as the premises of
+-- an implication chain (cheaper than a conjunction; see LTL.States.Taut).  Each
+-- premise is discharged by an instance of (T), □Elim of LTL.Rules.Temporal.
+-- (S2) is the one state condition a truth-table row does not satisfy for
+-- free, since the skeleton reads □ A and A as unrelated atoms.
 
 s2List : Formula -> List Formula
 s2List P = map s2Fml (□Args (sub P))
 
--- and the derivation half of LTL.Taut's □Chain: one modus ponens against one
--- instance of (T) per premise, left to right.  There is no s2Proof as a term of
--- its own -- the instances are consumed as they are met, which is what keeps
--- the count at 1 + 46 |□Args| with no propositional glue.
+-- The derivation half of □Chain: one modus ponens against one instance of
+-- (T) per premise, left to right.
 
 mpChain : (As : List Formula) {C : Formula}
        -> ⊢ ⇒List (map s2Fml As) C -> ⊢ C
@@ -70,23 +41,12 @@ mpChain []       d = d
 mpChain (A ∷ As) d = mpChain As (mp d □Elim)
 
 ------------------------------------------------------------------------
--- G32: Lemma 2.6.
---
--- The (S2) instances imply the state disjunction, propositionally.  Fix the
--- atom list of the implication itself and any row a of its truth table; the
--- premise says  □ B ⇒ B  holds under that reading for every □ B in Sub P,
--- which is □Ok, so skelVec is a state (LTL.States.Taut) and its chi is a true
--- disjunct of beta P (St P).
---
--- Note what does NOT happen.  No valuation is enumerated, no non-state is
--- refuted, and nothing is dropped from a disjunction: the row IS the state.
--- That is the same move G30 made computationally, where mkV builds a state
--- from an assignment to the atoms instead of filtering 2^|Sub P| vectors --
--- section 4g's closing remark, that the idea which made the search tractable is
--- the one that makes the certificate tractable, with the two now in one file.
+-- State completeness.  Fix the atom list of the implication and any row a of
+-- its truth table.  The premises say □ B ⇒ B holds in row a for every □ B in
+-- sub P (□Ok), so skelVec is a state and its chi is a true disjunct of
+-- beta P (St P).  No valuation is enumerated: the row IS the state.
 
--- The G32 tautology: the (S2) premises of s2List imply beta P (St P), i.e.
--- that some state of St P holds.
+-- The tautology: the (S2) premises of s2List imply beta P (St P).
 
 module _ (P : Formula) where
 
@@ -112,23 +72,14 @@ module _ (P : Formula) where
   stateCompletePC = mpChain (□Args (sub P)) (pc tautState)
 
 ------------------------------------------------------------------------
--- (L5) the same way, which is where the rest of the certificate is.
---
--- With Lemma 2.6 down to one node the dominant cost is ⋁Elim: 426
--- constructors per disjunct, 1280 of the 1529 for □ p ⇒ p, growing with the
--- number of STATES.  It is propositional through and through -- the note proves
--- it from (P1)-(P3) alone -- so (PC) can take it whole:
+-- (L5) the same way.  ⋁Elim costs 426 constructors per disjunct.  The
+-- implication
 --
 --     (C1 ⇒ C) ⇒ ... ⇒ (Cn ⇒ C) ⇒ ((C1 ∨ ... ∨ Cn) ⇒ C)
 --
--- is a tautology of its own skeleton, taut⋁Elim, and the n branches are
--- discharged by n modus ponens.  So betaElimPC is  1 + n  nodes of glue where
--- betaElim is  17 + 426 n , and the certificate becomes linear in |St P| with a
--- constant of one.
---
--- mpVals walks the VALUATIONS rather than the disjuncts, so that no inversion
--- of  map (chi P)  is needed -- map-mem-inv lives in LTL.Lib.Sets, which
--- LTL.States.Complete does not import.  Same reason as mpChain above.
+-- is a tautology of its skeleton (taut⋁Elim), so betaElimPC is one pc node
+-- and n modus ponens.  mpVals walks the valuations rather than the disjuncts,
+-- so no inversion of  map (chi P)  is needed.
 
 ⋁⇒Fml : List Formula -> Formula -> Formula
 ⋁⇒Fml Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)

@@ -1,102 +1,39 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.SCC.Graph -- G37 of PHASE11-PLAN.md: the finite fair-graph certificate
--- theorem, and nothing else.
+-- LTL.SCC.Graph -- the finite fair-graph certificate theorem.
 --
---   Finite fair-graph certificate theorem.
---   Given a finite graph, finitely many decidable fairness predicates F_i, and
---   a vertex v, compute either
---     (a) a lasso from v whose cycle meets every relevant F_i, or
+--   Given a finite graph, finitely many decidable fairness predicates, and a
+--   vertex v, compute either
+--     (a) a lasso from v whose cycle meets every predicate (FairLoop), or
 --     (b) a well-founded certificate that every recurrent component reachable
---         from v misses some F_i.
+--         from v misses some predicate (Cert).
 --
--- That is  fairGraph , at the bottom of the file.  (a) is FairLoop, (b) is
--- Cert, and certAll is the induction principle Cert exists to supply.
+-- That is fairGraph, at the end of the file; certAll is the induction
+-- principle a Cert supplies.  The two answers are proved exclusive
+-- (certNoCirc, fairNoLoop), so the negative answer is a decision.
 --
--- THERE IS NO LOGIC IN THIS MODULE.  It is parameterised by the node type and
--- an equality test on it -- sound and reflexive, which is all the searches use
--- -- and it imports only the prelude and the generic set layer (LTL.Lib.Sets,
--- LTL.Lib.Bar, LTL.Lib.Nodes).  No Formula and no valuation can occur in it.  The graph
--- is a list of vertices  vs : List Node  with an edge test
--- G : Node -> Node -> Bool  (abbreviated Edges), and the fairness sets are
--- boolean predicates  fs : List (Node -> Bool)  (abbreviated List Pred).  The
--- repeated hypotheses have names from LTL.Lib.Nodes (Closed, NoneSat,
--- HoldsOutside, Avail), and each run of lemmas that shares its leading
--- arguments sits in a  module _  over them.
+-- There is no logic here: the module is parameterised by a node type with a
+-- sound, reflexive equality test, and imports only the generic set layer.  The
+-- graph is a vertex list with an edge test G : Edges, the fairness sets are
+-- fs : List Pred.  LTL.SCC.SccLasso instantiates it at Val; LTL.Tests.
+-- GraphExamples at Nat, for the computational checks.
 --
--- Two instances.  LTL.SCC.SccLasso takes  Node = Val  with the  _≡ᵛ_  of
--- LTL.States.Reach, the same arguments LTL.States.Reach gives LTL.Lib.Nodes, so the Pred, IFin,
--- AllSat, ... of this module and of the rest of the development are one and
--- the same; the translation layer sees no difference.  LTL.Tests.GraphExamples takes
--- Node = Nat  and holds the computational checks, which a parameterised module
--- cannot run on itself.
+-- Design choices:
 --
--- Where "relevant" went.  The informal statement quantifies over the fairness
--- sets RELEVANT in a component, which is well defined only because the pending
--- eventuality is uniform on a component (walkPersist).  Here relevance is
--- absorbed into the predicate: the caller passes, for the eventuality  □ A ,
--- the predicate "□ A is not pending, or A fails", so a component in which the
--- eventuality is not pending meets it for free and a component in which it is
--- pending meets it exactly by fulfilling it.  The graph layer therefore knows
--- only "C meets every f in fs", and the LTL reading of fs is G38 and G39.
+-- 1. The reachable set is computed by a GROWING search that stops when a round
+--    adds nothing; completeness comes from the stopping condition, not a bound.
+-- 2. A component is a representative plus a filter (sccOf); the condensation
+--    is never built, and "terminal" is a boolean.
+-- 3. graphGo is a REMOVING iteration (refute a sink or a terminal component,
+--    delete it), so a Bar covers termination; findTerm finds a terminal
+--    component by following condensation edges, again by Bar recursion.
+-- 4. Every Bar comes from listBar, which is blocked while the list is a
+--    variable, so no guard is needed against normalisation blow-up.
 --
--- Four design choices.
---
--- 1. Mutual reachability needs the reachable set COMPLETELY.  reachGo is a
---    GROWING search whose stopping condition is that a round adds nothing --
---    closeGo of LTL.States.Closure with the seed changed from "contains P" to
---    "is v" -- and completeness comes from the stopping condition (reachSeed,
---    reachClosed) rather than from a bound.  There is no fuel and no claim
---    that  length vs  rounds suffice.
---
--- 2. No component objects and no quotients.  A component is a representative
---    plus filter:  sccOf vs G r = the w in reach(r) that reach r back.  The
---    condensation is never built; "r's component is terminal" is the boolean
---    isTerminal, and a condensation edge is followed by moving the
---    representative.
---
--- 3. No rank function and no topological sort.  graphGo is a REMOVING iteration
---    -- pick a sink or a terminal component, refute it, delete it -- so barRec
---    covers termination.  What needed proof is only that a non-empty graph has
---    a terminal component, and that is findTerm: follow condensation edges,
---    which is a third Bar search, terminating because the reachable set of the
---    new representative avoids every representative already visited.  The
---    invariant that says so is a single hypothesis, not a history list.
---
--- 4. No guardBar, and no blow-up without it.  Every Bar here comes from
--- listBar,
---    i.e. from barOfList, which recurses on  length xs  and is blocked while
---    the list is a variable; guardBar is not used at all, so the 2^k unfolding
---    cannot happen.  Terminal and Block do mention reachSet and isTerminal in
---    their constructor types -- and Agda normalises those -- but reachGo is
---    blocked at findFalse on a variable list, so nothing expands.  A growing
---    search on vectors would have needed the guard; a search over a list in
---    hand does not.
---
--- The two answers are proved EXCLUSIVE, and that is the second half of the
--- file.  certNoCirc: a Cert for ws forbids a fair circuit inside ws;
--- fairNoLoop and fairComplete carry it to the top, so the negative answer is a
--- decision and not merely an output.  This is the lecture's "key insight" done
--- finitely.  The lecture says an INFINITE path eventually stays inside one
--- SCC, which needs coinduction and a classical step; what is actually needed is
--- the same thing about a FINITE cycle, and that is two inductions on a trail --
---
---   a vertex on a cycle has a successor,  so a sink lies on no cycle;
---   any vertex of a cycle reaches any other,  so a cycle that enters a
---     successor-closed block never leaves it.
---
--- So no infinite path is constructed, nothing is coinductive, and no pigeonhole
--- is used, as in the rest of the development.  Both sides are inhabited and
--- neither theorem is vacuous: cycle-QS exhibits a Circuit and cert-P a Cert, in
--- LTL.Tests.GraphExamples.
---
--- What this still does NOT do.  It decides nothing about formulas and builds no
--- derivation; the LTL reading of (b) is G39, where certAll's two hypotheses are
--- extractR1's and extractBlock's on the nose -- null (outs ws G x) ≡ true IS
--- r1 P ws x ≡ true definitionally, and the block case supplies the closed set
--- and the unfulfilled eventuality that (Ind) needs.  Nor does it claim to be
--- cheaper than gfpW.  Gfp, Elim and Lasso all mention formulas;
--- this file does not.
+-- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
+-- so a sink lies on no cycle; and any vertex of a cycle reaches any other, so
+-- a cycle that enters a successor-closed block never leaves it.  Both are
+-- inductions on a finite trail.
 
 open import LTL.Lib.Prelude
 
@@ -125,7 +62,7 @@ null-notMem []       z e = refl
 null-notMem (w ∷ ws) z ()
 
 -- The out-neighbours of x inside ws.  For G = step P this is succs P ws x on
--- the nose, which is what G39 needs of it.
+-- the nose.
 
 outs : List Node -> Edges -> Node -> List Node
 outs ws G x = filter (G x) ws
@@ -134,11 +71,9 @@ hasOut : List Node -> Edges -> Node -> Bool
 hasOut ws G x = ¬ᵇ null (outs ws G x)
 
 ------------------------------------------------------------------------
--- Trails: finite paths inside ws, carrying the list of vertices visited and
--- indexed by the endpoint.  LTL.Countermodel.Walk with  step P  replaced by G, and for the
--- same reason -- indexing by the endpoint keeps every concatenation free of
--- equational bookkeeping.  Reflexive-transitive; a cycle is a trail from r to r
--- whose list is non-empty, and that is the only place non-emptiness is needed.
+-- Trails: finite paths inside ws, carrying the vertices visited and indexed by
+-- the endpoint (LTL.Countermodel.Walk with step P replaced by G).  A cycle is a
+-- trail from r to r with a non-empty list.
 
 data Trail (ws : List Node) (G : Edges) : Node -> List Node -> Node -> Set where
   tNil  : {v : Node} -> Trail ws G v [] v
@@ -183,17 +118,11 @@ data Reaches (ws : List Node) (G : Edges) (v w : Node) : Set where
   reachesBy : (zs : List Node) -> Trail ws G v zs w -> Reaches ws G v w
 
 ------------------------------------------------------------------------
--- The reachable set, as a growing search.
---
--- closeGo of LTL.States.Closure with two changes: the seed is "is v" instead of
--- "contains P", and the ambient candidate list is the vertex list rather than
--- StCand P.  A round adds every vertex of ws that is wanted -- is v, or is a
--- G-successor of something already in acc -- and is not there yet; when a round
--- adds nothing, acc contains every wanted vertex, and THAT is completeness.
--- No round is counted.
---
--- reachWanted, reachMissing, reachSettled, reachRound, ... are the wanted,
--- missing, settled, addAll, ... of LTL.States.Closure, for reachability in ws.
+-- The reachable set, as a growing search.  A round adds every vertex of ws
+-- that is wanted -- is v, or is a G-successor of something already in acc --
+-- and is not there yet; when a round adds nothing, acc contains every wanted
+-- vertex, which is completeness.  (closeGo of LTL.States.Closure has the same
+-- shape.)
 
 reachWanted : Edges -> Node -> List Node -> Node -> Bool
 reachWanted G v acc x = (v ≡ᵛ x) ∨ᵇ any (λ y -> G y x) acc
@@ -261,11 +190,10 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
                     (reachInRound acc x m q))
 
   ------------------------------------------------------------------------
-  -- Its four properties, each by the same recursion.
-  --
-  -- The result lies in ws; every member of it is reached by a trail; v is in
-  -- it; and it is closed under G-successors inside ws.  The last two are the
-  -- stopping condition read off, and together they are completeness.
+  -- Its four properties, each by the same recursion: the result lies in ws,
+  -- its members are reached by trails, v is in it, and it is closed under
+  -- G-successors inside ws.  The last two are the stopping condition read
+  -- off.
 
   reachGoIn   : {E : Pred} (acc : List Node) (av : Avail E ws acc)
                 (bar : IFin E)
@@ -289,9 +217,8 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
                          (λ m2 -> sb z m2)
                          (memAppCase (filter (reachMissing G v acc) ws) acc mz)
 
-  -- Every vertex a round adds is reached by a trail: it is v, or it is a
-  -- successor of a member of acc, and then the trail of that member grows by
-  -- one step.
+  -- Every vertex a round adds is reached by a trail: it is v, or a successor
+  -- of a member of acc, whose trail grows by one step.
 
   addReaches : (acc : List Node)
             -> ((z : Node) -> z ∈ acc -> Reaches ws G v z)
@@ -425,10 +352,8 @@ reachClosed : (ws : List Node) (G : Edges) (v : Node) {u w : Node}
            -> w ∈ reachSet ws G v
 reachClosed ws G v = reachGoClosed ws G v [] (reachAvInit ws) (listBar ws)
 
--- Completeness: a trail from a member of the set stays in the set.  This is the
--- half that would have needed the pigeonhole if the search had been run for a
--- fixed number of rounds; here it is an induction along the trail against the
--- stopping condition.
+-- Completeness: a trail from a member of the set stays in the set, by
+-- induction along the trail against the stopping condition.
 
 reachTrailIn : (ws : List Node) (G : Edges) (v : Node)
                {u : Node} {zs : List Node} {w : Node}
@@ -451,11 +376,8 @@ reachTrans ws G v u w mu mw = onR (reachTrail ws G u mw)
     onR (reachesBy zs t) = reachTrailIn ws G v mu t
 
 ------------------------------------------------------------------------
--- Components, without component objects.
---
--- sccOf ws G r is the strongly connected component of r: the vertices r reaches
--- that reach r back.  It is a filter of a list, nothing more; there is no
--- quotient, no set of sets, and no equality of components anywhere below.
+-- Components, without component objects: sccOf ws G r is the vertices r
+-- reaches that reach r back.  A filter of a list, nothing more.
 
 sccOf : List Node -> Edges -> Node -> List Node
 sccOf ws G r = filter (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r)
@@ -488,11 +410,8 @@ sccRep ws G r mr =
               (∈ᵛ-complete r (reachSet ws G r) (reachSeed ws G r mr))
 
 ------------------------------------------------------------------------
--- Terminal components.
---
--- r's component is terminal when everything r reaches reaches r back, i.e. when
--- the reachable set of r IS its component.  That is one boolean, and it is the
--- only thing said about the condensation: no edge of it is ever built.
+-- r's component is terminal when everything r reaches reaches r back, i.e.
+-- the reachable set of r IS its component.
 
 isTerminal : List Node -> Edges -> Node -> Bool
 isTerminal ws G r = all (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r)
@@ -504,8 +423,8 @@ termScc ws G r et {w} m =
   filter-true (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r) m
               (all-at (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r) m et)
 
--- A terminal component is closed under successors inside ws.  This is what the
--- refutation branch needs of it, and it is the whole use of terminality.
+-- A terminal component is closed under successors inside ws: the refutation
+-- needs exactly this of it.
 
 termClosed : (ws : List Node) (G : Edges) (r : Node)
           -> isTerminal ws G r ≡ true -> Closed ws G (sccOf ws G r)
@@ -513,18 +432,12 @@ termClosed ws G r et z y mz my e =
   termScc ws G r et (reachClosed ws G r (sccReach ws G r z mz) my e)
 
 ------------------------------------------------------------------------
--- A non-empty graph has a terminal component.
---
--- Follow condensation edges: while r's component is not terminal there is a w
--- that r reaches and that does not reach r, so w's component is strictly later,
--- and one moves the representative to w.  The plan's "acyclicity makes the
--- components visited distinct" is here a Bar search, and the invariant that
--- makes it one is a single hypothesis --
---
---   every vertex of the current reachable set still satisfies the Bar predicate
---
--- -- with no list of visited representatives.  Giving up r is the sub-Bar cBar
--- hands over, and the new reachable set avoids r because w does not reach r.
+-- A non-empty graph has a terminal component.  While r's component is not
+-- terminal, there is a w that r reaches and that does not reach r; move the
+-- representative to w.  This is a Bar search whose invariant is that every
+-- vertex of the current reachable set still satisfies the Bar predicate;
+-- giving up r is the sub-Bar cBar hands over, and the new reachable set
+-- avoids r because w does not reach r.
 
 -- A vertex whose component is terminal, found by the search above.
 
@@ -571,13 +484,10 @@ module _ (ws : List Node) (G : Edges) where
     termGo r mr (λ z mz -> ∈ᵛ-complete z ws (reachIn ws G r mz)) (listBar ws)
 
 ------------------------------------------------------------------------
--- The positive certificate: a fair circuit.
---
--- A circuit at r is a non-empty closed trail through r together with, for every
--- fairness predicate, a witness on it.  This is the constructive half of the
--- lecture's argument -- pick a witness in each F_i and join them by paths
--- inside the component -- and it is done here rather than in G38, so that G38
--- has only to reread a Trail as a Walk.
+-- The positive certificate: a fair circuit at r, a non-empty closed trail
+-- through r with a witness on it for every fairness predicate.  It is built by
+-- picking a witness for each predicate and joining them by trails inside the
+-- component.
 
 record Circuit (ws : List Node) (G : Edges) (fs : List Pred)
                (r : Node) : Set where
@@ -603,10 +513,9 @@ data Loop (ws : List Node) (G : Edges) (r : Node) : Set where
   loopBy : (cy : List Node) -> Trail ws G r cy r -> null cy ≡ false
         -> Loop ws G r
 
--- A terminal component of a vertex that has a successor is non-trivial.  This
--- is the only place the "every vertex has an out-edge" branch is used, and it
--- is why no separate cycle detection is needed: the successor is reached, so
--- terminality sends a trail back.
+-- A terminal component of a vertex that has a successor is non-trivial: the
+-- successor is reached, so terminality sends a trail back.  No separate cycle
+-- detection is needed.
 
 module _ (ws : List Node) (G : Edges) (r : Node) where
 
@@ -630,10 +539,10 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
           back : Reaches ws G x r -> Loop ws G r
           back (reachesBy zs t) = loopBy (x ∷ zs) (tCons mxw grx t) refl
 
-  -- One fairness predicate added to a circuit.  The leg is  loop ++ (r to w) ++
-  -- (w to r) , with the loop in front so that the r-to-w half is non-empty and
-  -- w is therefore a vertex the leg VISITS, not merely an endpoint.  trailApp
-  -- is left-nested for the same reason associativity never appears.
+  -- One fairness predicate added to a circuit.  The leg is  loop ++ (r to w)
+  -- ++ (w to r) , with the loop in front so that the r-to-w half is non-empty
+  -- and w is a vertex the leg VISITS.  trailApp is left-nested so that
+  -- associativity never appears.
 
   consCirc : (cy0 : List Node) -> Trail ws G r cy0 r -> null cy0 ≡ false
           -> (f : Pred) (w : Node) -> f w ≡ true
@@ -698,12 +607,10 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
         consCirc cy0 t0 nn f w fw (to w mw) (from w mw) fs rest
 
 ------------------------------------------------------------------------
--- One step of the outer iteration, decided.
---
--- Given that every vertex of ws has an out-edge: ws is empty, or its terminal
--- component is fair and a circuit is built, or it misses some f and is a block
--- to be refuted.  Nothing here recurses, which is what keeps the outer
--- recursion below down to the shape of elimGo.
+-- One step of the outer iteration, decided: given that every vertex of ws has
+-- an out-edge, ws is empty, or its terminal component is fair and a circuit is
+-- built, or it misses some f and is a block to be refuted.  Nothing here
+-- recurses.
 
 data Block (ws : List Node) (G : Edges) (fs : List Pred) : Set where
   bEmpty  : null ws ≡ true -> Block ws G fs
@@ -735,13 +642,10 @@ pickBlock (u ∷ ws) G fs h =
   blockOf (u ∷ ws) G fs h (findTerm (u ∷ ws) G u here)
 
 ------------------------------------------------------------------------
--- The negative certificate.
---
--- A well-founded record of the removal order, indexed by what is LEFT.  Two
--- kinds of step, and they are the two cases of Theorem 4.1 of m4.tex with the
--- formulas taken out: a vertex with no out-edge inside ws, and a block closed
--- under out-edges inside ws that misses a fairness predicate.  cNil says
--- nothing is left, so certAll below concludes about every vertex.
+-- The negative certificate: a well-founded record of the removal order,
+-- indexed by what is LEFT.  Each step removes a vertex with no out-edge inside
+-- ws, or a block closed under out-edges inside ws that misses a fairness
+-- predicate.  cNil says nothing is left.
 
 infixl 6 _∖ᵛ_ _∖_
 
@@ -772,11 +676,9 @@ fairInMono : (ws vs : List Node) (G : Edges) (fs : List Pred)
 fairInMono ws vs G fs sb (fairIn r mr c) =
   fairIn r (sb r mr) (circMono ws vs G fs r sb c)
 
--- Terminal-component removal.  A REMOVING iteration, so barRec covers it and
--- there is no rank and no topological sort: whichever of the two steps applies,
--- the vertex it names leaves ws and leaves the Bar's predicate with it, which
--- is what dropAllSat says.  For the sink that vertex is x; for a block it is
--- the representative r, which lies in its own component by sccRep.
+-- Terminal-component removal, a REMOVING iteration: whichever step applies,
+-- the vertex it names (the sink x, or the block's representative r) leaves ws
+-- and the Bar's predicate with it (dropAllSat).
 
 module _ (G : Edges) (fs : List Pred) where
 
@@ -856,14 +758,10 @@ fairGraph vs G fs v mv =
           fairLoop r st cy ts t nn wit
 
 ------------------------------------------------------------------------
--- What a certificate is FOR.
---
--- Reading the removal order as a well-founded induction.  R is the property to
--- be established of every vertex -- for G39 it is  ⊢ ¬ (chi P u) -- and
--- the hypothesis carried is "R holds outside ws", which is Refuted of
--- LTL.Elimination.Extract verbatim.  The sink case is what extractR1 consumes and the block
--- case is what extractBlock consumes; no formula has to appear for that to be
--- decided here.
+-- What a certificate is for: an induction over the removal order.  R is the
+-- property to establish of every vertex (for LTL.SCC.SccExtract, refutability
+-- of chi), and the hypothesis carried is "R holds outside ws".  The sink and
+-- block cases are the two hypotheses of certAll.
 
 module _ (G : Edges) (fs : List Pred) (R : Node -> Set)
          (sinkCase  : (ws : List Node) (x : Node) -> x ∈ ws
@@ -901,26 +799,14 @@ module _ (G : Edges) (fs : List Pred) (R : Node -> Set)
                                  (cong ¬ᵇ_ ec)))
 
 ------------------------------------------------------------------------
--- The two outputs are EXCLUSIVE.
---
--- This is the intuitive half of the lecture's argument, and the point is that
--- it comes out FINITARY.  The lecture says "an infinite path eventually stays
--- inside one SCC", which needs an infinite path and a classical step; what is
--- actually needed is the contrapositive about a FINITE cycle, and that is two
--- observations about a closed trail:
+-- The two outputs are EXCLUSIVE, by two observations about a closed trail:
 --
 --   a vertex on a cycle has a successor,  so a sink is on no cycle;
 --   any vertex of a cycle reaches any other,  so a cycle that enters a
 --     successor-closed block never leaves it.
---
--- Both are inductions on a trail of the length it happens to have.  No infinite
--- path is mentioned, nothing is coinductive, and no pigeonhole is used -- which
--- is the same three absences FORMALISATION-PLAN.md section 4f claims for the
--- rest of the development.
 
--- The suffix of a trail from any vertex it visits, and the prefix to one.  This
--- is walkFrom of LTL.Countermodel.Walk, in both directions, and it is all the "rotate the
--- cycle" the argument needs.
+-- The suffix of a trail from any vertex it visits, and the prefix to one: all
+-- the "rotation" of a cycle the argument needs.
 
 module _ (ws : List Node) (G : Edges) where
 
@@ -947,9 +833,8 @@ module _ (ws : List Node) (G : Edges) where
   trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
 
 -- Observation one: a vertex on a cycle has a successor inside ws.  Along a
--- trail, every vertex visited has a successor provided the ENDPOINT has, and
--- for a closed trail the endpoint is the start, whose successor is the trail's
--- own first step.
+-- trail every vertex visited has one provided the endpoint has, and for a
+-- closed trail the endpoint is the start, whose successor is the first step.
 
 data HasSucc (ws : List Node) (G : Edges) (x : Node) : Set where
   hasSucc : (y : Node) -> y ∈ ws -> G x y ≡ true -> HasSucc ws G x
@@ -978,9 +863,9 @@ module _ (ws : List Node) (G : Edges) where
          -> {x : Node} -> x ∈ cy -> HasSucc ws G x
   cycSucc r cy t nn mx = trailSucc t (firstStep t nn) mx
 
-  -- Observation two: any vertex of a cycle reaches any other -- suffix to the
-  -- base point, then prefix out again -- and a successor-closed block that a
-  -- trail starts in contains everything the trail reaches.
+  -- Observation two: any vertex of a cycle reaches any other (suffix to the
+  -- base point, then prefix out), and a successor-closed block that a trail
+  -- starts in contains everything the trail reaches.
 
   cycConn : (r : Node) (cy : List Node)
          -> Trail ws G r cy r -> (u z : Node) -> u ∈ cy -> z ∈ cy
@@ -1003,12 +888,9 @@ trailRestrict ws vs G tNil                 h = tNil
 trailRestrict ws vs G (tCons {x = y} m e t) h =
   tCons (h y here) e (trailRestrict ws vs G t (λ z mz -> h z (there mz)))
 
--- The theorem: a certificate for ws forbids a fair circuit inside ws.
---
--- Induction on the certificate, and each step says the cycle SURVIVES the
--- removal -- it never touched what was removed -- so the cycle is still there
--- when nothing is left, which cNil forbids.  That is the whole content of "an
--- infinite path eventually stays inside one SCC", finitely.
+-- A certificate for ws forbids a fair circuit inside ws.  By induction on the
+-- certificate: each step leaves the cycle untouched, so it is still there when
+-- nothing is left, which cNil forbids.
 
 certNoCirc : (G : Edges) (fs : List Pred) {ws : List Node}
           -> Cert G fs ws -> (r : Node) -> Circuit ws G fs r -> Empty
@@ -1053,12 +935,9 @@ certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
         out = refuteTrue (z ∈ᵛ C) λ eb -> inBlock z mz (∈ᵛ-sound z C eb)
 
 ------------------------------------------------------------------------
--- The dichotomy, at the top level.
---
--- fairGraph's two answers cannot both be right, and therefore the negative
--- answer is a DECISION: if a fair lasso from v exists at all, fairGraph returns
--- one.  Restricting the lasso's cycle to the reachable set is reachComplete,
--- which is where the growing search of the first half pays off.
+-- The dichotomy at the top level: fairGraph's two answers cannot both hold, so
+-- if a fair lasso from v exists, fairGraph returns one.  Restricting the
+-- lasso's cycle to the reachable set uses reachComplete.
 
 fairNoLoop : (vs : List Node) (G : Edges) (fs : List Pred)
              (v : Node) -> v ∈ vs
@@ -1085,10 +964,7 @@ fairComplete vs G fs v mv fl = onS (fairGraph vs G fs v mv) refl
     onS (inr c) es = emptyElim (fairNoLoop vs G fs v mv c fl)
 
 ------------------------------------------------------------------------
--- Reading a certificate off.
---
 -- The removal order as a list of step kinds, one per constructor of Cert.
--- Used by the checks of LTL.Tests.GraphExamples and by LTL.SCC.SccExtract.
 
 data CertStep : Set where
   removedSink removedBlock emptied : CertStep

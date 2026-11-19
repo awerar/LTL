@@ -1,60 +1,20 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.SCC.SccTrap -- two lemmas G40 needs.  Both are about the SEAM between the
--- graph layer and the two sets the existing development is built on, and
--- neither is graph theory or logic: they are the statements that make  Ust P
--- and  Uinf P  usable from LTL.SCC.Graph.
+-- LTL.SCC.SccTrap -- two lemmas that connect the graph search on Ust P to the
+-- rest of the development.
 --
--- Why they are needed at all.  The SCC procedure has to run on  Ust P : the
--- refutation branch (G39) is stated against Ust P, and running the search on
--- Uinf P instead would be circular, since Uinf P IS the elimination the SCC
--- procedure is supposed to replace.  But the positive branch (G38) delivers
--- into mkLasso, every side condition of which is against Uinf P.  So something
--- has to carry a fair loop found in Ust P down into Uinf P, and something has
--- to say that a component found anywhere in Ust P is reachable from a state
--- that actually contains P -- otherwise the loop is a countermodel to nothing.
+-- 1. Every state of Ust P is reached from a state containing P (ustSeedTo).
+--    So a fair component anywhere in Ust P is reachable from a state that
+--    contains P, and the countermodel can start there.  The proof follows
+--    closeGo's recursion: a state a round adds is a seed, or a successor of a
+--    state already in.  The trail comes out inside StCand P, and seedTrail
+--    lifts it into Ust P using ustClosed.
 --
--- 1. EVERY STATE OF Ust P IS REACHED FROM A SEED.
---
---    Ust P is closeGo's accumulator, and LTL.States.Closure proves three things about
---    it -- its members are states, it contains the seeds, it is closed -- but
---    not that it contains NOTHING ELSE.  ustSeeded adds the fourth, in the form
---    that is wanted: a trail from a state containing P.  It is the same
---    recursion as the other three and the same one as reachGoTrail of
---    LTL.SCC.Graph: a state a round adds is wanted, i.e. is a seed -- and then the
---    empty trail does it -- or is a successor of something already in, and then
---    that thing's trail grows by one step.
---
---    The trail comes out inside StCand P, the candidate list, and seedTrail
---    lifts it into Ust P: a trail of STATES starting at a member of Ust P stays
---    in Ust P, by ustClosed at each step.  So no new closure property is
---    needed and LTL.States.Closure is not touched.
---
--- 2. A TRAP SURVIVES THE ELIMINATION.
---
---    A Trap is a set C in which every state has a successor and every pending
---    eventuality is fulfilled along a path -- exactly the negations of (R1) and
---    (R2), read as a property of a SET rather than of a round.  trapKeep says a
---    trap is kept by one round, and elimGoTrap runs that along elimGo's own
---    recursion, so  C subset Ust P  gives  C subset Uinf P .
---
---    (R2) is where the work is, and it is one line of existing machinery:
---    gfpSound says a member of gfpW fulfils the eventuality nowhere reachable
---    inside us, and the trap supplies a path to a state where it IS fulfilled.
---    That LTL.Elimination.Gfp states its fixed point against the inductive Path -- rather
---    than against the fuel-bounded reach of LTL.States.Reach -- is what makes this
---    three lines instead of a development.
---
---    This is the inclusion that sccLasso (LTL.SCC.SccLasso) takes as a
---    hypothesis: a fair cycle in Ust P has a successor at every state and
---    fulfils every pending eventuality along itself, so it survives every
---    elimination round and lies in Uinf P.
---
--- Note what the second lemma is NOT.  It is not completeness of the
--- elimination and it is not a new fixed-point theory: it is one direction, the
--- one that says the elimination throws nothing useful away, and it is proved by
--- running the existing recursion with an extra invariant.  The other direction
--- -- that Uinf P is itself a trap, Lemma 5.1 of m4.tex -- is not needed.
+-- 2. A trap survives the elimination (uinfTrap).  A Trap is a set in which
+--    every state has a successor and every pending eventuality fails
+--    somewhere reachable: (R1) and (R2) fail on it.  trapKeep shows one round
+--    keeps a trap, and elimGoTrap runs that along elimGo, so  C subset Ust P
+--    gives  C subset Uinf P .  This is the inclusion sccLasso needs.
 
 module LTL.SCC.SccTrap where
 
@@ -75,10 +35,8 @@ any-none p (y ∷ ys) h =
         (any-none p ys (λ z m -> h z (there m)))
 
 ------------------------------------------------------------------------
--- 1. Every state of Ust P is reached from a state containing P.
---
--- The trail is carried inside StCand P, the list closeGo filters; lifting it
--- into Ust P is seedTrail below.
+-- 1. Every state of Ust P is reached from a state containing P.  The trail
+-- lies inside StCand P; seedTrail lifts it into Ust P.
 
 record Seeded (P : Formula) (w : Val) : Set where
   constructor seeded
@@ -183,11 +141,8 @@ ustSeedTo P w m = conv (ustSeeded P m)
         mu = ustSeed P (stCandSt P ms) es
 
 ------------------------------------------------------------------------
--- 2. Traps.
---
--- The negations of (R1) and (R2), as a property of a set: every state has a
--- successor inside C, and every eventuality pending at a state of C fails
--- somewhere reachable inside C.
+-- 2. Traps: every state has a successor inside C, and every eventuality
+-- pending at a state of C fails somewhere reachable inside C.
 
 record Trap (P : Formula) (C : List Val) : Set where
   constructor mkTrap
@@ -208,9 +163,9 @@ module _ (P : Formula) where
   pathMono C us sb pnil                   = pnil
   pathMono C us sb (pcons {w = y} m e p) = pcons (sb y m) e (pathMono C us sb p)
 
-  -- One round keeps a trap.  (R1) fails because the successor is in C, hence in
-  -- us; (R2) fails because gfpSound would make the eventuality hold along the
-  -- trap's own path to a state where it fails.
+  -- One round keeps a trap.  (R1) fails because the successor is in C, hence
+  -- in us; (R2) fails because gfpSound would make the eventuality hold along
+  -- the trap's own path to a state where it fails.
 
   trapKeep : (us C : List Val) -> Trap P C
           -> C ⊆ us
@@ -255,9 +210,8 @@ module _ (P : Formula) where
               ... | true  = refl
               ... | false = notInW ep
 
-  -- and therefore the whole elimination keeps it.  Same recursion as elimGo,
-  -- one invariant added; this is the "carry a structure that already contains
-  -- the proof" move of section 4f one more time.
+  -- and therefore the whole elimination keeps it: elimGo's recursion with one
+  -- invariant added.
 
   elimGoTrap   : {E : Pred} (us : List Val)
                  (sb : AllSat E us) (bar : IFin E)

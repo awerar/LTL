@@ -1,13 +1,10 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Syntax.Sub -- G2 of FORMALISATION-PLAN.md.
+-- LTL.Syntax.Sub -- the subformula list sub P, by plain structural recursion
+-- (no closure operation; it may contain duplicates).
 --
--- Sub(phi) of m4.tex section 2: a plain structural recursion, no closure
--- operation (see Remark 2.1 of the note).
---
--- The five membership lemmas the development needs are all consequences of a
--- single transitivity lemma sub-mono together with sub-self, so they are
--- two-liners rather than five separate inductions.
+-- The membership lemmas all follow from sub-self and the transitivity lemma
+-- sub-mono.
 
 module LTL.Syntax.Sub where
 
@@ -35,7 +32,6 @@ sub-self (□ A)   = here
 
 ------------------------------------------------------------------------
 -- Transitivity: sub is closed under passing to subformulas of its members.
---
 -- The here cases are all  k  itself, since there Q is P.
 
 sub-mono : (P : Formula) {Q : Formula} -> Q ∈ sub P

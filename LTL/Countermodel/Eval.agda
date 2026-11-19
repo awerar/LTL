@@ -1,19 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Eval -- G25 of FORMALISATION-PLAN.md.
+-- LTL.Countermodel.Eval -- the evaluation of LTL.Countermodel.LassoEval on the
+-- runs of LTL.Countermodel.Run.
 --
--- The Boolean evaluation of LTL.Countermodel.LassoEval on the runs of LTL.Countermodel.Run:
--- the states are valuations, and a variable is read off the state through
--- valOf.  For a variable not occurring in Sub(P) this gives false -- indexOf
--- returns length (sub P), off the end of the vector -- which is a perfectly
--- good valuation; soundness needs the evaluation to be total on ALL formulas,
--- not only on subformulas of P, since a derivation may mention anything.
---
--- evalAt P has the same five clauses as LassoEval's evalAt, definitionally, so
--- everything that computes with it (Hintikka's lemma, the refl checks) sees
--- ¬ᵇ, ⇒ᵇ, nextPos and all over orbitOf exactly as before.  eval then indexes
--- by a Nat, as the plan asks, by iterating the successor that many times from
--- the start of the run.
+-- A variable is read off the state through valOf.  For a variable not in sub
+-- P this gives false (indexOf runs off the end of the vector), so the
+-- evaluation is total on all formulas, as soundness needs.  eval indexes a run
+-- by a stage number, iterating the successor from the start.
 
 module LTL.Countermodel.Eval where
 
@@ -33,7 +26,7 @@ module _ (P : Formula) where
     using (evalAt; eval□-at; eval□-intro; eval□-false)
 
   ------------------------------------------------------------------------
-  -- The evaluation on a run, indexed as in the note's unwinding
+  -- The evaluation on a run, at stage i
 
   eval : (v0 : Val) -> Run P v0 -> Formula -> Nat -> Bool
   eval v0 r A i = evalAt c0 c1 A (posIter c0 c1 i (v0 , rest))

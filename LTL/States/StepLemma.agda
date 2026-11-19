@@ -1,21 +1,14 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.StepLemma -- G18 and G19 of FORMALISATION-PLAN.md,
--- Lemmas 2.7 and 2.8 of m4.tex.
+-- LTL.States.StepLemma -- the step lemma:
 --
 --   stepLemma : ⊢ (chi P v) ⇒ ○ (beta P (succs P (St P) v))
 --
--- Following the note: state completeness and (D1) give |- ○ (beta St),
--- hence a disjunction of ○ chi_w by (D4); the w with v not-> w are dropped;
--- (D4) carries the survivors back under a single ○.
---
--- The four refutation cases are done with the CONJUNCTION as antecedent,
---   R = (chi P v) ∧ ○ (chi P w) ,
--- deriving  ⊢ ¬ R  and converting at the end by dne.  That keeps every
--- case at one antecedent level, where ∧Fst and ∧Snd give both halves.
---
--- G19 (persistence, Lemma 2.8) is already discharged in LTL.States.Step as `persist`;
--- it is (T3) read off, so nothing is added here.
+-- State completeness and (D1) give ⊢ ○ (beta St), hence a disjunction of
+-- ○ chi_w by (D4); the w that are not successors of v are refuted and
+-- dropped; (D4) carries the rest back under a single ○.  The refutations use
+-- the conjunction  (chi P v) ∧ ○ (chi P w)  as antecedent, so every case sits
+-- at one level where ∧Fst and ∧Snd give both halves.
 
 module LTL.States.StepLemma where
 
@@ -163,7 +156,7 @@ filter⇒ P v Q (w ∷ ws) (alCons lenw al) bad with step P v w in e
   ⇒TransU (⇒Trans (bad w lenw e) (⇒Swap ⇒Refl)) (filter⇒ P v Q ws al bad)
 
 ------------------------------------------------------------------------
--- Lemma 2.7
+-- The step lemma
 
 stepLemma : (P : Formula) (v : Val)
          -> length v ≡ length (sub P)

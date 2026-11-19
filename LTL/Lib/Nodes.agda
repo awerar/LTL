@@ -1,22 +1,15 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Lib.Nodes -- finite sets of nodes, for a node type with a decidable equality.
+-- LTL.Lib.Nodes -- finite sets of nodes, for a node type with a sound,
+-- reflexive equality test _≡ᵛ_.
 --
--- Parameterised by the node type and its equality test, with the two facts
--- about the test the searches use: it is sound (true means equal) and
--- reflexive.  The graph layer (LTL.SCC.Graph) uses it at an arbitrary node type;
--- LTL.States.Reach instantiates it at  Val  with  _≡ᵛ_ , and that instance is the one
--- the rest of the development sees.
+-- The graph layer (LTL.SCC.Graph) uses it at any node type; LTL.States.Reach
+-- instantiates it at Val, and that instance is the one the rest of the
+-- development sees.  The superscript ᵛ reads "vertex".  Module parameters
+-- cannot carry fixity, so every use of _≡ᵛ_ here is parenthesised.
 --
--- The superscript ᵛ reads "vertex": ∈ᵛ ≢ᵛ are the tests on nodes, and at the
--- Val instance they are the tests on valuations.  The parameter _≡ᵛ_ has
--- Agda's default precedence (fixity declarations for module parameters are
--- ignored); every use is parenthesised or compared with ≡, so it parses the
--- same as the  infix 4.5  of LTL.States.Reach.
---
--- This module imports LTL.Lib.Sets and LTL.Lib.Bar but does not re-export them, so that
--- two instances never bring two copies of their names into scope.  The prelude
--- is opened above the module header because the parameters' types need it.
+-- LTL.Lib.Sets and LTL.Lib.Bar are imported but not re-exported, so that two
+-- instances never bring two copies of their names into scope.
 
 open import LTL.Lib.Prelude
 
@@ -60,18 +53,15 @@ x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
 ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
 
 ------------------------------------------------------------------------
--- Names for the hypotheses the graph searches keep repeating.
+-- Names for the hypotheses the graph searches keep repeating.  Each is an
+-- abbreviation, definitionally equal to the Pi-type it names.
 --
--- Each is only an abbreviation, definitionally equal to the Pi-type it names,
--- so a proof of the long form is a proof of the short one and no body changes.
---
---   Pred          a predicate on nodes: a fairness condition, or the
---                 predicate a Bar search runs on;
---   Edges         a graph on nodes, given as its edge test;
---   Closed ws G C   C is closed under G-successors that lie inside ws;
---   NoneSat f C     f is false at every member of C;
---   HoldsOutside R ws   R holds at every node outside ws -- the
---                 induction hypothesis of a removing iteration.
+--   Pred                a predicate on nodes
+--   Edges               a graph, given as its edge test
+--   Closed ws G C       C is closed under G-successors that lie inside ws
+--   NoneSat f C         f is false at every member of C
+--   HoldsOutside R ws   R holds at every node outside ws -- the induction
+--                       hypothesis of a removing search
 
 Pred : Set
 Pred = Node -> Bool
@@ -91,18 +81,15 @@ HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
 ------------------------------------------------------------------------
 -- Inductive finiteness for nodes
 
--- IFin E: E is inductively finite.  One cannot keep choosing pairwise distinct
--- nodes that satisfy E forever, so a search that always picks a new one
--- stops.
+-- IFin E: E is inductively finite, so a search that keeps picking new nodes
+-- satisfying E stops.
 
 IFin : Pred -> Set
 IFin E = Bar _≢ᵛ_ E
 
 ------------------------------------------------------------------------
--- Kuratowski implies inductively finite.
---
--- This is the only place the development uses the ≤ measure: it is paid once,
--- when the Bar is built, and no search counts anything afterwards.
+-- A list gives an inductively finite set.  The length bound is paid once, here,
+-- and no search counts anything afterwards.
 
 barOfList : {E : Pred} (n : Nat) (xs : List Node) -> length xs ≤ n
          -> ((x : Node) -> E x ≡ true -> x ∈ xs) -> IFin E
@@ -117,13 +104,9 @@ barOfList {E = E} (suc n) xs le sb =
                                  (∧ᵇ-trueʳ (E z) (x ≢ᵛ z) ez)))
 
 ------------------------------------------------------------------------
--- The invariant the removing searches carry.
---
--- AllSat E xs says the list xs lies inside the predicate E.  A search that
--- removes an element x from xs passes to E intersect (R x), and that is
--- precisely the sub-Bar cBar hands over -- so the pool of candidates still
--- available is not a list carried alongside the search: it is the Bar's own
--- predicate.
+-- The invariant the removing searches carry.  AllSat E xs says xs lies inside
+-- E.  Removing x from xs passes to  E intersect (R x) , exactly the sub-Bar
+-- that cBar hands over, so the pool of candidates is the Bar's own predicate.
 
 -- Naming convention for the searches built on this (Closure, Gfp, Elim,
 -- Graph, SccTrap):
@@ -149,8 +132,7 @@ listBar : (xs : List Node) -> IFin (λ v -> v ∈ᵛ xs)
 listBar xs = barOfList (length xs) xs (leRefl (length xs))
                        (λ x ex -> ∈ᵛ-sound x xs ex)
 
--- Dropping x from the list is dropping x from the predicate.  Both searches of
--- G29 that remove a member of the list they are searching use this.
+-- Dropping x from the list is dropping x from the predicate.
 
 dropAllSat : {E : Pred} (p : Pred) (xs : List Node) -> AllSat E xs
           -> (x : Node) -> p x ≡ false

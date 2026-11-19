@@ -1,14 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Rules.PropList -- G11 and G12 of FORMALISATION-PLAN.md.
+-- LTL.Rules.PropList -- the list-indexed propositional rules: (L2) a formula
+-- implying each member implies ⋀, (L5) ⋁ elimination, and (L6) splitting a
+-- disjunction on a formula.
 --
--- (L2) and (L5) of Lemma 1.1 of m4.tex: the only two schemes indexed by a
--- list.  ⋀ and ⋁ are from LTL.States.Val, with ⋀ [] = ⊤ and ⋁ [] = ⊥,
--- the convention fixed after Lemma 1.1 -- so the two clauses of (L5) at n = 0
--- are exactly the two clauses of (L0).
---
--- ⋁Elim is the workhorse of the provable branch: dropping refuted disjuncts,
--- and taking the disjunction over W in Theorem 4.1, are both instances of it.
+-- ⋀ and ⋁ are from LTL.States.Val, with ⋀ [] = ⊤ and ⋁ [] = ⊥.  ⋁Elim is the
+-- workhorse of the refutations: dropping refuted disjuncts and eliminating
+-- beta over a set of states are both instances of it.
 
 module LTL.Rules.PropList where
 
@@ -16,10 +14,8 @@ open import LTL.Rules.Prop public
 open import LTL.States.Val  public
 
 ------------------------------------------------------------------------
--- Negation introduction, lifted under an antecedent.
---
--- From  P ⇒ (C ⇒ B)  and  P ⇒ (C ⇒ ¬ B)  conclude  P ⇒ ¬ C.  Every
--- refutation below factors through this.
+-- Negation introduction under an antecedent: from  P ⇒ (C ⇒ B)  and
+-- P ⇒ (C ⇒ ¬ B)  conclude  P ⇒ ¬ C.  Every refutation below uses it.
 
 -- mpU2 is mpU under two antecedents P and Q.
 
@@ -52,8 +48,7 @@ mpU2 f g = mpU (mpU (liftP p2) f) g
 ∧Pair f g = mp p3 (¬IntroU (liftP g) (⇒TransU (liftP f) dne))
 
 -- Case analysis under an antecedent: from P ⇒ (X ⇒ Z) and P ⇒ (¬ X ⇒ Z)
--- conclude P ⇒ Z.  This is the cons case of ⋁Elim isolated, and it is what
--- the (D4) disjunction lemmas of LTL.Rules.Temporal need.
+-- conclude P ⇒ Z.  The (D4) disjunction lemmas of LTL.Rules.Temporal use it.
 
 caseU : {P X Z : Formula}
      -> ⊢ P ⇒ X ⇒ Z -> ⊢ P ⇒ ¬ X ⇒ Z
@@ -67,7 +62,7 @@ caseU {P} {X} {Z} f g = ⇒Trans (¬IntroU h1 h2) dne
     h2 = mpU (liftP (contra {X} {Z})) f
 
 ------------------------------------------------------------------------
--- G11 : (L2)
+-- (L2)
 
 -- AllFrom C As: every A in As follows from C (⊢ C ⇒ A for each).
 
@@ -93,7 +88,7 @@ allFrom-map (A ∷ As) f = fromCons (f here) (allFrom-map As (λ m -> f (there m
 ⋀Intro (A ∷ As) (fromCons d ds) = ∧Pair d (⋀Intro As ds)
 
 ------------------------------------------------------------------------
--- G12 : (L5)
+-- (L5)
 
 -- AllInto C As: every A in As implies C (⊢ A ⇒ C for each).
 
@@ -138,9 +133,8 @@ allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m
     h2 = mpU (liftP (contra {A} {C})) (liftP d)
 
 ------------------------------------------------------------------------
--- Dropping a refuted disjunct.  This is what "dropping the refuted
--- disjuncts" comes to in Lemma 2.6, which discharges the non-states this way,
--- and in Lemma 2.7, for the successors w with v not-> w.
+-- Dropping a refuted disjunct.  State completeness discharges the non-states
+-- this way, and the step lemma the non-successors.
 
 ⋁Drop : {A : Formula} (As : List Formula)
      -> ⊢ ¬ A -> ⊢ ⋁ (A ∷ As) ⇒ ⋁ As
@@ -149,11 +143,11 @@ allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m
            (intoCons (mp ¬Elim d) (allInto-map As (λ m -> ⋁Intro As m)))
 
 ------------------------------------------------------------------------
--- G13 : (L6)
+-- (L6)
 --
--- If  |- ⋁ Cs  then  |- ⋁ (splitOn A Cs) , where splitOn A Cs conjoins
--- each disjunct with A and, separately, with ¬ A.  This is the step of the
--- structural induction along Sub P in Lemma 2.6.
+-- If  ⊢ ⋁ Cs  then  ⊢ ⋁ (splitOn A Cs) , where splitOn A Cs conjoins each
+-- disjunct with A and, separately, with ¬ A.  This is the step of the
+-- induction along sub P in state completeness (LTL.States.Complete).
 
 splitOn : Formula -> List Formula -> List Formula
 splitOn A Cs = map (A ∧_) Cs ++ map (¬ A ∧_) Cs

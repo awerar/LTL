@@ -1,49 +1,23 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.LassoEval -- G25 and G26 of FORMALISATION-PLAN.md, for any lasso.
+-- LTL.Countermodel.LassoEval -- the Boolean evaluation of formulas on a lasso,
+-- and its soundness: every derivable formula is true at every position.
 --
---   "The lasso is a finite structure with a total successor function, so Always
---    and Eventually evaluate on it by conjunction and disjunction over the
---    finite forward orbit of a state; write [[.]]_s for that Boolean
---    evaluation.  One checks by induction on derivations that |- C implies
---    [[C]]_s = 1 at every state of every lasso."            -- m4.tex section 5
+-- The states have any type S, and read s n is the truth value of variable n
+-- in s.  LTL.Countermodel.Eval takes S to be valuations; LTL.Semantics takes
+-- it to be LTL.Trusted's Instant.
 --
--- The states of the lasso are of any type S, and read s n is the truth value
--- of the variable n in the state s.  LTL.Countermodel.Eval takes S to be valuations, read
--- against sub P, for the runs the elimination builds; LTL.Semantics takes it to
--- be LTL.Trusted's Instant, read as itself, for an arbitrary lasso.
+-- evalAt has one clause per constructor: ○ is one step of nextPos and □ A is
+-- the conjunction of A over the forward orbit (LTL.Countermodel.Orbit), so the
+-- recursion is structural.  It is total on all formulas and positions, so
+-- soundness holds for any derivable C at any position.
 --
--- The evaluation has five clauses, one per constructor of Formula.  □ A is the
--- conjunction of A over the forward orbit (LTL.Countermodel.Orbit); since orbitOf returns a
--- list, this is all, and the recursion is structural in the formula.
--- Eventually needs no clause of its own: ◇ A is ¬ □ ¬ A, so it comes out as
--- the disjunction the note describes.  The evaluation is by POSITION: ○ is one
--- step of nextPos and □ a conjunction over orbitOf, both functions of the
--- position alone.
---
--- Soundness has ten constructors.  Six are Boolean tautologies of at most three
--- variables, written out by cases; (K ○) and (Lin) reduce to  z ⇒ᵇ z  because
--- evalAt commutes with ○ definitionally, both sides of (Lin) being
--- ¬ᵇ evalAt A (nextPos pos) on the nose.  That leaves four.
---
---   (K □)  is all pointwise: the SAME orbit on both sides, so it is
---            all-at then ⇒ᵇ-mp then all-intro.
---
---   (Exp)    needs the orbit of pos to contain pos, its successor, and the
---            whole orbit of its successor.  All three are orbitIter, since
---            posIter 0, posIter 1 and posIter (suc t) all land in it.
---
---   (Ind)    is the only one with content.  Under  □ (A ⇒ ○ A)  and A at pos,
---            A holds at posIter t pos by induction on t -- the hypothesis is
---            available at posIter t pos because orbitIter puts it in the orbit
---            -- and every member of the orbit is a posIter t pos by
---            orbitOf-iter.  Twenty lines, no arithmetic.
---
---   (gen)    is the induction hypothesis at every position of the orbit.
---
--- The evaluation is total on all formulas and all positions, not only on
--- subformulas of some P or on the positions a run visits, which is what lets
--- soundness be stated for an arbitrary derivable C at an arbitrary position.
+-- In soundness, (P1)-(P3) are Boolean tautologies, and (K ○) and (Lin) hold
+-- because evalAt commutes with ○ definitionally.  (K □) is pointwise on one
+-- orbit; (Exp) needs the orbit to contain the position, its successor and the
+-- successor's orbit (orbitIter).  (Ind) is the one with content: A propagates
+-- along posIter t pos by induction on t, and every member of the orbit is
+-- such a posIter (orbitOf-iter).
 
 open import LTL.Syntax.Deriv
 
@@ -62,7 +36,7 @@ evalAt c0 c1 (○ A)   pos = evalAt c0 c1 A (nextPos c0 c1 pos)
 evalAt c0 c1 (□ A)   pos = all (evalAt c0 c1 A) (orbitOf c0 c1 pos)
 
 ------------------------------------------------------------------------
--- The two ways of using it, and the shapes G26 and G27 will want
+-- The two ways of using it
 
 eval□-at : (c0 : S) (c1 : List S) (A : Formula) (pos q : Pos)
         -> evalAt c0 c1 (□ A) pos ≡ true -> q ∈ orbitOf c0 c1 pos
@@ -161,11 +135,8 @@ expSound c0 c1 A pos =
                                             (orbitSub c0 c1 pos q m) eb)))
 
 ------------------------------------------------------------------------
--- (Ind).
---
--- The forward induction the note leaves to "one checks": A propagates along
--- the run because the hypothesis is available at every stage of it, and the
--- orbit consists exactly of those stages.
+-- (Ind): A propagates along the run, since the hypothesis is available at
+-- every stage and the orbit consists exactly of those stages.
 
 indSound : (c0 : S) (c1 : List S) (A : Formula) (pos : Pos)
         -> evalAt c0 c1 (□ (A ⇒ ○ A) ⇒ A ⇒ □ A) pos ≡ true
@@ -238,10 +209,8 @@ sound c0 c1 (lin {A}) pos =
         (⇒ᵇ-refl (¬ᵇ evalAt c0 c1 A (nextPos c0 c1 pos)))
         (⇒ᵇ-refl (¬ᵇ evalAt c0 c1 A (nextPos c0 c1 pos)))
 
--- (PC).  evalAt is DEFINED by ¬ᵇ at ¬ and by ⇒ᵇ at ⇒, so the two
--- compositionality hypotheses of tautSound are refl and the case is one line.
--- This is the whole of Ben-Ari's Axiom 0, and it is where the substitution
--- lemma that Remark 6.4 feared would have gone.
+-- (PC): evalAt is DEFINED by ¬ᵇ at ¬ and ⇒ᵇ at ⇒, so the two hypotheses
+-- of tautSound are refl.
 sound c0 c1 (pc {C} e) pos =
   tautSound (λ X -> evalAt c0 c1 X pos) C
             (λ X m -> refl) (λ X Y m -> refl) e

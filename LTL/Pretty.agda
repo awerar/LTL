@@ -1,60 +1,30 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Pretty -- the answers of the decision procedures, as text one can read.
+-- LTL.Pretty -- the procedure's answers as readable text.
 --
--- A derivation is a finite tree and a countermodel is a finite lasso, so both
--- can be written down.  C-c C-n on a derivation prints the TERM: every
--- constructor fully qualified, every
--- abbreviation of LTL.Syntax.Formula unfolded (A ∧ B appears as ¬ (A ⇒ ¬ B)), and
--- the tree laid out as nested applications.  That is right for checking a
--- shape by refl and useless for reading a proof.
---
--- This module renders to a String instead, in the two forms a proof is read
--- in on paper:
---
---   renderDeriv d    the Hilbert-style proof of m4.tex §1: numbered lines,
---                    each an axiom instance or obtained by (MP) / (Gen) from
---                    earlier lines cited by number.  A formula already proved
---                    is cited again rather than proved twice, so subproofs
---                    that the tree repeats appear once.
+--   renderDeriv d    a numbered Hilbert-style proof: each line an axiom
+--                    instance, or obtained by MP or Gen from earlier lines
+--                    cited by number.  A formula already proved is cited
+--                    again, not proved twice.
 --   renderTree n d   the derivation tree, indented, to depth n.
 --   renderCM Q c     the lasso countermodel: the variables true at each time
---                    point of the prefix and of the loop (m4 §5, Prop 5.3).
+--                    point of the prefix and of the loop.
 --
--- and the entry points
---
---   prove Q          renders decideSCC Q (LTL.Procedures.DecideSCC), whose
---                    certificates are short: the propositional bookkeeping is
---                    discharged by (PC).  proveWith renders any other procedure
---                    of the same type.
---   proveLines Q     prove Q as one String per line, for editors that only
---                    offer plain C-c C-n (see below).
+--   prove Q          renders decideSCC Q;  proveWith renders any procedure of
+--                    the same type.
+--   proveLines Q     prove Q as one String per line.
 --   proveTree n Q    the tree view of decideSCC Q.
 --
 -- Formulas are printed with the fixities of LTL.Syntax.Formula and minimal
--- parentheses.  Of the abbreviations, ∧, ⇔ and ◇ are put back: their unfolded
--- shapes ¬ (A ⇒ ¬ B) and ¬ □ ¬ A are rarely meant literally.  ∨, ⊤ and ⊥ are
--- NOT: ¬ A ⇒ B is the antecedent of (P3) and p ⇒ p is the identity theorem,
--- and printing them as B ∨ ¬ A or ⊤ would hide what is being proved.
--- showFormulaRaw prints with no abbreviations at all.  Variables are p q r s t,
--- then x5, x6, ...  The output uses the same spacing as Agda source, so a
--- printed formula can be pasted back into a file.
+-- parentheses.  ∧, ⇔ and ◇ are put back; ∨, ⊤ and ⊥ are not, since ¬ A ⇒ B
+-- and p ⇒ p usually mean what they say.  showFormulaRaw uses no abbreviations.
+-- Variables are p q r s t, then x5, x6, ...
 --
--- How to look at the output.  A String shown by C-c C-n is a quoted literal
--- with \n escapes.  C-u C-u C-c C-n (Agda's "use show instance" mode) instead
--- evaluates  show (expr)  and prints the resulting string raw, with real line
--- breaks; show below is the identity on String, which is all that mode needs.
--- So, with this module loaded:
---
---   C-u C-u C-c C-n   prove (□ pv ⇒ pv)
---
--- tools/show-proof does the same from a terminal.  An editor mode that talks
--- to Agda over --interaction-json gets the string back quoted either way; for
--- those, plain C-c C-n on  proveLines Q  shows one quoted line per row.
---
--- Strings are Agda.Builtin.String, which binds the NATURAL builtin through
--- Agda.Builtin.Nat; that is why LTL.Lib.Base takes its Nat from there.  Nothing in
--- the development depends on this module.
+-- To read the output: C-u C-u C-c C-n  prove (□ pv ⇒ pv)  prints the string
+-- raw (show is the identity on String, which is all that mode needs).  Over
+-- --interaction-json, plain C-c C-n on  proveLines Q  shows one line per row.
+-- tools/show-proof does the same from a terminal.  Nothing else in the
+-- development depends on this module.
 
 module LTL.Pretty where
 
@@ -116,11 +86,10 @@ commaSep (s ∷ t ∷ ss) = s <> ", " <> commaSep (t ∷ ss)
 ------------------------------------------------------------------------
 -- Formulas
 --
--- fm c A prints A in a context of precedence c: A is parenthesised when its
--- own precedence is below c.  Precedences are those of LTL.Syntax.Formula: the prefix
--- operators 30, ∧ 22, ⇒ 20 (both right associative), ⇔ 19 (non-associative).
--- The helpers take the pieces of the formula already split, never a rebuilt
--- formula, so every recursive call is on a subterm.
+-- fm c A prints A in a context of precedence c, parenthesising A when its own
+-- precedence is below c: prefix operators 30, ∧ 22, ⇒ 20 (both right
+-- associative), ⇔ 19.  The helpers take the formula already split, so every
+-- recursive call is on a subterm.
 
 showVar : Nat -> String
 showVar zero                         = "p"
@@ -369,12 +338,11 @@ renderTree n d = unlines (treeLines n d)
 ------------------------------------------------------------------------
 -- Countermodels
 --
--- A countermodel starting at v0 whose run has cycle c0 ∷ c1 and rest rest is
+-- A countermodel starting at v0 with rest rest and cycle c0 ∷ c1 is
 --   v0, rest            (a walk from v0 ending at b)
---   c0, c1, c0, c1, ... (a cycle from b back to b, repeated forever)
--- and Q is false at time 0.  Each time point is shown as the set of
--- variables true there; by Hintikka's lemma (LTL.Countermodel.Hintikka) that set of
--- variables is all of the model that matters.
+--   c0, c1, c0, c1, ... (the cycle, repeated forever)
+-- and Q is false at time 0.  Each time point is shown as the set of variables
+-- true there.
 
 isVar : Formula -> Bool
 isVar (var n) = true

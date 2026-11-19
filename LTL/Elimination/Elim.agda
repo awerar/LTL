@@ -1,46 +1,29 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Elimination.Elim -- G8 of FORMALISATION-PLAN.md.
+-- LTL.Elimination.Elim -- the state elimination and its result Uinf P.
 --
--- Definition 3.1 of m4.tex.  Starting from U_0 = St(P), remove every state to
--- which one of the following applies, and repeat:
+-- Starting from Ust P, remove every state to which one of the following
+-- applies, and repeat until a round removes nothing:
 --
---   (R1)  v has no ->-successor in U_k;
---   (R2)  for some j, the j-th eventuality is pending at v and is fulfilled at
---         no state of Reach_{U_k}(v).
+--   (R1)  v has no successor in the current set U;
+--   (R2)  some eventuality is pending at v and is fulfilled at no state
+--         reachable from v inside U.
 --
--- The eventualities are indexed by the box-subformulas of P: □ A is pending
--- at v when □ A is not in v, and fulfilled at w when A is not in w.
+-- The eventualities are the A with □ A in sub P: □ A is pending at v when it
+-- is not in v, and fulfilled at w when A is not in w.  (R2) is "v lies in gfpW
+-- P U A" (LTL.Elimination.Gfp).  decideSCC runs the elimination only in its
+-- fair branch, to place the countermodel's loop inside Uinf (uinfTrap).
 --
--- (R2) is stated through gfpW of LTL.Elimination.Gfp rather than through reach: "the j-th
--- eventuality is fulfilled at no state of Reach_{U_k}(v)" is written "v belongs
--- to the largest ->-closed set of states of U_k at which A_j still holds".
--- gfpSound and gfpComplete of LTL.Elimination.Gfp show the two are the same condition, with
--- Reach taken in its exact sense (the inductive type Path of ->-paths inside
--- U_k).  The reason for the change is Theorem 4.1: its case (R2) needs the set
--- to be closed under successors, and for a greatest fixed point that is free,
--- where for the reachable set it is a pigeonhole argument.
---
--- Two implementation choices (G29).
---
--- The iteration stops when a round removes nothing, by recursion on a Bar.
--- There is no fuel and no ≤ measure here at all.
---
--- The gfp sets are computed ONCE PER ROUND rather than once per state.  W_j
--- does not depend on the state being tested, but written as  v ∈ᵛ gfpW P us A
--- under the binder for v it would be rebuilt for every pending state of the
--- round, which made checkpoint C5 several times slower.  evList pairs each
--- eventuality with its set, the pair list is the argument the round filters
--- against, and badEv reads the set out of the pair.  Laziness keeps the
--- cost down further: the set in a pair is forced only if the eventuality is
--- actually pending at the state being tested.
+-- The gfp sets are computed once per round, not once per state: evList pairs
+-- each eventuality with its set, and laziness forces a set only if the
+-- eventuality is pending at the state being tested.
 
 module LTL.Elimination.Elim where
 
 open import LTL.Elimination.Gfp public
 
 ------------------------------------------------------------------------
--- The eventualities are the A for which □ A occurs in sub P: □Args (LTL.Syntax.Skel).
+-- The eventualities are the A for which □ A occurs in sub P: □Args.
 
 ------------------------------------------------------------------------
 -- (R1)
@@ -54,8 +37,8 @@ pending P v A = ¬ᵇ valOf P v (□ A)
 ------------------------------------------------------------------------
 -- (R2), with the sets hoisted out of the state loop
 
--- An eventuality □A of Sub P, given by its argument A, paired with its gfp set
--- W_A = gfpW P us A.
+-- An eventuality, given by its argument A, paired with its gfp set
+-- gfpW P us A.
 
 Ev : Set
 Ev = Formula × List Val
@@ -97,13 +80,10 @@ module _ (P : Formula) where
   elimRound us = filter (keep us (evList us)) us
 
   ------------------------------------------------------------------------
-  -- The elimination, run until a round removes nothing.
-  --
-  -- findFalse asks whether any state of us fails keep.  If none does, us is the
-  -- answer: that is Definition 3.1's stopping condition, read directly rather
-  -- than recovered from a fixed-point equation.  If one does, it is dropped
-  -- from the Bar's predicate along with the round, which is what makes the
-  -- recursive call structurally smaller.
+  -- The elimination, run until a round removes nothing.  findFalse asks
+  -- whether any state of us fails keep; if none does, us is the answer.  If
+  -- one does, it is dropped from the Bar's predicate, which makes the
+  -- recursive call smaller.
 
   elimGo   : {E : Pred} (us : List Val)
           -> AllSat E us -> IFin E -> List Val
@@ -120,28 +100,19 @@ module _ (P : Formula) where
            (dropAllSat (keep us (evList us)) us sb x q) (h x (sb x m))
 
   ------------------------------------------------------------------------
-  -- U_infinity.
-  --
-  -- The elimination starts from Ust P, the set LTL.States.Closure gives the search,
-  -- not from the complete state list St P, which is left to the derivations
-  -- (G30).  Its Bar is guardedVecBar: the states have length |sub P|, and the
-  -- vectors of a given length are inductively finite by induction on the
-  -- length, so nothing here needs the enumeration allVecs -- nor even
-  -- length (Ust P) .  guardBar
-  -- (Coquand and Siles, section 5) is what keeps the finiteness proof from
-  -- being forced as the search runs.
+  -- U_inf.  The elimination starts from Ust P, and its Bar is guardedVecBar:
+  -- the states have length |sub P|, so neither allVecs nor length (Ust P) is
+  -- ever computed.
 
-  -- Uinf P is U_inf of m4.tex: what is left of Ust P when (R1) and (R2) no
-  -- longer remove anything.
+  -- Uinf P: what is left of Ust P when (R1) and (R2) remove nothing.
 
   Uinf : List Val
   Uinf = elimGo (Ust P) (ustAllSat P) (ustBar P)
 
 ------------------------------------------------------------------------
--- Survivors are states.
---
--- Each round only filters, so U_inf is contained in St P.  Hintikka's lemma
--- needs this to read (S1) and (S2) off a state of the run.
+-- Survivors are states.  Each round only filters, so Uinf P lies inside
+-- St P.  Hintikka's lemma reads (S1) and (S2) off a state of the run with
+-- this.
 
 module _ (P : Formula) where
 
@@ -169,9 +140,8 @@ module _ (P : Formula) where
   uinfSub : (x : Val) -> x ∈ Uinf P -> x ∈ St P
   uinfSub x m = ustSt P (uinfUst x m)
 
-  -- The projection is named rather than applied inline: giving filter-prop its
-  -- list argument against the folded  St P  is what keeps the elaborator from
-  -- unfolding Uinf while it solves the implicit.
+  -- Named rather than applied inline: giving filter-prop its list argument
+  -- against the folded  St P  keeps the elaborator from unfolding Uinf.
 
   stIsState : {x : Val} -> x ∈ St P -> isState P x ≡ true
   stIsState m = filter-prop (isState P) (allVecs (length (sub P))) m

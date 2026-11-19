@@ -1,28 +1,15 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Lib.Base -- basic prelude (Nat, Bool, Empty, Unit, ≡).
+-- LTL.Lib.Base -- Nat, Bool, Empty, Unit and propositional equality.
 --
--- Self-contained apart from Agda's builtin library (not the standard library);
--- the module is --safe.  Nat is Agda.Builtin.Nat rather than a local copy
--- bound with the NATURAL pragma: such a binding can be made only once in a
--- development, and Agda.Builtin.String (needed by LTL.Pretty, the proof
--- printer) makes it through Agda.Builtin.Nat.  Propositional equality is
--- Agda.Builtin.Equality's _≡_ for the same reason:  with ... in eq  needs the
--- EQUALITY builtin, and Agda.Builtin.String binds it to that type.  Bool is
--- Agda.Builtin.Bool's, which is also the Bool of LTL.Trusted: an Instant there
--- is a Var -> Bool, and the evaluation of LTL.Countermodel.LassoEval must return the same
--- type for LTL.Semantics to compare the two.
+-- No standard library: Nat, Bool and ≡ are Agda's builtins.  They have to be,
+-- since Agda.Builtin.String (used by LTL.Pretty) binds the NATURAL and EQUALITY
+-- builtins to them, and LTL.Trusted uses the same Bool.  Empty and Unit keep
+-- these names because ⊥ and ⊤ are LTL formulas.
 --
--- The notation follows Agda's standard library -- x ≡ y, sym, trans, cong,
--- subst, if_then_else_, and the builtin _+_ and _∸_ (Agda.Builtin.Nat's _-_)
--- -- since that is what readers of Agda expect.  Empty and Unit keep their
--- names: ⊥ and ⊤ are the LTL constants of LTL.Syntax.Formula.
---
--- Boolean-valued tests carry a superscript naming the type they compare:
--- ≡ⁿ here on Nat, ≡ᵛ ∈ᵛ ≢ᵛ on nodes (LTL.Lib.Nodes; valuations at the instance
--- LTL.States.Reach makes), ≡ᶠ ∈ᶠ on formulas (LTL.Syntax.Formula, LTL.Syntax.Skel), just as ∧ᵇ
--- etc. (LTL.Lib.Prelude) act on Bool.  They are infix 4.5: tighter than ≡, looser
--- than ∷ and ++.
+-- Boolean-valued tests carry a superscript naming the type they compare (≡ⁿ on
+-- Nat here, ≡ᵛ on nodes, ≡ᶠ on formulas).  They are infix 4.5: tighter than
+-- ≡, looser than ∷ and ++.
 
 module LTL.Lib.Base where
 

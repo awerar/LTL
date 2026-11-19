@@ -46,8 +46,8 @@ agda -i . LTL/Benchmarks/Lecture.agda
 modules. `Examples` decides 46 formulas from Schmitt and Goubault-Larrecq.
 `Lecture` examines a worked example. These benchmark modules take longer than
 the core proofs.
-The source comments include historical timings; those depend on the machine and
-evaluation method.
+Timings quoted in the source comments depend on the machine and evaluation
+method.
 
 The files use `--safe --without-K --exact-split`. There are no postulates,
 unfinished goals, or termination overrides. The procedures return a derivation
@@ -135,10 +135,6 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/Procedures/` | `Answer`, `CompletePC`, `DecideSCC` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
-
-The source comments cite goals (G1–G40), phases and checkpoints of the plans
-of the original development, which are not in this repository;
-[docs/plan-index.md](docs/plan-index.md) lists where each one lives in the code.
 
 The textbook and external papers used during the original development are not
 included in this repository; bibliographic links are provided in the proposal.

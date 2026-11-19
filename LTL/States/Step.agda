@@ -1,19 +1,14 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Step -- G6 of FORMALISATION-PLAN.md.
+-- LTL.States.Step -- the transition relation step P v w:
 --
--- Definition 2.3 of m4.tex, the transition relation:
+--   (T1)  for ○ B in sub P:  ○ B in v  iff  B in w
+--   (T2)  for □ A in sub P:  □ A in v  implies  □ A in w
+--   (T3)  for □ A in sub P:  □ A not in v and A in v  implies  □ A not in w
 --
---   (T1)  for ○ B in Sub(P):  ○ B in v  iff  B in w
---   (T2)  for □ A in Sub(P):  □ A in v  implies  □ A in w
---   (T3)  for □ A in Sub(P):  □ A not in v and A in v  implies
---                               □ A not in w
---
--- (T2) and (T3) are the two halves of  □ A ⇔ A ∧ ○ □ A  with
--- ○ □ A read as "□ A at the successor"; (S2) of LTL.States.State is the
--- remaining half.  Keeping them here rather than in the state condition is what
--- lets Sub replace a Fischer-Ladner closure (Remark 2.1), and it also makes
--- persistence (Lemma 2.8) true by definition rather than by proof.
+-- (T2) and (T3) are the two halves of  □ A ⇔ A ∧ ○ □ A  with ○ □ A read as
+-- "□ A at the successor"; (S2) is the remaining half.  Keeping them here lets
+-- sub P stand in for a closure, and makes persistence hold by definition.
 
 module LTL.States.Step where
 
@@ -46,9 +41,8 @@ module _ (P : Formula) where
   succs us v = filter (step v) us
 
   ------------------------------------------------------------------------
-  -- Persistence, Lemma 2.8 of m4.tex.
-  --
-  -- On paper this needs a line of proof; here it is (T3), read off.
+  -- Persistence: a pending eventuality stays pending unless A fails.  It is
+  -- (T3), read off.
 
   persist : (v w : Val) (A : Formula)
          -> □ A ∈ sub P
@@ -70,10 +64,8 @@ module _ (P : Formula) where
       t3aux false true  true  () b c
 
   ------------------------------------------------------------------------
-  -- (T2), read off the same way.
-  --
-  -- The note uses it twice: in Lemma 2.7 to refute a successor dropping a box,
-  -- and in Hintikka's lemma to carry  □ A  forward along the run.
+  -- (T2), read off the same way.  The step lemma uses it to refute a
+  -- successor dropping a box, and Hintikka's lemma to carry  □ A  along a run.
 
   carry : (v w : Val) (A : Formula)
        -> □ A ∈ sub P

@@ -1,22 +1,14 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Elimination.Extract -- G21 of FORMALISATION-PLAN.md, the proof-extraction
--- apparatus of Theorem 4.1 of m4.tex.
+-- LTL.Elimination.Extract -- building blocks for refuting states.
 --
--- The note argues by induction on the round at which a state is removed, with
--- the induction hypothesis "every state outside U_k is refutable".  Here that
--- hypothesis is named,
+--   Refuted P us = every state of Ust P outside us is refutable.
 --
---   Refuted P us = every state of Ust P outside us is refutable,
---
--- and it holds of Ust P for nothing (ustRefuted).  This module holds what the
--- extraction is built from: beta_U as a disjunction indexed by states
--- (betaElim, betaIntro), and case (R1) of the theorem, extractR1, which drops
--- all successors by the hypothesis and closes with (D1) and (Lin).
---
--- The induction itself is run by the SCC certificate in LTL.SCC.SccExtract:
--- its sink step is extractR1, and its block step, extractBlock, is the (R2)
--- case of the note, refuting a pending eventuality with a single use of (Ind).
+-- Refuted P (Ust P) holds trivially (ustRefuted).  betaElim and betaIntro
+-- treat beta as a disjunction indexed by states, and extractR1 refutes a state
+-- with no successor inside us.  The induction that uses them is certAll's,
+-- run by LTL.SCC.SccExtract: extractR1 is its sink step, and extractBlock its
+-- block step.
 
 module LTL.Elimination.Extract where
 
@@ -40,12 +32,9 @@ stLen : (P : Formula) {v : Val} -> v ∈ St P
 stLen P m = allLen-mem (stAllLen P) m
 
 ------------------------------------------------------------------------
--- beta_U as a disjunction indexed by states.
---
--- (L5) in the form the theorem uses: introduction at one state, elimination
--- over all of them, and the refutation of a beta all of whose disjuncts are
--- refuted -- which is (L0) when the list is empty, since beta [] is ⊥ and
--- ⋁Elim [] is exFalso.
+-- beta_U as a disjunction indexed by states: introduction at one state,
+-- elimination over all of them, and the refutation of a beta all of whose
+-- disjuncts are refuted (for the empty list, beta [] is ⊥).
 
 -- AllInto for a mapped list, one derivation of  f w ⇒ C  per w.
 
@@ -74,27 +63,22 @@ module _ (P : Formula) where
            (betaElim ws (λ w m -> mp ¬Elim (h w m)))
 
   ------------------------------------------------------------------------
-  -- The induction hypothesis of the theorem
+  -- The induction hypothesis
 
-  -- The induction hypothesis ranges over Ust P, the set the search explores,
-  -- not over St P: a state outside Ust P is never removed and never has to be
-  -- refuted -- the provable branch disposes of it by (S1) instead.  What makes
-  -- the change possible is ustClosed, used by extractR1 below and by extractBlock
-  -- of LTL.SCC.SccExtract: the step lemma
-  -- offers ALL state-successors of u, and forward-closure puts each of them
-  -- back inside Ust P, where the hypothesis applies.
+  -- It ranges over Ust P, not St P: a state outside Ust P cannot contain the
+  -- input and is disposed of by (S1).  ustClosed makes this work: the step
+  -- lemma offers ALL state-successors of u, and each lies in Ust P, where the
+  -- hypothesis applies.
 
   Refuted : List Val -> Set
   Refuted us =
     (u : Val) -> u ∈ Ust P -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi P u)
 
   ------------------------------------------------------------------------
-  -- Case (R1).
-  --
-  -- stepLemma gives the successors of u inside St P, while (R1) speaks of U_k;
-  -- but a successor lying in U_k would be a member of succs P us u, which (R1)
-  -- says is empty.  So every disjunct of beta_S is refuted by the hypothesis,
-  -- (D1) puts the refutation under ○, and (Lin) brings the negation out.
+  -- A state with no successor inside us.  stepLemma gives the successors of u
+  -- inside St P; one inside us would be in succs P us u, which (R1) says is
+  -- empty.  So every disjunct of beta is refuted by the hypothesis, (D1) puts
+  -- the refutation under ○, and (Lin) brings the negation out.
 
   extractR1 : (us : List Val) (u : Val)
            -> u ∈ Ust P -> Refuted us -> r1 P us u ≡ true

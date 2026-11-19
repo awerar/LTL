@@ -1,96 +1,30 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.SCC.SccExtract -- G39 of PHASE11-PLAN.md: a bad component gives refutations.
---
--- The other half of the translation layer.  G38 read LTL.Graph's positive
--- answer as a lasso; this file reads its NEGATIVE answer -- a Cert, the record
--- of the order in which the vertices were removed -- as Hilbert proofs, through
--- certAll, chi and (Ind).  The result is
+-- LTL.SCC.SccExtract -- a certificate gives a derivation.
 --
 --     provableSCC : (Q : Formula)
 --                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
 --                -> ⊢ Q
 --
--- the refutation branch of Theorem 6.1, with no elimination, no greatest fixed
--- point and no round numbering in it: the induction is the reverse traversal
--- of the condensation DAG that the certificate records.
+-- The graph search's NEGATIVE answer is a Cert: the order in which it removed
+-- the vertices, each a sink or a block (a closed component missing some
+-- fairness predicate).  certAll turns it into an induction, refuting every
+-- state of Ust (¬ Q):
 --
--- What comes from LTL.Elimination.Extract.
+--   sink   null (outs ws (step P) x) ≡ true  is  r1 P ws x ≡ true
+--          definitionally, so extractR1 refutes x.
+--   block  the component C misses  evPred P A , i.e. at every state of C the
+--          eventuality □ A is pending and A holds.  extractBlock refutes the
+--          whole of C with one use of (Ind), the invariant being beta of C.
 --
---   stepLemma  -- (Step), Lemma 2.7
---   extractR1  -- the sink case, used verbatim
---   Refuted    -- the induction hypothesis
+-- certAll knows nothing of Ust P, while chi and the step lemma are stated for
+-- its states, so the block is intersected with Ust P on the spot (D below);
+-- ustClosed keeps it closed.
 --
--- extractBlock below is case (R2) of Theorem 4.1, refuting a pending
--- eventuality with one use of (Ind), but with the three facts the note takes
--- from the greatest fixed point -- membership, A holding throughout, closure
--- under successors -- turned into hypotheses, which the certificate's block
--- supplies instead.
---
--- The derivation closes with the (PC) forms of Lemma 2.6 and (L5)
--- (stateCompletePC and betaElimPC, LTL.Procedures.CompletePC), and the states
--- that do not contain ¬ Q are one pc node each (tautChi, LTL.States.Taut), so
--- the certificate is short: the only part of it that is derived step by step
--- is the temporal content, extractR1 and extractBlock.
---
--- The fit with certAll, hypothesis by hypothesis.
---
--- 1. THE SINK CASE IS extractR1 ON THE NOSE.  certAll's sink hypothesis is
---
---        null (outs ws G x) ≡ true
---
---    and at  G = step P  that is  r1 P ws x ≡ true  DEFINITIONALLY --
---    outs ws (step P) x  and  succs P ws x  are both  filter (step P x) ws .
---    sinkStep is one line and no coercion appears in it.
---
--- 2. THE BLOCK CASE IS (R2) WITH THE FIXED POINT REPLACED BY THE COMPONENT.
---    certAll's block hypothesis hands over a set C, a proof that it is closed
---    under G-successors inside ws, and a fairness predicate f that C misses
---    everywhere.  With  f = evPred P A ,  evPred P A y ≡ false  splits into
---
---        valOf P y (□ A) ≡ false     □ A pending at y
---        valOf P y A ≡ true          and unfulfilled at y
---
---    -- the two hypotheses (R2) needs, now at EVERY state of C rather than at
---    one state per round.  That is what uniformity on a component buys:
---    extractBlock refutes the whole component
---    in one use of (Ind), where the elimination of Definition 3.1 needs one
---    round per state.
---
--- 3. THE ONE WRINKLE, AND WHY IT IS PAID BY A FILTER.  certAll quantifies its
---    two hypotheses over an arbitrary vertex list ws and knows nothing about
---    Ust P -- it is the graph layer's induction principle and has no business
---    knowing.  extractBlock, on the other hand, needs every member of the block
---    to be a state of Ust P, since chi and the step lemma are stated there.
---    Rather than thread a subset invariant through certAll, the block is
---    intersected with Ust P on the spot:
---
---        D = filter (_∈ᵛ Ust P) C
---
---    and D is still successor-closed, because ustClosed says Ust P is: a
---    successor of a member of D that is a state lands in C by C's closure and
---    in Ust P by ustClosed, hence in D.  The eventuality is still pending and
---    unfulfilled throughout D since D is a sublist of C, and the state being
---    refuted is in D because certAll's own conclusion hands over its
---    Ust-membership.  So certAll is used exactly as it stands, and R carries
---    the Ust-membership as a hypothesis:
---
---        UstRef P z = z ∈ Ust P -> ⊢ ¬ (chi P z)
---
---    which is Refuted with the quantifier over ws stripped -- the ONE thing
---    certAll's conclusion has that Refuted's does not.
---
--- The search this consumes is graphGo over the whole of Ust P, not fairGraph
--- from a single vertex: fairGraph's certificate is for  reachSet vs G v , and
--- certAll would then need every state outside that reachable set already
--- refuted, which nothing supplies.  Over Ust P itself the starting hypothesis
--- is  ustRefuted , which is vacuous, and that is why the negative branch needs
--- no seed at all.
---
--- What this does NOT do.  It does not prove that a certificate exists whenever
--- Q is derivable, i.e. that the two branches of sccProof decide validity; that
--- is the dichotomy, and joining it to G38 is G40.  Here the certificate is a
--- hypothesis and the theorem is unconditional on it.
+-- The derivation closes with stateCompletePC and betaElimPC
+-- (LTL.Procedures.CompletePC), and each state not containing ¬ Q is one pc
+-- node (tautChi), so the certificate is short: only extractR1 and
+-- extractBlock are derived step by step.
 
 module LTL.SCC.SccExtract where
 
@@ -99,12 +33,8 @@ open import LTL.Elimination.Extract  public
 open import LTL.Procedures.CompletePC public
 
 ------------------------------------------------------------------------
--- The property certAll establishes.
---
--- Refuted P us is "every state of Ust P outside us is refutable"; certAll's
--- conclusion is a predicate of a bare vertex, with the "outside us" discharged
--- by the induction.  What is left is the Ust-membership, so that is what R
--- carries.
+-- The property certAll establishes: Refuted with the "outside us" discharged
+-- by the induction, leaving the Ust-membership as a hypothesis.
 
 module _ (P : Formula) where
 
@@ -116,16 +46,11 @@ module _ (P : Formula) where
   refutedOf ws ih u mu e = ih u e mu
 
   ------------------------------------------------------------------------
-  -- The block case: (R2) against a component instead of against gfpW.
-  --
-  -- This is case (R2) of Theorem 4.1 with its three uses of the fixed point --
-  -- membership, A holding, closure -- turned into the three hypotheses cUst,
-  -- cHold, cCl, and with the closure stated in the form the proof actually uses: the
-  -- successor offered by the step lemma is already known to be a state, and the
-  -- only question is whether it is still inside ws.  The body is otherwise the
-  -- note's argument unchanged: (i) B ⇒ A by (L2) and (L5), (ii) B ⇒ ○ B by
-  -- the step lemma, dropping the successors outside ws by the induction
-  -- hypothesis and keeping the rest by closure, (iii) B ⇒ □ A by (Ind).
+  -- The block case: a component C, closed inside ws, with □ A pending and A
+  -- holding at every state, is refuted by (Ind) with the invariant B = beta C:
+  -- (i) B ⇒ A by (L2) and (L5); (ii) B ⇒ ○ B by the step lemma, dropping the
+  -- successors outside ws by the induction hypothesis and keeping the rest by
+  -- closure; (iii) B ⇒ □ A by (Ind).
 
   extractBlock : (ws C : List Val) (u : Val)
               -> u ∈ Ust P -> Refuted P ws
@@ -192,9 +117,9 @@ module _ (P : Formula) where
           -> UstRef x
   sinkStep ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf ws ih) e1
 
-  -- The block.  The fairness predicate is read back as an eventuality by
-  -- evPredsInv, its falsity on C is split into the two hypotheses of (R2), and
-  -- the component is intersected with Ust P.
+  -- The block.  The fairness predicate is read back as an eventuality
+  -- (evPredsInv), its falsity on C gives the two hypotheses, and the
+  -- component is intersected with Ust P.
 
   blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds P
            -> C ⊆ ws -> Closed ws (step P) C -> NoneSat f C
@@ -246,7 +171,7 @@ module _ (P : Formula) where
           mzD = into z mz mzU
 
   ------------------------------------------------------------------------
-  -- G39: a certificate refutes everything it covers.
+  -- A certificate refutes everything it covers.
 
   certRefuted : {ws : List Val}
              -> Cert (step P) (evPreds P) ws -> Refuted P ws
@@ -262,12 +187,9 @@ module _ (P : Formula) where
   ustCertRefuted c = certRefuted c (ustRefuted P)
 
   ------------------------------------------------------------------------
-  -- The search, run on the whole state set.
-  --
-  -- graphGo rather than fairGraph: fairGraph is v-centred and certifies only
-  -- the reachable set of v, while the refutation branch has to account for
-  -- every state of Ust P at once.  The vertex list is Ust P and the Bar is its
-  -- own listBar, exactly as fairGraph does for reachSet.
+  -- The search, run on the whole state set.  graphGo rather than fairGraph:
+  -- fairGraph certifies only the states reachable from one vertex, while the
+  -- refutation has to cover every state of Ust P.
 
   sccGraph : FairIn (Ust P) (step P) (evPreds P) ⊎
              Cert (step P) (evPreds P) (Ust P)
@@ -275,13 +197,10 @@ module _ (P : Formula) where
     graphGo (step P) (evPreds P) (Ust P) (memAllSat (Ust P)) (listBar (Ust P))
 
 ------------------------------------------------------------------------
--- The refutation branch of Theorem 6.1, by the SCC route.
---
--- Every state of St (¬ Q) is in one of two positions.  A state that never
--- joined the search cannot contain ¬ Q, by the contrapositive of ustSeed, so
--- chi_w ⇒ Q is a tautology and one pc node.  Every state that did join is
--- refuted outright by the certificate, which covers all of Ust (¬ Q).  State
--- completeness -- which quantifies over ALL of St (¬ Q) -- then gives Q.
+-- The derivation of Q.  A state of St (¬ Q) outside Ust (¬ Q) cannot contain
+-- ¬ Q (by ustSeed), so chi_w ⇒ Q is a tautology and one pc node.  A state
+-- inside is refuted by the certificate.  State completeness, over all of
+-- St (¬ Q), then gives Q.
 
 provableEachSCC : (Q : Formula)
                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
@@ -308,27 +227,22 @@ provableSCC Q c =
   mp (betaElimPC (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateCompletePC (¬ Q))
 
 ------------------------------------------------------------------------
--- The two branches, side by side.
---
--- Not yet a decision: nothing here says the left branch cannot occur when Q is
--- valid, which is the dichotomy and is G40.  What it is, is the negative half
--- of Theorem 6.1 obtained without the elimination.
+-- The two branches of the search, side by side: a fair component, or a
+-- derivation of Q.
 
 sccProof : (Q : Formula)
         -> FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q)) ⊎ ⊢ Q
 sccProof Q = sumElim inl (λ c -> inr (provableSCC Q c)) (sccGraph (¬ Q))
 
--- Reading a derivation out, on the strength of the computed boolean: isInl
--- says which branch was taken, and refl in the checks below says the search was
--- actually run.
+-- Reading a derivation out, on the strength of the computed boolean: a refl
+-- argument says the search was run and took this branch.
 
 proofFrom : {A : Set} {Q : Formula}
          -> (s : A ⊎ ⊢ Q) -> isInl s ≡ false -> ⊢ Q
 proofFrom (inl a) ()
 proofFrom (inr d) e = d
 
--- and the shape of the certificate, as in cert-P of LTL.Tests.GraphExamples: 2 for
--- cBlock, 1 for cSink, 0 for cNil.
+-- The shape of the certificate: removedBlock, removedSink, then emptied.
 
 sccShape : (Q : Formula) -> List CertStep
 sccShape Q = sumElim (λ fi -> []) certShape (sccGraph (¬ Q))

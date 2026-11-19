@@ -1,18 +1,11 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Syntax.Formula -- G1 of FORMALISATION-PLAN.md.
+-- LTL.Syntax.Formula -- formulas: variables (var n), negation ¬, implication
+-- ⇒, next ○ and always □, with ∧, ∨, ⇔, ◇, ⊤ and ⊥ as abbreviations.
+-- Implication is ⇒ because Agda reserves →.
 --
--- The language of m4.tex section 1 (the datatype of LTL.Trusted): formulas
--- built from propositional variables (var n) by negation ¬, implication ⇒,
--- next ○ and always □.
--- Conjunction ∧, disjunction ∨, equivalence ⇔, eventually ◇ and the constants
--- ⊤ and ⊥ are abbreviations, exactly as in the note.  Implication is ⇒
--- rather than → because Agda reserves → for function types.
---
--- ≡ᶠ is decidable equality (Boolean-valued; the superscript names the type,
--- as in ≡ⁿ on Nat and ≡ᵛ on valuations).  It is used by the
--- duplicate-coherence clause of isState (G5) and by lookup (G4), so it is
--- proved sound and complete here once and for all.
+-- Also decidable equality ≡ᶠ, proved sound and complete once here; isState
+-- and lookup by formula rely on it.
 
 module LTL.Syntax.Formula where
 
@@ -21,12 +14,10 @@ open import LTL.Lib.Prelude public
 ------------------------------------------------------------------------
 -- Formulas
 --
--- The datatype is LTL.Trusted's, so the decision procedures run on exactly the
--- formulas the trusted statement talks about and LTL.Correct needs no
--- translation.  Its constructors are re-exported with this development's
--- fixities, which place the abbreviations below between them: the prefix
--- operators bind tightest, then ∧, ∨, ⇒ and ⇔; so
--- □ A ⇒ A ∧ ○ □ A  is  (□ A) ⇒ (A ∧ (○ (□ A))).
+-- The datatype is LTL.Trusted's, so the procedure runs on exactly the formulas
+-- the trusted statement talks about.  Its constructors are re-exported with
+-- this development's fixities: the prefix operators bind tightest, then ∧, ∨,
+-- ⇒ and ⇔, so  □ A ⇒ A ∧ ○ □ A  is  (□ A) ⇒ (A ∧ (○ (□ A))).
 
 open import LTL.Trusted public
   using (Formula; var)
@@ -39,7 +30,7 @@ infixr 21 _∨_
 infix  19 _⇔_
 
 ------------------------------------------------------------------------
--- Abbreviations (m4.tex section 1)
+-- Abbreviations
 
 ⊤ : Formula
 ⊤ = var zero ⇒ var zero
@@ -60,10 +51,8 @@ A ⇔ B = (A ⇒ B) ∧ (B ⇒ A)
 ◇ A = ¬ □ ¬ A
 
 ------------------------------------------------------------------------
--- Decidable equality.
---
--- All twenty-five cases are written out: --exact-split rejects a catch-all
--- clause overlapping the diagonal ones.
+-- Decidable equality.  All twenty-five cases are written out: --exact-split
+-- rejects a catch-all clause overlapping the diagonal ones.
 
 infix 4.5 _≡ᶠ_
 

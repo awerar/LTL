@@ -1,26 +1,25 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Rules.Prop -- G9 and G10 of FORMALISATION-PLAN.md.
+-- LTL.Rules.Prop -- the derived propositional rules that need no lists:
+-- (L1) identity, (L0) ⊤ and ⊥, (L3) explosion, (L4) excluded middle, (L7)
+-- ¬ A ⇒ A ⇒ B; also double negation.
 --
--- The list-free part of Lemma 1.1 of m4.tex: (L1), (L0), (L3), (L4), (L7).
---
--- Everything here comes from (P1), (P2), (P3) by composition.  There is no
--- deduction theorem and no tautology checker; hypothetical reasoning is done
--- by imp-lifting under a fixed antecedent P, with the three combinators
+-- Everything comes from (P1)-(P3) by composition.  There is no deduction
+-- theorem; hypothetical reasoning works under a fixed antecedent P with
 --
 --     ⇒Refl : ⊢ P ⇒ P
 --     liftP : ⊢ A -> ⊢ P ⇒ A
 --     mpU   : ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ A -> ⊢ P ⇒ B
 --
--- A trailing U in a name (mpU, ⇒TransU, ¬IntroU, caseU, mpU2) marks a rule that
--- works under such an antecedent.
+-- A trailing U in a name (mpU, ⇒TransU, ¬IntroU, caseU, mpU2) marks a rule
+-- that works under such an antecedent.
 
 module LTL.Rules.Prop where
 
 open import LTL.Syntax.Deriv public
 
 ------------------------------------------------------------------------
--- G9 : (L1)
+-- (L1)
 
 -- I = SKK
 ⇒Refl : {A : Formula} -> ⊢ A ⇒ A
@@ -35,10 +34,8 @@ liftP d = mp p1 d
 ⇒Trans f g = mp (mp p2 (liftP g)) f
 
 ------------------------------------------------------------------------
--- The imp-lifting combinators.
---
--- With ⇒Refl and liftP, mpU -- modus ponens performed under the antecedent P
--- -- replaces the deduction theorem for every use below.
+-- The imp-lifting combinators.  With ⇒Refl and liftP, mpU (modus ponens
+-- under the antecedent P) replaces the deduction theorem.
 
 mpU : {P A B : Formula}
    -> ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ A -> ⊢ P ⇒ B
@@ -54,10 +51,9 @@ mpU f g = mp (mp p2 f) g
 ⇒Swap {A} {B} {C} f = mpU (liftP (mp p2 f)) (p1 {B} {A})
 
 ------------------------------------------------------------------------
--- G10 : (L7), then (L3), (L0), (L4)
+-- (L7), then (L3), (L0), (L4)
 
--- (L7) first half.  This is what the  v (A ⇒ B) = 0  case of Lemma 2.5
--- needs, together with p1 as its second half.
+-- (L7) first half; p1 is the second.  Non-states are refuted with it.
 ¬Elim : {A B : Formula} -> ⊢ ¬ A ⇒ A ⇒ B
 ¬Elim = ⇒Trans p1 p3
 
@@ -71,9 +67,8 @@ explode = ⇒Swap ¬Elim
 deriv⊤ : ⊢ ⊤
 deriv⊤ = ⇒Refl
 
--- Double negation: dne eliminates it, dni introduces it.  dne comes first: under the antecedent  ¬ ¬ A  we
--- have  ¬ A ⇒ ¬ ⊤  by ¬Elim, hence  ⊤ ⇒ A  by (P3), and  ⊤  is
--- available, so A follows.
+-- Double negation: dne eliminates it, dni introduces it.  Under  ¬ ¬ A  we
+-- have  ¬ A ⇒ ¬ ⊤  by ¬Elim, hence  ⊤ ⇒ A  by (P3), and ⊤ holds.
 
 dne : {A : Formula} -> ⊢ ¬ ¬ A ⇒ A
 dne {A} = mpU (⇒Trans (¬Elim {¬ A} {¬ ⊤}) (p3 {⊤} {A}))
@@ -94,7 +89,7 @@ lem : {A : Formula} -> ⊢ A ∨ ¬ A
 lem = ⇒Refl
 
 ------------------------------------------------------------------------
--- Contraposition, used by the disjunction lemmas of G12
+-- Contraposition, used by the disjunction lemmas of LTL.Rules.PropList
 
 dnMono : {A B : Formula}
       -> ⊢ (A ⇒ B) ⇒ ¬ ¬ A ⇒ ¬ ¬ B

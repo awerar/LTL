@@ -1,74 +1,38 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Benchmarks.Lecture -- the worked example of the course's lecture 15 notes (not in
--- the repository), run through decideSCC.
---
--- The appendix of those notes (pages 139-141) analyses
+-- LTL.Benchmarks.Lecture -- the worked example of the course's lecture 15
+-- notes (not in the repository), run through decideSCC:
 --
 --     F a ∧ F b  ⇒  F (a ∧ b)
 --
--- by hand: it lists Sub, the locally consistent states with F(a and b) = 0,
--- their outgoing edges, and a countermodel path.  The formula is not valid, so
--- decideSCC takes the countermodel branch, and everything the lecture computes can
--- be checked against what the development computes.
+-- The notes analyse it by hand (appendix, pages 139-141): Sub, the locally
+-- consistent states with F(a and b) = 0, their edges, and a countermodel.
 --
 -- THE GRAPH IS THE SAME.  Writing a state as  8a + 4b + 2 Fa + Fb , the
 -- lecture's s0..s7 are 0, 1, 2, 3, 5, 7, 10, 11, and Ust of the negation is
--- exactly that set of eight, with the same twenty-four edges and the same
--- out-degrees, enumerated in a different order.  That is worth checking because
--- the two constructions have almost nothing in common: the lecture ASSUMES
--- F(a and b) = 0 to cut its table down to eight rows, while here the eight are
--- the closure under successors of the states containing the negation, and
--- F(a and b) = 0 falls out because the negation forces it and the closure
--- propagates it.  Before that, StCand has seventeen locally consistent states,
--- built from 32 candidates over 5 atoms, where the lecture would filter 2^6
--- valuations of its Sub.
+-- exactly those eight, with the same twenty-four edges.  The lecture ASSUMES
+-- F(a and b) = 0; here it follows, since the negation forces it and the
+-- closure propagates it.
 --
--- THE COUNTERMODEL IS NOT.  The lecture gives
---
---     s3 -> s5 -> s7 -> s7 -> ...          (loop at s7)
---
--- and that path is NOT FAIR.  At s7 one has Fb = 1 and b = 0, so s7 is outside
--- the fairness set  F_Fb = { v | v (Fb) = 0 or v (b) = 1 } : looping there
--- forever promises b and never delivers it, which is the very situation the
--- fairness condition exists to exclude, and is the same shape as the lecture's
--- own Example 2.  The path it presumably meant is  s3 -> s5 -> s7 -> s5 -> ... ,
--- alternating so that b recurs at s5 and a at s7; both edges exist.
---
--- decideSCC returns a different and shorter one,
+-- THE COUNTERMODEL IS NOT.  The lecture gives  s3 -> s5 -> s7 -> s7 -> ... ,
+-- which is not fair: at s7, Fb = 1 and b = 0, so looping there promises b and
+-- never delivers it.  (It presumably meant  s3 -> s5 -> s7 -> s5 -> ... .)
+-- decideSCC returns
 --
 --     s7 -> s4 -> s0 -> s0 -> ...          (loop at s0)
 --
--- (its cycle is recorded as four copies of the loop at s0: the SCC
--- construction starts from the bare loop and prepends one leg per
--- eventuality, and each leg is the loop again),
---
--- a at stage 0, b at stage 1, and everything false from stage 2 on: Fa and Fb
--- are both fulfilled at once and a and b are never true together.  It ends in
--- s0, a state where nothing is pending at all, which the hand analysis never
--- considers because it is looking for a loop that KEEPS the eventualities
--- alive.
---
--- The last three lines are the point, and they are the fairness predicate of
--- LTL.SCC.SccLasso applied to the two ends of the run.  For the eventuality
--- F b -- which in the box-only syntax is  ¬ □ ¬ b , so the argument
--- of the box is  ¬ b  --
---
---     evPred R (¬ b) s7 = false          s7 is outside F_Fb : the lecture's
---                                          loop cannot be fair
---     evPred R (¬ b) s0 = true           the loop decideSCC returns can be
---     evPred R (¬ a) s7 = true           and s7 is inside F_Fa, exactly as
---                                          the lecture says (a holds there)
---
--- so the objection is not a matter of reading: it is a checked equation about
--- the lecture's own state, against the lecture's own fairness set.
+-- with a at stage 0, b at stage 1 and everything false from stage 2 on.  Its
+-- cycle holds four copies of the loop at s0, one per eventuality plus the
+-- loop itself.  lec-fair checks the objection against the fairness predicate
+-- evPred of LTL.SCC.SccLasso: s7 is outside F_Fb, s0 inside it, and s7 inside
+-- F_Fa.
 
 module LTL.Benchmarks.Lecture where
 
 open import LTL.Procedures.DecideSCC public
 
 ------------------------------------------------------------------------
--- The formula, in the box-only syntax of m4.tex.
+-- The formula, in the box-only syntax.
 
 pa : Formula
 pa = var zero
@@ -83,11 +47,8 @@ R : Formula
 R = ¬ fab
 
 ------------------------------------------------------------------------
--- The state space.
---
--- 21 positions of Sub, but only 5 atoms -- a, b and the three boxes behind the
--- three F's -- so 32 candidates are built and 17 are states.  The lecture's
--- table is the closure, which is 8.
+-- The state space: 21 positions of sub, but only 5 atoms (a, b and the boxes
+-- behind the three F's), so 32 candidates and 17 states.  The closure is 8.
 
 lec-sizes : length (sub R) ∷ length (atoms (sub R)) ∷ length (cands R)
              ∷ length (StCand R) ∷ length (Ust R) ∷ length (Uinf R)
@@ -106,15 +67,14 @@ num : Val -> Nat
 num v = bitV (valOf R v pa) 8 + bitV (valOf R v pb) 4
         + bitV (valOf R v (◇ pa)) 2 + bitV (valOf R v (◇ pb)) 1
 
--- s0 = 0, s1 = 1, s2 = 2, s3 = 3, s4 = 5, s5 = 7, s6 = 10, s7 = 11: the same
--- eight, in the order the closure happens to produce them.
+-- s0 = 0, s1 = 1, s2 = 2, s3 = 3, s4 = 5, s5 = 7, s6 = 10, s7 = 11, in the
+-- order the closure produces them.
 
 lec-states : map num (Ust R) ≡ 0 ∷ 5 ∷ 1 ∷ 10 ∷ 2 ∷ 11 ∷ 7 ∷ 3 ∷ []
 lec-states = refl
 
 -- and the same profile: a and b true at two states each, Fa and Fb at five
--- each, F(a and b) at none -- which is the lecture's standing constraint,
--- derived here rather than assumed.
+-- each, F(a and b) at none.
 
 lec-profile : length (filter (λ v -> valOf R v pa) (Ust R))
                ∷ length (filter (λ v -> valOf R v pb) (Ust R))
@@ -125,11 +85,8 @@ lec-profile : length (filter (λ v -> valOf R v pa) (Ust R))
 lec-profile = refl
 
 ------------------------------------------------------------------------
--- The twenty-four edges.
---
--- The lecture lists  s0:1  s1:2  s2:2  s3:3  s4:3  s5:5  s6:3  s7:5 , which is
--- 24; here they come out in the closure's order, which by lec-states is
--- s0 s4 s1 s6 s2 s7 s5 s3.
+-- The twenty-four edges.  The lecture lists  s0:1 s1:2 s2:2 s3:3 s4:3 s5:5
+-- s6:3 s7:5 ; here they come in the closure's order, s0 s4 s1 s6 s2 s7 s5 s3.
 
 lec-outdeg : map (λ v -> length (succs R (Ust R) v)) (Ust R) ≡
              1 ∷ 3 ∷ 2 ∷ 3 ∷ 2 ∷ 5 ∷ 5 ∷ 3 ∷ []
@@ -139,10 +96,8 @@ lec-edges : length (concat (map (λ v -> succs R (Ust R) v) (Ust R))) ≡ 24
 lec-edges = refl
 
 ------------------------------------------------------------------------
--- The decision, and the lasso.
---
--- lassoOf reads the countermodel as (start , rest , cycle), where rest is the
--- stem followed by the cycle.  Decoded, the run is  s7 s4 s0 s0 ...
+-- The decision, and the lasso.  lassoOf reads the countermodel as (start ,
+-- rest , cycle), where rest is the stem followed by the cycle.
 
 lo : Val × List Val × List Val
 lo = lassoOf fab (decideSCC fab)
@@ -150,15 +105,12 @@ lo = lassoOf fab (decideSCC fab)
 lec-notValid : isProof (decideSCC fab) ≡ false
 lec-notValid = refl
 
--- Start, stem-and-cycle, cycle: s7, then s4 and the loop at s0.  Stated as
--- ONE equation because every mention of lo re-runs the whole countermodel
--- branch -- the graph search, the trap and the elimination it survives.  It is
--- a worked example and a benchmark, like LTL.Benchmarks.Examples, and the 5 s
--- rule of FORMALISATION-PLAN.md section 4a does not apply to it.
+-- Start, stem-and-cycle, cycle: s7, then s4 and the loop at s0.  One equation,
+-- because every mention of lo re-runs the countermodel branch.  The file takes
+-- about 11 s to check.
 
 -- The triple gets its own typed definition: written inline on the left of ≡,
--- Agda has to infer the type of a Σ pair, and that unification forces lo and
--- takes over half an hour instead of seconds.
+-- inferring the type of the Σ pair forces lo and takes over half an hour.
 
 lec-shape : Nat × List Nat × List Nat
 lec-shape = num (fst lo) , map num (fst (snd lo)) , map num (snd (snd lo))
@@ -167,12 +119,10 @@ lec-run : lec-shape ≡ (11 , 5 ∷ 0 ∷ 0 ∷ 0 ∷ 0 ∷ 0 ∷ [] , 0 ∷ 0 �
 lec-run = refl
 
 ------------------------------------------------------------------------
--- Why the lecture's path is not a countermodel.
---
--- s7 is the start of decideSCC's run, s0 is its cycle.  evPred R A z is the
--- fairness predicate of LTL.SCC.SccLasso for the eventuality whose box-argument is
--- A: "the eventuality is not pending at z, or its body already fails there",
--- which for  F b  is the lecture's own  F_Fb = { v | v (Fb) = 0 or v (b) = 1 } .
+-- Why the lecture's path is not a countermodel.  s7 is the start of the run,
+-- s0 its cycle.  evPred R A z says the eventuality with box-argument A is not
+-- pending at z or already fails there; for F b this is the lecture's own
+-- F_Fb = { v | v (Fb) = 0 or v (b) = 1 } .
 
 s7 : Val
 s7 = fst lo

@@ -1,28 +1,22 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.State -- G5 of FORMALISATION-PLAN.md.
+-- LTL.States.State -- which valuations are states, and St P, the list of all
+-- states.
 --
--- Definition 2.2 of m4.tex: a valuation is a state when it respects the
--- connectives (S1) and satisfies  □ A in v  implies  A in v  (S2).
---
--- To these the formalisation adds a third clause, coherence on duplicates.
--- It has no counterpart in the note because there a state IS a function on the
--- set Sub(phi); here a valuation is a List Bool read positionally against a
--- list that repeats (subBenAri-dup in LTL.Tests.Checks).  The clause is exactly what
--- makes the vector represent a function on the set, so isState is the
--- faithful encoding of Definition 2.2 rather than a strengthening of it.
+-- A state respects the connectives (S1) and satisfies  □ A in v  implies
+-- A in v  (S2).  A third clause, coherence, requires duplicate entries of
+-- sub P to carry the same bit, so that a state is a function on the SET of
+-- subformulas (sub P repeats; see subBenAri-dup in LTL.Tests.Checks).
 
 module LTL.States.State where
 
 open import LTL.States.Val public
 
 ------------------------------------------------------------------------
--- Lookup by first occurrence.
---
--- valOf P v A is the bit v assigns to A, read at the FIRST position of sub P
--- carrying A.  Under coherence this agrees with the bit at every position
--- carrying A, which is what lets chi (built positionally) and the conditions
--- below (built by lookup) be about the same thing.
+-- Lookup by first occurrence.  valOf P v A is the bit v assigns to A at the
+-- FIRST position of sub P carrying A.  Under coherence it agrees with every
+-- position carrying A, so chi (built positionally) and the conditions below
+-- (built by lookup) talk about the same bits.
 
 module _ (P : Formula) where
 
@@ -30,10 +24,8 @@ module _ (P : Formula) where
   valOf v A = bitAt v (indexOf (sub P) A)
 
   ------------------------------------------------------------------------
-  -- (S1) and (S2), imposed at each member of sub P.
-  --
-  -- var and ○ carry no local condition: the behaviour of ○ lives entirely in
-  -- the transition relation (LTL.States.Step), which is the point of Remark 2.1.
+  -- (S1) and (S2), imposed at each member of sub P.  var and ○ carry no local
+  -- condition: ○ is handled by the transition relation (LTL.States.Step).
 
   okAt : Val -> Formula -> Bool
   okAt v (var n) = true
@@ -46,11 +38,8 @@ module _ (P : Formula) where
   allOk v = all (okAt v)
 
   ------------------------------------------------------------------------
-  -- Coherence on duplicates.
-  --
-  -- Stated as "every position agrees with the first occurrence of its formula",
-  -- which is linear rather than quadratic and equivalent by transitivity
-  -- through that first occurrence.
+  -- Coherence on duplicates: every position agrees with the first occurrence
+  -- of its formula.  This is linear, and equivalent to pairwise agreement.
 
   cohAt : Val -> Nat -> Bool
   cohAt v i = bitAt v i ⇔ᵇ valOf v (nth (sub P) i ⊥)

@@ -1,24 +1,17 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Global -- G24 of FORMALISATION-PLAN.md, Lemma 5.4 of m4.tex.
+-- LTL.Countermodel.Global -- every eventuality pending at a position of a run
+-- is fulfilled at a position of its forward orbit.
 --
---   For every i and every □ A in Sub(phi) with □ A not in v_i, there is
---   j >= i with A not in v_j.
+-- A valid position (s , rest) carries a walk from s to b, the cycle's end,
+-- wherever on the run s sits.  walkPersist along that walk gives either a
+-- fulfilling state among s ∷ rest, or the eventuality still pending at b,
+-- where the run's cycle-fulfilment field finishes it.  So stem and cycle need
+-- no separate cases.
 --
--- The note's proof splits on whether v_i lies on the cycle or on the stem, and
--- runs persistence forward along the stem to reduce the second case to the
--- first.  Here there is no such split: walkPersist does both at once.  A valid
--- position (s , rest) carries a walk from s to b, the cycle's end, whatever
--- part of the run s sits on; applying persistence to that walk gives either a
--- fulfilling state among s ∷ rest -- which is the stem case, and also the
--- "fulfilled before the cycle closes" half of the cycle case -- or the
--- eventuality still pending at b, where the cycle-fulfilment property of
--- Proposition 5.3 finishes it.
---
--- The conclusion is stated as membership in the forward orbit, which is the
--- form G27 needs: [[□ A]] is a conjunction over the orbit, so a false
--- conjunct is exactly what refutes it.  globalFulfilAfter recovers the note's
--- "j >= i" reading from it.
+-- The conclusion is membership in the forward orbit, the form Hintikka's
+-- lemma needs: □ A evaluates as a conjunction over the orbit, so a false
+-- conjunct refutes it.  globalFulfilAfter restates it as "at a later stage".
 
 module LTL.Countermodel.Global where
 
@@ -33,7 +26,7 @@ cycMem mb here      = mb
 cycMem mb (there m) = m
 
 ------------------------------------------------------------------------
--- Lemma 5.4
+-- Fulfilment along the orbit
 
 -- Both lemmas are about a run whose cycle c0 ∷ c1 passes through b, with every
 -- box pending on b ∷ c0 ∷ c1 fulfilled on the cycle (the cyc field of Run).
@@ -70,7 +63,7 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
           fromPL (q , mq , eq) =
             place q (orbitStem c0 c1 s rest q mq) eq ez
 
-      -- still pending at b: Proposition 5.3 fulfils it on the cycle
+      -- still pending at b: the cycle-fulfilment field fulfils it on the cycle
       onCycle : valOf P b (□ A) ≡ false
              -> Σ[ q ∈ Pos ] q ∈ orbitOf c0 c1 (s , rest) ×
                                  valOf P (posState q) A ≡ false
@@ -89,9 +82,8 @@ module _ (P : Formula) (b c0 : Val) (c1 : List Val)
                 place q (orbitCycle c0 c1 s rest q mq) eq ez
 
   ------------------------------------------------------------------------
-  -- The note's reading: some LATER state of the run fulfils it.
-  --
-  -- j = i + t, so j >= i is built into the statement rather than asserted.
+  -- Some LATER stage of the run fulfils it: j = i + t, so j >= i is built
+  -- into the statement.
 
   globalFulfilAfter : (start : Pos) (i : Nat)
                    -> ValidPos P b (posIter c0 c1 i start)
