@@ -27,7 +27,7 @@ derivation or a certified finite lasso countermodel.
   **Until is not implemented** (it is the thesis goal).
 - Prelude notation follows Agda's standard library: `x ≡ y` (`sym`, `trans`,
   `cong`, `subst`), `A ⊎ B` (`inl`/`inr`), `Σ[ x ∈ A ] B` and `A × B` (both
-  built with `_,_`; `fst`/`snd`), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
+  built with `_,_`; `fst`/`snd`; `Trusted`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
   (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
   `if b then x else y`, and list helpers `filter any all null concat`.
   Boolean-valued operators carry a superscript naming their domain:
@@ -41,8 +41,8 @@ derivation or a certified finite lasso countermodel.
   section of `LTL/Lib/Prelude.agda`, follow one scheme: `∧ᵇ-trueˡ`, `∧ᵇ-split`,
   `∨ᵇ-introʳ`, `¬ᵇ-true`, `⇒ᵇ-mp`, `⇔ᵇ-complete`; add new ones there. `⊢ A` (`data ⊢_` in
   `LTL/Syntax/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
-  `⊥`/`⊤` are formulas. Function types and lambdas stay ASCII (`->`) apart from
-  `λ`.
+  `⊥`/`⊤` are formulas; `Empty` is `Trusted`'s, re-exported by `Base`.
+  Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
   `Closed ws G C`, `NoneSat f C`, `HoldsOutside R ws`, `AllSat`/`Avail`
@@ -80,11 +80,11 @@ derivation or a certified finite lasso countermodel.
 
 Each layer lives in its own folder, and a module's name follows its path
 (`LTL/Syntax/Formula.agda` is `LTL.Syntax.Formula`). The `LTL/` root holds
-only `Trusted`, `Semantics`, `Correct` and `Pretty`. Folder names never equal
+only `Trusted`, `Correct` and `Pretty`. Folder names never equal
 a module name.
 
 0. **Specification** (root) — `Trusted` (read-only, see above).
-1. **Foundations** (`Lib/`) — `Base` (Nat and Bool from `Agda.Builtin`, Empty, Unit,
+1. **Foundations** (`Lib/`) — `Base` (Nat and Bool from `Agda.Builtin`, `Trusted`'s Empty, Unit,
    `≡`); `Prelude` (`⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
    `<`, index/nth, Boolean connectives and all Boolean lemmas, `refuteTrue`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
@@ -128,9 +128,9 @@ a module name.
    `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer` (`LassoCountermodel`,
    `isProof`, `lassoOf`, `cmFrom`, `derivCounts`); `DecideSCC` (`decideSCC`,
    Thm 6.1; `traceOf`, `shapeOf`). At the root:
-   `Semantics` (`evalAt` agrees with `Trusted`'s `⊨`; `⊢-valid`,
-   `toCounterModel`, `fromDecider`); `Correct` (`decideSCC` as a
-   `Trusted.DecisionProcedure`).
+   `Correct` (the bridge: on a `Trusted` lasso that starts at `pos0` and loops
+   back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
+   `holds-evalAt`); `⊢-valid`, `toCounterModel`, and `decideSCCCorrect`).
 9. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (Graph's computational checks, at `Node = Nat`). In
@@ -147,12 +147,11 @@ a module name.
 - `decideSCC` (`LTL/Procedures/DecideSCC.agda`) — of type
   `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q` (`LTL/Procedures/Answer.agda`).
 - `decideSCCCorrect` (`LTL/Correct.agda`) — the same procedure as a
-  `Trusted.DecisionProcedure`. Any procedure of the type above gets one from
-  `fromDecider` (`LTL/Semantics.agda`).
+  `Trusted.DecisionProcedure`.
 
 ## Adding Until (expected touch points)
 
 `Trusted` (the constructor and its `⊨` clause; the user must make that change)
 → `Formula` → `Sub` → `Deriv` → `State`/`Step` → eventualities in `Elim`
-(currently indexed by box-subformulas) → `LassoEval`/`Semantics`/`Hintikka` →
+(currently indexed by box-subformulas) → `LassoEval`/`Correct`/`Hintikka` →
 the SCC fairness predicates in `SccLasso`.

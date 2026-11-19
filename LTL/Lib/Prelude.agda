@@ -387,6 +387,10 @@ map-map : {A B C : Set} (f : B -> C) (g : A -> B) (xs : List A)
 map-map f g []       = refl
 map-map f g (x ∷ xs) = cong (λ zs -> f (g x) ∷ zs) (map-map f g xs)
 
+map-id : {A : Set} (xs : List A) -> map (λ x -> x) xs ≡ xs
+map-id []       = refl
+map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
+
 memAppCase : {A : Set} {x : A} (xs ys : List A)
           -> x ∈ xs ++ ys -> x ∈ xs ⊎ x ∈ ys
 memAppCase []       ys h         = inr h

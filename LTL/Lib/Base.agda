@@ -4,8 +4,9 @@
 --
 -- No standard library: Nat, Bool and ≡ are Agda's builtins.  They have to be,
 -- since Agda.Builtin.String (used by LTL.Pretty) binds the NATURAL and EQUALITY
--- builtins to them, and LTL.Trusted uses the same Bool.  Empty and Unit keep
--- these names because ⊥ and ⊤ are LTL formulas.
+-- builtins to them, and LTL.Trusted uses the same Bool.  Empty is LTL.Trusted's
+-- own, so the semantics of ¬ is literally a function into it.  Empty and Unit
+-- keep these names because ⊥ and ⊤ are LTL formulas.
 --
 -- Boolean-valued tests carry a superscript naming the type they compare (≡ⁿ on
 -- Nat here, ≡ᵛ on nodes, ≡ᶠ on formulas).  They are infix 4.5: tighter than
@@ -41,7 +42,7 @@ suc n ≡ⁿ suc m = n ≡ⁿ m
 ------------------------------------------------------------------------
 -- Empty and Unit
 
-data Empty : Set where
+open import LTL.Trusted public using (Empty)
 
 emptyElim : {A : Set} -> Empty -> A
 emptyElim ()

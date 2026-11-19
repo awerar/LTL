@@ -124,7 +124,7 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 
 | Folder | Modules | What it is |
 |---|---|---|
-| `LTL/` | `Trusted`, `Semantics`, `Correct`, `Pretty` | the specification, the proof that the Boolean evaluation is its semantics (so derivable formulas are valid), the procedure as a `DecisionProcedure`, and readable output |
+| `LTL/` | `Trusted`, `Correct`, `Pretty` | the specification; the proof that the Boolean evaluation is its semantics (so derivable formulas are valid) and that the procedure is a `DecisionProcedure`; readable output |
 | `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes` | foundations without the standard library; inductively finite sets |
 | `LTL/Syntax/` | `Formula`, `Sub`, `Skel`, `Deriv` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |

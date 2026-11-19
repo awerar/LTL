@@ -10,8 +10,7 @@
 --   renderCM Q c     the lasso countermodel: the variables true at each time
 --                    point of the prefix and of the loop.
 --
---   prove Q          renders decideSCC Q;  proveWith renders any procedure of
---                    the same type.
+--   prove Q          renders decideSCC Q.
 --   proveLines Q     prove Q as one String per line.
 --   proveTree n Q    the tree view of decideSCC Q.
 --
@@ -384,26 +383,17 @@ renderCM Q c = unlines (cmLines Q c)
 ------------------------------------------------------------------------
 -- Entry points
 
-Decider : Set
-Decider = (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-
 resultLines : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
            -> List String
 resultLines Q (inl d) = proofLines d
 resultLines Q (inr c) = cmLines Q c
 
-proveLinesWith : Decider -> Formula -> List String
-proveLinesWith dec Q = resultLines Q (dec Q)
-
 -- one String per line: what plain C-c C-n displays best
 proveLines : Formula -> List String
-proveLines = proveLinesWith decideSCC
-
-proveWith : Decider -> Formula -> String
-proveWith dec Q = unlines (proveLinesWith dec Q)
+proveLines Q = resultLines Q (decideSCC Q)
 
 prove : Formula -> String
-prove = proveWith decideSCC
+prove Q = unlines (proveLines Q)
 
 proveTree : Nat -> Formula -> String
 proveTree n Q = go (decideSCC Q)
