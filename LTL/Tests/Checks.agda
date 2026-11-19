@@ -243,8 +243,8 @@ decideSCC-◇P-lasso = refl
 ◇P-shape = refl
 
 -- p fails at every stage, and so does ◇ p, the formula decided.  traceOf uses
--- the evaluation soundness is proved against, so this and the ⊢ Q -> Empty
--- field of the record are the same fact from two ends.
+-- the evaluation soundness is proved against, so this and cmUnderivable are
+-- the same fact from two ends.
 
 ◇P-trace : traceOf ◇P (var zero) 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 ◇P-trace = refl
@@ -254,7 +254,7 @@ decideSCC-◇P-lasso = refl
 
 ◇P-underivable : ⊢ ◇P -> Empty
 ◇P-underivable =
-  LassoCountermodel.underivable (countermodelFrom (decideSCC ◇P) refl)
+  cmUnderivable ◇P (countermodelFrom (decideSCC ◇P) refl)
 
 ------------------------------------------------------------------------
 -- c5 = □ (p ∨ q) ⇒ □ p ∨ □ q  is not valid.  sub of its negation has length

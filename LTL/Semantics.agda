@@ -165,7 +165,7 @@ module _ {S : Set} (read : S -> T.Instant) (loop : S × List S) where
 -- ever.  Q is false at stage 0 (falseAtStart), so it is not true at time 0.
 
 toCounterModel : (Q : Formula) -> LassoCountermodel Q -> T.LassoCounterModel Q
-toCounterModel Q (countermodel v0 lasso mv0 falseQ noDeriv) = T.counter L qFalse
+toCounterModel Q (countermodel v0 lasso falseQ) = T.counter L qFalse
   where
     open Lasso lasso
 

@@ -16,7 +16,7 @@
 --      graph search chose, and read evPred there).
 --   3. uinfTrap: C survives the elimination, so C lies in Uinf (¬ Q), as
 --      sccLasso requires.
---   4. sccLasso, then buildCM: Hintikka's lemma at stage 0, and soundness.
+--   4. sccLasso, then buildCM: Hintikka's lemma at stage 0.
 --
 -- The search runs on all of Ust (¬ Q), not from one vertex, because the
 -- certificate has to cover every state.  The elimination is computed only in
@@ -146,43 +146,35 @@ fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
 
 -- and then the trap survives the elimination, so sccLasso applies.
 
-trapLoopLasso : (P : Formula) (v0 : Val) -> TrapLoop P v0
-             -> v0 ∈ Uinf P × Lasso P v0
+trapLoopLasso : (P : Formula) (v0 : Val) -> TrapLoop P v0 -> Lasso P v0
 trapLoopLasso P v0 (trapLoop C mv0 inU tr flC) =
-  mv0U , sccLasso P C intoU v0 mv0U flC
+  sccLasso P C intoU v0 (intoU v0 mv0) flC
   where
     intoU : (z : Val) -> z ∈ C -> z ∈ Uinf P
     intoU = uinfTrap P C tr inU
-
-    mv0U : v0 ∈ Uinf P
-    mv0U = intoU v0 mv0
 
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.
 --
 -- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
--- Hintikka's lemma at stage 0 transfers that to the evaluation, and soundness
--- says a derivation of Q would evaluate it to 1.
+-- Hintikka's lemma at stage 0 transfers that to the evaluation.
 
-buildCM : (Q : Formula) (v0 : Val) -> v0 ∈ Uinf (¬ Q)
-           -> Lasso (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
-           -> LassoCountermodel Q
-buildCM Q v0 m l ev = countermodel v0 l m evalFalse noDeriv
+buildCM : (Q : Formula) (v0 : Val)
+       -> Lasso (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
+       -> LassoCountermodel Q
+buildCM Q v0 l ev = countermodel v0 l evalFalse
   where
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
       ¬ᵇ-true (valOf (¬ Q) v0 Q)
         (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
                               (¬ᵇ valOf (¬ Q) v0 Q)
-                                  (stateOk (¬ Q) v0 m (sub-self (¬ Q)))))
+                                  (stateOk (¬ Q) v0 (Lasso.startIn l) (sub-self (¬ Q)))))
                ev)
 
     evalFalse : eval (¬ Q) v0 l Q 0 ≡ false
     evalFalse =
       trans (sym (hintStart (¬ Q) v0 l Q (there (sub-self Q)))) valQ
-
-    noDeriv : ⊢ Q -> Empty
-    noDeriv d = true≢false (trans (sym (soundLasso (¬ Q) v0 l d 0)) evalFalse)
 
 ------------------------------------------------------------------------
 -- The decision
@@ -193,10 +185,9 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
     R : Formula
     R = ¬ Q
 
-    fromLasso : (s : Val) -> valOf R s R ≡ true
-             -> s ∈ Uinf R × Lasso R s
+    fromLasso : (s : Val) -> valOf R s R ≡ true -> Lasso R s
              -> ⊢ Q ⊎ LassoCountermodel Q
-    fromLasso s es (mu , l) = inr (buildCM Q s mu l es)
+    fromLasso s es l = inr (buildCM Q s l es)
 
     onFair : FairIn (Ust R) (step R) (evPreds R)
           -> ⊢ Q ⊎ LassoCountermodel Q
