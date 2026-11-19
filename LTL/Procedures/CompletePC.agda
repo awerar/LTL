@@ -1,45 +1,37 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Procedures.CompletePC -- G31 and G32 of FORMALISATION-PLAN.md: Lemma 2.6 again,
+-- LTL.Procedures.CompletePC -- G32 of FORMALISATION-PLAN.md: Lemma 2.6 again,
 -- with the propositional bookkeeping discharged by (PC) instead of enumerated.
 --
--- Nothing here replaces anything.  allComplete and stateComplete (LTL.States.Complete)
--- are untouched, and so are nonState, ⋁Filter and ⋁Drop, which is what
--- lets LTL.Benchmarks.Proofs put the two certificates side by side: the point of the phase
--- is a COMPARISON, and it needs both proofs in the development.
+-- stateComplete (LTL.States.Complete) proves  ⊢ beta P (St P)  by a case
+-- split over the 2^|Sub P| valuations and the one-by-one refutation of the
+-- non-states, and that is almost all of a certificate that uses it.  Both are
+-- propositional, so Ben-Ari writes PC beside them (his Definition 12.1,
+-- Axiom 0) and never writes them out.  With the eleventh constructor of
+-- LTL.Syntax.Deriv available they can be discharged the same way and, unlike
+-- Ben-Ari's, CHECKED: pc takes isTaut A ≡ true, a decidable condition on A
+-- alone, with no substitution relation anywhere.
 --
--- What section 4g measured is that 97 % of a certificate is the case split over
--- the 2^|Sub P| valuations and the one-by-one refutation of the non-states.
--- Both are propositional, so Ben-Ari writes PC beside them (his
--- Definition 12.1, Axiom 0) and never writes them out.  With the eleventh
--- constructor of LTL.Syntax.Deriv available they can be discharged the same way and,
--- unlike Ben-Ari's, CHECKED: pc takes isTaut A ≡ true, a decidable condition
--- on A alone, with no substitution relation anywhere.
---
---   G31   allCompletePC As  = pc (tautAll As)            19263 -> 1
 --   G32   stateCompletePC P = mpChain (□Args (sub P)) (pc (tautState P))
 --
 -- The chain is the |□Args (sub P)| instances of (T), one modus ponens each,
 -- so G32 is  1 + 46 |□Args (sub P)|  constructors exactly: 1 for p ⇒ p,
--- 47 for □ p ⇒ p where LTL.Complete's proof is 296839, and 277 for the
--- twenty-two-subformula example of section 4g, for which LTL.Complete's proof
--- cannot be written down at all.  It is linear in the number of eventualities
--- where LTL.Complete's is exponential in |Sub P|.
+-- 47 for □ p ⇒ p where LTL.States.Complete's proof is 296839.  It is linear
+-- in the number of eventualities where stateComplete is exponential in
+-- |Sub P|.  betaElimPC does the same for (L5), the elimination of beta_U
+-- over its disjuncts.  Both close the certificate branch of decideSCC
+-- (provableSCC, LTL.SCC.SccExtract).
 --
--- TWO DEPARTURES from the proposal in section 7, both simplifications, and both
--- measured in LTL.Benchmarks.Proofs.
+-- Two choices, both simplifications of section 7.
 --
--- 1.  Section 7 gives G32 as  E P ⇒ (D P ⇒ beta P (St P))  with D P the full
---     disjunction, so that stateCompletePC would consume allCompletePC as well.
---     That premise is not needed.  The tautology is proved by BUILDING the
---     witness state out of the truth-table row -- skelVec of LTL.States.Taut, which is
---     a state as soon as (S2) holds -- rather than by SELECTING it from D P.
---     Carrying D P would cost nothing in the certificate, since allCompletePC
---     is one node, but it would put a formula of size 2^|Sub P| inside the side
---     condition, and the side condition is the one thing (PC) adds that a
---     machine may have to evaluate.  Without it the side condition is small
---     enough to check by refl, which LTL.Benchmarks.Proofs does.  So G31 stands on its
---     own, as the pc form of the case split, and G32 does not go through it.
+-- 1.  The tautology is proved by BUILDING the witness state out of the
+--     truth-table row -- skelVec of LTL.States.Taut, which is a state as soon
+--     as (S2) holds -- rather than by SELECTING it from the full disjunction
+--     over all valuations.  Carrying that disjunction as a premise would put a
+--     formula of size 2^|Sub P| inside the side condition, and the side
+--     condition is the one thing (PC) adds that a machine may have to
+--     evaluate.  Without it the side condition is small enough to check by
+--     refl.
 --
 -- 2.  Section 7 makes E P a conjunction, assembled by (L2).  An implication
 --     chain is cheaper by a factor of five per eventuality; see LTL.States.Taut.
@@ -48,44 +40,6 @@ module LTL.Procedures.CompletePC where
 
 open import LTL.States.Complete public
 open import LTL.States.Taut     public
-
-------------------------------------------------------------------------
--- G31: the case split.
---
--- allComplete As is the disjunction over all 2^|As| valuations, proved by
--- splitting on the members of As one at a time with (L6).  As a boolean it is
--- immediate: read the atoms by a, read each member of As by the skeleton, and
--- the row so obtained is one of the disjuncts and its literals are true by
--- construction.  allVecs-complete says the row is enumerated -- it has the
--- right length, by map-length -- and chiRowTrue that its chi holds.
-
--- The case split over As: the disjunction of chi over all 2^|As| rows, i.e.
--- the formula of allComplete.
-
-caseSplitFml : List Formula -> Formula
-caseSplitFml As = ⋁ (map (chiOf As) (allVecs (length As)))
-
-tautAll : (As : List Formula) -> isTaut (caseSplitFml As) ≡ true
-tautAll As =
-  all-intro (λ a -> valFrom (atomsOf (caseSplitFml As)) a (caseSplitFml As))
-            (allVecs (length (atomsOf (caseSplitFml As))))
-            row
-  where
-    Ats : List Formula
-    Ats = atomsOf (caseSplitFml As)
-
-    row : {a : Val} -> a ∈ allVecs (length Ats)
-       -> valFrom Ats a (caseSplitFml As) ≡ true
-    row {a} m =
-      ⋁True Ats a (map (chiOf As) (allVecs (length As)))
-               (memMap (chiOf As)
-                       (allVecs-complete (length As) (map (valFrom Ats a) As)
-                                         (map-length (valFrom Ats a) As)))
-               (chiRowTrue Ats a As)
-
-allCompletePC : (As : List Formula)
-             -> ⊢ ⋁ (map (chiOf As) (allVecs (length As)))
-allCompletePC As = pc (tautAll As)
 
 ------------------------------------------------------------------------
 -- The (S2) premise.
@@ -99,7 +53,7 @@ allCompletePC As = pc (tautAll As)
 -- It is needed because it is the one clause of Definition 2.2 that a
 -- truth-table row does not satisfy for free: the skeleton reads □ A and A as
 -- two unrelated atoms, which is exactly why  □ p ⇒ p  is not a skeleton
--- tautology (LTL.Benchmarks.Proofs, □Elim-not-taut).  (S1) and coherence, by contrast,
+-- tautology.  (S1) and coherence, by contrast,
 -- cost nothing at all -- see LTL.States.Taut.
 
 s2List : Formula -> List Formula

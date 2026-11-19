@@ -92,10 +92,10 @@
 --
 -- What this still does NOT do.  It decides nothing about formulas and builds no
 -- derivation; the LTL reading of (b) is G39, where certAll's two hypotheses are
--- extractR1's and extractR2's on the nose -- null (outs ws G x) ≡ true IS
+-- extractR1's and extractBlock's on the nose -- null (outs ws G x) ≡ true IS
 -- r1 P ws x ≡ true definitionally, and the block case supplies the closed set
 -- and the unfulfilled eventuality that (Ind) needs.  Nor does it claim to be
--- cheaper than gfpW.  Gfp, Elim, Trace, Round and Lasso all mention formulas;
+-- cheaper than gfpW.  Gfp, Elim and Lasso all mention formulas;
 -- this file does not.
 
 open import LTL.Lib.Prelude
@@ -862,7 +862,7 @@ fairGraph vs G fs v mv =
 -- be established of every vertex -- for G39 it is  ⊢ ¬ (chi P u) -- and
 -- the hypothesis carried is "R holds outside ws", which is Refuted of
 -- LTL.Elimination.Extract verbatim.  The sink case is what extractR1 consumes and the block
--- case is what extractR2 consumes; no formula has to appear for that to be
+-- case is what extractBlock consumes; no formula has to appear for that to be
 -- decided here.
 
 module _ (G : Edges) (fs : List Pred) (R : Node -> Set)

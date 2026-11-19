@@ -11,8 +11,8 @@
 --
 -- ≡ᶠ is decidable equality (Boolean-valued; the superscript names the type,
 -- as in ≡ⁿ on Nat and ≡ᵛ on valuations).  It is used by the
--- duplicate-coherence clause of isState (G5), by lookup (G4), and by the
--- pigeonhole of G23, so it is proved sound and complete here once and for all.
+-- duplicate-coherence clause of isState (G5) and by lookup (G4), so it is
+-- proved sound and complete here once and for all.
 
 module LTL.Syntax.Formula where
 

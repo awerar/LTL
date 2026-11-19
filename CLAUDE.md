@@ -18,7 +18,7 @@ derivation or a certified finite lasso countermodel.
   modules are fine (`Base` re-exports `Agda.Builtin.Nat`).
 - Typecheck from the repository root, e.g. `agda -i . LTL/Correct.agda`
   (see README for the full list). The modules in `LTL/Benchmarks/`
-  (`Examples`, `Compare`, `Lecture`, `Proofs`) are slow; the core proof
+  (`Examples`, `Lecture`) are slow; the core proof
   modules should stay fast.
 - Language: `var n`, `¬ A`, `A ⇒ B`, `○ A` (next), `□ A` (always). `A ∧ B`,
   `A ∨ B`, `A ⇔ B`, `◇ A`, `⊥`, `⊤` are abbreviations (`LTL/Syntax/Formula.agda`;
@@ -104,45 +104,46 @@ a module name.
    `Val` instance of `Nodes`, successor lists); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
    explored state set).
-6. **Elimination / provable branch (m4 §3–4)** (`Elimination/`) — `Gfp` (set W, `Path`);
-   `Elim` (R1/R2, `Uinf`, `satB`); `Trace` (removal reasons); `Extract`
-   (`extract`, `provable`, Thm 4.1).
+6. **Elimination (m4 §3–4)** (`Elimination/`) — `Gfp` (set W, `Path`);
+   `Elim` (R1/R2, `Uinf`; survivors are states); `Extract` (`betaElim`,
+   `Refuted`, `extractR1`: the pieces of Thm 4.1 that `SccExtract` reuses).
+   The elimination is only run in the fair branch of `decideSCC`, to place the
+   countermodel's loop inside `Uinf` (`uinfTrap`).
 7. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Trusted`'s `Position`/`step`); `LassoEval` (Boolean `evalAt` and its
    soundness on a lasso of any state type, parameterised by `read`); `Walk`;
-   `Fix` (Lemma 5.1); `Round`; `Lasso` (Prop 5.3); `Run` (`Orbit` at `Val`);
+   `Lasso` (the record of Prop 5.3); `Run` (`Orbit` at `Val`);
    `Global` (Lemma 5.4); `Eval` (`LassoEval` at `Val`); `Sound`; `Hintikka`.
-8. **Decision procedures** — in `SCC/` (m5): `Graph` (the `fairGraph`
+8. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes`, imports
    only the generic layer, instantiated at `Val` in `SccLasso`); `SccLasso`,
-   `SccExtract`, `SccTrap` (graph ↔ logic translation). In `Procedures/`:
-   `Decide` (`decide`, Thm 6.1); `DecideSCC` (`decideSCC`); `CompletePC`,
-   `ShortPC` (`decidePC`, short certificates via (PC)). `Decide` also holds
-   `derivCounts` (size, MP, Gen, Ind, PC counts of a derivation). At the root:
+   `SccExtract` (`provableSCC`, closed with (PC)), `SccTrap` (graph ↔ logic
+   translation). In `Procedures/`: `CompletePC` (`stateCompletePC`,
+   `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer` (`LassoCountermodel`,
+   `isProof`, `lassoOf`, `cmFrom`, `derivCounts`); `DecideSCC` (`decideSCC`,
+   Thm 6.1; `traceOf`, `shapeOf`). At the root:
    `Semantics` (`evalAt` agrees with `Trusted`'s `⊨`; `⊢-valid`,
-   `toCounterModel`, `fromDecider`); `Correct` (the three procedures as
-   `Trusted.DecisionProcedure`s).
+   `toCounterModel`, `fromDecider`); `Correct` (`decideSCC` as a
+   `Trusted.DecisionProcedure`).
 9. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (Graph's computational checks, at `Node = Nat`). In
    `Benchmarks/` (slow): `Examples` (46 formulas, Schmitt & Goubault-Larrecq
-   Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`); `Compare` (decide vs decideSCC
-   on 47 formulas); `Proofs` (prints and measures certificates).
+   Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`).
 10. **Readable output** (root) — `Pretty` (`prove`, `proveTree`, `proveLines`:
-   decidePC results as numbered Hilbert proofs, trees, or lasso countermodels,
+   decideSCC results as numbered Hilbert proofs, trees, or lasso countermodels,
    rendered to `Agda.Builtin.String`; this is why `Base` takes `Nat` from
    `Agda.Builtin.Nat`). `tools/show-proof` runs it from the terminal via
    `agda --interaction-json`. Rendering is slow for large certificates.
 
 ## Public API
 
-- `decide` (`LTL/Procedures/Decide.agda`), `decideSCC` (`LTL/Procedures/DecideSCC.agda`),
-  `decidePC` (`LTL/Procedures/ShortPC.agda`) — all of type
-  `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q`.
-- `decideCorrect`, `decideSCCCorrect`, `decidePCCorrect` (`LTL/Correct.agda`)
-  — the same procedures as `Trusted.DecisionProcedure`. Any procedure of the
-  type above gets one from `fromDecider` (`LTL/Semantics.agda`).
+- `decideSCC` (`LTL/Procedures/DecideSCC.agda`) — of type
+  `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q` (`LTL/Procedures/Answer.agda`).
+- `decideSCCCorrect` (`LTL/Correct.agda`) — the same procedure as a
+  `Trusted.DecisionProcedure`. Any procedure of the type above gets one from
+  `fromDecider` (`LTL/Semantics.agda`).
 
 ## Adding Until (expected touch points)
 

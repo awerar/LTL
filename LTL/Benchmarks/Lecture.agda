@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.Benchmarks.Lecture -- the worked example of the course's lecture 15 notes (not in
--- the repository), run through decide.
+-- the repository), run through decideSCC.
 --
 -- The appendix of those notes (pages 139-141) analyses
 --
@@ -9,7 +9,7 @@
 --
 -- by hand: it lists Sub, the locally consistent states with F(a and b) = 0,
 -- their outgoing edges, and a countermodel path.  The formula is not valid, so
--- decide takes the countermodel branch, and everything the lecture computes can
+-- decideSCC takes the countermodel branch, and everything the lecture computes can
 -- be checked against what the development computes.
 --
 -- THE GRAPH IS THE SAME.  Writing a state as  8a + 4b + 2 Fa + Fb , the
@@ -35,9 +35,13 @@
 -- own Example 2.  The path it presumably meant is  s3 -> s5 -> s7 -> s5 -> ... ,
 -- alternating so that b recurs at s5 and a at s7; both edges exist.
 --
--- decide returns a different and shorter one,
+-- decideSCC returns a different and shorter one,
 --
 --     s7 -> s4 -> s0 -> s0 -> ...          (loop at s0)
+--
+-- (its cycle is recorded as four copies of the loop at s0: the SCC
+-- construction starts from the bare loop and prepends one leg per
+-- eventuality, and each leg is the loop again),
 --
 -- a at stage 0, b at stage 1, and everything false from stage 2 on: Fa and Fb
 -- are both fulfilled at once and a and b are never true together.  It ends in
@@ -52,7 +56,7 @@
 --
 --     evPred R (¬ b) s7 = false          s7 is outside F_Fb : the lecture's
 --                                          loop cannot be fair
---     evPred R (¬ b) s0 = true           the loop decide returns can be
+--     evPred R (¬ b) s0 = true           the loop decideSCC returns can be
 --     evPred R (¬ a) s7 = true           and s7 is inside F_Fa, exactly as
 --                                          the lecture says (a holds there)
 --
@@ -137,23 +141,20 @@ lec-edges = refl
 ------------------------------------------------------------------------
 -- The decision, and the lasso.
 --
--- lassoOfDecide reads the countermodel as (start , rest , cycle), where rest is
--- the stem followed by the cycle.  Decoded, the run is  s7 s4 s0 s0 ...
+-- lassoOf reads the countermodel as (start , rest , cycle), where rest is the
+-- stem followed by the cycle.  Decoded, the run is  s7 s4 s0 s0 ...
 
 lo : Val × List Val × List Val
-lo = lassoOfDecide fab (decide fab)
+lo = lassoOf fab (decideSCC fab)
 
-lec-notValid : isProof (decide fab) ∷ isProof (decideSCC fab) ∷ [] ≡
-               false ∷ false ∷ []
+lec-notValid : isProof (decideSCC fab) ≡ false
 lec-notValid = refl
 
--- Start, stem-and-cycle, cycle: s7, then s4 s0 s0, looping at s0.  Stated as
+-- Start, stem-and-cycle, cycle: s7, then s4 and the loop at s0.  Stated as
 -- ONE equation because every mention of lo re-runs the whole countermodel
--- branch -- the elimination, Proposition 5.3 and the round construction, about
--- 4.7 s -- where isProof alone needs only the branch and takes 0.5 s.  The two
--- equations that mention lo are nine of this file's ten seconds; it is a worked
--- example and a benchmark, like LTL.Benchmarks.Examples and LTL.Benchmarks.Proofs, and the 5 s rule
--- of FORMALISATION-PLAN.md section 4a does not apply to it.
+-- branch -- the graph search, the trap and the elimination it survives.  It is
+-- a worked example and a benchmark, like LTL.Benchmarks.Examples, and the 5 s
+-- rule of FORMALISATION-PLAN.md section 4a does not apply to it.
 
 -- The triple gets its own typed definition: written inline on the left of ≡,
 -- Agda has to infer the type of a Σ pair, and that unification forces lo and
@@ -162,13 +163,13 @@ lec-notValid = refl
 lec-shape : Nat × List Nat × List Nat
 lec-shape = num (fst lo) , map num (fst (snd lo)) , map num (snd (snd lo))
 
-lec-run : lec-shape ≡ (11 , 5 ∷ 0 ∷ 0 ∷ [] , 0 ∷ [])
+lec-run : lec-shape ≡ (11 , 5 ∷ 0 ∷ 0 ∷ 0 ∷ 0 ∷ 0 ∷ [] , 0 ∷ 0 ∷ 0 ∷ 0 ∷ [])
 lec-run = refl
 
 ------------------------------------------------------------------------
 -- Why the lecture's path is not a countermodel.
 --
--- s7 is the start of decide's run, s0 is its cycle.  evPred R A z is the
+-- s7 is the start of decideSCC's run, s0 is its cycle.  evPred R A z is the
 -- fairness predicate of LTL.SCC.SccLasso for the eventuality whose box-argument is
 -- A: "the eventuality is not pending at z, or its body already fails there",
 -- which for  F b  is the lecture's own  F_Fb = { v | v (Fb) = 0 or v (b) = 1 } .
@@ -180,7 +181,7 @@ s0 : Val
 s0 = nth (snd (snd lo)) zero []
 
 -- s7 is outside F_Fb, so the lecture's loop at s7 cannot be fair;
--- s0 is inside it, so the loop decide returns can be;
+-- s0 is inside it, so the loop decideSCC returns can be;
 -- and s7 IS inside F_Fa, exactly as the lecture says, since a holds there.
 
 lec-fair : evPred R (¬ pb) s7 ∷ evPred R (¬ pb) s0

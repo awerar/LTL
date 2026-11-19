@@ -65,10 +65,6 @@ module _ (P : Formula) where
   evList : List Val -> List Ev
   evList us = map (λ A -> A , gfpW P us A) (□Args (sub P))
 
-  evList-mem : (us : List Val) {A : Formula}
-            -> A ∈ □Args (sub P) -> (A , gfpW P us A) ∈ evList us
-  evList-mem us m = memMap (λ A -> A , gfpW P us A) m
-
   evList-of : (us : List Val) {A : Formula} {W : List Val}
            -> (A , W) ∈ evList us
            -> A ∈ □Args (sub P) × W ≡ gfpW P us A
@@ -141,16 +137,44 @@ module _ (P : Formula) where
   Uinf : List Val
   Uinf = elimGo (Ust P) (ustAllSat P) (ustBar P)
 
-  -- The states the elimination removed: R = U_st minus U_inf (m4.tex §4).
+------------------------------------------------------------------------
+-- Survivors are states.
+--
+-- Each round only filters, so U_inf is contained in St P.  Hintikka's lemma
+-- needs this to read (S1) and (S2) off a state of the run.
 
-  removed : List Val
-  removed = filter (λ v -> ¬ᵇ (v ∈ᵛ Uinf)) (Ust P)
+module _ (P : Formula) where
 
-  ------------------------------------------------------------------------
-  -- The decision, as a boolean.
-  --
-  -- This is the test of Theorem 6.1: is there a surviving state in which the
-  -- input formula holds?  Run on ¬ P, "no" means P is provable.
+  elimGoSub   : {E : Pred} (us : List Val)
+             -> (sb : AllSat E us) (bar : IFin E) {x : Val}
+             -> x ∈ elimGo P us sb bar -> x ∈ us
+  elimFindSub : {E : Pred} (us : List Val)
+             -> (sb : AllSat E us) (bar : IFin E)
+             -> (fr : FindResult (keep P us (evList P us)) us) {x : Val}
+             -> x ∈ elimFind P us sb bar fr -> x ∈ us
 
-  satB : Bool
-  satB = any (λ v -> valOf P v P) Uinf
+  elimGoSub us sb bar =
+    elimFindSub us sb bar (findFalse (keep P us (evList P us)) us)
+
+  elimFindSub us sb bar      (allTrue f)    m = m
+  elimFindSub us sb (cBar h) (found x mx q) m =
+    filter-sub (keep P us (evList P us)) us
+               (elimGoSub (elimRound P us)
+                          (dropAllSat (keep P us (evList P us)) us sb x q)
+                          (h x (sb x mx)) m)
+
+  uinfUst : (x : Val) -> x ∈ Uinf P -> x ∈ Ust P
+  uinfUst x m = elimGoSub (Ust P) (ustAllSat P) (ustBar P) m
+
+  uinfSub : (x : Val) -> x ∈ Uinf P -> x ∈ St P
+  uinfSub x m = ustSt P (uinfUst x m)
+
+  -- The projection is named rather than applied inline: giving filter-prop its
+  -- list argument against the folded  St P  is what keeps the elaborator from
+  -- unfolding Uinf while it solves the implicit.
+
+  stIsState : {x : Val} -> x ∈ St P -> isState P x ≡ true
+  stIsState m = filter-prop (isState P) (allVecs (length (sub P))) m
+
+  uinfState : (x : Val) -> x ∈ Uinf P -> isState P x ≡ true
+  uinfState x m = stIsState (uinfSub x m)

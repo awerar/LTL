@@ -11,23 +11,27 @@
 --                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
 --                -> ⊢ Q
 --
--- a second proof of the refutation branch of Theorem 6.1, with no elimination,
--- no greatest fixed point and no round numbering in it: the induction is the
--- reverse traversal of the condensation DAG that the certificate records.
+-- the refutation branch of Theorem 6.1, with no elimination, no greatest fixed
+-- point and no round numbering in it: the induction is the reverse traversal
+-- of the condensation DAG that the certificate records.
 --
--- What is reused from LTL.Elimination.Extract, which is the point of this module.
+-- What comes from LTL.Elimination.Extract.
 --
---   stepLemma      -- (Step), Lemma 2.7, unchanged
---   extractR1      -- the sink case, unchanged and used verbatim
---   Refuted        -- the induction hypothesis, unchanged
---   provableEach's -- the three-position argument, minus its middle case
+--   stepLemma  -- (Step), Lemma 2.7
+--   extractR1  -- the sink case, used verbatim
+--   Refuted    -- the induction hypothesis
 --
--- and what is NOT reused is extractR2: it is stated for  gfpW P us A  and uses
--- gfpIn, gfpHolds and gfpClosed, so it is welded to the greatest fixed point.
--- extractBlock below is its copy with those three facts turned into three
--- hypotheses, which the certificate's block supplies instead.  Nothing in
--- LTL.Elimination.Extract is touched: LTL.Benchmarks.Compare (checkpoint C8) compares the procedures
--- and needs all of them.
+-- extractBlock below is case (R2) of Theorem 4.1, refuting a pending
+-- eventuality with one use of (Ind), but with the three facts the note takes
+-- from the greatest fixed point -- membership, A holding throughout, closure
+-- under successors -- turned into hypotheses, which the certificate's block
+-- supplies instead.
+--
+-- The derivation closes with the (PC) forms of Lemma 2.6 and (L5)
+-- (stateCompletePC and betaElimPC, LTL.Procedures.CompletePC), and the states
+-- that do not contain ¬ Q are one pc node each (tautChi, LTL.States.Taut), so
+-- the certificate is short: the only part of it that is derived step by step
+-- is the temporal content, extractR1 and extractBlock.
 --
 -- The fit with certAll, hypothesis by hypothesis.
 --
@@ -50,7 +54,8 @@
 --    -- the two hypotheses (R2) needs, now at EVERY state of C rather than at
 --    one state per round.  That is what uniformity on a component buys:
 --    extractBlock refutes the whole component
---    in one use of (Ind), where elimRound needs one round per state.
+--    in one use of (Ind), where the elimination of Definition 3.1 needs one
+--    round per state.
 --
 -- 3. THE ONE WRINKLE, AND WHY IT IS PAID BY A FILTER.  certAll quantifies its
 --    two hypotheses over an arbitrary vertex list ws and knows nothing about
@@ -91,6 +96,7 @@ module LTL.SCC.SccExtract where
 
 open import LTL.SCC.SccLasso public
 open import LTL.Elimination.Extract  public
+open import LTL.Procedures.CompletePC public
 
 ------------------------------------------------------------------------
 -- The property certAll establishes.
@@ -112,9 +118,9 @@ module _ (P : Formula) where
   ------------------------------------------------------------------------
   -- The block case: (R2) against a component instead of against gfpW.
   --
-  -- This is extractR2 of LTL.Elimination.Extract with its three uses of the fixed point --
-  -- gfpIn, gfpHolds, gfpClosed -- turned into the three hypotheses cUst, cHold,
-  -- cCl, and with the closure stated in the form the proof actually uses: the
+  -- This is case (R2) of Theorem 4.1 with its three uses of the fixed point --
+  -- membership, A holding, closure -- turned into the three hypotheses cUst,
+  -- cHold, cCl, and with the closure stated in the form the proof actually uses: the
   -- successor offered by the step lemma is already known to be a state, and the
   -- only question is whether it is still inside ws.  The body is otherwise the
   -- note's argument unchanged: (i) B ⇒ A by (L2) and (L5), (ii) B ⇒ ○ B by
@@ -271,12 +277,11 @@ module _ (P : Formula) where
 ------------------------------------------------------------------------
 -- The refutation branch of Theorem 6.1, by the SCC route.
 --
--- provableEach of LTL.Elimination.Extract has three cases; this has two.  The state that
--- never joined the search is disposed of by ustSeed exactly as there, and every
--- state that did join is refuted outright -- there is no third case, because
--- there is no surviving set: the certificate covers all of Ust P.  That is the
--- structural difference between the two procedures and it is visible here in
--- the absence of satB.
+-- Every state of St (¬ Q) is in one of two positions.  A state that never
+-- joined the search cannot contain ¬ Q, by the contrapositive of ustSeed, so
+-- chi_w ⇒ Q is a tautology and one pc node.  Every state that did join is
+-- refuted outright by the certificate, which covers all of Ust (¬ Q).  State
+-- completeness -- which quantifies over ALL of St (¬ Q) -- then gives Q.
 
 provableEachSCC : (Q : Formula)
                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
@@ -286,11 +291,9 @@ provableEachSCC Q c w m = byPosition
     R : Formula
     R = ¬ Q
 
+    -- w does not contain R, so chi_w ⇒ Q is a tautology: one pc node
     fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
-    fromR ev =
-      ⇒Trans (subst (λ d -> ⊢ (chi R w) ⇒ (lit R d)) ev
-                        (chiProjVal R w (stLen R m) (sub-self R)))
-               dne
+    fromR ev = pc (tautChi Q w (stLen R m) ev)
 
     byPosition : ⊢ (chi R w) ⇒ Q
     byPosition with w ∈ᵛ Ust R in ec
@@ -302,7 +305,7 @@ provableEachSCC Q c w m = byPosition
 provableSCC : (Q : Formula)
            -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q)) -> ⊢ Q
 provableSCC Q c =
-  mp (betaElim (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateComplete (¬ Q))
+  mp (betaElimPC (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateCompletePC (¬ Q))
 
 ------------------------------------------------------------------------
 -- The two branches, side by side.

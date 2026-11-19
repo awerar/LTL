@@ -9,10 +9,9 @@
 --
 -- (PC) comes back as an ELEVENTH constructor, with a decidable side
 -- condition on the formula itself and no substitution relation -- see below and
--- LTL.Syntax.Skel.  Only LTL.Procedures.CompletePC and LTL.Procedures.ShortPC build pc nodes, so the
--- ten-constructor system is still what every lemma below them is proved in; pc
--- is there because it is what makes a certificate short, and LTL.Benchmarks.Proofs
--- measures the difference.
+-- LTL.Syntax.Skel.  Only LTL.Procedures.CompletePC and LTL.SCC.SccExtract build
+-- pc nodes, so the ten-constructor system is still what every lemma below them
+-- is proved in; pc is there because it is what makes a certificate short.
 
 module LTL.Syntax.Deriv where
 
@@ -68,10 +67,10 @@ data ⊢_ : Formula -> Set where
   -- decidable condition on A alone, and keeps ⊢_ a plain inductive family.
   -- isTaut is that test (LTL.Syntax.Skel), and soundness is tautSound.
   --
-  -- Only LTL.Procedures.CompletePC and LTL.Procedures.ShortPC use it: (L0)-(L7) and everything above
-  -- them are derived from (P1)-(P3) exactly as before, so the eleventh
-  -- constructor is additive.  What it buys is the length of a certificate; see
-  -- LTL.Benchmarks.Proofs.
+  -- Only LTL.Procedures.CompletePC and LTL.SCC.SccExtract use it: (L0)-(L7)
+  -- and everything above them are derived from (P1)-(P3) exactly as before, so
+  -- the eleventh constructor is additive.  What it buys is the length of a
+  -- certificate.
   pc : {A : Formula} -> isTaut A ≡ true -> ⊢ A
 
   -- modus ponens

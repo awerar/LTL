@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 r"""Print a derivation or countermodel for an LTL formula, readably.
 
-    tools/show-proof 'G p -> p'               numbered proof from decidePC
+    tools/show-proof 'G p -> p'               numbered proof from decideSCC
     tools/show-proof '□ pv ⇒ pv'              the same, in Agda syntax
     tools/show-proof --tree 6 'G p -> p'      the proof tree, to depth 6
     tools/show-proof --expr 'renderDeriv (dne {pv})'   any String expression

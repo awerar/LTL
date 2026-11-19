@@ -1,9 +1,10 @@
 # Constructive LTL decision procedures in Agda
 
-This development constructs a decision procedure returning either a derivation
-of a temporal formula or a certified lasso countermodel. It includes procedures
-based on state elimination and on strongly connected components, and versions
-with shorter proof certificates.
+This development constructs a decision procedure, `decideSCC`, returning either
+a derivation of a temporal formula or a certified lasso countermodel. It
+searches the state graph for fair strongly connected components (m5). Its
+derivations use a checked propositional-consequence rule, which keeps the
+certificates short.
 
 The current language has propositional variables, negation `¬`, implication
 `⇒`, **next** `○`, and **always** `□`. Eventually `◇` and the other Boolean
@@ -21,12 +22,11 @@ implemented.**
   ([LaTeX](docs/m5.tex)): the graph certificate argument and comparison.
 - [LTL/Trusted.agda](LTL/Trusted.agda): the specification, a small
   hand-checked module stating the LTL semantics and what a decision procedure
-  must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for all three
-  procedures.
-- [LTL/Procedures/Decide.agda](LTL/Procedures/Decide.agda) and
-  [LTL/Procedures/DecideSCC.agda](LTL/Procedures/DecideSCC.agda): the two public decision procedures.
-- [LTL/Procedures/ShortPC.agda](LTL/Procedures/ShortPC.agda): shorter derivations using a checked
-  propositional-consequence rule.
+  must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for the
+  procedure.
+- [LTL/Procedures/DecideSCC.agda](LTL/Procedures/DecideSCC.agda): the public
+  decision procedure, and [LTL/Procedures/Answer.agda](LTL/Procedures/Answer.agda):
+  what it returns and how to read it.
 
 ## Check the development
 
@@ -35,26 +35,24 @@ root:
 
 ```sh
 agda -i . LTL/Correct.agda
-agda -i . LTL/Procedures/DecideSCC.agda
-agda -i . LTL/Procedures/ShortPC.agda
+agda -i . LTL/Pretty.agda
 agda -i . LTL/Tests/Checks.agda
 agda -i . LTL/Tests/GraphExamples.agda
-agda -i . LTL/Benchmarks/Compare.agda
+agda -i . LTL/Benchmarks/Examples.agda
 agda -i . LTL/Benchmarks/Lecture.agda
-agda -i . LTL/Benchmarks/Proofs.agda
 ```
 
 `Checks` and `GraphExamples` hold the computational checks of the core
-modules. `Compare` imports the examples and contains computational comparisons on 47
-formulas. `Lecture` examines a worked example. `Proofs` measures and inspects
-proof certificates. These benchmark modules take longer than the core proofs.
+modules. `Examples` decides 46 formulas from Schmitt and Goubault-Larrecq.
+`Lecture` examines a worked example. These benchmark modules take longer than
+the core proofs.
 The source comments include historical timings; those depend on the machine and
 evaluation method.
 
 The files use `--safe --without-K --exact-split`. There are no postulates,
 unfinished goals, or termination overrides. The procedures return a derivation
 or a finite lasso countermodel. `LTL/Correct.agda` connects this to the
-semantics of `LTL/Trusted.agda`: each procedure is a `DecisionProcedure`.
+semantics of `LTL/Trusted.agda`: `decideSCC` is a `DecisionProcedure`.
 When it answers true, the formula is valid, meaning true at time 0 of every
 lasso (ultimately periodic) interpretation. When it answers false, it returns a
 lasso on which the formula is false. Validity on arbitrary infinite words is
@@ -62,7 +60,7 @@ not stated. The proposal discusses that distinction.
 
 ## Viewing proofs
 
-[LTL/Pretty.agda](LTL/Pretty.agda) prints the result of `decidePC` in a
+[LTL/Pretty.agda](LTL/Pretty.agda) prints the result of `decideSCC` in a
 readable form. For a valid formula you get a numbered Hilbert proof, where
 each line is an axiom or follows from earlier lines by MP or Gen. For an
 invalid one you get the lasso countermodel: the variables true at each time
@@ -103,7 +101,7 @@ formula is evaluated with `LTL.Pretty` and `LTL.Benchmarks.Examples` open, so `p
 `axT`, … can also be used. `tools/show-proof --help` lists all of this. Set
 `AGDA` to choose the Agda binary.
 
-In an editor, load `LTL/Pretty.agda` or `LTL/Benchmarks/Proofs.agda`, then:
+In an editor, load `LTL/Pretty.agda`, then:
 
 - Emacs: `C-u C-u C-c C-n prove (□ pv ⇒ pv)` prints the text with real line
   breaks. Plain `C-c C-n` shows a quoted string with `\n` escapes.
@@ -115,10 +113,7 @@ Other functions: `proveTree n Q`, `renderDeriv d` and `renderTree n d` for any
 derivation `d`, `showFormula` and `showFormulaRaw`.
 
 Limitations: rendering is computed by Agda's normaliser, so it is only
-practical for small certificates. `p ⇒ p`, `□ p ⇒ p` and the countermodel
-examples take about a second. Some formulas, such as `□ pv ⇒ ○ pv`, did not
-finish within 90 seconds. `decide`'s own certificates (`proveWith decide Q`)
-are far too large to render; see `LTL/Benchmarks/Proofs.agda`.
+practical for small certificates.
 
 ## Repository layout
 
@@ -129,17 +124,17 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 
 | Folder | Modules | What it is |
 |---|---|---|
-| `LTL/` | `Trusted`, `Semantics`, `Correct`, `Pretty` | the specification, the proof that the Boolean evaluation is its semantics (so derivable formulas are valid), the three procedures as `DecisionProcedure`s, and readable output |
+| `LTL/` | `Trusted`, `Semantics`, `Correct`, `Pretty` | the specification, the proof that the Boolean evaluation is its semantics (so derivable formulas are valid), the procedure as a `DecisionProcedure`, and readable output |
 | `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes` | foundations without the standard library; inductively finite sets |
 | `LTL/Syntax/` | `Formula`, `Sub`, `Skel`, `Deriv` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
 | `LTL/States/` | `Val`, `State`, `Step`, `Taut`, `Proj`, `NonState`, `Complete`, `StepLemma`, `Reach`, `VecBar`, `Closure` | states, transitions and the finite state space, m4 §2 |
-| `LTL/Elimination/` | `Gfp`, `Elim`, `Trace`, `Extract` | elimination and extraction of derivations, m4 §3–4 |
-| `LTL/Countermodel/` | `Orbit`, `LassoEval`, `Walk`, `Fix`, `Round`, `Lasso`, `Run`, `Global`, `Eval`, `Sound`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
+| `LTL/Elimination/` | `Gfp`, `Elim`, `Extract` | the elimination (it places countermodels in `Uinf`) and the building blocks of extraction, m4 §3–4 |
+| `LTL/Countermodel/` | `Orbit`, `LassoEval`, `Walk`, `Lasso`, `Run`, `Global`, `Eval`, `Sound`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccTrap` | graph certificates and their application to temporal logic, m5 |
-| `LTL/Procedures/` | `Decide`, `DecideSCC`, `CompletePC`, `ShortPC` | the decision procedures, m4 Thm 6.1 |
+| `LTL/Procedures/` | `Answer`, `CompletePC`, `DecideSCC` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
-| `LTL/Benchmarks/` | `Examples`, `Lecture`, `Compare`, `Proofs` | slow benchmarks and certificate measurements |
+| `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 
 The source comments cite goals (G1–G40), phases and checkpoints of the plans
 of the original development, which are not in this repository;

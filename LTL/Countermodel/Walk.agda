@@ -4,8 +4,8 @@
 --
 -- LTL.Elimination.Gfp already has Path, which is what Reach_U(v) is in m4.tex section 3;
 -- that is the right form for gfpSound and gfpComplete, where nothing is ever
--- built.  The lasso branch builds: a round is a path, a lasso is two paths, and
--- the evaluation of G25 indexes into them.  So the same relation is given again
+-- built.  The lasso branch builds: a lasso is two paths, and the evaluation of
+-- G25 indexes into them.  So the same relation is given again
 -- carrying the list of states it visits, and indexed by its endpoint:
 --
 --   Walk P us v ws x   --  v -> ws_1 -> ... -> ws_n = x, every ws_i in us
@@ -16,12 +16,13 @@
 -- The one substantial lemma is walkPersist: along a walk, an eventuality
 -- pending at the start is either fulfilled at a state visited, or still pending
 -- at the endpoint.  That is Lemma 2.8 of the note (persistence, discharged in
--- LTL.States.Step as `persist`) propagated along a path, and it is what both the round
--- construction (G22) and the cycle-fulfilment property (G23) turn on.
+-- LTL.States.Step as `persist`) propagated along a path, and it is what the
+-- cycle-fulfilment property of a lasso (LTL.SCC.SccLasso) and the trap of
+-- LTL.Procedures.DecideSCC turn on.
 
 module LTL.Countermodel.Walk where
 
-open import LTL.Elimination.Trace public
+open import LTL.Elimination.Elim public
 
 ------------------------------------------------------------------------
 -- Walks
@@ -51,31 +52,6 @@ module _ (P : Formula) where
   walkIn us wnil             ()
   walkIn us (wcons mw st wk) here      = mw
   walkIn us (wcons mw st wk) (there m) = walkIn us wk m
-
-------------------------------------------------------------------------
--- Membership under concatenation
-
-memConsApp : {z v : Val} (ws zs : List Val)
-          -> z ∈ v ∷ ws -> z ∈ v ∷ ws ++ zs
-memConsApp ws zs here      = here
-memConsApp ws zs (there m) = there (memAppL ws zs m)
-
--- A state visited by the second leg is visited by the concatenation, given
--- that the joint x is visited by the first.
-memConsApp2 : {z v x : Val} (ws zs : List Val)
-           -> x ∈ v ∷ ws -> z ∈ x ∷ zs -> z ∈ v ∷ ws ++ zs
-memConsApp2 ws zs mx here      = memConsApp ws zs mx
-memConsApp2 ws zs mx (there m) = there (memAppR ws zs m)
-
-null-appR : (ws : List Val) (y : Val) (zs : List Val)
-         -> null (ws ++ y ∷ zs) ≡ false
-null-appR []       y zs = refl
-null-appR (w ∷ ws) y zs = refl
-
-null-appL : (ws zs : List Val)
-         -> null ws ≡ false -> null (ws ++ zs) ≡ false
-null-appL []       zs ()
-null-appL (w ∷ ws) zs e = refl
 
 ------------------------------------------------------------------------
 -- The tail of a walk starting at any state it visits.
@@ -108,7 +84,7 @@ data Fulfil (P : Formula) (A : Formula) (v : Val) (ws : List Val) : Set where
 
 -- FulfilledAt P b qs s: every box pending at s is fulfilled on the cycle
 -- b ∷ qs.  AllFulfilled P b qs ss: this holds at every s in ss.  These are the
--- fulfilment hypotheses of Seen, Lasso, Run and Lemma 5.4.
+-- fulfilment hypotheses of Lasso, Run and Lemma 5.4.
 
 FulfilledAt : Formula -> Val -> List Val -> Val -> Set
 FulfilledAt P b qs s =
@@ -117,21 +93,11 @@ FulfilledAt P b qs s =
 AllFulfilled : Formula -> Val -> List Val -> List Val -> Set
 AllFulfilled P b qs ss = (s : Val) -> s ∈ ss -> FulfilledAt P b qs s
 
--- A Fulfil proof carries over to a longer walk: one more state in front
--- (fulfilCons), more states behind (fulfilPrefix: it lies in the prefix ws),
--- or a walk that reaches the fulfilling walk (fulfilSuffix).
+-- A Fulfil proof carries over to a walk with one more state in front.
 
 fulfilCons : {P A : Formula} {v w : Val} {ws : List Val}
           -> Fulfil P A w ws -> Fulfil P A v (w ∷ ws)
 fulfilCons (ful z m q) = ful z (there m) q
-
-fulfilPrefix : {P A : Formula} {v : Val} (ws zs : List Val)
-            -> Fulfil P A v ws -> Fulfil P A v (ws ++ zs)
-fulfilPrefix ws zs (ful z m q) = ful z (memConsApp ws zs m) q
-
-fulfilSuffix : {P A : Formula} {v x : Val} (ws zs : List Val)
-            -> x ∈ v ∷ ws -> Fulfil P A x zs -> Fulfil P A v (ws ++ zs)
-fulfilSuffix ws zs mx (ful z m q) = ful z (memConsApp2 ws zs mx m) q
 
 ------------------------------------------------------------------------
 -- Persistence along a walk (Lemma 2.8, propagated).

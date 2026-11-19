@@ -1,6 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Taut -- G31 and G32 of FORMALISATION-PLAN.md, boolean half.
+-- LTL.States.Taut -- G32 of FORMALISATION-PLAN.md and G34 of PHASE10-PLAN.md,
+-- boolean half.
 --
 -- (PC) asks that a formula be a tautology of its own skeleton: isTaut A runs
 -- valFrom over the truth table of atomsOf A (LTL.Syntax.Skel).  The two formulas
@@ -350,9 +351,9 @@ C ⇐ D = D ⇒ C
 -- G34 of PHASE10-PLAN.md: the branch as one node.
 --
 -- The last term of the certificate that is neither constant nor linear-with-
--- constant-one is the 67 constructors per state -- the two easy cases of
--- provableEach, which project  ¬ ¬ Q  out of chi_w by (L2), 39, then
--- cancel the double negation, 23, then (L1), 5.
+-- constant-one is the 67 constructors per state that does not contain ¬ Q
+-- (provableEachSCC, LTL.SCC.SccExtract), if derived: project  ¬ ¬ Q  out of
+-- chi_w by (L2), 39, then cancel the double negation, 23, then (L1), 5.
 --
 -- But  chi_w ⇒ Q  is a TAUTOLOGY OF ITS OWN SKELETON whenever w does not
 -- contain ¬ Q, and for the same reason the derivation works: chi_w is a
@@ -363,8 +364,8 @@ C ⇐ D = D ⇒ C
 -- hence Q.  Nothing about Q's own structure is used; Q is read by the skeleton
 -- like anything else.
 --
--- So this is the same move as G31 and G32 one more time, at the last place it
--- had not been made: a propositional step DECIDED rather than derived.
+-- So this is the same move as G32 one more time, at the last place it had not
+-- been made: a propositional step DECIDED rather than derived.
 
 ------------------------------------------------------------------------
 -- ∧, read out rather than built up.  skel∧Intro above is the introduction; a
@@ -501,30 +502,11 @@ atomsIn (□ B   ∷ As) {X} m =
 ------------------------------------------------------------------------
 -- Literals, read in both directions.
 
-litOfEq : (Ats : List Formula) (a : Val) (A : Formula) (b : Bool)
-       -> valFrom Ats a A ≡ b -> valFrom Ats a (lit A b) ≡ true
-litOfEq Ats a A true  e = e
-litOfEq Ats a A false e = cong ¬ᵇ_ e
-
-litSound : (Ats : List Formula) (a : Val) (A : Formula) (b : Bool)
-        -> valFrom Ats a (lit A b) ≡ true -> valFrom Ats a A ≡ b
-litSound Ats a A true  e = e
-litSound Ats a A false e = ¬ᵇ-true (valFrom Ats a A) e
-
 litMapMem : (f : Formula -> Bool) (As : List Formula) {X : Formula}
          -> X ∈ As -> lit X (f X) ∈ litList As (map f As)
 litMapMem f []       ()
 litMapMem f (A ∷ As) here      = here
 litMapMem f (A ∷ As) (there m) = there (litMapMem f As m)
-
-litMapOk : (Ats : List Formula) (a : Val) (f : Formula -> Bool) (As : List Formula)
-        -> ((A : Formula) -> A ∈ As -> valFrom Ats a A ≡ f A)
-        -> {C : Formula} -> C ∈ litList As (map f As)
-        -> valFrom Ats a C ≡ true
-litMapOk Ats a f []       h ()
-litMapOk Ats a f (A ∷ As) h here      = litOfEq Ats a A (f A) (h A here)
-litMapOk Ats a f (A ∷ As) h (there m) =
-  litMapOk Ats a f As (λ B mB -> h B (there mB)) m
 
 ------------------------------------------------------------------------
 -- The fact G35 turns on.

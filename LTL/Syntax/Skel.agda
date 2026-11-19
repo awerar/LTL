@@ -160,7 +160,6 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 -- LTL.Elimination.Elim.  It is defined here, below Deriv, because the short Lemma 2.6
 -- (LTL.Procedures.CompletePC) needs it as well, and that is on the other branch of the
 -- import graph: its (S2) premise is a conjunction of  □ A -> A  over □Args.
--- □Args-mem is in LTL.Elimination.Trace, the only place that needs it.
 
 □Args : List Formula -> List Formula
 □Args []           = []
@@ -179,6 +178,18 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 □Args-of (○ B   ∷ As) (there m) = □Args-of As m
 □Args-of (□ B   ∷ As) here      = here
 □Args-of (□ B   ∷ As) (there m) = there (□Args-of As m)
+
+-- and back: the eventualities really are box-subformulas.
+
+□Args-mem : (As : List Formula) {A : Formula}
+         -> A ∈ □Args As -> □ A ∈ As
+□Args-mem []           ()
+□Args-mem (var n ∷ As) m         = there (□Args-mem As m)
+□Args-mem (¬ B   ∷ As) m         = there (□Args-mem As m)
+□Args-mem (B ⇒ C ∷ As) m         = there (□Args-mem As m)
+□Args-mem (○ B   ∷ As) m         = there (□Args-mem As m)
+□Args-mem (□ B   ∷ As) here      = here
+□Args-mem (□ B   ∷ As) (there m) = there (□Args-mem As m)
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation.

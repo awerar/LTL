@@ -43,8 +43,8 @@ posIn P b (vpos s rest ms wk) = ms
 -- The run, extracted from a lasso.
 --
 -- The cycle is split once and for all into its head c0 and tail c1, which is
--- what makes nextPos total; the lasso's null qs ≡ false is what licenses
--- the split, and that in turn is what the extra step of roundOf bought.
+-- what makes nextPos total; the lasso's cycleNonEmpty is what licenses the
+-- split.
 --
 -- rest is everything after v0 up to the first return to b: the lasso's stem
 -- followed by one turn of its cycle.  Where a Run is taken apart whole, its

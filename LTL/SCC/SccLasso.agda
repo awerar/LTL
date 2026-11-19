@@ -13,8 +13,8 @@
 --
 -- 1. Trail becomes Walk.  LTL.Graph's Trail is LTL.Walk's Walk with  step P
 --    replaced by the abstract edge test G; at  G = step P  the two are the same
---    three fields, so trailWalk and walkTrail are two-clause inductions and not
---    constructions.  Nothing else is needed of the graph layer's paths.
+--    three fields, so trailWalk is a two-clause induction and not a
+--    construction.  Nothing else is needed of the graph layer's paths.
 --
 -- 2. The fairness predicates are fixed.  For the eventuality  □ A ,
 --
@@ -51,40 +51,20 @@
 --
 -- mkLasso's side conditions are all against  Uinf P :  b ∈ Uinf P , and
 -- both walks are  Walk P (Uinf P) .  LTL.Graph's vertices are whatever list it
--- is handed.  So the graph search has to be run somewhere inside Uinf P, and
--- sccLasso is stated for an arbitrary vertex list vs together with
+-- is handed.  So sccLasso is stated for an arbitrary vertex list vs together
+-- with
 --
 --     (z : Val) -> z ∈ vs -> z ∈ Uinf P
 --
--- so that "somewhere inside" is a parameter rather than a commitment.  The
--- instance taken here is  vs = Uinf P  with the identity inclusion.
+-- so that "somewhere inside Uinf P" is a parameter rather than a commitment.
+-- The search itself runs on Ust P (LTL.Procedures.DecideSCC), where the
+-- refutation branch needs it; a fair cycle found there has a successor at
+-- every state and fulfils every pending eventuality along itself, so it
+-- survives every elimination round and lies in Uinf P.  That inclusion is
+-- uinfTrap of LTL.SCC.SccTrap, and it is what DecideSCC supplies here.
 --
--- At that instance the certificate branch is DEAD, and the second half of the
--- file proves it rather than asserting it: lassoFair turns the lasso
--- Proposition 5.3 already supplies into a FairLoop -- the converse translation,
--- and the place where the polarity of evPred is checked in the other direction
--- -- and then fairNoLoop, LTL.Graph's exclusivity theorem, refutes the
--- certificate.  So sccLassoOf has exactly the type of  lasso ,
---
---     (P : Formula) (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
---
--- and G38 is a second proof of Proposition 5.3 rather than a conditional one.
--- Note that this costs nothing to run: fairGraph returns inl, so the branch
--- calling  lasso  is never evaluated, and sccAt below is computed by the SCC
--- search alone.
---
--- Running the search instead at  Ust P , which is what G39's extraction will
--- want (Refuted quantifies over Ust P), would make the certificate branch live
--- and the LASSO branch the one needing work: a fair cycle in Ust P has a
--- successor at every state and fulfils every pending eventuality along itself,
--- so it survives every elimination round and lies in Uinf P -- but that
--- inclusion is a greatest-fixed-point induction over elimGo and is not G38.
--- Stating sccLasso with the inclusion as a hypothesis is exactly what leaves
--- that door open: G40 can supply it, or can keep the elimination and use the
--- identity.
---
--- Nothing in LTL.Elimination.Extract, LTL.Elimination.Elim or LTL.Countermodel.Lasso is touched, and the existing
--- positive tail -- runOf, Hintikka, buildCM -- consumes the result unchanged.
+-- The positive tail -- runOf, Hintikka, buildCM -- consumes the result
+-- unchanged.
 
 module LTL.SCC.SccLasso where
 
@@ -92,11 +72,11 @@ open import LTL.Countermodel.Run   public
 open import LTL.SCC.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
 
 ------------------------------------------------------------------------
--- Trails are walks, and walks are trails.
+-- Trails are walks.
 --
 -- Trail us (step P) v zs w  is  Walk P us v zs w : same three fields, and
 -- step P v x ≡ true is Trail's edge field at  G = step P  on the nose.  The
--- graph layer's abstraction costs one induction to undo, in either direction.
+-- graph layer's abstraction costs one induction to undo.
 
 module _ (P : Formula) where
 
@@ -104,19 +84,6 @@ module _ (P : Formula) where
            -> Trail us (step P) v zs w -> Walk P us v zs w
   trailWalk us tNil          = wnil
   trailWalk us (tCons m e t) = wcons m e (trailWalk us t)
-
-  walkTrail : (us : List Val) {v : Val} {zs : List Val} {w : Val}
-           -> Walk P us v zs w -> Trail us (step P) v zs w
-  walkTrail us wnil            = tNil
-  walkTrail us (wcons m e wk)  = tCons m e (walkTrail us wk)
-
-  -- The base point of a non-empty cycle is a state the cycle visits.  Used in
-  -- both directions: to place the base point among mkLasso's states, and to see
-  -- that it lies in the vertex list.
-
-  walkLast : (us : List Val) {v : Val} {zs : List Val} {w : Val}
-          -> Walk P us v zs w -> null zs ≡ false -> w ∈ zs
-  walkLast us wk nn = trailLast us (step P) (walkTrail us wk) nn
 
   ------------------------------------------------------------------------
   -- The fairness predicates.
@@ -151,17 +118,6 @@ module _ (P : Formula) where
     sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
             (λ e2 -> ¬ᵇ-true (valOf P z A) e2)
             (∨ᵇ-true (valOf P z (□ A)) (¬ᵇ valOf P z A) ez)
-
-  -- and building one, from either disjunct.
-
-  evNotPending : (A : Formula) (z : Val)
-              -> valOf P z (□ A) ≡ true -> evPred A z ≡ true
-  evNotPending A z e = ∨ᵇ-introˡ (valOf P z (□ A)) (¬ᵇ valOf P z A) e
-
-  evFails : (A : Formula) (z : Val)
-         -> valOf P z A ≡ false -> evPred A z ≡ true
-  evFails A z e =
-    ∨ᵇ-introʳ (valOf P z (□ A)) (¬ᵇ valOf P z A) (cong ¬ᵇ_ e)
 
   ------------------------------------------------------------------------
   -- Persistence to a state VISITED, not to the endpoint.
@@ -247,88 +203,3 @@ module _ (P : Formula) where
         -> (v0 : Val) -> v0 ∈ Uinf P
         -> FairLoop vs (step P) evPreds v0 -> Run P v0
   sccRun vs sb v0 mv0 fl = runOf P v0 mv0 (sccLasso vs sb v0 fl)
-
-  ------------------------------------------------------------------------
-  -- The converse, which is what makes the instance at Uinf P total.
-  --
-  -- A fulfilling lasso IS a fair loop for evPreds P.  For each eventuality: if
-  -- it is not pending at the base point, the base point is its own witness --
-  -- and it lies ON the cycle because the cycle is non-empty; if it is pending
-  -- there, the lasso's own cycle-fulfilment field supplies a state of the cycle
-  -- where A fails, which is the other disjunct.  This is the polarity of evPred
-  -- checked from the other side.
-
-  lassoFair : (v0 : Val) -> Lasso P v0
-           -> FairLoop (Uinf P) (step P) evPreds v0
-  lassoFair v0 (mkLasso b mb ps wp qs wq nn cyc) =
-    fairLoop b ps qs (walkTrail (Uinf P) wp) (walkTrail (Uinf P) wq) nn each
-    where
-      mbq : b ∈ qs
-      mbq = walkLast (Uinf P) wq nn
-
-      forA : (A : Formula) -> A ∈ □Args (sub P)
-          -> Σ[ z ∈ Val ] z ∈ qs × evPred A z ≡ true
-      forA A mA with valOf P b (□ A) in ep
-      ... | true  = b , mbq , evNotPending A b ep
-      ... | false = onFul (cyc b here A mA ep)
-        where
-          onFul : Fulfil P A b qs
-               -> Σ[ z ∈ Val ] z ∈ qs × evPred A z ≡ true
-          onFul (ful z m q) = z , onMem m , evFails A z q
-            where
-              onMem : z ∈ b ∷ qs -> z ∈ qs
-              onMem here      = mbq
-              onMem (there k) = k
-
-      each : (g : Pred) -> g ∈ evPreds
-          -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
-      each g mg = onInv (evPredsInv mg)
-        where
-          onInv : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred A)
-               -> Σ[ z ∈ Val ] z ∈ qs × g z ≡ true
-          onInv (A , mA , eg) =
-            subst (λ h -> Σ[ z ∈ Val ] z ∈ qs × h z ≡ true)
-                  (sym eg) (forA A mA)
-
-  ------------------------------------------------------------------------
-  -- The instance: the search run on Uinf P itself, which always finds a loop.
-
-  uinfFair : (v0 : Val) -> v0 ∈ Uinf P
-          -> FairLoop (Uinf P) (step P) evPreds v0 ⊎
-             Cert (step P) evPreds (reachSet (Uinf P) (step P) v0)
-  uinfFair v0 mv0 = fairGraph (Uinf P) (step P) evPreds v0 mv0
-
-  -- Proposition 5.3, again.  The certificate branch is refuted by fairNoLoop
-  -- against the loop  lasso  already supplies; since fairGraph in fact returns
-  -- inl, that branch is never evaluated and  lasso  is never run.
-
-  sccLassoOf : (v0 : Val) -> v0 ∈ Uinf P -> Lasso P v0
-  sccLassoOf v0 mv0 = sumElim yes no (uinfFair v0 mv0)
-    where
-      yes : FairLoop (Uinf P) (step P) evPreds v0 -> Lasso P v0
-      yes fl = sccLasso (Uinf P) (λ z m -> m) v0 fl
-
-      no : Cert (step P) evPreds (reachSet (Uinf P) (step P) v0) -> Lasso P v0
-      no c = emptyElim (fairNoLoop (Uinf P) (step P) evPreds v0 mv0 c
-                                   (lassoFair v0 (lasso P v0 mv0)))
-
-  sccRunOf : (v0 : Val) -> v0 ∈ Uinf P -> Run P v0
-  sccRunOf v0 mv0 = runOf P v0 mv0 (sccLassoOf v0 mv0)
-
-  ------------------------------------------------------------------------
-  -- Projections, so that the two procedures can be set side by side.  lassoAt
-  -- of LTL.Countermodel.Lasso reads the round-based search the same way, so sccAt and
-  -- lassoAt are two List Val × List Val to be compared.
-
-  sccAt : (v : Val) -> v ∈ᵛ Uinf P ≡ true
-       -> List Val × List Val
-  sccAt v e = lassoStem P v l , lassoCycle P v l
-    where
-      l : Lasso P v
-      l = sccLassoOf v (∈ᵛ-sound v (Uinf P) e)
-
-  sccState : (v0 : Val) -> v0 ∈ᵛ Uinf P ≡ true -> Nat -> Val
-  sccState v0 e i = stateAt P v0 (sccRunOf v0 m) i
-    where
-      m : v0 ∈ Uinf P
-      m = ∈ᵛ-sound v0 (Uinf P) e

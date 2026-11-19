@@ -3,8 +3,8 @@
 -- LTL.Pretty -- the answers of the decision procedures, as text one can read.
 --
 -- A derivation is a finite tree and a countermodel is a finite lasso, so both
--- can be written down.  LTL.Benchmarks.Proofs does that with the datatypes DTree / RTree,
--- and C-c C-n then prints the TERM: every constructor fully qualified, every
+-- can be written down.  C-c C-n on a derivation prints the TERM: every
+-- constructor fully qualified, every
 -- abbreviation of LTL.Syntax.Formula unfolded (A ∧ B appears as ¬ (A ⇒ ¬ B)), and
 -- the tree laid out as nested applications.  That is right for checking a
 -- shape by refl and useless for reading a proof.
@@ -23,14 +23,13 @@
 --
 -- and the entry points
 --
---   prove Q          renders decidePC Q (LTL.Procedures.ShortPC), whose certificates
---                    are short.  proveWith decide Q renders decide's
---                    certificate instead, but that is not practical: it is
---                    82357 constructors already for p ⇒ p (LTL.Benchmarks.Proofs), and
---                    rendering it did not finish in six minutes.
+--   prove Q          renders decideSCC Q (LTL.Procedures.DecideSCC), whose
+--                    certificates are short: the propositional bookkeeping is
+--                    discharged by (PC).  proveWith renders any other procedure
+--                    of the same type.
 --   proveLines Q     prove Q as one String per line, for editors that only
 --                    offer plain C-c C-n (see below).
---   proveTree n Q    the tree view of decidePC Q.
+--   proveTree n Q    the tree view of decideSCC Q.
 --
 -- Formulas are printed with the fixities of LTL.Syntax.Formula and minimal
 -- parentheses.  Of the abbreviations, ∧, ⇔ and ◇ are put back: their unfolded
@@ -45,7 +44,7 @@
 -- with \n escapes.  C-u C-u C-c C-n (Agda's "use show instance" mode) instead
 -- evaluates  show (expr)  and prints the resulting string raw, with real line
 -- breaks; show below is the identity on String, which is all that mode needs.
--- So, with this module (or LTL.Benchmarks.Proofs) loaded:
+-- So, with this module loaded:
 --
 --   C-u C-u C-c C-n   prove (□ pv ⇒ pv)
 --
@@ -59,7 +58,7 @@
 
 module LTL.Pretty where
 
-open import LTL.Procedures.ShortPC public
+open import LTL.Procedures.DecideSCC public
 open import Agda.Builtin.String public using (String)
 open import Agda.Builtin.String using (primStringAppend; primShowNat; primStringToList)
 
@@ -430,16 +429,16 @@ proveLinesWith dec Q = resultLines Q (dec Q)
 
 -- one String per line: what plain C-c C-n displays best
 proveLines : Formula -> List String
-proveLines = proveLinesWith decidePC
+proveLines = proveLinesWith decideSCC
 
 proveWith : Decider -> Formula -> String
 proveWith dec Q = unlines (proveLinesWith dec Q)
 
 prove : Formula -> String
-prove = proveWith decidePC
+prove = proveWith decideSCC
 
 proveTree : Nat -> Formula -> String
-proveTree n Q = go (decidePC Q)
+proveTree n Q = go (decideSCC Q)
   where
     go : ⊢ Q ⊎ LassoCountermodel Q -> String
     go (inl d) = renderTree n d

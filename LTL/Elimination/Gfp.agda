@@ -153,10 +153,6 @@ module _ (P : Formula) where
     shrinkGoSub us (wZero us A) (memAllSat (wZero us A))
                 (listBar (wZero us A))
 
-  gfpIn : (us : List Val) (A : Formula) {w : Val}
-       -> w ∈ gfpW us A -> w ∈ us
-  gfpIn us A m = filter-sub (holdsAt A) us (gfpWZero us A m)
-
   gfpHolds : (us : List Val) (A : Formula) {w : Val}
           -> w ∈ gfpW us A -> valOf P w A ≡ true
   gfpHolds us A m = filter-prop (holdsAt A) us (gfpWZero us A m)

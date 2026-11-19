@@ -37,7 +37,7 @@
 
 module LTL.Semantics where
 
-open import LTL.Procedures.Decide public
+open import LTL.Procedures.Answer public
 import LTL.Trusted as T
 import LTL.Countermodel.Orbit
 import LTL.Countermodel.LassoEval
@@ -223,7 +223,7 @@ toCounterModel Q (countermodel v0 r mv0 falseQ noDeriv) = T.counter L qFalse
                           falseQ))
 
 ------------------------------------------------------------------------
--- Every procedure of the shape of decide is a Trusted DecisionProcedure.
+-- Every procedure of the shape of decideSCC is a Trusted DecisionProcedure.
 --
 -- The test is which branch the procedure took.  When it took the derivation,
 -- ⊢-valid makes it valid; when it took the countermodel, toCounterModel

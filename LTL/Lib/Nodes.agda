@@ -125,7 +125,7 @@ barOfList {E = E} (suc n) xs le sb =
 -- available is not a list carried alongside the search: it is the Bar's own
 -- predicate.
 
--- Naming convention for the searches built on this (Closure, Gfp, Elim, Fix,
+-- Naming convention for the searches built on this (Closure, Gfp, Elim,
 -- Graph, SccTrap):
 --   sb    a subset proof: AllSat E xs, or xs ⊆ ys;
 --   bar   the IFin E the search recurses on;

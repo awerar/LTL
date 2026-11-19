@@ -145,8 +145,7 @@ guardBar n (suc k) w =
 -- copies of what it wraps, so with k a literal the NORMAL FORM of the guarded
 -- Bar has 2^k nodes -- and Agda normalises the constructor types of a data
 -- declaration, so every data type whose constructors mention U_infinity
--- (SuccInUinf, Escape, Walk, Round, Lasso, Run, ValidPos: most of Phases 5 and
--- 6) would normalise it.  With k = n and P a variable the match on k is
+-- (Walk, Lasso, Run, ValidPos) would normalise it.  With k = n and P a variable the match on k is
 -- blocked, the guard stays folded, and the explosion cannot happen; on a closed
 -- formula n reduces and the guard does its job.  Laziness has to be arranged
 -- in the term, not merely relied on in the evaluator.

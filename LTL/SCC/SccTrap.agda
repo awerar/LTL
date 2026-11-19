@@ -45,17 +45,16 @@
 --    than against the fuel-bounded reach of LTL.States.Reach -- is what makes this
 --    three lines instead of a development.
 --
---    This is the inclusion LTL/SCC/SccLasso.agda's header flagged and deferred:
---    "a fair cycle in Ust P has a successor at every state and fulfils every
---    pending eventuality along itself, so it survives every elimination round
---    and lies in Uinf P -- but that inclusion is a greatest-fixed-point
---    induction over elimGo and is not G38".  It is 60 lines, and it is here.
+--    This is the inclusion that sccLasso (LTL.SCC.SccLasso) takes as a
+--    hypothesis: a fair cycle in Ust P has a successor at every state and
+--    fulfils every pending eventuality along itself, so it survives every
+--    elimination round and lies in Uinf P.
 --
 -- Note what the second lemma is NOT.  It is not completeness of the
 -- elimination and it is not a new fixed-point theory: it is one direction, the
 -- one that says the elimination throws nothing useful away, and it is proved by
 -- running the existing recursion with an extra invariant.  The other direction
--- -- that Uinf P is itself a trap -- is Lemma 5.1, in LTL.Countermodel.Fix.
+-- -- that Uinf P is itself a trap, Lemma 5.1 of m4.tex -- is not needed.
 
 module LTL.SCC.SccTrap where
 

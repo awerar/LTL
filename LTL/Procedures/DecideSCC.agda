@@ -4,19 +4,15 @@
 --
 --   decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 --
--- the same type as decide (LTL.Procedures.Decide, Theorem 6.1), decided by a different
--- question.  decide asks a BOOLEAN of the elimination,
+-- Theorem 6.1 of m4.tex, decided by the graph search of m5.tex: is there a
+-- fair component in Ust (¬ Q)?
 --
---     satB (¬ Q)  --  does some surviving state contain ¬ Q?
+--     sccGraph (¬ Q)  --  a FairIn, or a Cert covering all of Ust (¬ Q)
 --
--- and decideSCC asks which way the graph search went,
---
---     sccGraph (¬ Q)  --  is there a fair component in Ust (¬ Q)?
---
--- Neither branch is obtained by refuting the other, exactly as in decide: the
--- certificate branch returns a derivation built by G39 and never mentions a
--- lasso, and the fair branch returns a lasso built by G38 and mentions a
--- derivation only to consume one.
+-- Neither branch is obtained by refuting the other: the certificate branch
+-- returns a derivation built by G39 (provableSCC, LTL.SCC.SccExtract) and never
+-- mentions a lasso, and the fair branch returns a lasso built by G38 and
+-- mentions a derivation only to consume one.
 --
 -- Why the search is run on all of Ust P and not from a vertex.  fairGraph is
 -- v-centred and certifies only  reachSet vs G v ; the refutation branch has to
@@ -40,22 +36,19 @@
 --      witness the graph layer chose and reading evPred there.  Those are the
 --      negations of (R1) and (R2).
 --   3. uinfTrap -- so C survives the elimination and lies in Uinf P.  This is
---      the step that lets the existing positive tail be used unchanged: sccLasso
---      of G38 takes exactly the inclusion  C subset Uinf P  as its hypothesis,
---      which is why it was stated with that hypothesis rather than at Uinf P.
---   4. sccRun, then buildCMFrom -- Hintikka's lemma at stage 0 and soundness,
---      verbatim from buildCM, with the run supplied rather than built by lasso.
+--      the step that lets the positive tail be used: sccLasso of G38 takes
+--      exactly the inclusion  C subset Uinf P  as its hypothesis.
+--   4. sccRun, then buildCM -- Hintikka's lemma at stage 0 and soundness.
 --
 -- So the elimination is still COMPUTED in the fair branch -- uinfTrap runs
 -- elimGo -- but it is not what decides, and it produces no lasso: the lasso is
 -- the SCC construction's.  In the certificate branch the elimination is not
--- computed at all.  That asymmetry is what the SCC procedure buys, and
--- checkpoint C8 (LTL.Benchmarks.Compare) measures it.
+-- computed at all.
 
 module LTL.Procedures.DecideSCC where
 
 open import LTL.SCC.SccTrap public
-open import LTL.Procedures.Decide  public
+open import LTL.Procedures.Answer public
 
 ------------------------------------------------------------------------
 -- Paths out of trails, for the Trap's second field.
@@ -189,17 +182,16 @@ trapLoopRun P v0 (trapLoop C mv0 inU tr flC) =
     mv0U = intoU v0 mv0
 
 ------------------------------------------------------------------------
--- buildCM with the run supplied.
+-- A countermodel from a run.
 --
--- Verbatim from LTL.Decide's buildCM except that the run is a parameter rather
--- than  runOf ... (lasso ...) .  Everything else -- (S1) at ¬ Q, Hintikka's
--- lemma at stage 0, soundness -- is the same three lines, and buildCM itself is
--- untouched: C8 needs both procedures in the development at once.
+-- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
+-- Hintikka's lemma at stage 0 transfers that to the evaluation, and soundness
+-- says a derivation of Q would evaluate it to 1.
 
-buildCMFrom : (Q : Formula) (v0 : Val) -> v0 ∈ Uinf (¬ Q)
+buildCM : (Q : Formula) (v0 : Val) -> v0 ∈ Uinf (¬ Q)
            -> Run (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
            -> LassoCountermodel Q
-buildCMFrom Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
+buildCM Q v0 m r ev = countermodel v0 r m evalFalse noDeriv
   where
     valQ : valOf (¬ Q) v0 Q ≡ false
     valQ =
@@ -228,7 +220,7 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
     fromRun : (s : Val) -> valOf R s R ≡ true
            -> s ∈ Uinf R × Run R s
            -> ⊢ Q ⊎ LassoCountermodel Q
-    fromRun s es (mu , rn) = inr (buildCMFrom Q s mu rn es)
+    fromRun s es (mu , rn) = inr (buildCM Q s mu rn es)
 
     onFair : FairIn (Ust R) (step R) (evPreds R)
           -> ⊢ Q ⊎ LassoCountermodel Q
@@ -243,3 +235,27 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
               fromRun s es
                       (trapLoopRun R s (fairTrapLoop R s ms
                                                      (fairLoop r st cy ts tc nn wit)))
+
+------------------------------------------------------------------------
+-- Reading the answer of decideSCC.
+
+-- The truth values of A at stages 0,...,n-1 of the countermodel to Q, or the
+-- empty list if Q turned out to be provable and there is no countermodel.
+
+traceOf : (Q : Formula) -> Formula -> Nat -> List Bool
+traceOf Q A n = onDec (decideSCC Q)
+  where
+    onDec : ⊢ Q ⊎ LassoCountermodel Q -> List Bool
+    onDec (inl d) = []
+    onDec (inr c) = cmFrom Q c A zero n
+
+-- and the shape of the lasso: the run is  v0  followed by cmRest, whose tail is
+-- the cycle, so it is periodic from stage  1 + |cmRest| - |cmCycle|  on, with
+-- period |cmCycle|.
+
+shapeOf : (Q : Formula) -> Nat × Nat
+shapeOf Q = onDec (decideSCC Q)
+  where
+    onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat × Nat
+    onDec (inl d) = zero , zero
+    onDec (inr c) = length (cmRest Q c) , length (cmCycle Q c)

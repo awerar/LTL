@@ -11,7 +11,7 @@
 --   being a theorem IS the fact that the state set is complete.  That term is
 --   typechecked and never normalised, so its 2^|Sub P| costs nothing.
 --
---   The elimination, Theorem 4.1 and the lasso, on the other hand, ARE
+--   The graph search, the elimination and the lasso, on the other hand, ARE
 --   normalised -- computing with the decision procedure directly is the point
 --   (Coquand and Siles, section 6) -- and they do not need every state.  They
 --   need a set U of states that is closed under ->-successors and contains
@@ -20,7 +20,8 @@
 -- This module builds such a U and proves the three properties, ustSt, ustSeed
 -- and ustClosed, that everything downstream is stated against.
 --
--- Why exactly those three.  ustClosed is what case (R1) of Theorem 4.1 needs:
+-- Why exactly those three.  ustClosed is what the refutation of a state needs
+-- (extractR1 and extractBlock, the two cases of Theorem 4.1):
 -- the step lemma offers ALL state-successors of u, and each has to be either
 -- already refuted or still inside the set being eliminated.  ustSeed is what
 -- the provable branch needs: a state outside U cannot contain P, so by (S1) it

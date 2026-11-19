@@ -79,8 +79,8 @@ sumElim : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
 sumElim f g (inl a) = f a
 sumElim f g (inr b) = g b
 
--- Does a sum hold its left alternative?  (decide's results are proofs on the
--- left, so LTL.Procedures.Decide calls this isProof.)
+-- Does a sum hold its left alternative?  (decideSCC's results are proofs on
+-- the left, so LTL.Procedures.Answer calls this isProof.)
 
 isInl : {A B : Set} -> A ⊎ B -> Bool
 isInl (inl _) = true
@@ -178,11 +178,6 @@ refuteTrue false no = refl
 ∧ᵇ-false-introʳ true  b eb = eb
 ∧ᵇ-false-introʳ false b eb = refl
 
--- a ∧ᵇ b is false and a is true, so b is false
-∧ᵇ-false-cancelˡ : (a b : Bool) -> a ∧ᵇ b ≡ false -> a ≡ true -> b ≡ false
-∧ᵇ-false-cancelˡ true  b eab ea = eab
-∧ᵇ-false-cancelˡ false b eab ()
-
 -- ¬ᵇ (a ∧ᵇ b) is true and a is true, so b is false
 ¬ᵇ∧ᵇ-cancelˡ : (a b : Bool) -> ¬ᵇ (a ∧ᵇ b) ≡ true -> a ≡ true -> b ≡ false
 ¬ᵇ∧ᵇ-cancelˡ true  true  () e
@@ -238,10 +233,6 @@ refuteTrue false no = refl
 ¬ᵇ¬ᵇ-true true  e = refl
 ¬ᵇ¬ᵇ-true false ()
 
-¬ᵇ-clash : (x : Bool) -> x ≡ true -> ¬ᵇ x ≡ true -> Empty
-¬ᵇ-clash true  ex ()
-¬ᵇ-clash false () en
-
 -- Implication
 
 ⇒ᵇ-refl : (b : Bool) -> b ⇒ᵇ b ≡ true
@@ -264,11 +255,6 @@ refuteTrue false no = refl
 ⇒ᵇ-false true  true  ()
 ⇒ᵇ-false true  false e = refl , refl
 ⇒ᵇ-false false b     ()
-
-⇒ᵇ-contra : (x y : Bool) -> (y ≡ true -> x ≡ true) -> ¬ᵇ x ⇒ᵇ ¬ᵇ y ≡ true
-⇒ᵇ-contra true  y     h = refl
-⇒ᵇ-contra false true  h = emptyElim (true≢false (sym (h refl)))
-⇒ᵇ-contra false false h = refl
 
 -- Equivalence
 
