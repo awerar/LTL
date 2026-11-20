@@ -10,7 +10,7 @@
 --    (s , w ∷ ws)  |->  (w , ws)          walk on
 --    (s , [])      |->  loop              loop back
 --
--- which is Position, step and loopBack of LTL.Trusted.  This avoids index
+-- which is Position, step and Lasso.loop of LTL.Trusted.  This avoids index
 -- arithmetic: the forward orbit of pos is literally  stretch pos ++ loopStretch
 -- (orbit-split), and everything about orbits follows from that equation.
 --

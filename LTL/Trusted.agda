@@ -27,13 +27,6 @@ module LTL.Trusted where
   Period : Set
   Period = List Instant
 
-  record Lasso : Set where
-    field
-      start    : Period
-      loopHead : Instant
-      loopTail : Period
-  open Lasso
-
   record Position : Set where
     constructor at
     field
@@ -41,17 +34,20 @@ module LTL.Trusted where
       rest : Period
   open Position
 
-  loopBack : Lasso -> Position
-  loopBack l = at (loopHead l) (loopTail l)
+  record Lasso : Set where
+    field
+      start    : Period
+      loop : Position
+  open Lasso
 
   initial : Lasso -> Position
   initial l with start l
-  ... | []     = loopBack l
+  ... | []     = loop l
   ... | x ∷ xs = at x xs
 
   step : Lasso -> Position -> Position
   step l (at _ (y ∷ ys)) = at y ys
-  step l (at _ [])       = loopBack l
+  step l (at _ [])       = loop l
 
   position : Lasso -> Nat -> Position
   position l zero    = initial l
