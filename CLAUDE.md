@@ -137,7 +137,8 @@ a module name.
 5. **Finite search infrastructure** (`States/`) — `Reach` (`≡ᵛ` on valuations, the
    `Val` instance of `Nodes`); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
-   explored state set; its members are states, `ustState`); `Extract`
+   explored state set: `Graph`'s growing `closure` at `step`, seeded by the
+   states containing `P`; its members are states, `ustState`); `Extract`
    (`betaElim`, `Refuted`, (R1) and `extractR1`: the pieces of m4 Thm 4.1
    that `SccExtract` reuses); `Closure` and `Extract` are P-modules. m4's elimination (§3) is not formalised: the
    SCC search replaces it, and countermodels live in `Ust`.
@@ -152,15 +153,16 @@ a module name.
    start; and `OrbitEval` at `Val`, giving `evalAt` and `eval`);
    `Hintikka` (`globalFulfil`, Lemma 5.4, and Hintikka's lemma). All but
    `Orbit` and `OrbitEval` are P-modules.
-7. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
-   certificate theorem, largest module; parameterised like `Nodes` and by the
+7. **Decision procedure** — in `SCC/` (m5): `Graph` (the growing search
+   `closure` with the reachable set as an instance, and the `fairGraph`
+   certificate theorem; largest module; parameterised like `Nodes` and by the
    edge test `G`, imports only the generic layer; the P-module `Walk`
    applies it at `G = step` and re-exports it, so inside the P-modules its
    names read `Trail ws`, `Cert fs ws`, and outside they take P first,
    `Cert (¬ Q) fs ws`); `SccLasso` (`sccLasso`: a `FairLoop` is a `Lasso`),
    `SccExtract` (`ustCertRefuted`: a certificate refutes every state of
-   `Ust`), `SccSeed` (`ustSeedTo`: every state of `Ust` is reached from one
-   containing `P`). In `Procedures/`: `CompletePC` (P-module;
+   `Ust`), `SccSeed` (`ustSeedTo`: every state of `Ust` is `Seeded`, reached from
+   one containing `P`). In `Procedures/`: `CompletePC` (P-module;
    `stateCompletePC`, `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer`
    (`LassoCountermodel`, `isProof`, `countermodelFrom`, `cmLasso`,
    `cmTrace`, `cmShape`, `countermodelFrom`, `proofFrom`, `derivCounts`);

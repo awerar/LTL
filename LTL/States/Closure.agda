@@ -18,8 +18,9 @@
 -- its bits at the ATOMS of sub P (the var, ○ and □ entries), so mkV builds
 -- it from an assignment to the atoms, and StCand has exactly the members of
 -- St (8192 candidates become 128 for c5 of LTL.Tests.Checks).
--- Then the successor closure of the states containing P.  That search GROWS
--- its accumulator, so it recurses on a Bar (vecIFin) rather than a length.
+-- Then the successor closure of the states containing P, by the growing
+-- search of LTL.SCC.Graph.  That search GROWS its accumulator, so it
+-- recurses on a Bar (vecIFin) rather than a length.
 
 open import LTL.Syntax.Formula using (Formula)
 
@@ -29,6 +30,11 @@ open import LTL.States.Common
 open import LTL.States.VecBar
 open import LTL.States.State P
 open import LTL.States.Step P
+
+-- The growing search, at the edge test step.  LTL.Countermodel.Walk makes
+-- the application the other P-modules see; this one stays private.
+open import LTL.SCC.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step
+  using (closure; closureIn; closureSeed; closureClosed)
 
 ------------------------------------------------------------------------
 -- The vector an assignment to the atoms determines, and the assignment a
@@ -140,174 +146,29 @@ stStCand {v} m = filter-true isState cands inCands st
                        (map-length (valOf v) (atoms (sub P)))))
 
 ------------------------------------------------------------------------
--- The successor closure of the states containing P.
---
--- The accumulator starts empty, and each round adds every state of StCand
--- that is WANTED -- contains P, or is a successor of something already in --
--- and is not there yet.  When a round adds nothing, the accumulator contains
--- every wanted state.  Each round adds a new vector of length |sub P|, and
--- vecIFin says that cannot go on forever.
+-- The successor closure of the states containing P: the growing search
+-- closure of LTL.SCC.Graph, seeded by "contains P", over StCand.  Each round
+-- adds a new vector of length |sub P|, and vecBar says that cannot go on
+-- forever.
 
 vecBar : IFin (hasLength (length (sub P)))
 vecBar = guardedVecBar (length (sub P)) (hasLength (length (sub P)))
                        (λ v ev -> ev)
 
-wanted : List Val -> Val -> Bool
-wanted acc v = valOf v P ∨ᵇ any (λ u -> step u v) acc
+containsP : Val -> Bool
+containsP v = valOf v P
 
-missing : List Val -> Val -> Bool
-missing acc v = wanted acc v ∧ᵇ ¬ᵇ (v ∈ᵛ acc)
-
--- x is settled when it needs no adding: it is not wanted, or acc already has
--- it.  The search looks for an unsettled x with findFalse.
-
-settled : List Val -> Val -> Bool
-settled acc v = ¬ᵇ missing acc v
-
-addAll : List Val -> List Val
-addAll acc = filter (missing acc) StCand ++ acc
-
--- Reading settled in both directions (the Boolean step is ¬ᵇ∧ᵇ-cancelˡ of
--- LTL.Lib.Prelude)
-
-missingOf : (acc : List Val) (x : Val) -> settled acc x ≡ false
-         -> missing acc x ≡ true
-missingOf acc x q = ¬ᵇ-false (missing acc x) q
-
-notInAcc : (acc : List Val) (x : Val) -> settled acc x ≡ false
-        -> x ∈ᵛ acc ≡ false
-notInAcc acc x q =
-  ¬ᵇ-true (x ∈ᵛ acc)
-          (∧ᵇ-trueʳ (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) (missingOf acc x q))
-
-inAddAll : (acc : List Val) (x : Val) -> x ∈ StCand
-        -> settled acc x ≡ false -> x ∈ addAll acc
-inAddAll acc x m q =
-  memAppL (filter (missing acc) StCand) acc
-          (filter-true (missing acc) StCand m (missingOf acc x q))
-
-------------------------------------------------------------------------
--- The search
-
-closeGo   : {E : Pred} (acc : List Val)
-         -> Avail E StCand acc
-         -> IFin E -> List Val
-closeFind : {E : Pred} (acc : List Val)
-         -> Avail E StCand acc
-         -> IFin E -> FindResult (settled acc) StCand -> List Val
-
-closeGo acc av bar = closeFind acc av bar (findFalse (settled acc) StCand)
-
-closeFind acc av bar      (allTrue f)      = acc
-closeFind {E} acc av (cBar h) (found x m q) =
-  closeGo (addAll acc) av' (h x (av x m (notInAcc acc x q)))
-  where
-    av' : (z : Val) -> z ∈ StCand -> z ∈ᵛ addAll acc ≡ false
-       -> E z ∧ᵇ (x ≢ᵛ z) ≡ true
-    av' z mz e =
-      ∧ᵇ-intro (E z) (x ≢ᵛ z)
-               (av z mz outAcc)
-               (cong ¬ᵇ_ outX)
-      where
-        outAcc : z ∈ᵛ acc ≡ false
-        outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
-          ∈ᵛ-false z (addAll acc) e
-           (memAppR (filter (missing acc) StCand) acc
-                    (∈ᵛ-sound z acc eb))
-
-        outX : x ≡ᵛ z ≡ false
-        outX = refuteTrue (x ≡ᵛ z) λ eb ->
-          ∈ᵛ-false z (addAll acc) e
-           (subst (λ y -> y ∈ addAll acc) (≡ᵛ-sound x z eb)
-                  (inAddAll acc x m q))
-
-------------------------------------------------------------------------
--- Its three properties, each by the same recursion
-
-closeGoSt   : {E : Pred} (acc : List Val)
-           -> (av : Avail E StCand acc)
-           -> (bar : IFin E)
-           -> acc ⊆ StCand
-           -> {z : Val} -> z ∈ closeGo acc av bar -> z ∈ StCand
-closeFindSt : {E : Pred} (acc : List Val)
-           -> (av : Avail E StCand acc)
-           -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
-           -> acc ⊆ StCand
-           -> {z : Val} -> z ∈ closeFind acc av bar fr -> z ∈ StCand
-
-closeGoSt acc av bar =
-  closeFindSt acc av bar (findFalse (settled acc) StCand)
-
-closeFindSt acc av bar      (allTrue f)      sb {z} m = sb z m
-closeFindSt acc av (cBar h) (found x mx q) sb       m =
-  closeGoSt (addAll acc) _ (h x (av x mx (notInAcc acc x q))) sb' m
-  where
-    sb' : ∀[ z ∈ addAll acc ] z ∈ StCand
-    sb' z mz = sumElim (λ m1 -> filter-sub (missing acc) StCand m1)
-                       (λ m2 -> sb z m2)
-                       (memAppCase (filter (missing acc) StCand) acc mz)
-
-closeGoSeed   : {E : Pred} (acc : List Val)
-             -> (av : Avail E StCand acc)
-             -> (bar : IFin E) {z : Val}
-             -> z ∈ StCand -> valOf z P ≡ true
-             -> z ∈ closeGo acc av bar
-closeFindSeed : {E : Pred} (acc : List Val)
-             -> (av : Avail E StCand acc)
-             -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
-             -> {z : Val} -> z ∈ StCand -> valOf z P ≡ true
-             -> z ∈ closeFind acc av bar fr
-
-closeGoSeed acc av bar =
-  closeFindSeed acc av bar (findFalse (settled acc) StCand)
-
-closeFindSeed acc av bar      (allTrue f)       {z} mz e =
-  ∈ᵛ-sound z acc
-    (¬ᵇ-false (z ∈ᵛ acc)
-              (¬ᵇ∧ᵇ-cancelˡ (wanted acc z) (¬ᵇ (z ∈ᵛ acc)) (f mz)
-                 (∨ᵇ-introˡ (valOf z P) (any (λ u -> step u z) acc) e)))
-closeFindSeed acc av (cBar h) (found x mx q)     mz e =
-  closeGoSeed (addAll acc) _ (h x (av x mx (notInAcc acc x q))) mz e
-
-closeGoClosed   : {E : Pred} (acc : List Val)
-               -> (av : Avail E StCand acc)
-               -> (bar : IFin E) {u w : Val}
-               -> u ∈ closeGo acc av bar -> w ∈ StCand
-               -> step u w ≡ true -> w ∈ closeGo acc av bar
-closeFindClosed : {E : Pred} (acc : List Val)
-               -> (av : Avail E StCand acc)
-               -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
-               -> {u w : Val} -> u ∈ closeFind acc av bar fr -> w ∈ StCand
-               -> step u w ≡ true -> w ∈ closeFind acc av bar fr
-
-closeGoClosed acc av bar =
-  closeFindClosed acc av bar (findFalse (settled acc) StCand)
-
-closeFindClosed acc av bar      (allTrue f)       {u} {w} mu mw st =
-  ∈ᵛ-sound w acc
-    (¬ᵇ-false (w ∈ᵛ acc)
-              (¬ᵇ∧ᵇ-cancelˡ (wanted acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
-                 (∨ᵇ-introʳ (valOf w P) (any (λ u' -> step u' w) acc)
-                            (any-intro (λ u' -> step u' w) acc mu st))))
-closeFindClosed acc av (cBar h) (found x mx q)      mu mw st =
-  closeGoClosed (addAll acc) _ (h x (av x mx (notInAcc acc x q))) mu mw st
-
-------------------------------------------------------------------------
--- The set the search explores, and its three properties
-
-emptyAcc : (z : Val) -> z ∈ [] {A = Val} -> z ∈ StCand
-emptyAcc z ()
+stCandLen : AllSat (hasLength (length (sub P))) StCand
+stCandLen z mz = stAllSat z (stCandSt mz)
 
 -- Ust P: the successor closure of the states that contain P.  Every search
 -- runs on it.
 
 Ust : List Val
-Ust = closeGo [] (λ z mz e -> stAllSat z (stCandSt mz)) vecBar
+Ust = closure containsP StCand stCandLen vecBar
 
 ustSt : {v : Val} -> v ∈ Ust -> v ∈ St
-ustSt m =
-  stCandSt (closeGoSt [] (λ z mz e -> stAllSat z (stCandSt mz)) vecBar
-                      emptyAcc m)
+ustSt {v} m = stCandSt (closureIn containsP StCand stCandLen vecBar v m)
 
 -- Named rather than applied inline: giving filter-prop its list argument
 -- against the folded  St  keeps the elaborator from unfolding Ust.
@@ -322,12 +183,9 @@ ustState m = stIsState (ustSt m)
 
 ustSeed : {v : Val}
        -> v ∈ St -> valOf v P ≡ true -> v ∈ Ust
-ustSeed m e =
-  closeGoSeed [] (λ z mz e' -> stAllSat z (stCandSt mz)) vecBar
-              (stStCand m) e
+ustSeed m e = closureSeed containsP StCand stCandLen vecBar (stStCand m) e
 
 ustClosed : {v w : Val}
          -> v ∈ Ust -> w ∈ St -> step v w ≡ true -> w ∈ Ust
 ustClosed mv mw st =
-  closeGoClosed [] (λ z mz e -> stAllSat z (stCandSt mz)) vecBar
-                mv (stStCand mw) st
+  closureClosed containsP StCand stCandLen vecBar mv (stStCand mw) st

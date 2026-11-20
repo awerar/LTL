@@ -89,9 +89,9 @@ persistTo us A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
 
 sccLasso : (v0 : Val) -> v0 ∈ Ust
         -> FairLoop Ust evPreds v0 -> Lasso v0
-sccLasso v0 mv0 (fairLoop r stem (circuit [] tc () wit))
+sccLasso v0 mv0 (fairLoop r stem (circuit (loopBy [] tc ()) wit))
 sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
-                          (circuit cy@(q ∷ qs) (tCons mq e tqs) nn wit)) =
+                          (circuit (loopBy cy@(q ∷ qs) (tCons mq e tqs) nn) wit)) =
   mkLasso cyc fair (st ++ cy)
           (vpos v0 (st ++ cy) mv0 (trailApp Ust ts tcy))
   where

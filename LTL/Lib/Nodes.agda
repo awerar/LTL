@@ -112,8 +112,8 @@ barOfList {E = E} (suc n) xs le sb =
 -- E.  Removing x from xs passes to  E intersect (R x) , exactly the sub-Bar
 -- that cBar hands over, so the pool of candidates is the Bar's own predicate.
 
--- Naming convention for the searches built on this (Closure, Graph,
--- SccSeed):
+-- Naming convention for the searches built on this (the growing closure and
+-- the removing graphGo and findTerm of LTL.SCC.Graph):
 --   sb    a subset proof: AllSat E xs, or xs ⊆ ys;
 --   bar   the IFin E the search recurses on;
 --   av    the "available" invariant of a growing search, Avail E ws acc:

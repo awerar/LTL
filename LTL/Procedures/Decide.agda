@@ -101,7 +101,7 @@ buildCM v0 l ev = countermodel v0 l evalFalse
 fairCountermodel : FairIn Ust evPreds -> LassoCountermodel Q
 fairCountermodel (fairIn r mr c) =
   buildCM seed (sccLasso seed seedIn (fairLoop r reaches c)) seedHolds
-  where open SeedTo (ustSeedTo r mr)
+  where open Seeded (ustSeedTo r mr)
 
 ------------------------------------------------------------------------
 -- The decision: sccProof, with the fair component read as a countermodel.
