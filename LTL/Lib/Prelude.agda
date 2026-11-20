@@ -106,7 +106,7 @@ ltWeak (ltSuc l) = ltSuc (ltWeak l)
 -- Σ-types and products
 --
 -- Σ[ x ∈ A ] B  is  Σ A (λ x -> B): a witness x : A together with a proof
--- of B.  The ∈ there is part of the notation, not list membership.  A × B is
+-- of B.  The ∈ there names a type, not list membership.  A × B is
 -- the non-dependent case, so one pair constructor  _,_  serves both.  Σ is a
 -- data type rather than a record, so there is no eta rule for pairs.
 
@@ -333,18 +333,35 @@ data _∈_ {A : Set} (x : A) : List A -> Set where
   here  : {xs : List A}              -> x ∈ x ∷ xs
   there : {y : A} {xs : List A} -> x ∈ xs -> x ∈ y ∷ xs
 
+-- Quantifiers bounded by a list.  ∀[ x ∈ xs ] B  is  (x : _) -> x ∈ xs -> B,
+-- and  ∃[ x ∈ xs ] B  is  Σ[ x ∈ _ ] x ∈ xs × B; here ∈ is list membership.
+-- Arrows are parsed before notations, so the body of ∀ ends at the first
+-- unparenthesised ->; when more hypotheses follow, write the telescope out.
+
+infix 2 ∀∈-syntax ∃∈-syntax
+
+∀∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
+∀∈-syntax xs B = (x : _) -> x ∈ xs -> B x
+
+syntax ∀∈-syntax xs (λ x -> B) = ∀[ x ∈ xs ] B
+
+∃∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
+∃∈-syntax xs B = Σ[ x ∈ _ ] x ∈ xs × B x
+
+syntax ∃∈-syntax xs (λ x -> B) = ∃[ x ∈ xs ] B
+
 -- A witness found in ys is a witness in y ∷ ys.
 
-there-Σ : {A : Set} {P : A -> Set} {y : A} {ys : List A}
-       -> Σ[ x ∈ A ] x ∈ ys × P x -> Σ[ x ∈ A ] x ∈ y ∷ ys × P x
-there-Σ (x , m , p) = x , there m , p
+there-∃ : {A : Set} {P : A -> Set} {y : A} {ys : List A}
+       -> ∃[ x ∈ ys ] P x -> ∃[ x ∈ y ∷ ys ] P x
+there-∃ (x , m , p) = x , there m , p
 
 -- Inclusion of lists as sets, with the element explicit.
 
 infix 4 _⊆_
 
 _⊆_ : {A : Set} -> List A -> List A -> Set
-xs ⊆ ys = (x : _) -> x ∈ xs -> x ∈ ys
+xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 
 memAppL : {A : Set} {x : A} (xs ys : List A) -> x ∈ xs -> x ∈ xs ++ ys
 memAppL []       ys ()
@@ -466,11 +483,11 @@ all-atFalse p (y ∷ ys) (there m) e =
   ∧ᵇ-false-introʳ (p y) (all p ys) (all-atFalse p ys m e)
 
 all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
-         -> Σ[ x ∈ A ] x ∈ xs × p x ≡ false
+         -> ∃[ x ∈ xs ] p x ≡ false
 all-false p []       ()
 all-false p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> there-Σ (all-false p ys e2))
+          (λ e2 -> there-∃ (all-false p ys e2))
           (∧ᵇ-false (p y) (all p ys) e)
 
 all-intro : {A : Set} (p : A -> Bool) (xs : List A)

@@ -128,7 +128,6 @@ nonState v len e0 = byCoh e0
               (λ bad -> emptyElim (true≢false bad))
               (∧ᵇ-false (allOk v (sub P)) true e)
       where
-        sigElim : (Σ[ A ∈ Formula ] A ∈ sub P ×
-                                        okAt v A ≡ false)
+        sigElim : (∃[ A ∈ sub P ] okAt v A ≡ false)
                -> ⊢ ¬ C
         sigElim (A , m , q) = okFail ce m q

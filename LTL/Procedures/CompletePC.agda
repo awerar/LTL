@@ -75,13 +75,13 @@ stateCompletePC = mpChain (□Args (sub P)) (pc tautState)
 -- so no inversion of  map chi  is needed.
 
 mpVals : {C : Formula} (ws : List Val) {Z : Formula}
-      -> ((w : Val) -> w ∈ ws -> ⊢ (chi w) ⇒ C)
+      -> (∀[ w ∈ ws ] ⊢ (chi w) ⇒ C)
       -> ⊢ ⇒List (map (C ⇐_) (map chi ws)) Z -> ⊢ Z
 mpVals []       h d = d
 mpVals (w ∷ ws) h d =
   mpVals ws (λ z m -> h z (there m)) (mp d (h w here))
 
 betaElimPC : {C : Formula} (ws : List Val)
-          -> ((w : Val) -> w ∈ ws -> ⊢ (chi w) ⇒ C)
+          -> (∀[ w ∈ ws ] ⊢ (chi w) ⇒ C)
           -> ⊢ (beta ws) ⇒ C
 betaElimPC {C} ws h = mpVals ws h (pc (taut⋁Elim (map chi ws) C))

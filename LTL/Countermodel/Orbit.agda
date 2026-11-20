@@ -58,7 +58,7 @@ stretch-head (s , w ∷ ws) = here
 -- A state visited on a stretch is the state of a position on it.
 
 stretch-mem : (pos : Pos) {z : S} -> z ∈ stretchStates pos
-           -> Σ[ q ∈ Pos ] q ∈ stretch pos × posState q ≡ z
+           -> ∃[ q ∈ stretch pos ] posState q ≡ z
 stretch-mem (s , [])     here      = (s , []) , here , refl
 stretch-mem (s , [])     (there ())
 stretch-mem (s , w ∷ ws) here      = (s , w ∷ ws) , here , refl

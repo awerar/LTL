@@ -52,8 +52,7 @@ atomBits v = map (valOf v) (atoms (sub P))
 -- (LTL.Syntax.Skel) at valOf, which is compositional by (S1).
 
 valFromEq : (v : Val) -> allOk v (sub P) ≡ true
-         -> (A : Formula) -> A ∈ sub P
-         -> valFrom (atoms (sub P)) (atomBits v) A ≡ valOf v A
+         -> ∀[ A ∈ sub P ] valFrom (atoms (sub P)) (atomBits v) A ≡ valOf v A
 valFromEq v ok =
   skelEval (valOf v) (atoms (sub P)) P
            (λ X mX aX -> atomMem (sub P) mX aX)
@@ -110,8 +109,7 @@ candsLen : {v : Val} -> v ∈ cands
 candsLen {v} m =
   fromSig (map-mem-inv mkV (allVecs (length (atoms (sub P)))) m)
   where
-    fromSig : (Σ[ a ∈ Val ] a ∈ allVecs (length (atoms (sub P))) ×
-                                v ≡ mkV a)
+    fromSig : (∃[ a ∈ allVecs (length (atoms (sub P))) ] v ≡ mkV a)
            -> length v ≡ length (sub P)
     fromSig (a , ma , ea) =
       trans (cong length ea)
@@ -139,7 +137,7 @@ stStCand {v} m = filter-true isState cands inCands st
     len = allVecs-len' (length (sub P)) v
                        (filter-sub isState (allVecs (length (sub P))) m)
       where
-        allVecs-len' : (n : Nat) (w : Val) -> w ∈ allVecs n -> length w ≡ n
+        allVecs-len' : (n : Nat) -> ∀[ w ∈ allVecs n ] length w ≡ n
         allVecs-len' n w mw = ≡ⁿ-sound (length w) n (allVecs-len n mw)
 
     inCands : v ∈ cands
@@ -253,7 +251,7 @@ closeFindSt acc av bar      (allTrue f)      sb {z} m = sb z m
 closeFindSt acc av (cBar h) (found x mx q) sb       m =
   closeGoSt (addAll acc) _ (h x (av x mx (notInAcc acc x q))) sb' m
   where
-    sb' : (z : Val) -> z ∈ addAll acc -> z ∈ StCand
+    sb' : ∀[ z ∈ addAll acc ] z ∈ StCand
     sb' z mz = sumElim (λ m1 -> filter-sub (missing acc) StCand m1)
                        (λ m2 -> sb z m2)
                        (memAppCase (filter (missing acc) StCand) acc mz)

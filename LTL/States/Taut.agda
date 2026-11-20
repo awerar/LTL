@@ -240,8 +240,7 @@ betaSkel Ats a P boxOk =
 -- (S2) holds in row a at each B of As: □ B true implies B true.
 
 S2At : List Formula -> Val -> List Formula -> Set
-S2At Ats a As = (B : Formula) -> B ∈ As
-             -> valFrom Ats a (□ B) ⇒ᵇ valFrom Ats a B ≡ true
+S2At Ats a As = ∀[ B ∈ As ] valFrom Ats a (□ B) ⇒ᵇ valFrom Ats a B ≡ true
 
 □Chain : (Ats : List Formula) (a : Val) (As : List Formula) (C : Formula)
       -> (S2At Ats a As -> valFrom Ats a C ≡ true)

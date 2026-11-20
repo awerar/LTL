@@ -46,7 +46,7 @@ open import LTL.Procedures.Answer using (LassoCountermodel; countermodel)
 -- gives Q.
 
 provableEachSCC : Cert evPreds Ust
-               -> (w : Val) -> w ∈ St -> ⊢ (chi w) ⇒ Q
+               -> ∀[ w ∈ St ] ⊢ (chi w) ⇒ Q
 provableEachSCC c w m = byPosition
   where
     -- w does not contain ¬ Q, so chi_w ⇒ Q is a tautology: one pc node

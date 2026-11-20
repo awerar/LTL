@@ -133,11 +133,11 @@ null-mem (y ∷ ys) () m
 -- any
 
 any-true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
-        -> Σ[ x ∈ A ] x ∈ xs × p x ≡ true
+        -> ∃[ x ∈ xs ] p x ≡ true
 any-true p []       ()
 any-true p (y ∷ ys) e =
   sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> there-Σ (any-true p ys e2))
+          (λ e2 -> there-∃ (any-true p ys e2))
           (∨ᵇ-true (p y) (any p ys) e)
 
 any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
@@ -166,10 +166,10 @@ null-false (y ∷ ys) e = y , here
 -- map against membership
 
 map-mem-inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
-           -> y ∈ map f xs -> Σ[ x ∈ A ] x ∈ xs × y ≡ f x
+           -> y ∈ map f xs -> ∃[ x ∈ xs ] y ≡ f x
 map-mem-inv f []       ()
 map-mem-inv f (x ∷ xs) here      = x , here , refl
-map-mem-inv f (x ∷ xs) (there m) = there-Σ (map-mem-inv f xs m)
+map-mem-inv f (x ∷ xs) (there m) = there-∃ (map-mem-inv f xs m)
 
 ------------------------------------------------------------------------
 -- The kinds of step in a certificate of LTL.SCC.Graph, one per constructor of

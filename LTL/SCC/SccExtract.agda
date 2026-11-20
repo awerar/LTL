@@ -57,29 +57,27 @@ extractBlock : (ws C : List Val) (u : Val)
             -> C ⊆ Ust
             -> ((z y : Val) -> z ∈ C -> y ∈ St -> y ∈ᵛ ws ≡ true
                   -> step z y ≡ true -> y ∈ C)
-            -> ((z : Val) -> z ∈ C -> valOf z A ≡ true)
+            -> (∀[ z ∈ C ] valOf z A ≡ true)
             -> valOf u (□ A) ≡ false -> u ∈ C
             -> ⊢ ¬ (chi u)
 extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
   where
-    lenC : (w : Val) -> w ∈ C -> length w ≡ length (sub P)
+    lenC : ∀[ w ∈ C ] length w ≡ length (sub P)
     lenC w m = stLen (ustSt (cUst w m))
 
     -- (i)
     bA : ⊢ (beta C) ⇒ A
     bA = betaElim C eachA
       where
-        eachA : (w : Val) -> w ∈ C -> ⊢ (chi w) ⇒ A
+        eachA : ∀[ w ∈ C ] ⊢ (chi w) ⇒ A
         eachA w m = subst (λ b -> ⊢ (chi w) ⇒ (lit A b)) (cHold w m)
                           (chiProjVal w (lenC w m) (sub-□ P mbox))
 
     -- (ii)
-    toC : (w : Val) -> w ∈ C
-       -> ⊢ (beta (succs St w)) ⇒ (beta C)
+    toC : ∀[ w ∈ C ] ⊢ (beta (succs St w)) ⇒ (beta C)
     toC w m = betaElim (succs St w) eachS
       where
-        eachS : (w' : Val) -> w' ∈ succs St w
-             -> ⊢ (chi w') ⇒ (beta C)
+        eachS : ∀[ w' ∈ succs St w ] ⊢ (chi w') ⇒ (beta C)
         eachS w' m' = byMem
           where
             pr : w' ∈ St × step w w' ≡ true
@@ -94,7 +92,7 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
     bNext : ⊢ (beta C) ⇒ ○ (beta C)
     bNext = betaElim C eachN
       where
-        eachN : (w : Val) -> w ∈ C -> ⊢ (chi w) ⇒ ○ (beta C)
+        eachN : ∀[ w ∈ C ] ⊢ (chi w) ⇒ ○ (beta C)
         eachN w m = ⇒Trans (stepLemma w (lenC w m)) (○Mono (toC w m))
 
     -- (iii)
@@ -123,26 +121,26 @@ sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
          -> C ⊆ ws -> Closed ws step C -> NoneSat f C
          -> HoldsOutside UstRef ws
-         -> (z : Val) -> z ∈ C -> UstRef z
+         -> ∀[ z ∈ C ] UstRef z
 blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
   where
-    onA : (Σ[ A ∈ Formula ] A ∈ □Args (sub P) × f ≡ evPred A)
+    onA : (∃[ A ∈ □Args (sub P) ] f ≡ evPred A)
        -> ⊢ ¬ (chi z)
     onA (A , mA , ef) =
       extractBlock ws D z mzU (refutedOf ws ih) A (□Args-mem (sub P) mA)
                    dUst dCl dHold pend mzD
       where
-        missA : (y : Val) -> y ∈ C -> evPred A y ≡ false
+        missA : ∀[ y ∈ C ] evPred A y ≡ false
         missA y my = subst (λ h -> h y ≡ false) ef (mis y my)
 
         -- the component, cut down to the states chi is stated for
         D : List Val
         D = filter (λ y -> y ∈ᵛ Ust) C
 
-        dC : (y : Val) -> y ∈ D -> y ∈ C
+        dC : ∀[ y ∈ D ] y ∈ C
         dC y m = filter-sub (λ t -> t ∈ᵛ Ust) C m
 
-        dUst : (y : Val) -> y ∈ D -> y ∈ Ust
+        dUst : ∀[ y ∈ D ] y ∈ Ust
         dUst y m = ∈ᵛ-sound y Ust (filter-prop (λ t -> t ∈ᵛ Ust) C m)
 
         into : (y : Val) -> y ∈ C -> y ∈ Ust -> y ∈ D
@@ -157,7 +155,7 @@ blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
           into y' (cl y y' (dC y my) (∈ᵛ-sound y' ws ew) st)
                   (ustClosed (dUst y my) my' st)
 
-        dHold : (y : Val) -> y ∈ D -> valOf y A ≡ true
+        dHold : ∀[ y ∈ D ] valOf y A ≡ true
         dHold y my =
           ¬ᵇ-false (valOf y A)
                    (∨ᵇ-falseʳ (valOf y (□ A)) (¬ᵇ valOf y A)
@@ -174,7 +172,7 @@ blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
 
 certRefuted : {ws : List Val}
            -> Cert evPreds ws -> Refuted ws
-           -> (z : Val) -> z ∈ Ust -> ⊢ ¬ (chi z)
+           -> ∀[ z ∈ Ust ] ⊢ ¬ (chi z)
 certRefuted {ws} c ih =
   certAll evPreds UstRef sinkStep blockStep c
           (λ z e mu -> ih z mu e)
@@ -182,7 +180,7 @@ certRefuted {ws} c ih =
 -- Over Ust itself the seed is vacuous: nothing is outside.
 
 ustCertRefuted : Cert evPreds Ust
-              -> (z : Val) -> z ∈ Ust -> ⊢ ¬ (chi z)
+              -> ∀[ z ∈ Ust ] ⊢ ¬ (chi z)
 ustCertRefuted c = certRefuted c ustRefuted
 
 ------------------------------------------------------------------------

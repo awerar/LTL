@@ -46,7 +46,7 @@ evPredsMem : {A : Formula} -> A ∈ □Args (sub P)
 evPredsMem m = memMap evPred m
 
 evPredsInv : {g : Pred} -> g ∈ evPreds
-          -> Σ[ A ∈ Formula ] A ∈ □Args (sub P) × g ≡ evPred A
+          -> ∃[ A ∈ □Args (sub P) ] g ≡ evPred A
 evPredsInv m = map-mem-inv evPred (□Args (sub P)) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
@@ -106,7 +106,7 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
     fair : Fair cyc
     fair A mA pr = onW (wit (evPred A) (evPredsMem mA))
       where
-        onW : (Σ[ z ∈ Val ] z ∈ cy × evPred A z ≡ true)
+        onW : (∃[ z ∈ cy ] evPred A z ≡ true)
            -> Fulfil A r cy
         onW (z , mz , ez) =
           sumElim (λ f -> f)

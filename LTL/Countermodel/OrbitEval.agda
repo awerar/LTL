@@ -70,7 +70,7 @@ module _ (loop : Pos) where
     all-at (evalAt A) (orbit loop pos) m e
 
   eval□-intro : (A : Formula) (pos : Pos)
-             -> ((q : Pos) -> q ∈ orbit loop pos -> evalAt A q ≡ true)
+             -> (∀[ q ∈ orbit loop pos ] evalAt A q ≡ true)
              -> evalAt (□ A) pos ≡ true
   eval□-intro A pos f =
     all-intro (evalAt A) (orbit loop pos) (λ {q} m -> f q m)

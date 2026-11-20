@@ -73,7 +73,7 @@ Closed : List Node -> Edges -> List Node -> Set
 Closed ws G C = (z y : Node) -> z ∈ C -> y ∈ ws -> G z y ≡ true -> y ∈ C
 
 NoneSat : Pred -> List Node -> Set
-NoneSat f C = (z : Node) -> z ∈ C -> f z ≡ false
+NoneSat f C = ∀[ z ∈ C ] f z ≡ false
 
 HoldsOutside : (Node -> Set) -> List Node -> Set
 HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
@@ -120,7 +120,7 @@ barOfList {E = E} (suc n) xs le sb =
 -- recurses on the smaller Bar that cBar hands over.
 
 AllSat : Pred -> List Node -> Set
-AllSat E xs = (x : Node) -> x ∈ xs -> E x ≡ true
+AllSat E xs = ∀[ x ∈ xs ] E x ≡ true
 
 Avail : Pred -> List Node -> List Node -> Set
 Avail E ws acc = (z : Node) -> z ∈ ws -> z ∈ᵛ acc ≡ false -> E z ≡ true

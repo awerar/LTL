@@ -182,7 +182,7 @@ allLen-mem (alCons e al) (there m) = allLen-mem al m
 -- AllInto for a mapped list, one derivation of  f w ⇒ C  per w.
 
 allIntoMap : {C : Formula} (f : Val -> Formula) (ws : List Val)
-          -> ((w : Val) -> w ∈ ws -> ⊢ (f w) ⇒ C) -> AllInto C (map f ws)
+          -> (∀[ w ∈ ws ] ⊢ (f w) ⇒ C) -> AllInto C (map f ws)
 allIntoMap f []       h = intoNil
 allIntoMap f (w ∷ ws) h = intoCons (h w here) (allIntoMap f ws (λ z m -> h z (there m)))
 

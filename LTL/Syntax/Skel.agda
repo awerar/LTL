@@ -198,8 +198,7 @@ skelEval : (f : Formula -> Bool) (Ats : List Formula) (P : Formula)
               -> f (¬ X) ≡ ¬ᵇ f X)
         -> ((X Y : Formula) -> X ⇒ Y ∈ sub P
               -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
-        -> (A : Formula) -> A ∈ sub P
-        -> valFrom Ats (map f Ats) A ≡ f A
+        -> ∀[ A ∈ sub P ] valFrom Ats (map f Ats) A ≡ f A
 skelEval f Ats P at fn fi (var n) m = atomLook f Ats (var n) (at (var n) m refl)
 skelEval f Ats P at fn fi (○ A)   m = atomLook f Ats (○ A) (at (○ A) m refl)
 skelEval f Ats P at fn fi (□ A)   m = atomLook f Ats (□ A) (at (□ A) m refl)

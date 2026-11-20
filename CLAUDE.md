@@ -30,6 +30,11 @@ derivation or a certified finite lasso countermodel.
   built with `_,_`; `fst`/`snd`; `Trusted`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
   (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
   `if b then x else y`, and list helpers `filter any all null concat`.
+  Quantifiers bounded by a list: `∀[ x ∈ xs ] B` for `(x : _) -> x ∈ xs -> B`
+  and `∃[ x ∈ xs ] B` for `Σ[ x ∈ _ ] x ∈ xs × B`. Use ∀ only when `B` is a
+  single conclusion: the notation's body stops at the first unparenthesised
+  `->`, so when more hypotheses follow, write the telescope out. Implicit
+  binders (`{x : A} -> x ∈ xs -> …`) have no notation.
   Boolean-valued operators carry a superscript naming their domain:
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,

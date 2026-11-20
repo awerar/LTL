@@ -35,8 +35,8 @@ record Seeded (w : Val) : Set where
 -- One round: a state it adds is a seed, or a successor of something already in.
 
 addSeeded : (acc : List Val)
-         -> ((z : Val) -> z ∈ acc -> Seeded z)
-         -> (z : Val) -> z ∈ addAll acc -> Seeded z
+         -> (∀[ z ∈ acc ] Seeded z)
+         -> ∀[ z ∈ addAll acc ] Seeded z
 addSeeded acc sd z m =
   sumElim fromNew (λ m2 -> sd z m2)
           (memAppCase (filter (missing acc) StCand) acc m)
@@ -59,7 +59,7 @@ addSeeded acc sd z m =
         viaU : any (λ u -> step u z) acc ≡ true -> Seeded z
         viaU ea = pick (any-true (λ u -> step u z) acc ea)
           where
-            pick : (Σ[ u ∈ Val ] u ∈ acc × step u z ≡ true)
+            pick : (∃[ u ∈ acc ] step u z ≡ true)
                 -> Seeded z
             pick (u , mu , su) =
               seeded seed (visited ++ z ∷ []) seedIn seedHolds
@@ -69,12 +69,12 @@ addSeeded acc sd z m =
 closeGoSeeded   : {E : Pred} (acc : List Val)
                -> (av : Avail E StCand acc)
                -> (bar : IFin E)
-               -> ((z : Val) -> z ∈ acc -> Seeded z)
+               -> (∀[ z ∈ acc ] Seeded z)
                -> {z : Val} -> z ∈ closeGo acc av bar -> Seeded z
 closeFindSeeded : {E : Pred} (acc : List Val)
                -> (av : Avail E StCand acc)
                -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
-               -> ((z : Val) -> z ∈ acc -> Seeded z)
+               -> (∀[ z ∈ acc ] Seeded z)
                -> {z : Val} -> z ∈ closeFind acc av bar fr -> Seeded z
 
 closeGoSeeded acc av bar =
@@ -111,7 +111,7 @@ record SeedTo (w : Val) : Set where
     seedHolds : valOf seed P ≡ true
     reaches   : Reaches Ust seed w
 
-ustSeedTo : (w : Val) -> w ∈ Ust -> SeedTo w
+ustSeedTo : ∀[ w ∈ Ust ] SeedTo w
 ustSeedTo w m =
   seedTo seed mu seedHolds (reachesBy visited (seedTrail mu trail))
   where

@@ -111,8 +111,7 @@ notSucc v w lenv lenw e = sigElim (all-false (stepAt v w) (sub P) e)
     byShape {○ B}   m q = case○ m q
     byShape {□ B}   m q = case□ m q
 
-    sigElim : (Σ[ A ∈ Formula ] A ∈ sub P ×
-                                    stepAt v w A ≡ false)
+    sigElim : (∃[ A ∈ sub P ] stepAt v w A ≡ false)
            -> ⊢ ¬ R
     sigElim (A , m , q) = byShape m q
 

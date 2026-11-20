@@ -36,7 +36,7 @@ stLen m = allLen-mem stAllLen m
 -- disjuncts are refuted (for the empty list, beta [] is ⊥).
 
 betaElim : {C : Formula} (ws : List Val)
-        -> ((w : Val) -> w ∈ ws -> ⊢ (chi w) ⇒ C)
+        -> (∀[ w ∈ ws ] ⊢ (chi w) ⇒ C)
         -> ⊢ (beta ws) ⇒ C
 betaElim ws h = ⋁Elim (map chi ws) (allIntoMap chi ws h)
 
@@ -45,7 +45,7 @@ betaIntro : (ws : List Val) {w : Val}
 betaIntro ws m = ⋁Intro (map chi ws) (memMap chi m)
 
 ¬Beta : (ws : List Val)
-     -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi w))
+     -> (∀[ w ∈ ws ] ⊢ ¬ (chi w))
      -> ⊢ ¬ (beta ws)
 ¬Beta ws h =
   refute {beta ws} {⊤}
@@ -82,13 +82,13 @@ extractR1 us u mu ih e1 =
   refute (stepLemma u (stLen (ustSt mu)))
          (liftP (mp linFwd (○Gen (¬Beta (succs St u) each))))
   where
-    outside : (w : Val) -> w ∈ succs St u -> w ∈ᵛ us ≡ false
+    outside : ∀[ w ∈ succs St u ] w ∈ᵛ us ≡ false
     outside w m = refuteTrue (w ∈ᵛ us) λ eb ->
       null-mem (succs us u) e1
        (succsIn us u (∈ᵛ-sound w us eb)
                 (snd (succsMem St u m)))
 
-    each : (w : Val) -> w ∈ succs St u -> ⊢ ¬ (chi w)
+    each : ∀[ w ∈ succs St u ] ⊢ ¬ (chi w)
     each w m = ih w (ustClosed mu (fst (succsMem St u m))
                                (snd (succsMem St u m)))
                  (outside w m)

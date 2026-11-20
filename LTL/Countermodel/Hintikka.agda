@@ -124,7 +124,7 @@ module _ (cy : Cycle) where
       □Holds e =
         all-intro (evalAt loop B) (orbit loop pos) (λ {q} m -> atQ q m)
         where
-          atQ : (q : Pos) -> q ∈ orbit loop pos -> evalAt loop B q ≡ true
+          atQ : ∀[ q ∈ orbit loop pos ] evalAt loop B q ≡ true
           atQ q m =
             trans (sym (ih q (orbitValid cy pos q vp m)))
                   (□True B mA pos q vp m e)
@@ -135,8 +135,7 @@ module _ (cy : Cycle) where
       allFalse e =
         fromGF (globalFulfil cy fair vp B (□Args-of (sub P) mA) e)
         where
-          fromGF : (Σ[ q ∈ Pos ] q ∈ orbit loop pos ×
-                                     valOf (posState q) B ≡ false)
+          fromGF : (∃[ q ∈ orbit loop pos ] valOf (posState q) B ≡ false)
                 -> evalAt loop (□ B) pos ≡ false
           fromGF (q , mq , eq) =
             eval□-false loop B pos q mq
@@ -157,7 +156,7 @@ hintLasso v0 (mkLasso cy fair rest sv) A mA i =
   hintikka cy fair A mA (posIter (Cycle.loop cy) i (v0 , rest))
            (posIterValid cy i (v0 , rest) sv)
 
-hintStart : (v0 : Val) (l : Lasso v0) (A : Formula) -> A ∈ sub P
-         -> valOf v0 A ≡ eval v0 l A 0
+hintStart : (v0 : Val) (l : Lasso v0) -> ∀[ A ∈ sub P ]
+            valOf v0 A ≡ eval v0 l A 0
 hintStart v0 (mkLasso cy fair rest sv) A mA =
   hintikka cy fair A mA (v0 , rest) sv

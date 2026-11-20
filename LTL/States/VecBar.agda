@@ -82,7 +82,7 @@ allVecs-len (suc n) m =
             -> hasLength (suc n) v ≡ true
     fromHalf {v} b mv = fromSig (map-mem-inv (λ bs -> b ∷ bs) (allVecs n) mv)
       where
-        fromSig : (Σ[ w ∈ Val ] w ∈ allVecs n × v ≡ b ∷ w)
+        fromSig : (∃[ w ∈ allVecs n ] v ≡ b ∷ w)
                -> hasLength (suc n) v ≡ true
         fromSig (w , mw , ew) =
           subst (λ u -> hasLength (suc n) u ≡ true) (sym ew) (allVecs-len n mw)

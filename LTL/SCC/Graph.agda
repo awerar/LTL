@@ -228,8 +228,8 @@ module _ (ws : List Node) (v : Node) where
   -- of a member of acc, whose trail grows by one step.
 
   addReaches : (acc : List Node)
-            -> ((z : Node) -> z ∈ acc -> Reaches ws v z)
-            -> (z : Node) -> z ∈ reachRound ws v acc -> Reaches ws v z
+            -> (∀[ z ∈ acc ] Reaches ws v z)
+            -> ∀[ z ∈ reachRound ws v acc ] Reaches ws v z
   addReaches acc rc z m =
     sumElim fromNew (λ m2 -> rc z m2)
             (memAppCase (filter (reachMissing v acc) ws) acc m)
@@ -252,7 +252,7 @@ module _ (ws : List Node) (v : Node) where
           viaY : any (λ y -> G y z) acc ≡ true -> Reaches ws v z
           viaY ea = pick (any-true (λ y -> G y z) acc ea)
             where
-              pick : (Σ[ y ∈ Node ] y ∈ acc × G y z ≡ true)
+              pick : (∃[ y ∈ acc ] G y z ≡ true)
                   -> Reaches ws v z
               pick (y , my , gy) =
                 reachesBy (via ++ z ∷ [])
@@ -261,11 +261,11 @@ module _ (ws : List Node) (v : Node) where
 
   reachGoTrail   : {E : Pred} (acc : List Node) (av : Avail E ws acc)
                    (bar : IFin E)
-                -> ((z : Node) -> z ∈ acc -> Reaches ws v z)
+                -> (∀[ z ∈ acc ] Reaches ws v z)
                 -> {z : Node} -> z ∈ reachGo acc av bar -> Reaches ws v z
   reachFindTrail : {E : Pred} (acc : List Node) (av : Avail E ws acc)
                    (bar : IFin E) (fr : FindResult (reachSettled v acc) ws)
-                -> ((z : Node) -> z ∈ acc -> Reaches ws v z)
+                -> (∀[ z ∈ acc ] Reaches ws v z)
                 -> {z : Node} -> z ∈ reachFind acc av bar fr -> Reaches ws v z
 
   reachGoTrail acc av bar =
@@ -470,7 +470,7 @@ module _ (ws : List Node) where
   termFind r mr {E} av (cBar h) (found w mw q) =
     termGo w (reachIn ws r mw) av' (h r (av r (reachSeed ws r mr)))
     where
-      av' : (z : Node) -> z ∈ reachSet ws w -> E z ∧ᵇ (r ≢ᵛ z) ≡ true
+      av' : ∀[ z ∈ reachSet ws w ] E z ∧ᵇ (r ≢ᵛ z) ≡ true
       av' z mz =
         ∧ᵇ-intro (E z) (r ≢ᵛ z)
                  (av z (reachTrans ws r w z mw mz))
@@ -485,8 +485,7 @@ module _ (ws : List Node) where
                          (subst (λ y -> y ∈ reachSet ws w)
                                 (sym (≡ᵛ-sound r z eb)) mz)
 
-  findTerm : (r : Node) -> r ∈ ws
-          -> Terminal ws
+  findTerm : ∀[ r ∈ ws ] Terminal ws
   findTerm r mr =
     termGo r mr (λ z mz -> ∈ᵛ-complete z ws (reachIn ws r mz)) (listBar ws)
 
@@ -503,7 +502,7 @@ record Circuit (ws : List Node) (fs : List Pred)
     cycle    : List Node
     trail    : Trail ws r cycle r
     nonEmpty : null cycle ≡ false
-    meets    : (f : Pred) -> f ∈ fs -> Σ[ z ∈ Node ] z ∈ cycle × f z ≡ true
+    meets    : ∀[ f ∈ fs ] ∃[ z ∈ cycle ] f z ≡ true
 
 circMono : (ws vs : List Node) (fs : List Pred)
            (r : Node) -> ws ⊆ vs
@@ -586,25 +585,23 @@ module _ (ws : List Node) (r : Node) where
       mw : w ∈ leg
       mw = memAppL front bs (trailLast ws frontT frontNN)
 
-      each : (g : Pred) -> g ∈ f ∷ fs
-          -> Σ[ z ∈ Node ] z ∈ leg ++ cy × g z ≡ true
+      each : ∀[ g ∈ f ∷ fs ] ∃[ z ∈ leg ++ cy ] g z ≡ true
       each g here      = w , memAppL leg cy mw , fw
       each g (there m) = shift (wit g m)
         where
-          shift : (Σ[ z ∈ Node ] z ∈ cy × g z ≡ true)
-               -> Σ[ z ∈ Node ] z ∈ leg ++ cy × g z ≡ true
+          shift : (∃[ z ∈ cy ] g z ≡ true)
+               -> ∃[ z ∈ leg ++ cy ] g z ≡ true
           shift (z , mz , gz) = z , memAppR leg cy mz , gz
 
   mkCirc : (cy0 : List Node) -> Trail ws r cy0 r -> null cy0 ≡ false
         -> (C : List Node)
-        -> ((u : Node) -> u ∈ C -> Reaches ws r u)
-        -> ((u : Node) -> u ∈ C -> Reaches ws u r)
+        -> (∀[ u ∈ C ] Reaches ws r u)
+        -> (∀[ u ∈ C ] Reaches ws u r)
         -> (fs : List Pred) -> meetsAll fs C ≡ true
         -> Circuit ws fs r
   mkCirc cy0 t0 nn C to from []        e = circuit cy0 t0 nn noF
     where
-      noF : (f : Pred) -> f ∈ []
-         -> Σ[ z ∈ Node ] z ∈ cy0 × f z ≡ true
+      noF : ∀[ f ∈ [] ] ∃[ z ∈ cy0 ] f z ≡ true
       noF f ()
   mkCirc cy0 t0 nn C to from (f ∷ fs) e =
     pick (any-true f C (∧ᵇ-trueˡ (any f C) (meetsAll fs C) e))
@@ -613,7 +610,7 @@ module _ (ws : List Node) (r : Node) where
       rest = mkCirc cy0 t0 nn C to from fs
                     (∧ᵇ-trueʳ (any f C) (meetsAll fs C) e)
 
-      pick : (Σ[ w ∈ Node ] w ∈ C × f w ≡ true)
+      pick : (∃[ w ∈ C ] f w ≡ true)
           -> Circuit ws (f ∷ fs) r
       pick (w , mw , fw) =
         consCirc cy0 t0 nn f w fw (to w mw) (from w mw) fs rest
@@ -640,7 +637,7 @@ blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
   where open Loop (loopAt ws r mr et (h mr))
 ... | false = unf (all-false (λ g -> any g (sccOf ws r)) fs eb)
   where
-    unf : (Σ[ g ∈ Pred ] g ∈ fs × any g (sccOf ws r) ≡ false)
+    unf : (∃[ g ∈ fs ] any g (sccOf ws r) ≡ false)
        -> Block ws fs
     unf (g , mg , eg) = bUnfair r mr et g mg eg
 
@@ -734,7 +731,7 @@ module _ (fs : List Pred) where
       notInC : Pred
       notInC y = ¬ᵇ (y ∈ᵛ C)
 
-      miss : (z : Node) -> z ∈ C -> g z ≡ false
+      miss : ∀[ z ∈ C ] g z ≡ false
       miss z mz = any-false g C eg mz
 
 ------------------------------------------------------------------------
@@ -758,7 +755,7 @@ fairGraph vs fs v mv =
           (graphGo fs (reachSet vs v) (memAllSat (reachSet vs v))
                    (listBar (reachSet vs v)))
   where
-    into : (z : Node) -> z ∈ reachSet vs v -> z ∈ vs
+    into : ∀[ z ∈ reachSet vs v ] z ∈ vs
     into z m = reachIn vs v m
 
     toLoop : FairIn (reachSet vs v) fs -> FairLoop vs fs v
@@ -778,7 +775,7 @@ module _ (fs : List Pred) (R : Node -> Set)
                    -> HoldsOutside R ws -> R x)
          (blockCase : (ws C : List Node) (f : Pred) -> f ∈ fs
                    -> C ⊆ ws -> Closed ws G C -> NoneSat f C
-                   -> HoldsOutside R ws -> (z : Node) -> z ∈ C -> R z)
+                   -> HoldsOutside R ws -> ∀[ z ∈ C ] R z)
          where
 
   certAll : {ws : List Node} -> Cert fs ws -> HoldsOutside R ws
@@ -919,7 +916,7 @@ certNoCirc fs (cSink ws x mx e c) r (circuit cy t nn wit) =
         onS (hasSucc y my gy) =
           null-mem (outs ws x) e (filter-true (G x) ws my gy)
 
-    keep : (z : Node) -> z ∈ cy -> z ∈ ws ∖ᵛ x
+    keep : ∀[ z ∈ cy ] z ∈ ws ∖ᵛ x
     keep z mz = filter-true (x ≢ᵛ_) ws (trailIn ws t mz) (cong ¬ᵇ_ out)
       where
         out : x ≡ᵛ z ≡ false
@@ -931,14 +928,14 @@ certNoCirc fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
     inBlock : (z : Node) -> z ∈ cy -> z ∈ C -> Empty
     inBlock z mz mzc = onW (wit f mf)
       where
-        onW : (Σ[ y ∈ Node ] y ∈ cy × f y ≡ true) -> Empty
+        onW : (∃[ y ∈ cy ] f y ≡ true) -> Empty
         onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
           where
             inC : y ∈ C
             inC = blockAlong ws C cl
                              (Reaches.trail (cycConn ws r cy t z y mz my)) mzc
 
-    keep : (z : Node) -> z ∈ cy -> z ∈ ws ∖ C
+    keep : ∀[ z ∈ cy ] z ∈ ws ∖ C
     keep z mz = filter-true (λ y -> ¬ᵇ (y ∈ᵛ C)) ws (trailIn ws t mz)
                             (cong ¬ᵇ_ out)
       where
@@ -957,7 +954,7 @@ fairNoLoop vs fs v mv c (fairLoop r stem (circuit cy t nn wit)) =
   certNoCirc fs c r
              (circuit cy (trailRestrict vs (reachSet vs v) t keep) nn wit)
   where
-    keep : (z : Node) -> z ∈ cy -> z ∈ reachSet vs v
+    keep : ∀[ z ∈ cy ] z ∈ reachSet vs v
     keep z mz = reachComplete vs v mv
                   (Reaches.trail (reachesApp vs stem (trailTo vs t mz)))
 
