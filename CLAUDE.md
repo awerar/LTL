@@ -110,7 +110,7 @@ a module name.
 6. **Elimination (m4 §3–4)** (`Elimination/`) — `Gfp` (set W, `Path`);
    `Elim` (R1/R2, `Uinf`; survivors are states); `Extract` (`betaElim`,
    `Refuted`, `extractR1`: the pieces of Thm 4.1 that `SccExtract` reuses).
-   The elimination is only run in the fair branch of `decideSCC`, to place the
+   The elimination is only run in the fair branch of `decide`, to place the
    countermodel's loop inside `Uinf` (`uinfTrap`).
 7. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
@@ -126,28 +126,28 @@ a module name.
    `SccExtract` (`provableSCC`, closed with (PC)), `SccTrap` (graph ↔ logic
    translation). In `Procedures/`: `CompletePC` (`stateCompletePC`,
    `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer` (`LassoCountermodel`,
-   `isProof`, `lassoOf`, `cmFrom`, `derivCounts`); `DecideSCC` (`decideSCC`,
-   Thm 6.1; `traceOf`, `shapeOf`). At the root:
+   `isProof`, `countermodelFrom`, `cmLasso`, `cmTrace`, `cmShape`,
+   `derivCounts`); `Decide` (`decide`, Thm 6.1). At the root:
    `Correct` (the bridge: on a `Trusted` lasso that starts at `pos0` and loops
    back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
    `holds-evalAt`); `⊢-valid`, `toCounterModel`, `cmUnderivable`, and
-   `decideSCCCorrect`).
+   `decideCorrect`).
 9. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (Graph's computational checks, at `Node = Nat`). In
    `Benchmarks/` (slow): `Examples` (46 formulas, Schmitt & Goubault-Larrecq
    Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`).
 10. **Readable output** (root) — `Pretty` (`prove`, `proveTree`, `proveLines`:
-   decideSCC results as numbered Hilbert proofs, trees, or lasso countermodels,
+   decide results as numbered Hilbert proofs, trees, or lasso countermodels,
    rendered to `Agda.Builtin.String`; this is why `Base` takes `Nat` from
    `Agda.Builtin.Nat`). `tools/show-proof` runs it from the terminal via
    `agda --interaction-json`. Rendering is slow for large certificates.
 
 ## Public API
 
-- `decideSCC` (`LTL/Procedures/DecideSCC.agda`) — of type
+- `decide` (`LTL/Procedures/Decide.agda`) — of type
   `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q` (`LTL/Procedures/Answer.agda`).
-- `decideSCCCorrect` (`LTL/Correct.agda`) — the same procedure as a
+- `decideCorrect` (`LTL/Correct.agda`) — the same procedure as a
   `Trusted.DecisionProcedure`.
 
 ## Adding Until (expected touch points)

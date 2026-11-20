@@ -1,9 +1,9 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Correct -- decideSCC meets the specification of LTL.Trusted.
+-- LTL.Correct -- decide meets the specification of LTL.Trusted.
 --
 -- A DecisionProcedure answers true only for formulas valid on every lasso, and
--- false only with a lasso on which the formula fails.  decideSCC answers with
+-- false only with a lasso on which the formula fails.  decide answers with
 -- ⊢ Q ⊎ LassoCountermodel Q , and the two branches meet Trusted through one
 -- bridge: when a Trusted lasso L starts at pos0 and loops back to loop, the
 -- Boolean evaluation of LTL.Countermodel.OrbitEval at stage n IS truth at time
@@ -18,7 +18,7 @@
 
 module LTL.Correct where
 
-open import LTL.Procedures.DecideSCC public
+open import LTL.Procedures.Decide public
 import LTL.Trusted as T
 open T using (_,_⊨_)
 import LTL.Countermodel.Orbit
@@ -173,24 +173,24 @@ cmUnderivable Q c d with toCounterModel Q c
 ... | T.counter L notQ = notQ (⊢-valid d L)
 
 ------------------------------------------------------------------------
--- decideSCC as a Trusted DecisionProcedure.  The test is which branch it took:
+-- decide as a Trusted DecisionProcedure.  The test is which branch it took:
 -- a derivation is valid by ⊢-valid, and a countermodel translates by
 -- toCounterModel.
 
-decideSCCCorrect : T.DecisionProcedure
-decideSCCCorrect = record
-  { decideValid    = λ Q -> isProof (decideSCC Q)
+decideCorrect : T.DecisionProcedure
+decideCorrect = record
+  { decideValid    = λ Q -> isProof (decide Q)
   ; validIfTrue    = validIfTrue
   ; counterIfFalse = counterIfFalse
   }
   where
-    validIfTrue : (Q : Formula) -> isProof (decideSCC Q) ≡ true -> T.valid Q
-    validIfTrue Q e with decideSCC Q
+    validIfTrue : (Q : Formula) -> isProof (decide Q) ≡ true -> T.valid Q
+    validIfTrue Q e with decide Q
     ... | inl d = ⊢-valid d
     ... | inr c = emptyElim (true≢false (sym e))
 
-    counterIfFalse : (Q : Formula) -> isProof (decideSCC Q) ≡ false
+    counterIfFalse : (Q : Formula) -> isProof (decide Q) ≡ false
                   -> T.LassoCounterModel Q
-    counterIfFalse Q e with decideSCC Q
+    counterIfFalse Q e with decide Q
     ... | inl d = emptyElim (true≢false e)
     ... | inr c = toCounterModel Q c

@@ -10,9 +10,9 @@
 --   renderCM Q c     the lasso countermodel: the variables true at each time
 --                    point of the prefix and of the loop.
 --
---   prove Q          renders decideSCC Q.
+--   prove Q          renders decide Q.
 --   proveLines Q     prove Q as one String per line.
---   proveTree n Q    the tree view of decideSCC Q.
+--   proveTree n Q    the tree view of decide Q.
 --
 -- Formulas are printed with the fixities of LTL.Syntax.Formula and minimal
 -- parentheses.  ∧, ⇔ and ◇ are put back; ∨, ⊤ and ⊥ are not, since ¬ A ⇒ B
@@ -27,7 +27,7 @@
 
 module LTL.Pretty where
 
-open import LTL.Procedures.DecideSCC public
+open import LTL.Procedures.Decide public
 open import Agda.Builtin.String public using (String)
 open import Agda.Builtin.String using (primStringAppend; primShowNat; primStringToList)
 
@@ -390,13 +390,13 @@ resultLines Q (inr c) = cmLines Q c
 
 -- one String per line: what plain C-c C-n displays best
 proveLines : Formula -> List String
-proveLines Q = resultLines Q (decideSCC Q)
+proveLines Q = resultLines Q (decide Q)
 
 prove : Formula -> String
 prove Q = unlines (proveLines Q)
 
 proveTree : Nat -> Formula -> String
-proveTree n Q = go (decideSCC Q)
+proveTree n Q = go (decide Q)
   where
     go : ⊢ Q ⊎ LassoCountermodel Q -> String
     go (inl d) = renderTree n d

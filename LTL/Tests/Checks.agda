@@ -4,13 +4,13 @@
 --
 -- One section per module, in dependency order, with small example formulas
 -- (benAri, ◇P, bnb, c5, ...), the states and lassos computed for them, and the
--- answers of decideSCC.  LTL.Tests.GraphExamples holds the checks of
+-- answers of decide.  LTL.Tests.GraphExamples holds the checks of
 -- LTL.SCC.Graph.
 
 module LTL.Tests.Checks where
 
 open import LTL.Pretty    public
-open import LTL.Procedures.DecideSCC public
+open import LTL.Procedures.Decide public
 open import LTL.Correct   public
 import LTL.Trusted as T
 
@@ -201,15 +201,15 @@ scc-◇P : isInl (sccGraph ◇P) ≡ true
 scc-◇P = refl
 
 ------------------------------------------------------------------------
--- LTL.Procedures.DecideSCC
+-- LTL.Procedures.Decide
 
 -- Ben-Ari's formula and  □ p ⇒ □ ○ p  are valid: the answer is a derivation.
 
-decideSCC-benAri : isProof (decideSCC benAri) ≡ true
-decideSCC-benAri = refl
+decide-benAri : isProof (decide benAri) ≡ true
+decide-benAri = refl
 
-decideSCC-bnb : isProof (decideSCC bnb) ≡ true
-decideSCC-bnb = refl
+decide-bnb : isProof (decide bnb) ≡ true
+decide-bnb = refl
 
 -- The certificates are short.  For (T),  □ p ⇒ p , the derivation has 55
 -- constructors, 5 of them pc nodes: state completeness is one pc node and one
@@ -231,30 +231,35 @@ axT-size = refl
 ◇P-cmState : Val
 ◇P-cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
 
-decideSCC-◇P : isProof (decideSCC ◇P) ≡ false
-decideSCC-◇P = refl
+decide-◇P : isProof (decide ◇P) ≡ false
+decide-◇P = refl
 
-decideSCC-◇P-lasso : lassoOf ◇P (decideSCC ◇P) ≡
-                     (◇P-cmState , ◇P-cmState ∷ ◇P-cmState ∷ [] ,
-                                   ◇P-cmState ∷ ◇P-cmState ∷ [])
-decideSCC-◇P-lasso = refl
+-- The countermodel itself; refl says the procedure answered with one.
 
-◇P-shape : shapeOf ◇P ≡ (2 , 2)
+◇P-cm : LassoCountermodel ◇P
+◇P-cm = countermodelFrom (decide ◇P) refl
+
+decide-◇P-lasso : cmLasso ◇P ◇P-cm ≡
+                  (◇P-cmState , ◇P-cmState ∷ ◇P-cmState ∷ [] ,
+                                ◇P-cmState ∷ ◇P-cmState ∷ [])
+decide-◇P-lasso = refl
+
+◇P-shape : cmShape ◇P ◇P-cm ≡ (2 , 2)
 ◇P-shape = refl
 
--- p fails at every stage, and so does ◇ p, the formula decided.  traceOf uses
+-- p fails at every stage, and so does ◇ p, the formula decided.  cmTrace uses
 -- the evaluation that LTL.Correct carries over to Trusted's semantics, so this
 -- and cmUnderivable are the same fact from two ends.
 
-◇P-trace : traceOf ◇P (var zero) 4 ≡ false ∷ false ∷ false ∷ false ∷ []
+◇P-trace : cmTrace ◇P ◇P-cm (var zero) 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 ◇P-trace = refl
 
-◇P-input : traceOf ◇P ◇P 2 ≡ false ∷ false ∷ []
+◇P-input : cmTrace ◇P ◇P-cm ◇P 2 ≡ false ∷ false ∷ []
 ◇P-input = refl
 
 ◇P-underivable : ⊢ ◇P -> Empty
 ◇P-underivable =
-  cmUnderivable ◇P (countermodelFrom (decideSCC ◇P) refl)
+  cmUnderivable ◇P ◇P-cm
 
 ------------------------------------------------------------------------
 -- c5 = □ (p ∨ q) ⇒ □ p ∨ □ q  is not valid.  sub of its negation has length
@@ -296,18 +301,21 @@ c5pq : Val
 c5pq = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
     ∷ true  ∷ false ∷ true ∷ true ∷ true  ∷ true ∷ []
 
-decideSCC-c5 : isProof (decideSCC c5) ≡ false
-decideSCC-c5 = refl
+decide-c5 : isProof (decide c5) ≡ false
+decide-c5 = refl
 
-decideSCC-c5-lasso : lassoOf c5 (decideSCC c5) ≡
-                     (c5q , c5p ∷ c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ [] ,
-                            c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ [])
-decideSCC-c5-lasso = refl
+c5-cm : LassoCountermodel c5
+c5-cm = countermodelFrom (decide c5) refl
 
-c5-p : traceOf c5 cp 4 ≡ false ∷ true ∷ true ∷ true ∷ []
+decide-c5-lasso : cmLasso c5 c5-cm ≡
+                  (c5q , c5p ∷ c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ [] ,
+                         c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ [])
+decide-c5-lasso = refl
+
+c5-p : cmTrace c5 c5-cm cp 4 ≡ false ∷ true ∷ true ∷ true ∷ []
 c5-p = refl
 
-c5-q : traceOf c5 cq 4 ≡ true ∷ false ∷ true ∷ true ∷ []
+c5-q : cmTrace c5 c5-cm cq 4 ≡ true ∷ false ∷ true ∷ true ∷ []
 c5-q = refl
 
 ------------------------------------------------------------------------
@@ -347,7 +355,7 @@ pretty-countermodel = refl
 -- The Boolean answer of the DecisionProcedure: (T) is valid, ◇ p is not.
 
 correct-answers :
-  T.DecisionProcedure.decideValid decideSCCCorrect (□ var 0 ⇒ var 0)
-  ∷ T.DecisionProcedure.decideValid decideSCCCorrect (◇ var 0)
+  T.DecisionProcedure.decideValid decideCorrect (□ var 0 ⇒ var 0)
+  ∷ T.DecisionProcedure.decideValid decideCorrect (◇ var 0)
   ∷ [] ≡ true ∷ false ∷ []
 correct-answers = refl

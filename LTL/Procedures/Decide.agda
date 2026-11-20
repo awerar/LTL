@@ -1,8 +1,8 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Procedures.DecideSCC -- the decision procedure:
+-- LTL.Procedures.Decide -- the decision procedure:
 --
---   decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
+--   decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 --
 -- It searches Ust (¬ Q) for a fair component (sccGraph).  A certificate gives
 -- a derivation (provableSCC, LTL.SCC.SccExtract).  A fair component gives a
@@ -22,7 +22,7 @@
 -- certificate has to cover every state.  The elimination is computed only in
 -- the fair branch.
 
-module LTL.Procedures.DecideSCC where
+module LTL.Procedures.Decide where
 
 open import LTL.SCC.SccTrap public
 open import LTL.Procedures.Answer public
@@ -179,8 +179,8 @@ buildCM Q v0 l ev = countermodel v0 l evalFalse
 ------------------------------------------------------------------------
 -- The decision
 
-decideSCC : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
+decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
+decide Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
   where
     R : Formula
     R = ¬ Q
@@ -202,27 +202,3 @@ decideSCC Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
               fromLasso s es
                 (trapLoopLasso R s
                    (fairTrapLoop R s ms (fairLoop r st cy ts tc nn wit)))
-
-------------------------------------------------------------------------
--- Reading the answer of decideSCC.
-
--- The truth values of A at stages 0,...,n-1 of the countermodel to Q, or the
--- empty list if Q turned out to be provable and there is no countermodel.
-
-traceOf : (Q : Formula) -> Formula -> Nat -> List Bool
-traceOf Q A n = onDec (decideSCC Q)
-  where
-    onDec : ⊢ Q ⊎ LassoCountermodel Q -> List Bool
-    onDec (inl d) = []
-    onDec (inr c) = cmFrom Q c A zero n
-
--- and the shape of the lasso: its run is v0 followed by cmRest, whose tail is
--- the cycle, so it is periodic from stage  1 + |cmRest| - |cmCycle|  on, with
--- period |cmCycle|.
-
-shapeOf : (Q : Formula) -> Nat × Nat
-shapeOf Q = onDec (decideSCC Q)
-  where
-    onDec : ⊢ Q ⊎ LassoCountermodel Q -> Nat × Nat
-    onDec (inl d) = zero , zero
-    onDec (inr c) = length (cmRest Q c) , length (cmCycle Q c)

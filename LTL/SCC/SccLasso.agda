@@ -20,7 +20,7 @@
 --
 -- A Lasso's states must lie in Uinf P, but the graph search runs on Ust P.  So
 -- sccLasso takes any vertex list with an inclusion into Uinf P as a
--- hypothesis; LTL.Procedures.DecideSCC supplies it with uinfTrap.
+-- hypothesis; LTL.Procedures.Decide supplies it with uinfTrap.
 
 module LTL.SCC.SccLasso where
 

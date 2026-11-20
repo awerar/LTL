@@ -1,12 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.Benchmarks.Examples -- Figure 11 of Schmitt and Goubault-Larrecq, "Linear
--- Temporal Logic" (page 14), run through decideSCC.
+-- Temporal Logic" (page 14), run through decide.
 --
 -- Forty-six named modal and temporal statements in the box/diamond fragment.
--- Each check states the branch decideSCC takes: isProof = true means it
+-- Each check states the branch decide takes: isProof = true means it
 -- returned a derivation, false a lasso countermodel with  ⊢ X -> Empty.  So
--- every line is a theorem, certified by the type of decideSCC.  The
+-- every line is a theorem, certified by the type of decide.  The
 -- twenty-two marked valid in the figure (T, G, pb5, lin1, Dum, Dum1-4, D, 4,
 -- 4M, G0, H, H+, L, L+, L++, X, K3, K4, K5) are exactly the twenty-two that
 -- come out true here.
@@ -18,7 +18,7 @@
 
 module LTL.Benchmarks.Examples where
 
-open import LTL.Procedures.DecideSCC public
+open import LTL.Procedures.Decide public
 
 ------------------------------------------------------------------------
 -- The two variables
@@ -183,157 +183,157 @@ axK5 = □ ◇ (pv ∨ qv) ⇔ □ ◇ pv ∨ □ ◇ qv
 ------------------------------------------------------------------------
 -- The results
 
-check-T : isProof (decideSCC axT) ≡ true
+check-T : isProof (decide axT) ≡ true
 check-T = refl
 
-check-pb2 : isProof (decideSCC pb2) ≡ false
+check-pb2 : isProof (decide pb2) ≡ false
 check-pb2 = refl
 
-check-G : isProof (decideSCC axG) ≡ true
+check-G : isProof (decide axG) ≡ true
 check-G = refl
 
-check-M : isProof (decideSCC axM) ≡ false
+check-M : isProof (decide axM) ≡ false
 check-M = refl
 
-check-M2 : isProof (decideSCC axM2) ≡ false
+check-M2 : isProof (decide axM2) ≡ false
 check-M2 = refl
 
-check-M3 : isProof (decideSCC axM3) ≡ false
+check-M3 : isProof (decide axM3) ≡ false
 check-M3 = refl
 
-check-pb5 : isProof (decideSCC pb5) ≡ true
+check-pb5 : isProof (decide pb5) ≡ true
 check-pb5 = refl
 
-check-lin1 : isProof (decideSCC lin1) ≡ true
+check-lin1 : isProof (decide lin1) ≡ true
 check-lin1 = refl
 
-check-Dum : isProof (decideSCC axDum) ≡ true
+check-Dum : isProof (decide axDum) ≡ true
 check-Dum = refl
 
-check-Dum1 : isProof (decideSCC axDum1) ≡ true
+check-Dum1 : isProof (decide axDum1) ≡ true
 check-Dum1 = refl
 
-check-Dum2 : isProof (decideSCC axDum2) ≡ true
+check-Dum2 : isProof (decide axDum2) ≡ true
 check-Dum2 = refl
 
-check-Dum3 : isProof (decideSCC axDum3) ≡ true
+check-Dum3 : isProof (decide axDum3) ≡ true
 check-Dum3 = refl
 
-check-Dum4 : isProof (decideSCC axDum4) ≡ true
+check-Dum4 : isProof (decide axDum4) ≡ true
 check-Dum4 = refl
 
-check-D : isProof (decideSCC axD) ≡ true
+check-D : isProof (decide axD) ≡ true
 check-D = refl
 
-check-ax4 : isProof (decideSCC ax4) ≡ true
+check-ax4 : isProof (decide ax4) ≡ true
 check-ax4 = refl
 
-check-ax4M : isProof (decideSCC ax4M) ≡ true
+check-ax4M : isProof (decide ax4M) ≡ true
 check-ax4M = refl
 
-check-ax5 : isProof (decideSCC ax5) ≡ false
+check-ax5 : isProof (decide ax5) ≡ false
 check-ax5 = refl
 
-check-ax5M : isProof (decideSCC ax5M) ≡ false
+check-ax5M : isProof (decide ax5M) ≡ false
 check-ax5M = refl
 
-check-B : isProof (decideSCC axB) ≡ false
+check-B : isProof (decide axB) ≡ false
 check-B = refl
 
-check-BM : isProof (decideSCC axBM) ≡ false
+check-BM : isProof (decide axBM) ≡ false
 check-BM = refl
 
-check-G0 : isProof (decideSCC axG0) ≡ true
+check-G0 : isProof (decide axG0) ≡ true
 check-G0 = refl
 
-check-H : isProof (decideSCC axH) ≡ true
+check-H : isProof (decide axH) ≡ true
 check-H = refl
 
-check-Hplus : isProof (decideSCC axHplus) ≡ true
+check-Hplus : isProof (decide axHplus) ≡ true
 check-Hplus = refl
 
-check-L : isProof (decideSCC axL) ≡ true
+check-L : isProof (decide axL) ≡ true
 check-L = refl
 
-check-Lplus : isProof (decideSCC axLplus) ≡ true
+check-Lplus : isProof (decide axLplus) ≡ true
 check-Lplus = refl
 
-check-Lplusplus : isProof (decideSCC axLplusplus) ≡ true
+check-Lplusplus : isProof (decide axLplusplus) ≡ true
 check-Lplusplus = refl
 
-check-Pt : isProof (decideSCC axPt) ≡ false
+check-Pt : isProof (decide axPt) ≡ false
 check-Pt = refl
 
-check-W : isProof (decideSCC axW) ≡ false
+check-W : isProof (decide axW) ≡ false
 check-W = refl
 
-check-Z : isProof (decideSCC axZ) ≡ false
+check-Z : isProof (decide axZ) ≡ false
 check-Z = refl
 
-check-Grz : isProof (decideSCC axGrz) ≡ false
+check-Grz : isProof (decide axGrz) ≡ false
 check-Grz = refl
 
-check-Grz1 : isProof (decideSCC axGrz1) ≡ false
+check-Grz1 : isProof (decide axGrz1) ≡ false
 check-Grz1 = refl
 
-check-Grz2 : isProof (decideSCC axGrz2) ≡ false
+check-Grz2 : isProof (decide axGrz2) ≡ false
 check-Grz2 = refl
 
-check-Grz3 : isProof (decideSCC axGrz3) ≡ false
+check-Grz3 : isProof (decide axGrz3) ≡ false
 check-Grz3 = refl
 
-check-Grz4 : isProof (decideSCC axGrz4) ≡ false
+check-Grz4 : isProof (decide axGrz4) ≡ false
 check-Grz4 = refl
 
-check-Grz5 : isProof (decideSCC axGrz5) ≡ false
+check-Grz5 : isProof (decide axGrz5) ≡ false
 check-Grz5 = refl
 
-check-F : isProof (decideSCC axF) ≡ false
+check-F : isProof (decide axF) ≡ false
 check-F = refl
 
-check-Hs : isProof (decideSCC axHs) ≡ false
+check-Hs : isProof (decide axHs) ≡ false
 check-Hs = refl
 
-check-P : isProof (decideSCC axP) ≡ false
+check-P : isProof (decide axP) ≡ false
 check-P = refl
 
-check-R : isProof (decideSCC axR) ≡ false
+check-R : isProof (decide axR) ≡ false
 check-R = refl
 
-check-X : isProof (decideSCC axX) ≡ true
+check-X : isProof (decide axX) ≡ true
 check-X = refl
 
-check-Zem : isProof (decideSCC axZem) ≡ false
+check-Zem : isProof (decide axZem) ≡ false
 check-Zem = refl
 
-check-K1 : isProof (decideSCC axK1) ≡ false
+check-K1 : isProof (decide axK1) ≡ false
 check-K1 = refl
 
-check-K2 : isProof (decideSCC axK2) ≡ false
+check-K2 : isProof (decide axK2) ≡ false
 check-K2 = refl
 
-check-K3 : isProof (decideSCC axK3) ≡ true
+check-K3 : isProof (decide axK3) ≡ true
 check-K3 = refl
 
-check-K4 : isProof (decideSCC axK4) ≡ true
+check-K4 : isProof (decide axK4) ≡ true
 check-K4 = refl
 
-check-K5 : isProof (decideSCC axK5) ≡ true
+check-K5 : isProof (decide axK5) ≡ true
 check-K5 = refl
 
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
 -- Two of the countermodels, read off.
 --
--- traceOf evaluates a chosen formula at the successive stages of the run, and
--- shapeOf says where the run starts repeating: with shapeOf Q = r , c the run
--- is  v0 , rest_0 , ... , rest_{r-1} , then the last c of those forever, so it
--- is periodic from stage  1 + r - c  with period c.  traceOf uses the
+-- cmTrace evaluates a chosen formula at the successive stages of the run, and
+-- cmShape says where the run starts repeating: with cmShape Q c = r , n the
+-- run is  v0 , rest_0 , ... , rest_{r-1} , then the last n of those forever,
+-- so it is periodic from stage  1 + r - n  with period n.  cmTrace uses the
 -- evaluation that LTL.Correct carries over to Trusted's semantics, so
--- "traceOf Q Q 1 = false ∷ []" and cmUnderivable are the same fact.
+-- "cmTrace Q c Q 1 = false ∷ []" and cmUnderivable are the same fact.
 
 ------------------------------------------------------------------------
--- pb2 = p ⇒ □ p.  shapeOf pb2 = 4 , 2, so the run is periodic from stage 3
+-- pb2 = p ⇒ □ p.  Its lasso has shape 4 , 2, so the run is periodic from stage 3
 -- with period 2:
 --
 --    p       1  0  1  1  1  1  1  1  ...
@@ -345,21 +345,24 @@ check-K5 = refl
 -- two states where one would do: the SCC construction prepends a leg per
 -- eventuality to the bare loop.
 
-pb2-shape : shapeOf pb2 ≡ (4 , 2)
+pb2-cm : LassoCountermodel pb2
+pb2-cm = countermodelFrom (decide pb2) refl
+
+pb2-shape : cmShape pb2 pb2-cm ≡ (4 , 2)
 pb2-shape = refl
 
-pb2-p : traceOf pb2 pv 8 ≡
+pb2-p : cmTrace pb2 pb2-cm pv 8 ≡
         true ∷ false ∷ true ∷ true ∷ true ∷ true ∷ true ∷ true ∷ []
 pb2-p = refl
 
-pb2-□ : traceOf pb2 (□ pv) 4 ≡ false ∷ false ∷ true ∷ true ∷ []
+pb2-□ : cmTrace pb2 pb2-cm (□ pv) 4 ≡ false ∷ false ∷ true ∷ true ∷ []
 pb2-□ = refl
 
-pb2-input : traceOf pb2 pb2 4 ≡ false ∷ true ∷ true ∷ true ∷ []
+pb2-input : cmTrace pb2 pb2-cm pb2 4 ≡ false ∷ true ∷ true ∷ true ∷ []
 pb2-input = refl
 
 ------------------------------------------------------------------------
--- axM2 = ◇ □ (p ⇒ □ p).  shapeOf axM2 = 8 , 8: the stem is empty and the run
+-- axM2 = ◇ □ (p ⇒ □ p).  Its lasso has shape 8 , 8: the stem is empty and the run
 -- is periodic from stage 1 with period 8:
 --
 --    p            1  1  0  1  1  1  0  1  ...
@@ -370,18 +373,21 @@ pb2-input = refl
 -- fails wherever p holds, infinitely often.  So □ (p ⇒ □ p) holds nowhere and
 -- axM2 is false at every stage, not just at stage 0.
 
-axM2-shape : shapeOf axM2 ≡ (8 , 8)
+axM2-cm : LassoCountermodel axM2
+axM2-cm = countermodelFrom (decide axM2) refl
+
+axM2-shape : cmShape axM2 axM2-cm ≡ (8 , 8)
 axM2-shape = refl
 
-axM2-p : traceOf axM2 pv 8 ≡
+axM2-p : cmTrace axM2 axM2-cm pv 8 ≡
          true ∷ true ∷ false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ []
 axM2-p = refl
 
-axM2-step : traceOf axM2 (pv ⇒ □ pv) 8 ≡
+axM2-step : cmTrace axM2 axM2-cm (pv ⇒ □ pv) 8 ≡
             false ∷ false ∷ true ∷ false ∷ false ∷ false ∷ true ∷ false ∷ []
 axM2-step = refl
 
-axM2-input : traceOf axM2 axM2 4 ≡ false ∷ false ∷ false ∷ false ∷ []
+axM2-input : cmTrace axM2 axM2-cm axM2 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 axM2-input = refl
 
 ------------------------------------------------------------------------
@@ -425,5 +431,5 @@ K5fwd-cert : sccShape axK5fwd ≡
              removedBlock ∷ removedBlock ∷ removedBlock ∷ removedBlock ∷ emptied ∷ []
 K5fwd-cert = refl
 
-check-K5fwd : isProof (decideSCC axK5fwd) ≡ true
+check-K5fwd : isProof (decide axK5fwd) ≡ true
 check-K5fwd = refl

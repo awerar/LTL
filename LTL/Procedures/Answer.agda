@@ -54,11 +54,9 @@ cmCycle Q c = stretchStates (Lasso.loop (LassoCountermodel.lasso c))
 cmStart : (Q : Formula) -> LassoCountermodel Q -> Val
 cmStart Q c = LassoCountermodel.start c
 
--- (start , rest , cycle) of the countermodel, or three empty lists for a proof.
-lassoOf : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-       -> Val × List Val × List Val
-lassoOf Q (inl d) = [] , [] , []
-lassoOf Q (inr c) = cmStart Q c , cmRest Q c , cmCycle Q c
+-- (start , rest , cycle) of the countermodel.
+cmLasso : (Q : Formula) -> LassoCountermodel Q -> Val × List Val × List Val
+cmLasso Q c = cmStart Q c , cmRest Q c , cmCycle Q c
 
 ------------------------------------------------------------------------
 -- Looking at a derivation.  One pass over the tree counts the nodes, and how
@@ -112,3 +110,15 @@ cmEval Q c A i = eval (¬ Q) start lasso A i
 cmFrom : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Nat -> List Bool
 cmFrom Q c A i zero    = []
 cmFrom Q c A i (suc n) = cmEval Q c A i ∷ cmFrom Q c A (suc i) n
+
+-- The values of A at stages 0, ..., n-1 of the run.
+
+cmTrace : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> List Bool
+cmTrace Q c A = cmFrom Q c A zero
+
+-- The shape of the lasso: its run is the start followed by cmRest, whose tail
+-- is the cycle, so it is periodic from stage  1 + |cmRest| - |cmCycle|  on,
+-- with period |cmCycle|.
+
+cmShape : (Q : Formula) -> LassoCountermodel Q -> Nat × Nat
+cmShape Q c = length (cmRest Q c) , length (cmCycle Q c)

@@ -11,7 +11,7 @@
 --
 -- The eventualities are the A with □ A in sub P: □ A is pending at v when it
 -- is not in v, and fulfilled at w when A is not in w.  (R2) is "v lies in gfpW
--- P U A" (LTL.Elimination.Gfp).  decideSCC runs the elimination only in its
+-- P U A" (LTL.Elimination.Gfp).  decide runs the elimination only in its
 -- fair branch, to place the countermodel's loop inside Uinf (uinfTrap).
 --
 -- The gfp sets are computed once per round, not once per state: evList pairs

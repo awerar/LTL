@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.Benchmarks.Lecture -- the worked example of the course's lecture 15
--- notes (not in the repository), run through decideSCC:
+-- notes (not in the repository), run through decide:
 --
 --     F a ∧ F b  ⇒  F (a ∧ b)
 --
@@ -17,7 +17,7 @@
 -- THE COUNTERMODEL IS NOT.  The lecture gives  s3 -> s5 -> s7 -> s7 -> ... ,
 -- which is not fair: at s7, Fb = 1 and b = 0, so looping there promises b and
 -- never delivers it.  (It presumably meant  s3 -> s5 -> s7 -> s5 -> ... .)
--- decideSCC returns
+-- decide returns
 --
 --     s7 -> s4 -> s0 -> s0 -> ...          (loop at s0)
 --
@@ -29,7 +29,7 @@
 
 module LTL.Benchmarks.Lecture where
 
-open import LTL.Procedures.DecideSCC public
+open import LTL.Procedures.Decide public
 
 ------------------------------------------------------------------------
 -- The formula, in the box-only syntax.
@@ -96,14 +96,17 @@ lec-edges : length (concat (map (λ v -> succs R (Ust R) v) (Ust R))) ≡ 24
 lec-edges = refl
 
 ------------------------------------------------------------------------
--- The decision, and the lasso.  lassoOf reads the countermodel as (start ,
+-- The decision, and the lasso.  cmLasso reads the countermodel as (start ,
 -- rest , cycle), where rest is the stem followed by the cycle.
 
-lo : Val × List Val × List Val
-lo = lassoOf fab (decideSCC fab)
-
-lec-notValid : isProof (decideSCC fab) ≡ false
+lec-notValid : isProof (decide fab) ≡ false
 lec-notValid = refl
+
+lec-cm : LassoCountermodel fab
+lec-cm = countermodelFrom (decide fab) refl
+
+lo : Val × List Val × List Val
+lo = cmLasso fab lec-cm
 
 -- Start, stem-and-cycle, cycle: s7, then s4 and the loop at s0.  One equation,
 -- because every mention of lo re-runs the countermodel branch.  The file takes
@@ -131,7 +134,7 @@ s0 : Val
 s0 = nth (snd (snd lo)) zero []
 
 -- s7 is outside F_Fb, so the lecture's loop at s7 cannot be fair;
--- s0 is inside it, so the loop decideSCC returns can be;
+-- s0 is inside it, so the loop decide returns can be;
 -- and s7 IS inside F_Fa, exactly as the lecture says, since a holds there.
 
 lec-fair : evPred R (¬ pb) s7 ∷ evPred R (¬ pb) s0

@@ -1,6 +1,6 @@
 # Constructive LTL decision procedures in Agda
 
-This development constructs a decision procedure, `decideSCC`, returning either
+This development constructs a decision procedure, `decide`, returning either
 a derivation of a temporal formula or a certified lasso countermodel. It
 searches the state graph for fair strongly connected components (m5). Its
 derivations use a checked propositional-consequence rule, which keeps the
@@ -24,7 +24,7 @@ implemented.**
   hand-checked module stating the LTL semantics and what a decision procedure
   must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for the
   procedure.
-- [LTL/Procedures/DecideSCC.agda](LTL/Procedures/DecideSCC.agda): the public
+- [LTL/Procedures/Decide.agda](LTL/Procedures/Decide.agda): the public
   decision procedure, and [LTL/Procedures/Answer.agda](LTL/Procedures/Answer.agda):
   what it returns and how to read it.
 
@@ -52,7 +52,7 @@ method.
 The files use `--safe --without-K --exact-split`. There are no postulates,
 unfinished goals, or termination overrides. The procedures return a derivation
 or a finite lasso countermodel. `LTL/Correct.agda` connects this to the
-semantics of `LTL/Trusted.agda`: `decideSCC` is a `DecisionProcedure`.
+semantics of `LTL/Trusted.agda`: `decide` is a `DecisionProcedure`.
 When it answers true, the formula is valid, meaning true at time 0 of every
 lasso (ultimately periodic) interpretation. When it answers false, it returns a
 lasso on which the formula is false. Validity on arbitrary infinite words is
@@ -60,7 +60,7 @@ not stated. The proposal discusses that distinction.
 
 ## Viewing proofs
 
-[LTL/Pretty.agda](LTL/Pretty.agda) prints the result of `decideSCC` in a
+[LTL/Pretty.agda](LTL/Pretty.agda) prints the result of `decide` in a
 readable form. For a valid formula you get a numbered Hilbert proof, where
 each line is an axiom or follows from earlier lines by MP or Gen. For an
 invalid one you get the lasso countermodel: the variables true at each time
@@ -132,7 +132,7 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/Elimination/` | `Gfp`, `Elim`, `Extract` | the elimination (it places countermodels in `Uinf`) and the building blocks of extraction, m4 §3–4 |
 | `LTL/Countermodel/` | `Orbit`, `OrbitEval`, `Walk`, `Lasso`, `Global`, `Eval`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccTrap` | graph certificates and their application to temporal logic, m5 |
-| `LTL/Procedures/` | `Answer`, `CompletePC`, `DecideSCC` | the decision procedure and its answer type, m4 Thm 6.1 |
+| `LTL/Procedures/` | `Answer`, `CompletePC`, `Decide` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 
