@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Val -- valuations, the characteristic formula chi P v, and
--- beta P U, the disjunction of chi over a list of valuations.
+-- LTL.States.Val -- signed literals, and conjunction and disjunction over a
+-- list, the pieces of the characteristic formula chi v (LTL.States.State).
 --
 -- A valuation is a List Bool read positionally against sub P.  Since sub P may
 -- repeat formulas, LTL.States.State adds a coherence clause.  The empty
@@ -36,15 +36,9 @@ litList []       v         = []
 litList (A ∷ As) []        = []
 litList (A ∷ As) (b ∷ bs)  = lit A b ∷ litList As bs
 
-chi : Formula -> Val -> Formula
-chi P v = ⋀ (litList (sub P) v)
-
-beta : Formula -> List Val -> Formula
-beta P vs = ⋁ (map (chi P) vs)
-
 ------------------------------------------------------------------------
 -- The projection lemma: a membership proof for A in sub P locates the literal
--- of A inside chi P v, signed by v's bit at that position.  Every projection of
+-- of A inside chi v, signed by v's bit at that position.  Every projection of
 -- a conjunct of chi goes through it.
 
 litList-mem : {A : Formula} (As : List Formula) (v : Val)

@@ -15,7 +15,9 @@
 
 module LTL.Procedures.Answer where
 
-open import LTL.Countermodel.Hintikka public
+open import LTL.States.Common public
+open import LTL.Countermodel.Lasso
+open import LTL.Countermodel.Eval
 
 ------------------------------------------------------------------------
 -- What a countermodel is.  Names starting with cm (cmEval, cmFrom, ...) are

@@ -50,6 +50,23 @@ derivation or a certified finite lasso countermodel.
   A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
+- P-modules: the modules that work over one formula P — `State`, `Step`,
+  `Proj`, `NonState`, `Complete`, `StepLemma`, `Closure`, `Extract`,
+  `CompletePC`, `Walk`, `Lasso`, `Global`, `Eval`, `Hintikka`, `SccLasso`,
+  `SccExtract`, `SccSeed` — take it as a module parameter,
+  `module LTL.States.Step (P : Formula) where` (with `Formula` imported above
+  the header), so P is never written at a call site inside them. A P-module
+  opens `LTL.States.Common` and each P-module it uses at P
+  (`open import LTL.States.State P`), privately, and re-exports nothing:
+  applying a module copies its names, so two re-exported copies of `valOf`
+  would be ambiguous. The exceptions are `SccLasso`, which re-exports its
+  application of `Graph` at `step`, and `Eval`, which re-exports `OrbitEval`
+  at `readVal`. Code that does not mention P goes in an unparameterised
+  module (`Common`, `Taut`, `VecBar`, `Reach`), or an importer opening the
+  P-module unapplied would see a spurious P argument. Outside the layer
+  (`Answer`, `Decide`, `Correct`, `Pretty`, the tests) P-modules are opened
+  unapplied, so every name takes P first (`St benAri`, `Lasso (¬ Q) v0`).
+  `Decide` re-exports all of them.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
@@ -99,16 +116,20 @@ a module name.
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).
-4. **States and transitions (m4 §2)** (`States/`, with layer 5) — `Val` (valuations, `chi`, `beta`);
-   `State` (`isState`, `St P`); `Step` (`step`, `succs`, T1–T3); `Taut`
-   (Boolean facts about chi/beta for (PC)); `Proj`, `NonState`, `Complete`
-   (`stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas 2.7–2.8).
+4. **States and transitions (m4 §2)** (`States/`, with layer 5) — `Val` (literals,
+   `⋀`/`⋁`, `litList`); `Common` (the formula-independent base of the
+   P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
+   lemmas, `AllLen`, `allComplete`); P-modules `State` (`isState`, `St`,
+   `chi`, `beta`); `Step` (`step`, `succs`, T1–T3); `Proj`, `NonState`,
+   `Complete` (`stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas
+   2.7–2.8). `Taut` (Boolean facts about chi/beta for (PC), stated for any
+   P, and `tautChi`) is unparameterised.
 5. **Finite search infrastructure** (`States/`) — `Reach` (`≡ᵛ` on valuations, the
-   `Val` instance of `Nodes`, successor lists); `VecBar` (valuations of a given
+   `Val` instance of `Nodes`); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
    explored state set; its members are states, `ustState`); `Extract`
    (`betaElim`, `Refuted`, (R1) and `extractR1`: the pieces of m4 Thm 4.1
-   that `SccExtract` reuses). m4's elimination (§3) is not formalised: the
+   that `SccExtract` reuses); `Closure` and `Extract` are P-modules. m4's elimination (§3) is not formalised: the
    SCC search replaces it, and countermodels live in `Ust`.
 6. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
@@ -116,19 +137,23 @@ a module name.
    □ over the forward orbit, and its soundness; any state type, read by `read`); `Walk`;
    `Lasso` (the record of Prop 5.3: a `Cycle` whose head `loop` is a valid
    position, as in `Trusted`'s `Lasso`, fairness at its end `b`, and a valid
-   start; `Orbit` at `Val`);
-   `Global` (Lemma 5.4); `Eval` (`OrbitEval` at `Val`); `Hintikka`.
+   start);
+   `Global` (Lemma 5.4); `Eval` (`OrbitEval` at `Val`); `Hintikka`. All but
+   `Orbit` and `OrbitEval` are P-modules.
 7. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes` and by the
-   edge test `G`, imports only the generic layer; `SccLasso` instantiates it
-   once per formula at `G = step P`, so its names take `P` first, as in
-   `Trail P ws`, `Cert P fs ws`, and a constructor used as a term needs
-   `{P}`, as in `tNil {P}`); `SccLasso`,
-   `SccExtract` (`provableSCC`, closed with (PC)), `SccSeed` (`ustSeedTo`:
-   every state of `Ust P` is reached from one containing `P`). In `Procedures/`: `CompletePC` (`stateCompletePC`,
-   `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer` (`LassoCountermodel`,
-   `isProof`, `countermodelFrom`, `cmLasso`, `cmTrace`, `cmShape`,
-   `derivCounts`); `Decide` (`decide`, Thm 6.1). At the root:
+   edge test `G`, imports only the generic layer; the P-module `SccLasso`
+   applies it at `G = step` and re-exports it, so inside the P-modules its
+   names read `Trail ws`, `Cert fs ws`, and outside they take P first,
+   `Cert (¬ Q) fs ws`); `SccLasso`,
+   `SccExtract` (`ustCertRefuted`: a certificate refutes every state of
+   `Ust`), `SccSeed` (`ustSeedTo`: every state of `Ust` is reached from one
+   containing `P`). In `Procedures/`: `CompletePC` (P-module;
+   `stateCompletePC`, `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer`
+   (`LassoCountermodel`, `isProof`, `countermodelFrom`, `cmLasso`,
+   `cmTrace`, `cmShape`, `derivCounts`); `Decide` (`provableSCC`, closed
+   with (PC), `sccProof`, `sccShape`, and `decide`, Thm 6.1; it re-exports
+   every P-module unapplied). At the root:
    `Correct` (the bridge: on a `Trusted` lasso that starts at `pos0` and loops
    back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
    `holds-evalAt`); `⊢-valid`, `toCounterModel`, `cmUnderivable`, and

@@ -1,117 +1,122 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.SCC.SccSeed -- every state of Ust P is reached from a state containing
+-- LTL.SCC.SccSeed -- every state of Ust is reached from a state containing
 -- P (ustSeedTo).
 --
 -- The graph search covers all of Ust P, so a fair component can lie anywhere
 -- in it; this lemma gives the countermodel a start that contains P, with a
 -- stem from there to the component.  The proof follows closeGo's recursion: a
 -- state a round adds is a seed, or a successor of a state already in.  The
--- trail comes out inside StCand P, and seedTrail lifts it into Ust P using
+-- trail comes out inside StCand P, and seedTrail lifts it into Ust using
 -- ustClosed.
 
-module LTL.SCC.SccSeed where
+open import LTL.Syntax.Formula using (Formula)
 
-open import LTL.SCC.SccExtract public
+module LTL.SCC.SccSeed (P : Formula) where
+
+open import LTL.States.Common
+open import LTL.States.State P
+open import LTL.States.Step P
+open import LTL.States.Closure P
+open import LTL.Countermodel.Walk P
+open import LTL.SCC.SccLasso P
 
 ------------------------------------------------------------------------
--- A seed and a trail inside StCand P from it.
+-- A seed and a trail inside StCand from it.
 
-record Seeded (P : Formula) (w : Val) : Set where
+record Seeded (w : Val) : Set where
   constructor seeded
   field
     seed      : Val
     visited   : List Val
-    seedIn    : seed ∈ StCand P
-    seedHolds : valOf P seed P ≡ true
-    trail     : Trail P (StCand P) seed visited w
+    seedIn    : seed ∈ StCand
+    seedHolds : valOf seed P ≡ true
+    trail     : Trail StCand seed visited w
 
 -- One round: a state it adds is a seed, or a successor of something already in.
 
-module _ (P : Formula) where
+addSeeded : (acc : List Val)
+         -> ((z : Val) -> z ∈ acc -> Seeded z)
+         -> (z : Val) -> z ∈ addAll acc -> Seeded z
+addSeeded acc sd z m =
+  sumElim fromNew (λ m2 -> sd z m2)
+          (memAppCase (filter (missing acc) StCand) acc m)
+  where
+    fromNew : z ∈ filter (missing acc) StCand -> Seeded z
+    fromNew m1 =
+      sumElim isSeed viaU
+              (∨ᵇ-true (valOf z P) (any (λ u -> step u z) acc) want)
+      where
+        mzs : z ∈ StCand
+        mzs = filter-sub (missing acc) StCand m1
 
-  addSeeded : (acc : List Val)
-           -> ((z : Val) -> z ∈ acc -> Seeded P z)
-           -> (z : Val) -> z ∈ addAll P acc -> Seeded P z
-  addSeeded acc sd z m =
-    sumElim fromNew (λ m2 -> sd z m2)
-            (memAppCase (filter (missing P acc) (StCand P)) acc m)
-    where
-      fromNew : z ∈ filter (missing P acc) (StCand P) -> Seeded P z
-      fromNew m1 =
-        sumElim isSeed viaU
-                (∨ᵇ-true (valOf P z P) (any (λ u -> step P u z) acc) want)
-        where
-          mzs : z ∈ StCand P
-          mzs = filter-sub (missing P acc) (StCand P) m1
+        want : wanted acc z ≡ true
+        want = ∧ᵇ-trueˡ (wanted acc z) (¬ᵇ (z ∈ᵛ acc))
+                        (filter-prop (missing acc) StCand m1)
 
-          want : wanted P acc z ≡ true
-          want = ∧ᵇ-trueˡ (wanted P acc z) (¬ᵇ (z ∈ᵛ acc))
-                          (filter-prop (missing P acc) (StCand P) m1)
+        isSeed : valOf z P ≡ true -> Seeded z
+        isSeed e = seeded z [] mzs e tNil
 
-          isSeed : valOf P z P ≡ true -> Seeded P z
-          isSeed e = seeded z [] mzs e (tNil {P})
+        viaU : any (λ u -> step u z) acc ≡ true -> Seeded z
+        viaU ea = pick (any-true (λ u -> step u z) acc ea)
+          where
+            pick : (Σ[ u ∈ Val ] u ∈ acc × step u z ≡ true)
+                -> Seeded z
+            pick (u , mu , su) =
+              seeded seed (visited ++ z ∷ []) seedIn seedHolds
+                     (trailApp StCand trail (tCons mzs su tNil))
+              where open Seeded (sd u mu)
 
-          viaU : any (λ u -> step P u z) acc ≡ true -> Seeded P z
-          viaU ea = pick (any-true (λ u -> step P u z) acc ea)
-            where
-              pick : (Σ[ u ∈ Val ] u ∈ acc × step P u z ≡ true)
-                  -> Seeded P z
-              pick (u , mu , su) =
-                seeded seed (visited ++ z ∷ []) seedIn seedHolds
-                       (trailApp P (StCand P) trail (tCons {P} mzs su (tNil {P})))
-                where open Seeded (sd u mu)
+closeGoSeeded   : {E : Pred} (acc : List Val)
+               -> (av : Avail E StCand acc)
+               -> (bar : IFin E)
+               -> ((z : Val) -> z ∈ acc -> Seeded z)
+               -> {z : Val} -> z ∈ closeGo acc av bar -> Seeded z
+closeFindSeeded : {E : Pred} (acc : List Val)
+               -> (av : Avail E StCand acc)
+               -> (bar : IFin E) (fr : FindResult (settled acc) StCand)
+               -> ((z : Val) -> z ∈ acc -> Seeded z)
+               -> {z : Val} -> z ∈ closeFind acc av bar fr -> Seeded z
 
-  closeGoSeeded   : {E : Pred} (acc : List Val)
-                 -> (av : Avail E (StCand P) acc)
-                 -> (bar : IFin E)
-                 -> ((z : Val) -> z ∈ acc -> Seeded P z)
-                 -> {z : Val} -> z ∈ closeGo P acc av bar -> Seeded P z
-  closeFindSeeded : {E : Pred} (acc : List Val)
-                 -> (av : Avail E (StCand P) acc)
-                 -> (bar : IFin E) (fr : FindResult (settled P acc) (StCand P))
-                 -> ((z : Val) -> z ∈ acc -> Seeded P z)
-                 -> {z : Val} -> z ∈ closeFind P acc av bar fr -> Seeded P z
+closeGoSeeded acc av bar =
+  closeFindSeeded acc av bar (findFalse (settled acc) StCand)
 
-  closeGoSeeded acc av bar =
-    closeFindSeeded acc av bar (findFalse (settled P acc) (StCand P))
+closeFindSeeded acc av bar      (allTrue f)    sd {z} m = sd z m
+closeFindSeeded acc av (cBar h) (found x mx q) sd     m =
+  closeGoSeeded (addAll acc) _ (h x (av x mx (notInAcc acc x q)))
+                (addSeeded acc sd) m
 
-  closeFindSeeded acc av bar      (allTrue f)    sd {z} m = sd z m
-  closeFindSeeded acc av (cBar h) (found x mx q) sd     m =
-    closeGoSeeded (addAll P acc) _ (h x (av x mx (notInAcc P acc x q)))
-                  (addSeeded acc sd) m
+ustSeeded : {z : Val} -> z ∈ Ust -> Seeded z
+ustSeeded =
+  closeGoSeeded [] (λ z mz e -> stAllSat z (stCandSt mz)) vecBar noSd
+  where
+    noSd : (z : Val) -> z ∈ [] {A = Val} -> Seeded z
+    noSd z ()
 
-  ustSeeded : {z : Val} -> z ∈ Ust P -> Seeded P z
-  ustSeeded =
-    closeGoSeeded [] (λ z mz e -> stAllSat P z (stCandSt P mz)) (vecBar P) noSd
-    where
-      noSd : (z : Val) -> z ∈ [] {A = Val} -> Seeded P z
-      noSd z ()
+-- A trail of states out of Ust stays in Ust P.
 
-  -- A trail of states out of Ust P stays in Ust P.
+seedTrail : {s : Val} {zs : List Val} {w : Val}
+         -> s ∈ Ust -> Trail StCand s zs w
+         -> Trail Ust s zs w
+seedTrail ms tNil                   = tNil
+seedTrail ms (tCons {x = y} m e t) = tCons my e (seedTrail my t)
+  where
+    my : y ∈ Ust
+    my = ustClosed ms (stCandSt m) e
 
-  seedTrail : {s : Val} {zs : List Val} {w : Val}
-           -> s ∈ Ust P -> Trail P (StCand P) s zs w
-           -> Trail P (Ust P) s zs w
-  seedTrail ms tNil                   = tNil {P}
-  seedTrail ms (tCons {x = y} m e t) = tCons {P} my e (seedTrail my t)
-    where
-      my : y ∈ Ust P
-      my = ustClosed P ms (stCandSt P m) e
-
-record SeedTo (P : Formula) (w : Val) : Set where
+record SeedTo (w : Val) : Set where
   constructor seedTo
   field
     seed      : Val
-    seedIn    : seed ∈ Ust P
-    seedHolds : valOf P seed P ≡ true
-    reaches   : Reaches P (Ust P) seed w
+    seedIn    : seed ∈ Ust
+    seedHolds : valOf seed P ≡ true
+    reaches   : Reaches Ust seed w
 
-ustSeedTo : (P : Formula) (w : Val) -> w ∈ Ust P -> SeedTo P w
-ustSeedTo P w m =
-  seedTo seed mu seedHolds (reachesBy {P} visited (seedTrail P mu trail))
+ustSeedTo : (w : Val) -> w ∈ Ust -> SeedTo w
+ustSeedTo w m =
+  seedTo seed mu seedHolds (reachesBy visited (seedTrail mu trail))
   where
-    open Seeded (ustSeeded P m)
+    open Seeded (ustSeeded m)
 
-    mu : seed ∈ Ust P
-    mu = ustSeed P (stCandSt P seedIn) seedHolds
+    mu : seed ∈ Ust
+    mu = ustSeed (stCandSt seedIn) seedHolds

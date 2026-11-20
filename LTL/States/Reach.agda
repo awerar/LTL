@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Reach -- valuations as a set, and successor lists.
+-- LTL.States.Reach -- valuations as a set.
 --
 -- Defines the equality test _≡ᵛ_ on valuations, proves it sound and reflexive,
 -- and instantiates LTL.Lib.Nodes at Val with it.  That instance supplies ∈ᵛ,
@@ -9,7 +9,7 @@
 
 module LTL.States.Reach where
 
-open import LTL.States.Step public
+open import LTL.States.Val public
 open import LTL.Lib.Bar  public
 
 ------------------------------------------------------------------------
@@ -39,17 +39,3 @@ _≡ᵛ_ : Val -> Val -> Bool
 -- The set layer, at Val.  ∈ᵛ comes from here:  v ∈ᵛ us = any (v ≡ᵛ_) us .
 
 open import LTL.Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
-
-------------------------------------------------------------------------
--- Reading a successor list
-
-module _ (P : Formula) where
-
-  succsMem : (us : List Val) (v : Val) {w : Val}
-          -> w ∈ succs P us v -> w ∈ us × step P v w ≡ true
-  succsMem us v m =
-    filter-sub (step P v) us m , filter-prop (step P v) us m
-
-  succsIn : (us : List Val) (v : Val) {w : Val}
-         -> w ∈ us -> step P v w ≡ true -> w ∈ succs P us v
-  succsIn us v mw st = filter-true (step P v) us mw st

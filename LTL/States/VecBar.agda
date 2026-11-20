@@ -66,7 +66,6 @@ vecIFin (suc m) =
           (barPull unconsV (hasLength (suc m)) (unconsNeq m)
                    (barProd boolIFin (vecIFin m)))
 
-
 ------------------------------------------------------------------------
 -- Members of allVecs n have length n, so the length-n predicate is a correct
 -- Bar predicate for St P, and the search never touches the enumeration.
@@ -87,11 +86,6 @@ allVecs-len (suc n) m =
                -> hasLength (suc n) v ≡ true
         fromSig (w , mw , ew) =
           subst (λ u -> hasLength (suc n) u ≡ true) (sym ew) (allVecs-len n mw)
-
-stAllSat : (P : Formula) -> AllSat (hasLength (length (sub P))) (St P)
-stAllSat P x m =
-  allVecs-len (length (sub P))
-              (filter-sub (isState P) (allVecs (length (sub P))) m)
 
 ------------------------------------------------------------------------
 -- The guard of Barras, refined by Gonthier (Coquand and Siles, section 5).

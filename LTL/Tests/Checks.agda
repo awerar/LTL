@@ -145,7 +145,7 @@ Ust-¬Bnb : length (Ust ¬Bnb) ≡ 2
 Ust-¬Bnb = refl
 
 ------------------------------------------------------------------------
--- LTL.SCC.SccExtract
+-- LTL.Procedures.Decide: the derivation branch
 
 -- Ben-Ari's formula and  □ p ⇒ □ ○ p , decided by the graph search.  Both
 -- derivations are produced, so the search, certAll, extractR1 and

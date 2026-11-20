@@ -2,8 +2,8 @@
 
 -- LTL.States.Taut -- Boolean facts about how the skeleton evaluation valFrom
 -- reads lit, ⋀, ⋁, chi and beta.  They are the side conditions of the pc
--- nodes built in LTL.Procedures.CompletePC and LTL.SCC.SccExtract; no
--- derivation appears here.
+-- nodes built in LTL.Procedures.CompletePC and LTL.Procedures.Decide.  The
+-- one derivation here is mpChain, which discharges the premises of □Chain.
 --
 -- Every lemma fixes one atom list Ats and one row a.  valFrom depends on Ats,
 -- so readings under different atom lists are unrelated, and each caller uses
@@ -18,7 +18,11 @@
 
 module LTL.States.Taut where
 
-open import LTL.States.State public
+open import LTL.States.Common
+
+-- Taut states its lemmas for any formula P, so it opens State unapplied, and
+-- privately: a P-module that opens Taut has State at its own P.
+open import LTL.States.State
 
 ------------------------------------------------------------------------
 -- Membership, as a boolean: what turns a membership proof into the side
@@ -364,3 +368,38 @@ tautChi Q w len ev =
         step ec =
           ¬ᵇ¬ᵇ-true (valFrom Ats a Q)
                     (⋀ProjTrue Ats a (litList (sub R) w) mneg ec)
+
+------------------------------------------------------------------------
+-- The derivation half of □Chain: one modus ponens against one instance of
+-- (T) per premise, left to right.
+
+mpChain : (As : List Formula) {C : Formula}
+       -> ⊢ ⇒List (map s2Fml As) C -> ⊢ C
+mpChain []       d = d
+mpChain (A ∷ As) d = mpChain As (mp d □Elim)
+
+------------------------------------------------------------------------
+-- The implication behind (L5),
+--
+--     (C1 ⇒ C) ⇒ ... ⇒ (Cn ⇒ C) ⇒ ((C1 ∨ ... ∨ Cn) ⇒ C),
+--
+-- is a tautology of its skeleton.
+
+⋁⇒Fml : List Formula -> Formula -> Formula
+⋁⇒Fml Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
+
+taut⋁Elim : (Cs : List Formula) (C : Formula)
+         -> isTaut (⋁⇒Fml Cs C) ≡ true
+taut⋁Elim Cs C =
+  all-intro (λ a -> valFrom (atomsOf (⋁⇒Fml Cs C)) a (⋁⇒Fml Cs C))
+            (allVecs (length (atomsOf (⋁⇒Fml Cs C))))
+            row
+  where
+    Ats : List Formula
+    Ats = atomsOf (⋁⇒Fml Cs C)
+
+    row : {a : Val} -> a ∈ allVecs (length Ats)
+       -> valFrom Ats a (⋁⇒Fml Cs C) ≡ true
+    row {a} m =
+      ⇒Chain Ats a (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
+               (λ g -> ⋁ElimTrue Ats a Cs C (λ mD -> g (memMap (C ⇐_) mD)))

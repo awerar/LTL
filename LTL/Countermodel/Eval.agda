@@ -8,26 +8,28 @@
 -- evaluation is total on all formulas, as soundness needs.  eval indexes a
 -- lasso by a stage number, iterating the successor from the start.
 
-module LTL.Countermodel.Eval where
+open import LTL.Syntax.Formula using (Formula)
 
-open import LTL.Countermodel.Global public
+module LTL.Countermodel.Eval (P : Formula) where
+
+open import LTL.States.Common
+open import LTL.States.State P
+open import LTL.Countermodel.Lasso P
 import LTL.Countermodel.OrbitEval
 
 ------------------------------------------------------------------------
 -- The Boolean evaluation at a position
 
 -- a valuation read as an assignment to the variables
-readVal : Formula -> Val -> Nat -> Bool
-readVal P v n = valOf P v (var n)
+readVal : Val -> Nat -> Bool
+readVal v n = valOf v (var n)
 
-module _ (P : Formula) where
+open LTL.Countermodel.OrbitEval Val readVal public
+  using (evalAt; eval□-at; eval□-intro; eval□-false)
 
-  open LTL.Countermodel.OrbitEval Val (readVal P) public
-    using (evalAt; eval□-at; eval□-intro; eval□-false)
+------------------------------------------------------------------------
+-- The evaluation on a lasso, at stage i
 
-  ------------------------------------------------------------------------
-  -- The evaluation on a lasso, at stage i
-
-  eval : (v0 : Val) -> Lasso P v0 -> Formula -> Nat -> Bool
-  eval v0 l A i = evalAt loop A (posIter loop i (v0 , rest))
-    where open Lasso l
+eval : (v0 : Val) -> Lasso v0 -> Formula -> Nat -> Bool
+eval v0 l A i = evalAt loop A (posIter loop i (v0 , rest))
+  where open Lasso l

@@ -2,109 +2,99 @@
 
 -- LTL.States.Extract -- building blocks for refuting states.
 --
---   Refuted P us = every state of Ust P outside us is refutable.
+--   Refuted us = every state of Ust outside us is refutable.
 --
--- Refuted P (Ust P) holds trivially (ustRefuted).  betaElim and betaIntro
+-- Refuted Ust holds trivially (ustRefuted).  betaElim and betaIntro
 -- treat beta as a disjunction indexed by states, and extractR1 refutes a state
 -- with no successor inside us.  The induction that uses them is certAll's,
 -- run by LTL.SCC.SccExtract: extractR1 is its sink step, and extractBlock its
 -- block step.
 
-module LTL.States.Extract where
+open import LTL.Syntax.Formula using (Formula)
 
-open import LTL.States.Closure   public
-open import LTL.States.StepLemma public
+module LTL.States.Extract (P : Formula) where
+
+open import LTL.States.Common
+open import LTL.States.State P
+open import LTL.States.Step P
+open import LTL.States.StepLemma P
+open import LTL.States.Closure P
 
 ------------------------------------------------------------------------
 -- Every state has the length chi expects
 
-allLen-mem : {n : Nat} {vs : List Val} -> AllLen n vs -> {v : Val}
-          -> v ∈ vs -> length v ≡ n
-allLen-mem alNil         ()
-allLen-mem (alCons e al) here      = e
-allLen-mem (alCons e al) (there m) = allLen-mem al m
+stAllLen : AllLen (length (sub P)) St
+stAllLen = allLen-filter isState (allVecs-allLen (length (sub P)))
 
-stAllLen : (P : Formula) -> AllLen (length (sub P)) (St P)
-stAllLen P = allLen-filter (isState P) (allVecs-allLen (length (sub P)))
-
-stLen : (P : Formula) {v : Val} -> v ∈ St P
+stLen : {v : Val} -> v ∈ St
      -> length v ≡ length (sub P)
-stLen P m = allLen-mem (stAllLen P) m
+stLen m = allLen-mem stAllLen m
 
 ------------------------------------------------------------------------
 -- beta_U as a disjunction indexed by states: introduction at one state,
 -- elimination over all of them, and the refutation of a beta all of whose
 -- disjuncts are refuted (for the empty list, beta [] is ⊥).
 
--- AllInto for a mapped list, one derivation of  f w ⇒ C  per w.
+betaElim : {C : Formula} (ws : List Val)
+        -> ((w : Val) -> w ∈ ws -> ⊢ (chi w) ⇒ C)
+        -> ⊢ (beta ws) ⇒ C
+betaElim ws h = ⋁Elim (map chi ws) (allIntoMap chi ws h)
 
-allIntoMap : {C : Formula} (f : Val -> Formula) (ws : List Val)
-          -> ((w : Val) -> w ∈ ws -> ⊢ (f w) ⇒ C) -> AllInto C (map f ws)
-allIntoMap f []       h = intoNil
-allIntoMap f (w ∷ ws) h = intoCons (h w here) (allIntoMap f ws (λ z m -> h z (there m)))
+betaIntro : (ws : List Val) {w : Val}
+         -> w ∈ ws -> ⊢ (chi w) ⇒ (beta ws)
+betaIntro ws m = ⋁Intro (map chi ws) (memMap chi m)
 
-module _ (P : Formula) where
+¬Beta : (ws : List Val)
+     -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi w))
+     -> ⊢ ¬ (beta ws)
+¬Beta ws h =
+  refute {beta ws} {⊤}
+         (liftP deriv⊤)
+         (betaElim ws (λ w m -> mp ¬Elim (h w m)))
 
-  betaElim : {C : Formula} (ws : List Val)
-          -> ((w : Val) -> w ∈ ws -> ⊢ (chi P w) ⇒ C)
-          -> ⊢ (beta P ws) ⇒ C
-  betaElim ws h = ⋁Elim (map (chi P) ws) (allIntoMap (chi P) ws h)
+------------------------------------------------------------------------
+-- The induction hypothesis
 
-  betaIntro : (ws : List Val) {w : Val}
-           -> w ∈ ws -> ⊢ (chi P w) ⇒ (beta P ws)
-  betaIntro ws m = ⋁Intro (map (chi P) ws) (memMap (chi P) m)
+-- It ranges over Ust P, not St P: a state outside Ust cannot contain the
+-- input and is disposed of by (S1).  ustClosed makes this work: the step
+-- lemma offers ALL state-successors of u, and each lies in Ust P, where the
+-- hypothesis applies.
 
-  ¬Beta : (ws : List Val)
-       -> ((w : Val) -> w ∈ ws -> ⊢ ¬ (chi P w))
-       -> ⊢ ¬ (beta P ws)
-  ¬Beta ws h =
-    refute {beta P ws} {⊤}
-           (liftP deriv⊤)
-           (betaElim ws (λ w m -> mp ¬Elim (h w m)))
+Refuted : List Val -> Set
+Refuted us =
+  (u : Val) -> u ∈ Ust -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi u)
 
-  ------------------------------------------------------------------------
-  -- The induction hypothesis
+------------------------------------------------------------------------
+-- (R1): u has no successor inside us.
 
-  -- It ranges over Ust P, not St P: a state outside Ust P cannot contain the
-  -- input and is disposed of by (S1).  ustClosed makes this work: the step
-  -- lemma offers ALL state-successors of u, and each lies in Ust P, where the
-  -- hypothesis applies.
+r1 : List Val -> Val -> Bool
+r1 us u = null (succs us u)
 
-  Refuted : List Val -> Set
-  Refuted us =
-    (u : Val) -> u ∈ Ust P -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi P u)
+-- A state to which (R1) applies.  stepLemma gives the successors of u
+-- inside St; one inside us would be in succs us u, which (R1) says is
+-- empty.  So every disjunct of beta is refuted by the hypothesis, (D1) puts
+-- the refutation under ○, and (Lin) brings the negation out.
 
-  ------------------------------------------------------------------------
-  -- (R1): u has no successor inside us.
+extractR1 : (us : List Val) (u : Val)
+         -> u ∈ Ust -> Refuted us -> r1 us u ≡ true
+         -> ⊢ ¬ (chi u)
+extractR1 us u mu ih e1 =
+  refute (stepLemma u (stLen (ustSt mu)))
+         (liftP (mp linFwd (○Gen (¬Beta (succs St u) each))))
+  where
+    outside : (w : Val) -> w ∈ succs St u -> w ∈ᵛ us ≡ false
+    outside w m = refuteTrue (w ∈ᵛ us) λ eb ->
+      null-mem (succs us u) e1
+       (succsIn us u (∈ᵛ-sound w us eb)
+                (snd (succsMem St u m)))
 
-  r1 : List Val -> Val -> Bool
-  r1 us u = null (succs P us u)
+    each : (w : Val) -> w ∈ succs St u -> ⊢ ¬ (chi w)
+    each w m = ih w (ustClosed mu (fst (succsMem St u m))
+                               (snd (succsMem St u m)))
+                 (outside w m)
 
-  -- A state to which (R1) applies.  stepLemma gives the successors of u
-  -- inside St P; one inside us would be in succs P us u, which (R1) says is
-  -- empty.  So every disjunct of beta is refuted by the hypothesis, (D1) puts
-  -- the refutation under ○, and (Lin) brings the negation out.
+------------------------------------------------------------------------
+-- The base of the induction: outside Ust there is nothing to refute.
 
-  extractR1 : (us : List Val) (u : Val)
-           -> u ∈ Ust P -> Refuted us -> r1 us u ≡ true
-           -> ⊢ ¬ (chi P u)
-  extractR1 us u mu ih e1 =
-    refute (stepLemma P u (stLen P (ustSt P mu)))
-           (liftP (mp linFwd (○Gen (¬Beta (succs P (St P) u) each))))
-    where
-      outside : (w : Val) -> w ∈ succs P (St P) u -> w ∈ᵛ us ≡ false
-      outside w m = refuteTrue (w ∈ᵛ us) λ eb ->
-        null-mem (succs P us u) e1
-         (succsIn P us u (∈ᵛ-sound w us eb)
-                  (snd (succsMem P (St P) u m)))
-
-      each : (w : Val) -> w ∈ succs P (St P) u -> ⊢ ¬ (chi P w)
-      each w m = ih w (ustClosed P mu (fst (succsMem P (St P) u m))
-                                 (snd (succsMem P (St P) u m)))
-                   (outside w m)
-
-  ------------------------------------------------------------------------
-  -- The base of the induction: outside Ust P there is nothing to refute.
-
-  ustRefuted : Refuted (Ust P)
-  ustRefuted u mu e = emptyElim (∈ᵛ-false u (Ust P) e mu)
+ustRefuted : Refuted Ust
+ustRefuted u mu e = emptyElim (∈ᵛ-false u Ust e mu)

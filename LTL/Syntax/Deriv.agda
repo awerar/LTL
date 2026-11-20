@@ -6,7 +6,7 @@
 --
 -- Propositional reasoning uses (P1)-(P3), so everything in LTL.Rules is
 -- derived without (PC).  (PC) is used only by LTL.Procedures.CompletePC and
--- LTL.SCC.SccExtract, where it keeps the certificates short.
+-- LTL.Procedures.Decide, where it keeps the certificates short.
 
 module LTL.Syntax.Deriv where
 
