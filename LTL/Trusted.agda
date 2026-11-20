@@ -70,11 +70,14 @@ module LTL.Trusted where
   valid : Formula -> Set
   valid f = (lasso : Lasso) -> (interpret lasso) , 0 ⊨ f
 
-  data LassoCounterModel (f : Formula) : Set where
-    counter : (lasso : Lasso) -> (interpret lasso) , 0 ⊨ (¬ f) -> LassoCounterModel f
+  record LassoCountermodel (f : Formula) : Set where
+    constructor counter
+    field
+      lasso : Lasso
+      falseAtStart : (interpret lasso) , 0 ⊨ (¬ f)
 
   record DecisionProcedure : Set where
     field
       decideValid : Formula -> Bool
       validIfTrue : (f : Formula) -> decideValid f ≡ true -> valid f
-      counterIfFalse : (f : Formula) -> decideValid f ≡ false -> LassoCounterModel f
+      counterIfFalse : (f : Formula) -> decideValid f ≡ false -> LassoCountermodel f

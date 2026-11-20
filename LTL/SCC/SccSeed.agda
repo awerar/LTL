@@ -19,7 +19,6 @@ open import LTL.States.State P
 open import LTL.States.Step P
 open import LTL.States.Closure P
 open import LTL.Countermodel.Walk P
-open import LTL.SCC.SccLasso P
 
 ------------------------------------------------------------------------
 -- A seed and a trail inside StCand from it.

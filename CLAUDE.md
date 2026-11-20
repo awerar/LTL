@@ -7,7 +7,7 @@ derivation or a certified finite lasso countermodel.
 ## Ground rules
 
 - `LTL/Trusted.agda` is the user's hand-checked specification (LTL
-  semantics, `valid`, `LassoCounterModel`, `DecisionProcedure`). **Never edit
+  semantics, `valid`, `LassoCountermodel`, `DecisionProcedure`). **Never edit
   it**; if it needs a change, tell the user. `Formula` is its datatype
   (re-exported by `LTL/Syntax/Formula.agda` with this development's fixities), and
   `Bool`/`List` are Agda's builtins, so its `Instant`/`Period` use our types.
@@ -59,7 +59,7 @@ derivation or a certified finite lasso countermodel.
   opens `LTL.States.Common` and each P-module it uses at P
   (`open import LTL.States.State P`), privately, and re-exports nothing:
   applying a module copies its names, so two re-exported copies of `valOf`
-  would be ambiguous. The exceptions are `SccLasso`, which re-exports its
+  would be ambiguous. The exceptions are `Walk`, which re-exports its
   application of `Graph` at `step`, and `Eval`, which re-exports `OrbitEval`
   at `readVal`. Code that does not mention P goes in an unparameterised
   module (`Common`, `Taut`, `VecBar`, `Reach`), or an importer opening the
@@ -140,7 +140,9 @@ a module name.
 6. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Trusted`'s `Position`/`step`); `OrbitEval` (Boolean `evalAt` at positions,
-   □ over the forward orbit, and its soundness; any state type, read by `read`); `Walk`;
+   □ over the forward orbit, and its soundness; any state type, read by `read`); `Walk`
+   (`Graph` at `step`, so walks are `Trail Ust v zs w`; `Fulfil`,
+   `trailPersist`);
    `Lasso` (the record of Prop 5.3: a `Cycle` whose head `loop` is a valid
    position, as in `Trusted`'s `Lasso`, fairness at its end `b`, and a valid
    start);
@@ -148,10 +150,10 @@ a module name.
    `Orbit` and `OrbitEval` are P-modules.
 7. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes` and by the
-   edge test `G`, imports only the generic layer; the P-module `SccLasso`
+   edge test `G`, imports only the generic layer; the P-module `Walk`
    applies it at `G = step` and re-exports it, so inside the P-modules its
    names read `Trail ws`, `Cert fs ws`, and outside they take P first,
-   `Cert (¬ Q) fs ws`); `SccLasso`,
+   `Cert (¬ Q) fs ws`); `SccLasso` (`sccLasso`: a `FairLoop` is a `Lasso`),
    `SccExtract` (`ustCertRefuted`: a certificate refutes every state of
    `Ust`), `SccSeed` (`ustSeedTo`: every state of `Ust` is reached from one
    containing `P`). In `Procedures/`: `CompletePC` (P-module;
@@ -163,7 +165,7 @@ a module name.
    all of the above unapplied, for importers). At the root:
    `Correct` (the bridge: on a `Trusted` lasso that starts at `pos0` and loops
    back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
-   `holds-evalAt`); `⊢-valid`, `toCounterModel`, `cmUnderivable`, and
+   `holds-evalAt`); `⊢-valid`, `toCountermodel`, `cmUnderivable`, and
    `decideCorrect`).
 8. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,

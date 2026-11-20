@@ -4,7 +4,7 @@
 -- is fulfilled at a position of its forward orbit.
 --
 -- A valid position (s , rest) carries a walk from s to b, the cycle's end,
--- wherever on the lasso s sits.  walkPersist along that walk gives either a
+-- wherever on the lasso s sits.  trailPersist along that walk gives either a
 -- fulfilling state among s ∷ rest, or the eventuality still pending at b,
 -- where fairness finishes it.  So stem and cycle need no separate cases.
 --
@@ -39,7 +39,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
                                   valOf (posState q) A ≡ false
   globalFulfil (vpos s rest ms wk) A mA pend =
     sumElim onStem onCycle
-            (walkPersist Ust A (□Args-mem (sub P) mA) wk pend)
+            (trailPersist Ust A (□Args-mem (sub P) mA) wk pend)
     where
       place : (q : Pos) -> q ∈ orbit loop (s , rest) -> {z : Val}
            -> posState q ≡ z -> valOf z A ≡ false

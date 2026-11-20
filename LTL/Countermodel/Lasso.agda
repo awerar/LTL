@@ -7,7 +7,7 @@
 -- b, the last state of the cycle.  Both the start (v0 , rest) and the
 -- position loop the lasso loops back to are valid, and b steps to loop: this
 -- is the whole invariant.  The successor preserves validity, and the step
--- proof falls out of consuming the Walk constructor: no arithmetic.
+-- proof falls out of consuming the Trail constructor: no arithmetic.
 --
 -- Every walk from a valid position passes through b, so fairness is only
 -- asked of b: every eventuality pending there is fulfilled on the cycle.
@@ -29,7 +29,7 @@ open import LTL.Countermodel.Walk P
 
 data ValidPos (b : Val) : Pos -> Set where
   vpos : (s : Val) (rest : List Val) -> s ∈ Ust
-      -> Walk Ust s rest b -> ValidPos b (s , rest)
+      -> Trail Ust s rest b -> ValidPos b (s , rest)
 
 posIn : (b : Val) {pos : Pos}
      -> ValidPos b pos -> posState pos ∈ Ust
@@ -60,7 +60,7 @@ Fair cy =
 endOnCycle : (cy : Cycle)
           -> Cycle.b cy ∈ stretchStates (Cycle.loop cy)
 endOnCycle (mkCycle b (s , rest) (vpos s rest ms wk) stb) =
-  walkEnd Ust wk
+  trailEnd Ust wk
 
 ------------------------------------------------------------------------
 -- Validity is preserved along the lasso, hence throughout an orbit
@@ -72,8 +72,8 @@ module _ (cy : Cycle) where
   posStep : {pos : Pos} -> ValidPos b pos
          -> ValidPos b (nextPos loop pos) ×
             step (posState pos) (posState (nextPos loop pos)) ≡ true
-  posStep (vpos s []        ms wnil)             = loopValid , closingStep
-  posStep (vpos s (w ∷ ws) ms (wcons mw st wk)) = vpos w ws mw wk , st
+  posStep (vpos s []        ms tNil)             = loopValid , closingStep
+  posStep (vpos s (w ∷ ws) ms (tCons mw st wk)) = vpos w ws mw wk , st
 
   posIterValid : (t : Nat) (pos : Pos) -> ValidPos b pos
               -> ValidPos b (posIter loop t pos)

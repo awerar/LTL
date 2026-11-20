@@ -11,7 +11,7 @@
 -- formula).  The □ case uses the finite forward orbit: every iterate of a
 -- position is in its orbit, and every member of the orbit is an iterate.
 --
--- ⊢-valid uses the bridge on an arbitrary Trusted lasso, toCounterModel on the
+-- ⊢-valid uses the bridge on an arbitrary Trusted lasso, toCountermodel on the
 -- lasso a countermodel reads off; together they give cmUnderivable.  Formula
 -- is LTL.Trusted's own datatype, so the statement is about the formulas the
 -- procedure runs on.
@@ -146,8 +146,8 @@ module _ {S : Set} (read : S -> T.Instant) where
 -- for ever.  Q is false at stage 0 (falseAtStart), so it is not true at
 -- time 0.
 
-toCounterModel : (Q : Formula) -> LassoCountermodel Q -> T.LassoCounterModel Q
-toCounterModel Q c = T.counter L qFalse
+toCountermodel : (Q : Formula) -> LassoCountermodel Q -> T.LassoCountermodel Q
+toCountermodel Q c = T.counter L qFalse
   where
     open LassoCountermodel c
     open Lasso lasso using (loop; rest)
@@ -169,13 +169,13 @@ toCounterModel Q c = T.counter L qFalse
 -- in particular on the countermodel's own lasso.
 
 cmUnderivable : (Q : Formula) -> LassoCountermodel Q -> ⊢ Q -> Empty
-cmUnderivable Q c d with toCounterModel Q c
+cmUnderivable Q c d with toCountermodel Q c
 ... | T.counter L notQ = notQ (⊢-valid d L)
 
 ------------------------------------------------------------------------
 -- decide as a Trusted DecisionProcedure.  The test is which branch it took:
 -- a derivation is valid by ⊢-valid, and a countermodel translates by
--- toCounterModel.
+-- toCountermodel.
 
 decideCorrect : T.DecisionProcedure
 decideCorrect = record
@@ -190,7 +190,7 @@ decideCorrect = record
     ... | inr c = emptyElim (true≢false (sym e))
 
     counterIfFalse : (Q : Formula) -> isProof (decide Q) ≡ false
-                  -> T.LassoCounterModel Q
+                  -> T.LassoCountermodel Q
     counterIfFalse Q e with decide Q
     ... | inl d = emptyElim (true≢false e)
-    ... | inr c = toCounterModel Q c
+    ... | inr c = toCountermodel Q c

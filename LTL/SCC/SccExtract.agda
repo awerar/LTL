@@ -30,6 +30,7 @@ open import LTL.States.Proj P
 open import LTL.States.StepLemma P
 open import LTL.States.Closure P
 open import LTL.States.Extract P
+open import LTL.Countermodel.Walk P
 open import LTL.SCC.SccLasso P
 
 ------------------------------------------------------------------------

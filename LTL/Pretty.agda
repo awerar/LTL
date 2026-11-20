@@ -188,12 +188,17 @@ data Justification : Set where
   byMP  : Nat -> Nat -> Justification
   byGen : Nat -> Justification
 
-data ProofLine : Set where
-  proofLine : Formula -> Justification -> ProofLine
+record ProofLine : Set where
+  constructor proofLine
+  field
+    formula : Formula
+    justif  : Justification
 
--- the number of lines so far, and the lines, newest first
-data ProofState : Set where
-  proofState : Nat -> List ProofLine -> ProofState
+record ProofState : Set where
+  constructor proofState
+  field
+    count : Nat              -- the number of lines so far
+    lines : List ProofLine   -- the lines, newest first
 
 data Found : Set where
   notFound : Found
@@ -269,9 +274,13 @@ justifStr (byAx s)   = s
 justifStr (byMP i j) = "MP " <> showNat i <> ", " <> showNat j
 justifStr (byGen i)  = "Gen " <> showNat i
 
--- number, justification and formula of each line, oldest first
-data Row : Set where
-  row : String -> String -> String -> Row
+-- one printed line of a proof; rowsRev lists them oldest first
+record Row : Set where
+  constructor row
+  field
+    number  : String
+    justif  : String
+    formula : String
 
 rowsRev : Nat -> List ProofLine -> List Row -> List Row
 rowsRev n       []                   acc = acc

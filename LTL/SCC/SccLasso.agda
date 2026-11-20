@@ -4,7 +4,8 @@
 --
 -- LTL.SCC.Graph knows nothing about formulas; this module reads its positive
 -- answer, a FairLoop (a stem, then a Circuit: a non-empty cycle with a witness
--- on it for every fairness predicate), as a Lasso.
+-- on it for every fairness predicate), as a Lasso.  Its application at step P
+-- is made in LTL.Countermodel.Walk, whose Trail is the lasso's path type.
 --
 -- The fairness predicate for the eventuality □ A is
 --
@@ -29,23 +30,6 @@ open import LTL.States.Step P
 open import LTL.States.Closure P
 open import LTL.Countermodel.Walk P
 open import LTL.Countermodel.Lasso P
-import LTL.SCC.Graph as Graph
-
--- The graph layer at the state graph of P.  This is the one application of
--- LTL.SCC.Graph, and SccLasso re-exports it: a P-module gets Trail us v zs w,
--- Cert fs ws, ... from here, and an importer outside, opening SccLasso
--- unapplied, gets Trail P us v zs w, Cert P fs ws, ...
-
-open Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step public
-
-------------------------------------------------------------------------
--- Trails are walks: Trail us has the same three fields as Walk us.
-
-trailWalk : (us : List Val) {v : Val} {zs : List Val} {w : Val}
-         -> Trail us v zs w -> Walk us v zs w
-trailWalk us tNil          = wnil
-trailWalk us (tCons m e t) = wcons m e (trailWalk us t)
-
 ------------------------------------------------------------------------
 -- The fairness predicates, one per eventuality.  Their FALSITY at z is
 -- exactly what the refutation consumes (□ A pending, A holding); here only
@@ -77,16 +61,16 @@ evWitness A z ez pd =
           (∨ᵇ-true (valOf z (□ A)) (¬ᵇ valOf z A) ez)
 
 ------------------------------------------------------------------------
--- Persistence to a state VISITED, not to the endpoint: walkPersist with the
+-- Persistence to a state VISITED, not to the endpoint: trailPersist with the
 -- target carried along and the walk cut short when it is reached.
 
 persistTo : (us : List Val) (A : Formula) -> □ A ∈ sub P
-         -> {v : Val} {ws : List Val} {x : Val} -> Walk us v ws x
+         -> {v : Val} {ws : List Val} {x : Val} -> Trail us v ws x
          -> valOf v (□ A) ≡ false
          -> {z : Val} -> z ∈ ws
          -> Fulfil A v ws ⊎ valOf z (□ A) ≡ false
-persistTo us A mb wnil e ()
-persistTo us A mb (wcons {v} {w} {ws} {x} mw st wk) e {z} mz =
+persistTo us A mb tNil e ()
+persistTo us A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
   onA z mz
   where
     onA : (y : Val) -> y ∈ w ∷ ws
@@ -109,19 +93,13 @@ sccLasso v0 mv0 (fairLoop r stem (circuit [] tc () wit))
 sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
                           (circuit cy@(q ∷ qs) (tCons mq e tqs) nn wit)) =
   mkLasso cyc fair (st ++ cy)
-          (vpos v0 (st ++ cy) mv0 (walkApp Ust wst wcy))
+          (vpos v0 (st ++ cy) mv0 (trailApp Ust ts tcy))
   where
-    wst : Walk Ust v0 st r
-    wst = trailWalk Ust ts
-
-    wqs : Walk Ust q qs r
-    wqs = trailWalk Ust tqs
-
-    wcy : Walk Ust r cy r
-    wcy = wcons mq e wqs
+    tcy : Trail Ust r cy r
+    tcy = tCons mq e tqs
 
     cyc : Cycle
-    cyc = mkCycle r (q , qs) (vpos q qs mq wqs) e
+    cyc = mkCycle r (q , qs) (vpos q qs mq tqs) e
 
     -- Pending at the base point: go out to the witness the graph layer
     -- chose for evPred A.
@@ -133,4 +111,4 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
         onW (z , mz , ez) =
           sumElim (λ f -> f)
                   (λ pz -> ful z (there mz) (evWitness A z ez pz))
-                  (persistTo Ust A (□Args-mem (sub P) mA) wcy pr mz)
+                  (persistTo Ust A (□Args-mem (sub P) mA) tcy pr mz)

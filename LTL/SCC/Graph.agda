@@ -16,7 +16,7 @@
 -- sound, reflexive equality test, and by the edge test G, which no definition
 -- changes; it imports only the generic set layer.  The graph is a vertex list
 -- ws with the edges of G, the fairness sets are fs : List Pred.
--- LTL.SCC.SccLasso instantiates it at Val with G = step P, once per formula;
+-- LTL.Countermodel.Walk instantiates it at Val with G = step P, once per formula;
 -- LTL.Tests.GraphExamples at Nat, for the computational checks.
 --
 -- Design choices:
@@ -74,8 +74,8 @@ hasOut ws x = ¬ᵇ null (outs ws x)
 
 ------------------------------------------------------------------------
 -- Trails: finite paths inside ws, carrying the vertices visited and indexed by
--- the endpoint (LTL.Countermodel.Walk with step P replaced by G).  A cycle is a
--- trail from r to r with a non-empty list.
+-- the endpoint.  A cycle is a trail from r to r with a non-empty list.  At
+-- G = step P they are the walks of LTL.Countermodel.Walk.
 
 data Trail (ws : List Node) : Node -> List Node -> Node -> Set where
   tNil  : {v : Node} -> Trail ws v [] v
@@ -444,8 +444,12 @@ termClosed ws r et z y mz my e =
 
 -- A vertex whose component is terminal, found by the search above.
 
-data Terminal (ws : List Node) : Set where
-  terminalAt : (r : Node) -> r ∈ ws -> isTerminal ws r ≡ true -> Terminal ws
+record Terminal (ws : List Node) : Set where
+  constructor terminalAt
+  field
+    r        : Node
+    rIn      : r ∈ ws
+    terminal : isTerminal ws r ≡ true
 
 module _ (ws : List Node) where
 
@@ -841,8 +845,12 @@ module _ (ws : List Node) where
 -- trail every vertex visited has one provided the endpoint has, and for a
 -- closed trail the endpoint is the start, whose successor is the first step.
 
-data HasSucc (ws : List Node) (x : Node) : Set where
-  hasSucc : (y : Node) -> y ∈ ws -> G x y ≡ true -> HasSucc ws x
+record HasSucc (ws : List Node) (x : Node) : Set where
+  constructor hasSucc
+  field
+    next   : Node
+    nextIn : next ∈ ws
+    edge   : G x next ≡ true
 
 module _ (ws : List Node) where
 
