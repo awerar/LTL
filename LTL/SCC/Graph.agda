@@ -52,16 +52,7 @@ open import LTL.Lib.Bar
 open import LTL.Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl
 
 ------------------------------------------------------------------------
--- Glue
-
-appNotNull : {A : Set} (xs ys : List A) -> null xs ≡ false
-          -> null (xs ++ ys) ≡ false
-appNotNull []       ys ()
-appNotNull (x ∷ xs) ys e = refl
-
-null-notMem : (ws : List Node) (z : Node) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
-null-notMem []       z e = refl
-null-notMem (w ∷ ws) z ()
+-- Out-neighbours
 
 -- The out-neighbours of x inside ws.  For G = step P this is succs P ws x on
 -- the nose.

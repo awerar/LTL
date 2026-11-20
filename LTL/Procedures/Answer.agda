@@ -44,7 +44,7 @@ countermodelFrom (inr c) e = c
 
 -- The derivation, the same way, from an answer of decide or sccProof.
 proofFrom : {A : Set} {Q : Formula}
-         -> (s : A ⊎ ⊢ Q) -> isInl s ≡ false -> ⊢ Q
+         -> (s : A ⊎ ⊢ Q) -> isProof s ≡ false -> ⊢ Q
 proofFrom (inl a) ()
 proofFrom (inr d) e = d
 

@@ -113,13 +113,9 @@ module _ {S : Set} (read : S -> T.Instant) where
 
     holds-evalAt (□ A) n h =
       E.eval□-intro loop A (stage n)
-        (λ q m -> fromIter q (O.∈orbit-iter loop (stage n) q m))
-      where
-        fromIter : (q : O.Pos) -> Σ[ t ∈ Nat ] O.posIter loop t (stage n) ≡ q
-                -> EvalsTrue A q
-        fromIter q (t , et) =
-          subst (EvalsTrue A) (trans (O.posIter-+ʳ loop t n pos0) et)
-                (holds-evalAt A (t + n) (h t))
+        (O.orbit-all loop (EvalsTrue A) (stage n)
+           (λ t -> subst (EvalsTrue A) (O.posIter-+ʳ loop t n pos0)
+                         (holds-evalAt A (t + n) (h t))))
 
 ------------------------------------------------------------------------
 -- Soundness: a derivable formula is valid.  A Trusted lasso l is a lasso of

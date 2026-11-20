@@ -126,19 +126,21 @@ badSucc v w lenv lenw e = mp dne (notSucc v w lenv lenw e)
 -- Dropping the non-successors under the antecedent chi v
 
 filter⇒ : (v : Val) (Q : Formula) (ws : List Val)
-       -> AllLen (length (sub P)) ws
+       -> (∀[ w ∈ ws ] length w ≡ length (sub P))
        -> ((w : Val) -> length w ≡ length (sub P) -> step v w ≡ false
              -> ⊢ Q ⇒ ¬ ○ (chi w))
        -> ⊢ Q ⇒ ⋁ (map ○_ (map chi ws))
                 ⇒ ⋁ (map ○_ (map chi
                          (filter (step v) ws)))
-filter⇒ v Q []       alNil           bad = liftP ⇒Refl
-filter⇒ v Q (w ∷ ws) (alCons lenw al) bad with step v w in e
+filter⇒ v Q []       len bad = liftP ⇒Refl
+filter⇒ v Q (w ∷ ws) len bad with step v w in e
 -- kept: compose under the same antecedent ¬ ○ (chi w)
-... | true  = mpU (liftP p2) (⇒Trans (filter⇒ v Q ws al bad) p1)
+... | true  =
+  mpU (liftP p2) (⇒Trans (filter⇒ v Q ws (λ u m -> len u (there m)) bad) p1)
 -- dropped: ¬ ○ (chi w) is available, so that antecedent can be discharged
 ... | false =
-  ⇒TransU (⇒Trans (bad w lenw e) (⇒Swap ⇒Refl)) (filter⇒ v Q ws al bad)
+  ⇒TransU (⇒Trans (bad w (len w here) e) (⇒Swap ⇒Refl))
+          (filter⇒ v Q ws (λ u m -> len u (there m)) bad)
 
 ------------------------------------------------------------------------
 -- The step lemma
@@ -147,12 +149,9 @@ stepLemma : (v : Val)
          -> length v ≡ length (sub P)
          -> ⊢ (chi v) ⇒ ○ (beta (succs St v))
 stepLemma v lenv =
-  ⇒Trans (mpU (filter⇒ v (chi v) St stLen bad) start)
+  ⇒Trans (mpU (filter⇒ v (chi v) St (λ w m -> stLen m) bad) start)
            (○⋁L2 (map chi (succs St v)))
   where
-    stLen : AllLen (length (sub P)) St
-    stLen = allLen-filter isState (allVecs-allLen (length (sub P)))
-
     bad : (w : Val) -> length w ≡ length (sub P) -> step v w ≡ false
        -> ⊢ (chi v) ⇒ ¬ ○ (chi w)
     bad w lenw e = badSucc v w lenv lenw e

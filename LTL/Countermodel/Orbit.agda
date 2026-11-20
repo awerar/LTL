@@ -155,6 +155,14 @@ module _ (loop : Pos) where
   ∈orbit-iter pos q m =
     ∈orbitN-iter (length (stretch pos) + length loopStretch) pos q m
 
+  -- So what holds at every iterate holds on the whole orbit.
+
+  orbit-all : (R : Pos -> Set) (pos : Pos)
+           -> ((t : Nat) -> R (posIter t pos))
+           -> ∀[ q ∈ orbit pos ] R q
+  orbit-all R pos h q m with ∈orbit-iter pos q m
+  ... | t , et = subst R et (h t)
+
   ------------------------------------------------------------------------
   -- The orbit as a plain concatenation: the rest of the stretch, then one
   -- turn of the cycle.  Everything below is read off this equation.
@@ -220,5 +228,5 @@ module _ (loop : Pos) where
 
   -- so the orbit of a successor is contained in the orbit
   nextOrbit⊆orbit : (pos : Pos) -> orbit (nextPos pos) ⊆ orbit pos
-  nextOrbit⊆orbit pos q m with ∈orbit-iter (nextPos pos) q m
-  ... | t , et = subst (λ r -> r ∈ orbit pos) et (iter∈orbit (suc t) pos)
+  nextOrbit⊆orbit pos =
+    orbit-all (λ r -> r ∈ orbit pos) (nextPos pos) (λ t -> iter∈orbit (suc t) pos)

@@ -21,16 +21,6 @@ open import LTL.States.StepLemma P
 open import LTL.States.Closure P
 
 ------------------------------------------------------------------------
--- Every state has the length chi expects
-
-stAllLen : AllLen (length (sub P)) St
-stAllLen = allLen-filter isState (allVecs-allLen (length (sub P)))
-
-stLen : {v : Val} -> v ∈ St
-     -> length v ≡ length (sub P)
-stLen m = allLen-mem stAllLen m
-
-------------------------------------------------------------------------
 -- beta_U as a disjunction indexed by states: introduction at one state,
 -- elimination over all of them, and the refutation of a beta all of whose
 -- disjuncts are refuted (for the empty list, beta [] is ⊥).

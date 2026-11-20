@@ -17,36 +17,13 @@
 -- orbit; (Exp) needs the orbit to contain the position, its successor and the
 -- successor's orbit (iter∈orbit).  (Ind) is the one with content: A propagates
 -- along posIter t pos by induction on t, and every member of the orbit is
--- such a posIter (∈orbit-iter).
+-- such a posIter (orbit-all).
 
 open import LTL.Syntax.Deriv
 
 module LTL.Countermodel.OrbitEval (S : Set) (read : S -> Nat -> Bool) where
 
 open import LTL.Countermodel.Orbit S
-
-------------------------------------------------------------------------
--- The Boolean tautologies behind (P1), (P2), (P3) and the identity
-
-tautP1 : (a b : Bool) -> a ⇒ᵇ b ⇒ᵇ a ≡ true
-tautP1 true  true  = refl
-tautP1 true  false = refl
-tautP1 false b     = refl
-
-tautP2 : (a b c : Bool)
-      -> (a ⇒ᵇ b ⇒ᵇ c) ⇒ᵇ (a ⇒ᵇ b) ⇒ᵇ a ⇒ᵇ c ≡ true
-tautP2 true  true  true  = refl
-tautP2 true  true  false = refl
-tautP2 true  false true  = refl
-tautP2 true  false false = refl
-tautP2 false b     c     = refl
-
-tautP3 : (a b : Bool)
-      -> (¬ᵇ b ⇒ᵇ ¬ᵇ a) ⇒ᵇ a ⇒ᵇ b ≡ true
-tautP3 true  true  = refl
-tautP3 true  false = refl
-tautP3 false true  = refl
-tautP3 false false = refl
 
 module _ (loop : Pos) where
 
@@ -87,14 +64,7 @@ module _ (loop : Pos) where
   ∧True : (X Y : Formula) (pos : Pos)
        -> evalAt X pos ≡ true -> evalAt Y pos ≡ true
        -> evalAt (X ∧ Y) pos ≡ true
-  ∧True X Y pos ex ey =
-    aux (evalAt X pos) (evalAt Y pos) ex ey
-    where
-      aux : (x y : Bool) -> x ≡ true -> y ≡ true
-         -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
-      aux true  true  ex' ey' = refl
-      aux true  false ex' ()
-      aux false y     ()  ey'
+  ∧True X Y pos = ¬ᵇ⇒ᵇ¬ᵇ-intro (evalAt X pos) (evalAt Y pos)
 
   ------------------------------------------------------------------------
   -- (K □)
@@ -152,8 +122,7 @@ module _ (loop : Pos) where
           -> evalAt A pos ≡ true
           -> evalAt (□ A) pos ≡ true
       body e1 e2 =
-        all-intro (evalAt A) (orbit loop pos)
-                  (λ {q} m -> fromIter q (∈orbit-iter loop pos q m))
+        eval□-intro A pos (orbit-all loop (λ r -> evalAt A r ≡ true) pos along)
         where
           along : (t : Nat) -> evalAt A (posIter loop t pos) ≡ true
           along zero    = e2
@@ -168,11 +137,6 @@ module _ (loop : Pos) where
                                     (iter∈orbit loop t pos) e1)
                             (along t))
 
-          fromIter : (q : Pos) -> (Σ[ t ∈ Nat ] posIter loop t pos ≡ q)
-                  -> evalAt A q ≡ true
-          fromIter q (t , et) =
-            subst (λ r -> evalAt A r ≡ true) et (along t)
-
   ------------------------------------------------------------------------
   -- Soundness
 
@@ -180,13 +144,13 @@ module _ (loop : Pos) where
        -> (pos : Pos) -> evalAt C pos ≡ true
 
   sound (p1 {A} {B}) pos =
-    tautP1 (evalAt A pos) (evalAt B pos)
+    ⇒ᵇ-P1 (evalAt A pos) (evalAt B pos)
 
   sound (p2 {A} {B} {C}) pos =
-    tautP2 (evalAt A pos) (evalAt B pos) (evalAt C pos)
+    ⇒ᵇ-P2 (evalAt A pos) (evalAt B pos) (evalAt C pos)
 
   sound (p3 {A} {B}) pos =
-    tautP3 (evalAt A pos) (evalAt B pos)
+    ⇒ᵇ-P3 (evalAt A pos) (evalAt B pos)
 
   sound (k□ {A} {B}) pos =
     ⇒ᵇ-intro (evalAt (□ (A ⇒ B)) pos)

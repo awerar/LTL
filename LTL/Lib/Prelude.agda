@@ -253,6 +253,47 @@ refuteTrue false no = refl
 ⇒ᵇ-false true  false e = refl , refl
 ⇒ᵇ-false false b     ()
 
+-- The axioms (P1)-(P3) of LTL.Syntax.Deriv are Boolean tautologies.
+
+⇒ᵇ-P1 : (a b : Bool) -> a ⇒ᵇ b ⇒ᵇ a ≡ true
+⇒ᵇ-P1 true  true  = refl
+⇒ᵇ-P1 true  false = refl
+⇒ᵇ-P1 false b     = refl
+
+⇒ᵇ-P2 : (a b c : Bool) -> (a ⇒ᵇ b ⇒ᵇ c) ⇒ᵇ (a ⇒ᵇ b) ⇒ᵇ a ⇒ᵇ c ≡ true
+⇒ᵇ-P2 true  true  true  = refl
+⇒ᵇ-P2 true  true  false = refl
+⇒ᵇ-P2 true  false true  = refl
+⇒ᵇ-P2 true  false false = refl
+⇒ᵇ-P2 false b     c     = refl
+
+⇒ᵇ-P3 : (a b : Bool) -> (¬ᵇ b ⇒ᵇ ¬ᵇ a) ⇒ᵇ a ⇒ᵇ b ≡ true
+⇒ᵇ-P3 true  true  = refl
+⇒ᵇ-P3 true  false = refl
+⇒ᵇ-P3 false true  = refl
+⇒ᵇ-P3 false false = refl
+
+-- The LTL abbreviations A ∨ B = ¬ A ⇒ B and A ∧ B = ¬ (A ⇒ ¬ B), read as
+-- Booleans: how an evaluation that is ¬ᵇ at ¬ and ⇒ᵇ at ⇒ sees them.
+
+¬ᵇ⇒ᵇ-introˡ : (a b : Bool) -> a ≡ true -> ¬ᵇ a ⇒ᵇ b ≡ true
+¬ᵇ⇒ᵇ-introˡ true  b e = refl
+¬ᵇ⇒ᵇ-introˡ false b ()
+
+¬ᵇ⇒ᵇ¬ᵇ-intro : (a b : Bool) -> a ≡ true -> b ≡ true -> ¬ᵇ (a ⇒ᵇ ¬ᵇ b) ≡ true
+¬ᵇ⇒ᵇ¬ᵇ-intro true  true  ea eb = refl
+¬ᵇ⇒ᵇ¬ᵇ-intro true  false ea ()
+¬ᵇ⇒ᵇ¬ᵇ-intro false b     () eb
+
+¬ᵇ⇒ᵇ¬ᵇ-trueˡ : (a b : Bool) -> ¬ᵇ (a ⇒ᵇ ¬ᵇ b) ≡ true -> a ≡ true
+¬ᵇ⇒ᵇ¬ᵇ-trueˡ true  b e = refl
+¬ᵇ⇒ᵇ¬ᵇ-trueˡ false b ()
+
+¬ᵇ⇒ᵇ¬ᵇ-trueʳ : (a b : Bool) -> ¬ᵇ (a ⇒ᵇ ¬ᵇ b) ≡ true -> b ≡ true
+¬ᵇ⇒ᵇ¬ᵇ-trueʳ true  true  e = refl
+¬ᵇ⇒ᵇ¬ᵇ-trueʳ true  false ()
+¬ᵇ⇒ᵇ¬ᵇ-trueʳ false b     ()
+
 -- Equivalence
 
 ⇔ᵇ-refl : (b : Bool) -> b ⇔ᵇ b ≡ true

@@ -162,6 +162,11 @@ null-false : {A : Set} (xs : List A) -> null xs ≡ false
 null-false []       ()
 null-false (y ∷ ys) e = y , here
 
+appNotNull : {A : Set} (xs ys : List A) -> null xs ≡ false
+          -> null (xs ++ ys) ≡ false
+appNotNull []       ys ()
+appNotNull (x ∷ xs) ys e = refl
+
 ------------------------------------------------------------------------
 -- map against membership
 

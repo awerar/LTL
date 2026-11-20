@@ -67,25 +67,12 @@ vecIFin (suc m) =
                    (barProd boolIFin (vecIFin m)))
 
 ------------------------------------------------------------------------
--- Members of allVecs n have length n, so the length-n predicate is a correct
--- Bar predicate for St P, and the search never touches the enumeration.
+-- A valuation of length n satisfies the Bar predicate hasLength n; with
+-- allVecs-len (LTL.Syntax.Skel) this makes it a correct Bar predicate for
+-- St P, and the search never touches the enumeration.
 
-allVecs-len : (n : Nat) {v : Val} -> v ∈ allVecs n -> hasLength n v ≡ true
-allVecs-len zero    here      = refl
-allVecs-len zero    (there ())
-allVecs-len (suc n) m =
-  sumElim (fromHalf true) (fromHalf false)
-          (memAppCase (map (λ bs -> true  ∷ bs) (allVecs n))
-                      (map (λ bs -> false ∷ bs) (allVecs n)) m)
-  where
-    fromHalf : {v : Val} (b : Bool) -> v ∈ map (λ bs -> b ∷ bs) (allVecs n)
-            -> hasLength (suc n) v ≡ true
-    fromHalf {v} b mv = fromSig (map-mem-inv (λ bs -> b ∷ bs) (allVecs n) mv)
-      where
-        fromSig : (∃[ w ∈ allVecs n ] v ≡ b ∷ w)
-               -> hasLength (suc n) v ≡ true
-        fromSig (w , mw , ew) =
-          subst (λ u -> hasLength (suc n) u ≡ true) (sym ew) (allVecs-len n mw)
+hasLength-intro : (n : Nat) (v : Val) -> length v ≡ n -> hasLength n v ≡ true
+hasLength-intro n v e = subst (λ k -> length v ≡ⁿ k ≡ true) e (≡ⁿ-refl (length v))
 
 ------------------------------------------------------------------------
 -- The guard of Barras, refined by Gonthier (Coquand and Siles, section 5).

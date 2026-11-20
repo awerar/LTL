@@ -52,6 +52,10 @@ x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
 ∈ᵛ-false : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
 ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
 
+null-notMem : (ws : List Node) (z : Node) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
+null-notMem []       z e = refl
+null-notMem (w ∷ ws) z ()
+
 ------------------------------------------------------------------------
 -- Names for the hypotheses the graph searches keep repeating.  Each is an
 -- abbreviation, definitionally equal to the Pi-type it names.

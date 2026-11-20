@@ -5,8 +5,8 @@
 -- The modules from LTL.States.State to LTL.SCC.SccSeed are parameterised by
 -- the formula P.  What they share that does not mention P lives here, so that
 -- an importer who opens them unapplied does not see a spurious P argument:
--- the refutation lemmas, projections out of litList, the disjunction over all
--- valuations, and AllLen.  It re-exports the derived rules, valuations as a set
+-- the refutation lemmas, projections out of litList, and the disjunction over
+-- all valuations.  It re-exports the derived rules, valuations as a set
 -- (LTL.States.Reach) and positions (LTL.Countermodel.Orbit at Val), so a
 -- P-module opens this module and its P-modules.
 
@@ -102,10 +102,6 @@ chiOf As v = ⋀ (litList As v)
 
 -- Lining up allVecs with splitOn
 
-appCong : {A : Set} {xs xs' ys ys' : List A}
-       -> xs ≡ xs' -> ys ≡ ys' -> xs ++ ys ≡ xs' ++ ys'
-appCong refl refl = refl
-
 chiOfTrue : (A : Formula) (As : List Formula) (V : List Val)
          -> map (chiOf (A ∷ As)) (map (λ w -> true ∷ w) V) ≡
             map (A ∧_) (map (chiOf As) V)
@@ -125,8 +121,8 @@ stepEq A As =
   trans (map-append (chiOf (A ∷ As))
                     (map (λ w -> true  ∷ w) (allVecs (length As)))
                     (map (λ w -> false ∷ w) (allVecs (length As))))
-        (appCong (chiOfTrue  A As (allVecs (length As)))
-                 (chiOfFalse A As (allVecs (length As))))
+        (cong₂ _++_ (chiOfTrue  A As (allVecs (length As)))
+                    (chiOfFalse A As (allVecs (length As))))
 
 -- The disjunction over all valuations: the first half of state completeness
 -- (LTL.States.Complete), by induction along the list, splitting on the next
@@ -138,45 +134,6 @@ allComplete []       = mp (⋁Intro (⊤ ∷ []) here) deriv⊤
 allComplete (A ∷ As) =
   subst (λ L -> ⊢ ⋁ L) (sym (stepEq A As))
         (splitD (map (chiOf As) (allVecs (length As))) (allComplete As))
-
-------------------------------------------------------------------------
--- Every vector produced by allVecs n has length n
-
-data AllLen (n : Nat) : List Val -> Set where
-  alNil  : AllLen n []
-  alCons : {v : Val} {vs : List Val}
-        -> length v ≡ n -> AllLen n vs -> AllLen n (v ∷ vs)
-
-allLen-append : {n : Nat} {xs ys : List Val}
-             -> AllLen n xs -> AllLen n ys -> AllLen n (xs ++ ys)
-allLen-append alNil          ay = ay
-allLen-append (alCons e ax)  ay = alCons e (allLen-append ax ay)
-
-allLen-cons : (b : Bool) {n : Nat} {V : List Val}
-           -> AllLen n V -> AllLen (suc n) (map (λ w -> b ∷ w) V)
-allLen-cons b alNil         = alNil
-allLen-cons b (alCons e ax) = alCons (cong suc e) (allLen-cons b ax)
-
-allVecs-allLen : (n : Nat) -> AllLen n (allVecs n)
-allVecs-allLen zero    = alCons refl alNil
-allVecs-allLen (suc n) =
-  allLen-append (allLen-cons true  (allVecs-allLen n))
-                (allLen-cons false (allVecs-allLen n))
-
-allLen-filter : {n : Nat} (p : Val -> Bool) {vs : List Val}
-             -> AllLen n vs -> AllLen n (filter p vs)
-allLen-filter p alNil                 = alNil
-allLen-filter p {v ∷ vs} (alCons e al) = aux (p v)
-  where
-    aux : (b : Bool) -> AllLen _ (filterCons b v (filter p vs))
-    aux true  = alCons e (allLen-filter p al)
-    aux false = allLen-filter p al
-
-allLen-mem : {n : Nat} {vs : List Val} -> AllLen n vs -> {v : Val}
-          -> v ∈ vs -> length v ≡ n
-allLen-mem alNil         ()
-allLen-mem (alCons e al) here      = e
-allLen-mem (alCons e al) (there m) = allLen-mem al m
 
 ------------------------------------------------------------------------
 -- AllInto for a mapped list, one derivation of  f w ⇒ C  per w.

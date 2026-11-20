@@ -18,6 +18,7 @@ open import LTL.Syntax.Formula using (Formula)
 module LTL.States.State (P : Formula) where
 
 open import LTL.States.Val
+open import LTL.Lib.Sets using (filter-sub)
 
 ------------------------------------------------------------------------
 -- The characteristic formula chi v of a valuation, and beta vs, the
@@ -72,6 +73,12 @@ isState v = allOk v (sub P) ∧ᵇ
 
 St : List Val
 St = filter isState (allVecs (length (sub P)))
+
+-- Every state has the length chi expects.
+
+stLen : {v : Val} -> v ∈ St -> length v ≡ length (sub P)
+stLen {v} m =
+  allVecs-len (length (sub P)) v (filter-sub isState (allVecs (length (sub P))) m)
 
 ------------------------------------------------------------------------
 -- Searching allCoh

@@ -152,15 +152,11 @@ module _ (cy : Cycle) where
        -> valOf (posState pos) (□ B) ≡ true
        -> valOf (posState q) B ≡ true
   □True B mb pos q vp m e =
-    fromIter (∈orbit-iter loop pos q m)
-    where
-      fromIter : (Σ[ t ∈ Nat ] posIter loop t pos ≡ q)
-              -> valOf (posState q) B ≡ true
-      fromIter (t , et) =
-        subst (λ r -> valOf (posState r) B ≡ true) et
-              (□S2 (posState (posIter loop t pos))
-                     (posIn b (posIterValid cy t pos vp))
-                     B mb (□Along B mb t pos vp e))
+    orbit-all loop (λ r -> valOf (posState r) B ≡ true) pos
+      (λ t -> □S2 (posState (posIter loop t pos))
+                  (posIn b (posIterValid cy t pos vp))
+                  B mb (□Along B mb t pos vp e))
+      q m
 
   ------------------------------------------------------------------------
   -- Hintikka's lemma

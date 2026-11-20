@@ -37,9 +37,7 @@ open import LTL.States.Step P
 
 -- Every state has the length the bar over vectors expects.
 stAllSat : AllSat (hasLength (length (sub P))) St
-stAllSat x m =
-  allVecs-len (length (sub P))
-              (filter-sub isState (allVecs (length (sub P))) m)
+stAllSat x m = hasLength-intro (length (sub P)) x (stLen m)
 
 mkV : Val -> Val
 mkV a = map (valFrom (atoms (sub P)) a) (sub P)
@@ -133,16 +131,9 @@ stStCand {v} m = filter-true isState cands inCands st
     st : isState v ≡ true
     st = filter-prop isState (allVecs (length (sub P))) m
 
-    len : length v ≡ length (sub P)
-    len = allVecs-len' (length (sub P)) v
-                       (filter-sub isState (allVecs (length (sub P))) m)
-      where
-        allVecs-len' : (n : Nat) -> ∀[ w ∈ allVecs n ] length w ≡ n
-        allVecs-len' n w mw = ≡ⁿ-sound (length w) n (allVecs-len n mw)
-
     inCands : v ∈ cands
     inCands =
-      subst (λ z -> z ∈ cands) (mkV-id v st len)
+      subst (λ z -> z ∈ cands) (mkV-id v st (stLen m))
             (memMap mkV
                     (allVecs-complete
                        (length (atoms (sub P))) (atomBits v)
@@ -340,9 +331,3 @@ ustClosed : {v w : Val}
 ustClosed mv mw st =
   closeGoClosed [] (λ z mz e -> stAllSat z (stCandSt mz)) vecBar
                 mv (stStCand mw) st
-
-ustAllSat : AllSat (hasLength (length (sub P))) Ust
-ustAllSat x m = stAllSat x (ustSt m)
-
-ustBar : IFin (hasLength (length (sub P)))
-ustBar = vecBar

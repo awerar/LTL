@@ -45,6 +45,24 @@ allVecs-complete (suc n) (false ∷ v)  e  =
           (map (λ bs -> false ∷ bs) (allVecs n))
           (memMap (λ bs -> false ∷ bs) (allVecs-complete n v (sucInj e)))
 
+-- and every member of allVecs n has length n
+
+consAll-len : {n : Nat} (b : Bool) (vs : List Val)
+           -> (∀[ w ∈ vs ] length w ≡ n)
+           -> ∀[ v ∈ map (λ bs -> b ∷ bs) vs ] length v ≡ suc n
+consAll-len b (w ∷ ws) h v here      = cong suc (h w here)
+consAll-len b (w ∷ ws) h v (there m) =
+  consAll-len b ws (λ u mu -> h u (there mu)) v m
+
+allVecs-len : (n : Nat) -> ∀[ v ∈ allVecs n ] length v ≡ n
+allVecs-len zero    v here       = refl
+allVecs-len zero    v (there ())
+allVecs-len (suc n) v m =
+  sumElim (consAll-len true  (allVecs n) (allVecs-len n) v)
+          (consAll-len false (allVecs n) (allVecs-len n) v)
+          (memAppCase (map (λ bs -> true  ∷ bs) (allVecs n))
+                      (map (λ bs -> false ∷ bs) (allVecs n)) m)
+
 ------------------------------------------------------------------------
 -- Lookup by first occurrence
 

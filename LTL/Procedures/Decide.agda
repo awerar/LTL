@@ -104,9 +104,9 @@ fairCountermodel (fairIn r mr c) =
   where open SeedTo (ustSeedTo r mr)
 
 ------------------------------------------------------------------------
--- The decision
+-- The decision: sccProof, with the fair component read as a countermodel.
 
 decide : ⊢ Q ⊎ LassoCountermodel Q
-decide with sccGraph
-... | inl fair = inr (fairCountermodel fair)
-... | inr cert = inl (provableSCC cert)
+decide with sccProof
+... | inl fair  = inr (fairCountermodel fair)
+... | inr proof = inl proof

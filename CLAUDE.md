@@ -129,7 +129,7 @@ a module name.
 4. **States and transitions (m4 §2)** (`States/`, with layer 5) — `Val` (literals,
    `⋀`/`⋁`, `litList`); `Common` (the formula-independent base of the
    P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
-   lemmas, `AllLen`, `allComplete`); P-modules `State` (`isState`, `St`,
+   lemmas, `allComplete`); P-modules `State` (`isState`, `St`, `stLen`,
    `chi`, `beta`); `Step` (`step`, `succs`, T1–T3); `Proj`;
    `Complete` (`nonState`, `stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas
    2.7–2.8). `Taut` (Boolean facts about chi/beta for (PC), stated for any

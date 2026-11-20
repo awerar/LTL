@@ -145,20 +145,20 @@ nonState v len e0 = byCoh e0
 -- Dropping the non-states
 
 ⋁Filter : (vs : List Val)
-       -> AllLen (length (sub P)) vs
+       -> (∀[ v ∈ vs ] length v ≡ length (sub P))
        -> ⊢ ⋁ (map chi vs)
             ⇒ ⋁ (map chi (filter isState vs))
-⋁Filter []       alNil          = ⇒Refl
-⋁Filter (v ∷ vs) (alCons len al) with isState v in e
-... | true  = ∨MonoR (⋁Filter vs al)
+⋁Filter []       len = ⇒Refl
+⋁Filter (v ∷ vs) len with isState v in e
+... | true  = ∨MonoR (⋁Filter vs (λ u m -> len u (there m)))
 ... | false =
-  ⇒Trans (⋁Drop (map chi vs) (nonState v len e)) (⋁Filter vs al)
+  ⇒Trans (⋁Drop (map chi vs) (nonState v (len v here) e))
+         (⋁Filter vs (λ u m -> len u (there m)))
 
 ------------------------------------------------------------------------
 -- State completeness
 
 stateComplete : ⊢ beta St
 stateComplete =
-  mp (⋁Filter (allVecs (length (sub P)))
-                 (allVecs-allLen (length (sub P))))
+  mp (⋁Filter (allVecs (length (sub P))) (allVecs-len (length (sub P))))
      (allComplete (sub P))

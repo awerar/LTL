@@ -35,30 +35,17 @@ open import LTL.States.State
   ∨ᵇ-introʳ (B ≡ᶠ A) (A ∈ᶠ Bs) (∈ᶠ-mem Bs m)
 
 ------------------------------------------------------------------------
--- The skeleton reads ∨ and ∧ as expected.  C ∨ D is ¬ C ⇒ D and C ∧ D is
--- ¬ (C ⇒ ¬ D), so these are Boolean identities, stated at the shapes the
--- list constructions produce.
-
-skel∨Inl : (x y : Bool) -> x ≡ true -> ¬ᵇ x ⇒ᵇ y ≡ true
-skel∨Inl true  y e = refl
-skel∨Inl false y ()
-
-skel∧Intro : (x y : Bool) -> x ≡ true -> y ≡ true
-          -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
-skel∧Intro true  true  e1 e2 = refl
-skel∧Intro true  false e1 ()
-skel∧Intro false y     () e2
-
-------------------------------------------------------------------------
 -- ⋁ is true as soon as one disjunct is, ⋀ as soon as all conjuncts are.  The
 -- empty ⋀ is ⊤, which is  var 0 ⇒ var 0  and true whatever the row says.
+-- The skeleton reads C ∨ D = ¬ C ⇒ D and C ∧ D = ¬ (C ⇒ ¬ D) through the
+-- Boolean lemmas ¬ᵇ⇒ᵇ-introˡ and ¬ᵇ⇒ᵇ¬ᵇ-intro of LTL.Lib.Prelude.
 
 ⋁True : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
      -> C ∈ Cs -> valFrom Ats a C ≡ true
      -> valFrom Ats a (⋁ Cs) ≡ true
 ⋁True Ats a []       ()       e
 ⋁True Ats a (D ∷ Cs) here     e =
-  skel∨Inl (valFrom Ats a D) (valFrom Ats a (⋁ Cs)) e
+  ¬ᵇ⇒ᵇ-introˡ (valFrom Ats a D) (valFrom Ats a (⋁ Cs)) e
 ⋁True Ats a (D ∷ Cs) (there m) e =
   ⇒ᵇ-const (¬ᵇ valFrom Ats a D) (valFrom Ats a (⋁ Cs))
            (⋁True Ats a Cs m e)
@@ -68,8 +55,8 @@ skel∧Intro false y     () e2
      -> valFrom Ats a (⋀ Cs) ≡ true
 ⋀True Ats a []       h = ⇒ᵇ-refl (valFrom Ats a (var zero))
 ⋀True Ats a (D ∷ Cs) h =
-  skel∧Intro (valFrom Ats a D) (valFrom Ats a (⋀ Cs))
-             (h here) (⋀True Ats a Cs (λ m -> h (there m)))
+  ¬ᵇ⇒ᵇ¬ᵇ-intro (valFrom Ats a D) (valFrom Ats a (⋀ Cs))
+                (h here) (⋀True Ats a Cs (λ m -> h (there m)))
 
 ------------------------------------------------------------------------
 -- The chi of the row the assignment itself gives is true: its literals are
@@ -291,31 +278,17 @@ C ⇐ D = D ⇒ C
 -- double negation takes 67 constructors.
 
 ------------------------------------------------------------------------
--- ∧, read out: a projection needs the two eliminations (skel∧Intro above is
--- the introduction).
-
-skel∧Fst : (x y : Bool) -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
-        -> x ≡ true
-skel∧Fst true  y e = refl
-skel∧Fst false y ()
-
-skel∧Snd : (x y : Bool) -> ¬ᵇ (x ⇒ᵇ ¬ᵇ y) ≡ true
-        -> y ≡ true
-skel∧Snd true  true  e = refl
-skel∧Snd true  false ()
-skel∧Snd false y     ()
-
--- the converse of ⋀True: a true conjunction has true conjuncts
+-- The converse of ⋀True: a true conjunction has true conjuncts.
 
 ⋀ProjTrue : (Ats : List Formula) (a : Val) (Cs : List Formula) {C : Formula}
          -> C ∈ Cs -> valFrom Ats a (⋀ Cs) ≡ true
          -> valFrom Ats a C ≡ true
 ⋀ProjTrue Ats a []       ()       e
 ⋀ProjTrue Ats a (D ∷ Cs) here     e =
-  skel∧Fst (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e
+  ¬ᵇ⇒ᵇ¬ᵇ-trueˡ (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e
 ⋀ProjTrue Ats a (D ∷ Cs) (there m) e =
   ⋀ProjTrue Ats a Cs m
-               (skel∧Snd (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e)
+               (¬ᵇ⇒ᵇ¬ᵇ-trueʳ (valFrom Ats a D) (valFrom Ats a (⋀ Cs)) e)
 
 ------------------------------------------------------------------------
 -- The literal of P itself inside chi P w.  sub P begins with P, and P ≡ᶠ P is

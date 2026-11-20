@@ -87,11 +87,8 @@ module _ (cy : Cycle) where
 
   orbitValid : (pos q : Pos) -> ValidPos b pos -> q ∈ orbit loop pos
             -> ValidPos b q
-  orbitValid pos q vp m = fromIter (∈orbit-iter loop pos q m)
-    where
-      fromIter : (Σ[ t ∈ Nat ] posIter loop t pos ≡ q) -> ValidPos b q
-      fromIter (t , et) =
-        subst (λ r -> ValidPos b r) et (posIterValid t pos vp)
+  orbitValid pos q vp m =
+    orbit-all loop (ValidPos b) pos (λ t -> posIterValid t pos vp) q m
 
 ------------------------------------------------------------------------
 -- The lasso.  rest is everything after v0 up to the first return to b: the
