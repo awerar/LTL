@@ -63,10 +63,16 @@ derivation or a certified finite lasso countermodel.
   application of `Graph` at `step`, and `Eval`, which re-exports `OrbitEval`
   at `readVal`. Code that does not mention P goes in an unparameterised
   module (`Common`, `Taut`, `VecBar`, `Reach`), or an importer opening the
-  P-module unapplied would see a spurious P argument. Outside the layer
-  (`Answer`, `Decide`, `Correct`, `Pretty`, the tests) P-modules are opened
-  unapplied, so every name takes P first (`St benAri`, `Lasso (¬ Q) v0`).
-  `Decide` re-exports all of them.
+  P-module unapplied would see a spurious P argument. `Decide` works the same
+  way one level up: its parameter is the input Q, and it opens the P-modules
+  at `¬ Q`. Everywhere else (`Answer`, `Correct`, `Pretty`, the tests) these
+  modules are opened unapplied, so every name takes its formula first
+  (`St benAri`, `Lasso (¬ Q) v0`, `decide Q`). `LTL.Procedures.Everything`
+  re-exports all of them unapplied, and those importers import it.
+- An unparameterised module that has a P-module in scope unapplied must not
+  also open one applied, since the two copies of each name clash. A
+  parameterised module opens the unparameterised ones it needs, never
+  `Everything`.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
@@ -151,9 +157,10 @@ a module name.
    containing `P`). In `Procedures/`: `CompletePC` (P-module;
    `stateCompletePC`, `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer`
    (`LassoCountermodel`, `isProof`, `countermodelFrom`, `cmLasso`,
-   `cmTrace`, `cmShape`, `derivCounts`); `Decide` (`provableSCC`, closed
-   with (PC), `sccProof`, `sccShape`, and `decide`, Thm 6.1; it re-exports
-   every P-module unapplied). At the root:
+   `cmTrace`, `cmShape`, `countermodelFrom`, `proofFrom`, `derivCounts`);
+   `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
+   `sccProof`, `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
+   all of the above unapplied, for importers). At the root:
    `Correct` (the bridge: on a `Trusted` lasso that starts at `pos0` and loops
    back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
    `holds-evalAt`); `⊢-valid`, `toCounterModel`, `cmUnderivable`, and

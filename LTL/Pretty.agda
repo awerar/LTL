@@ -27,7 +27,7 @@
 
 module LTL.Pretty where
 
-open import LTL.Procedures.Decide public
+open import LTL.Procedures.Everything public
 open import Agda.Builtin.String public using (String)
 open import Agda.Builtin.String using (primStringAppend; primShowNat; primStringToList)
 

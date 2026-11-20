@@ -131,15 +131,16 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/States/` | `Val`, `Reach`, `Common`, `State`, `Step`, `Taut`, `Proj`, `NonState`, `Complete`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
 | `LTL/Countermodel/` | `Orbit`, `OrbitEval`, `Walk`, `Lasso`, `Global`, `Eval`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccSeed` | graph certificates and their application to temporal logic, m5 |
-| `LTL/Procedures/` | `Answer`, `CompletePC`, `Decide` | the decision procedure and its answer type, m4 Thm 6.1 |
+| `LTL/Procedures/` | `Answer`, `CompletePC`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 
 The modules that work over one fixed formula P (most of `States/`,
 `Countermodel/` and `SCC/`, and `CompletePC`) take it as a module parameter,
-so P is not passed around inside them. `Decide` opens them unapplied, and so
-does any other module outside them, so there every name takes P as its
-first argument: `St P`, `Lasso (¬ Q) v0`.
+so P is not passed around inside them. `Decide` is parameterised the same way
+by the input Q, and opens them at `¬ Q`. `LTL/Procedures/Everything.agda`
+opens all of these modules without arguments for everyone else, so there
+every name takes its formula first: `St P`, `Lasso (¬ Q) v0`, `decide Q`.
 
 The textbook and external papers used during the original development are not
 included in this repository; bibliographic links are provided in the proposal.

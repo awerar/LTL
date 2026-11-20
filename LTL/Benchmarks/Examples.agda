@@ -18,7 +18,7 @@
 
 module LTL.Benchmarks.Examples where
 
-open import LTL.Procedures.Decide public
+open import LTL.Procedures.Everything public
 
 ------------------------------------------------------------------------
 -- The two variables

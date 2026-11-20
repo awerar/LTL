@@ -18,7 +18,7 @@
 
 module LTL.Correct where
 
-open import LTL.Procedures.Decide public
+open import LTL.Procedures.Everything public
 import LTL.Trusted as T
 open T using (_,_⊨_)
 import LTL.Countermodel.Orbit

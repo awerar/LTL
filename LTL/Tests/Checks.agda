@@ -10,7 +10,7 @@
 module LTL.Tests.Checks where
 
 open import LTL.Pretty    public
-open import LTL.Procedures.Decide public
+open import LTL.Procedures.Everything public
 open import LTL.Correct   public
 import LTL.Trusted as T
 

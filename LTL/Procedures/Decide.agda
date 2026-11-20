@@ -5,7 +5,7 @@
 --   decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
 --
 -- It searches Ust (¬ Q) for a fair component (sccGraph).  A certificate gives
--- a derivation (provableSCC, below).  A fair component gives a countermodel,
+-- a derivation (provableSCC).  A fair component gives a countermodel,
 -- in three steps:
 --
 --   1. ustSeedTo: the component's representative is reached from a state s
@@ -16,85 +16,64 @@
 -- The search runs on all of Ust (¬ Q), not from one vertex, because the
 -- certificate has to cover every state.
 --
--- Everything here is about the input Q, so this module is not parameterised:
--- it opens the P-modules unapplied and uses them at ¬ Q.  It re-exports all
--- of them, so an importer (LTL.Correct, LTL.Pretty, the tests) needs only
--- this module.
+-- Everything here is about one input Q, so Q is the module parameter and the
+-- P-modules are opened at P = ¬ Q.  Outside, decide Q and provableSCC Q read
+-- as usual; LTL.Procedures.Everything re-exports this module with the rest.
 
-module LTL.Procedures.Decide where
+open import LTL.Syntax.Formula using (Formula; ¬_)
 
-open import LTL.States.Common           public
-open import LTL.States.VecBar           public
-open import LTL.States.Taut             public
-open import LTL.States.State            public
-open import LTL.States.Step             public
-open import LTL.States.Proj             public
-open import LTL.States.NonState         public
-open import LTL.States.Complete         public
-open import LTL.States.StepLemma        public
-open import LTL.States.Closure          public
-open import LTL.States.Extract          public
-open import LTL.Procedures.CompletePC   public
-open import LTL.Countermodel.Walk       public
-open import LTL.Countermodel.Lasso      public
-open import LTL.Countermodel.Global     public
-open import LTL.Countermodel.Eval       public
-open import LTL.Countermodel.Hintikka   public
-open import LTL.SCC.SccLasso            public
-open import LTL.SCC.SccExtract          public
-open import LTL.SCC.SccSeed             public
-open import LTL.Procedures.Answer       public
+module LTL.Procedures.Decide (Q : Formula) where
+
+open import LTL.States.Common
+open import LTL.States.Taut using (tautChi)
+open import LTL.States.State           (¬ Q)
+open import LTL.States.Closure         (¬ Q)
+open import LTL.States.Extract         (¬ Q)
+open import LTL.Procedures.CompletePC  (¬ Q)
+open import LTL.Countermodel.Lasso     (¬ Q)
+open import LTL.Countermodel.Eval      (¬ Q)
+open import LTL.Countermodel.Hintikka  (¬ Q)
+open import LTL.SCC.SccLasso           (¬ Q)
+open import LTL.SCC.SccExtract         (¬ Q)
+open import LTL.SCC.SccSeed            (¬ Q)
+open import LTL.Procedures.Answer using (LassoCountermodel; countermodel)
 
 ------------------------------------------------------------------------
--- The derivation of Q.  A state of St (¬ Q) outside Ust (¬ Q) cannot contain
--- ¬ Q (by ustSeed), so chi_w ⇒ Q is a tautology and one pc node.  A state
--- inside is refuted by the certificate.  State completeness, over all of
--- St (¬ Q), then gives Q.
+-- The derivation of Q.  A state of St outside Ust cannot contain ¬ Q (by
+-- ustSeed), so chi_w ⇒ Q is a tautology and one pc node.  A state inside is
+-- refuted by the certificate.  State completeness, over all of St, then
+-- gives Q.
 
-provableEachSCC : (Q : Formula)
-               -> Cert (¬ Q) (evPreds (¬ Q)) (Ust (¬ Q))
-               -> (w : Val) -> w ∈ St (¬ Q) -> ⊢ (chi (¬ Q) w) ⇒ Q
-provableEachSCC Q c w m = byPosition
+provableEachSCC : Cert evPreds Ust
+               -> (w : Val) -> w ∈ St -> ⊢ (chi w) ⇒ Q
+provableEachSCC c w m = byPosition
   where
-    R : Formula
-    R = ¬ Q
+    -- w does not contain ¬ Q, so chi_w ⇒ Q is a tautology: one pc node
+    fromR : valOf w (¬ Q) ≡ false -> ⊢ (chi w) ⇒ Q
+    fromR ev = pc (tautChi Q w (stLen m) ev)
 
-    -- w does not contain R, so chi_w ⇒ Q is a tautology: one pc node
-    fromR : valOf R w R ≡ false -> ⊢ (chi R w) ⇒ Q
-    fromR ev = pc (tautChi Q w (stLen R m) ev)
-
-    byPosition : ⊢ (chi R w) ⇒ Q
-    byPosition with w ∈ᵛ Ust R in ec
+    byPosition : ⊢ (chi w) ⇒ Q
+    byPosition with w ∈ᵛ Ust in ec
     ... | false =
-      fromR (refuteTrue (valOf R w R) λ ed ->
-               ∈ᵛ-false w (Ust R) ec (ustSeed R m ed))
-    ... | true = mp ¬Elim (ustCertRefuted R c w (∈ᵛ-sound w (Ust R) ec))
+      fromR (refuteTrue (valOf w (¬ Q)) λ ed ->
+               ∈ᵛ-false w Ust ec (ustSeed m ed))
+    ... | true = mp ¬Elim (ustCertRefuted c w (∈ᵛ-sound w Ust ec))
 
-provableSCC : (Q : Formula)
-           -> Cert (¬ Q) (evPreds (¬ Q)) (Ust (¬ Q)) -> ⊢ Q
-provableSCC Q c =
-  mp (betaElimPC (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateCompletePC (¬ Q))
+provableSCC : Cert evPreds Ust -> ⊢ Q
+provableSCC c =
+  mp (betaElimPC St (provableEachSCC c)) stateCompletePC
 
 ------------------------------------------------------------------------
 -- The two branches of the search, side by side: a fair component, or a
--- derivation of Q.
+-- derivation of Q.  proofFrom (LTL.Procedures.Answer) reads the second out.
 
-sccProof : (Q : Formula)
-        -> FairIn (¬ Q) (Ust (¬ Q)) (evPreds (¬ Q)) ⊎ ⊢ Q
-sccProof Q = sumElim inl (λ c -> inr (provableSCC Q c)) (sccGraph (¬ Q))
-
--- Reading a derivation out, on the strength of the computed boolean: a refl
--- argument says the search was run and took this branch.
-
-proofFrom : {A : Set} {Q : Formula}
-         -> (s : A ⊎ ⊢ Q) -> isInl s ≡ false -> ⊢ Q
-proofFrom (inl a) ()
-proofFrom (inr d) e = d
+sccProof : FairIn Ust evPreds ⊎ ⊢ Q
+sccProof = sumElim inl (λ c -> inr (provableSCC c)) sccGraph
 
 -- The shape of the certificate: removedBlock, removedSink, then emptied.
 
-sccShape : (Q : Formula) -> List CertStep
-sccShape Q = sumElim (λ fi -> []) (certShape (¬ Q)) (sccGraph (¬ Q))
+sccShape : List CertStep
+sccShape = sumElim (λ fi -> []) certShape sccGraph
 
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.
@@ -102,38 +81,32 @@ sccShape Q = sumElim (λ fi -> []) (certShape (¬ Q)) (sccGraph (¬ Q))
 -- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
 -- Hintikka's lemma at stage 0 transfers that to the evaluation.
 
-buildCM : (Q : Formula) (v0 : Val)
-       -> Lasso (¬ Q) v0 -> valOf (¬ Q) v0 (¬ Q) ≡ true
+buildCM : (v0 : Val) -> Lasso v0 -> valOf v0 (¬ Q) ≡ true
        -> LassoCountermodel Q
-buildCM Q v0 l ev = countermodel v0 l evalFalse
+buildCM v0 l ev = countermodel v0 l evalFalse
   where
-    valQ : valOf (¬ Q) v0 Q ≡ false
+    valQ : valOf v0 Q ≡ false
     valQ =
-      ¬ᵇ-true (valOf (¬ Q) v0 Q)
-        (trans (sym (⇔ᵇ-sound (valOf (¬ Q) v0 (¬ Q))
-                              (¬ᵇ valOf (¬ Q) v0 Q)
-                                  (stateOk (¬ Q) v0 (Lasso.startIn l) (sub-self (¬ Q)))))
+      ¬ᵇ-true (valOf v0 Q)
+        (trans (sym (⇔ᵇ-sound (valOf v0 (¬ Q)) (¬ᵇ valOf v0 Q)
+                              (stateOk v0 (Lasso.startIn l) (sub-self (¬ Q)))))
                ev)
 
-    evalFalse : eval (¬ Q) v0 l Q 0 ≡ false
-    evalFalse =
-      trans (sym (hintStart (¬ Q) v0 l Q (there (sub-self Q)))) valQ
+    evalFalse : eval v0 l Q 0 ≡ false
+    evalFalse = trans (sym (hintStart v0 l Q (there (sub-self Q)))) valQ
 
 -- A fair circuit through r, reached from a state s containing ¬ Q, is a fair
 -- loop from s, and so a countermodel.
 
-fairCountermodel : (Q : Formula)
-                -> FairIn (¬ Q) (Ust (¬ Q)) (evPreds (¬ Q))
-                -> LassoCountermodel Q
-fairCountermodel Q (fairIn r mr c) =
-  buildCM Q seed (sccLasso (¬ Q) seed seedIn (fairLoop {¬ Q} r reaches c))
-          seedHolds
-  where open SeedTo (ustSeedTo (¬ Q) r mr)
+fairCountermodel : FairIn Ust evPreds -> LassoCountermodel Q
+fairCountermodel (fairIn r mr c) =
+  buildCM seed (sccLasso seed seedIn (fairLoop r reaches c)) seedHolds
+  where open SeedTo (ustSeedTo r mr)
 
 ------------------------------------------------------------------------
 -- The decision
 
-decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-decide Q with sccGraph (¬ Q)
-... | inl fair = inr (fairCountermodel Q fair)
-... | inr cert = inl (provableSCC Q cert)
+decide : ⊢ Q ⊎ LassoCountermodel Q
+decide with sccGraph
+... | inl fair = inr (fairCountermodel fair)
+... | inr cert = inl (provableSCC cert)

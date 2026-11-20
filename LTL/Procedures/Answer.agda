@@ -43,6 +43,12 @@ countermodelFrom : {Q : Formula} (s : ⊢ Q ⊎ LassoCountermodel Q)
 countermodelFrom (inl d) ()
 countermodelFrom (inr c) e = c
 
+-- The derivation, the same way, from an answer of decide or sccProof.
+proofFrom : {A : Set} {Q : Formula}
+         -> (s : A ⊎ ⊢ Q) -> isInl s ≡ false -> ⊢ Q
+proofFrom (inl a) ()
+proofFrom (inr d) e = d
+
 -- The lasso stores the states still to come before the cycle restarts, which
 -- is its stem followed by its cycle; so the stem has length
 -- length (cmRest Q c) - length (cmCycle Q c), and is empty exactly when the two

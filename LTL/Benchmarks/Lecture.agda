@@ -29,7 +29,7 @@
 
 module LTL.Benchmarks.Lecture where
 
-open import LTL.Procedures.Decide public
+open import LTL.Procedures.Everything public
 
 ------------------------------------------------------------------------
 -- The formula, in the box-only syntax.
