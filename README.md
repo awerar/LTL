@@ -128,10 +128,9 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes` | foundations without the standard library; inductively finite sets |
 | `LTL/Syntax/` | `Formula`, `Sub`, `Skel`, `Deriv` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
-| `LTL/States/` | `Val`, `State`, `Step`, `Taut`, `Proj`, `NonState`, `Complete`, `StepLemma`, `Reach`, `VecBar`, `Closure` | states, transitions and the finite state space, m4 §2 |
-| `LTL/Elimination/` | `Gfp`, `Elim`, `Extract` | the elimination (it places countermodels in `Uinf`) and the building blocks of extraction, m4 §3–4 |
+| `LTL/States/` | `Val`, `State`, `Step`, `Taut`, `Proj`, `NonState`, `Complete`, `StepLemma`, `Reach`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
 | `LTL/Countermodel/` | `Orbit`, `OrbitEval`, `Walk`, `Lasso`, `Global`, `Eval`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
-| `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccTrap` | graph certificates and their application to temporal logic, m5 |
+| `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccSeed` | graph certificates and their application to temporal logic, m5 |
 | `LTL/Procedures/` | `Answer`, `CompletePC`, `Decide` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |

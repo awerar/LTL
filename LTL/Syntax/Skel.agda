@@ -134,8 +134,8 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 -- The arguments of the box-subformulas.
 --
 -- □Args collects the A for which □ A occurs in the list: these are the
--- eventualities.  It lives here, below Deriv, because both the elimination and
--- LTL.Procedures.CompletePC need it.
+-- eventualities.  It lives here, below Deriv, because both the fairness
+-- predicates of LTL.SCC.SccLasso and LTL.Procedures.CompletePC need it.
 
 □Args : List Formula -> List Formula
 □Args []           = []

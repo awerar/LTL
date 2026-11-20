@@ -3,7 +3,7 @@
 -- LTL.Countermodel.Lasso -- a fair lasso from v0, and its positions as those
 -- of LTL.Countermodel.Orbit at valuations.
 --
--- A position (s , rest) is VALID when rest is a walk in Uinf P from s back to
+-- A position (s , rest) is VALID when rest is a walk in Ust P from s back to
 -- b, the last state of the cycle.  Both the start (v0 , rest) and the
 -- position loop the lasso loops back to are valid, and b steps to loop: this
 -- is the whole invariant.  The successor preserves validity, and the step
@@ -23,11 +23,11 @@ open import LTL.Countermodel.Orbit Val public
 -- Valid positions
 
 data ValidPos (P : Formula) (b : Val) : Pos -> Set where
-  vpos : (s : Val) (rest : List Val) -> s ∈ Uinf P
-      -> Walk P (Uinf P) s rest b -> ValidPos P b (s , rest)
+  vpos : (s : Val) (rest : List Val) -> s ∈ Ust P
+      -> Walk P (Ust P) s rest b -> ValidPos P b (s , rest)
 
 posIn : (P : Formula) (b : Val) {pos : Pos}
-     -> ValidPos P b pos -> posState pos ∈ Uinf P
+     -> ValidPos P b pos -> posState pos ∈ Ust P
 posIn P b (vpos s rest ms wk) = ms
 
 ------------------------------------------------------------------------
@@ -55,7 +55,7 @@ Fair P cy =
 endOnCycle : (P : Formula) (cy : Cycle P)
           -> Cycle.b cy ∈ stretchStates (Cycle.loop cy)
 endOnCycle P (mkCycle b (s , rest) (vpos s rest ms wk) stb) =
-  walkEnd P (Uinf P) wk
+  walkEnd P (Ust P) wk
 
 ------------------------------------------------------------------------
 -- Validity is preserved along the lasso, hence throughout an orbit
@@ -98,7 +98,7 @@ record Lasso (P : Formula) (v0 : Val) : Set where
 
   open Cycle cycle public
 
-  startIn : v0 ∈ Uinf P
+  startIn : v0 ∈ Ust P
   startIn = posIn P b startValid
 
 module _ (P : Formula) where

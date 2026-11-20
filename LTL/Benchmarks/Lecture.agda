@@ -51,9 +51,9 @@ R = ¬ fab
 -- behind the three F's), so 32 candidates and 17 states.  The closure is 8.
 
 lec-sizes : length (sub R) ∷ length (atoms (sub R)) ∷ length (cands R)
-             ∷ length (StCand R) ∷ length (Ust R) ∷ length (Uinf R)
+             ∷ length (StCand R) ∷ length (Ust R)
              ∷ length (□Args (sub R)) ∷ [] ≡
-               21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 8 ∷ 3 ∷ []
+               21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 3 ∷ []
 lec-sizes = refl
 
 ------------------------------------------------------------------------

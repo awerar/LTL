@@ -51,7 +51,7 @@ derivation or a certified finite lasso countermodel.
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
-  (`St`, `Ust`, `Uinf`, `r1`/`r2`, `gfpW`, `wZero`, `chi`, `beta`) stay, with a
+  (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
   `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/Lib/Nodes.agda`.
 - Comments explain the code as it is today. A module header is about 5–15
@@ -61,7 +61,7 @@ derivation or a certified finite lasso countermodel.
   checkpoints, or the lemma/theorem numbering of `m4.tex`/`m5.tex`; no history
   ("used to", "now", "before …"), which belongs in git. The labels of axioms,
   rules and conditions — (P1)–(P3), (L0)–(L7), (D1)–(D6), (S1)/(S2),
-  (T1)–(T3), (R1)/(R2), (Ind), (Lin), (Exp), (PC) — are the code's own
+  (T1)–(T3), (R1), (Ind), (Lin), (Exp), (PC) — are the code's own
   vocabulary and stay.
 - Computational `refl` checks go in `LTL/Tests/Checks.agda` (one section per module)
   or `LTL/Tests/GraphExamples.agda`, not in the proof modules.
@@ -106,13 +106,11 @@ a module name.
 5. **Finite search infrastructure** (`States/`) — `Reach` (`≡ᵛ` on valuations, the
    `Val` instance of `Nodes`, successor lists); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
-   explored state set).
-6. **Elimination (m4 §3–4)** (`Elimination/`) — `Gfp` (set W, `Path`);
-   `Elim` (R1/R2, `Uinf`; survivors are states); `Extract` (`betaElim`,
-   `Refuted`, `extractR1`: the pieces of Thm 4.1 that `SccExtract` reuses).
-   The elimination is only run in the fair branch of `decide`, to place the
-   countermodel's loop inside `Uinf` (`uinfTrap`).
-7. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
+   explored state set; its members are states, `ustState`); `Extract`
+   (`betaElim`, `Refuted`, (R1) and `extractR1`: the pieces of m4 Thm 4.1
+   that `SccExtract` reuses). m4's elimination (§3) is not formalised: the
+   SCC search replaces it, and countermodels live in `Ust`.
+6. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Trusted`'s `Position`/`step`); `OrbitEval` (Boolean `evalAt` at positions,
    □ over the forward orbit, and its soundness; any state type, read by `read`); `Walk`;
@@ -120,11 +118,11 @@ a module name.
    position, as in `Trusted`'s `Lasso`, fairness at its end `b`, and a valid
    start; `Orbit` at `Val`);
    `Global` (Lemma 5.4); `Eval` (`OrbitEval` at `Val`); `Hintikka`.
-8. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
+7. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes`, imports
    only the generic layer, instantiated at `Val` in `SccLasso`); `SccLasso`,
-   `SccExtract` (`provableSCC`, closed with (PC)), `SccTrap` (graph ↔ logic
-   translation). In `Procedures/`: `CompletePC` (`stateCompletePC`,
+   `SccExtract` (`provableSCC`, closed with (PC)), `SccSeed` (`ustSeedTo`:
+   every state of `Ust P` is reached from one containing `P`). In `Procedures/`: `CompletePC` (`stateCompletePC`,
    `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer` (`LassoCountermodel`,
    `isProof`, `countermodelFrom`, `cmLasso`, `cmTrace`, `cmShape`,
    `derivCounts`); `Decide` (`decide`, Thm 6.1). At the root:
@@ -132,12 +130,12 @@ a module name.
    back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
    `holds-evalAt`); `⊢-valid`, `toCounterModel`, `cmUnderivable`, and
    `decideCorrect`).
-9. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
+8. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (Graph's computational checks, at `Node = Nat`). In
    `Benchmarks/` (slow): `Examples` (46 formulas, Schmitt & Goubault-Larrecq
    Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`).
-10. **Readable output** (root) — `Pretty` (`prove`, `proveTree`, `proveLines`:
+9. **Readable output** (root) — `Pretty` (`prove`, `proveTree`, `proveLines`:
    decide results as numbered Hilbert proofs, trees, or lasso countermodels,
    rendered to `Agda.Builtin.String`; this is why `Base` takes `Nat` from
    `Agda.Builtin.Nat`). `tools/show-proof` runs it from the terminal via
@@ -153,6 +151,7 @@ a module name.
 ## Adding Until (expected touch points)
 
 `Trusted` (the constructor and its `⊨` clause; the user must make that change)
-→ `Formula` → `Sub` → `Deriv` → `State`/`Step` → eventualities in `Elim`
-(currently indexed by box-subformulas) → `OrbitEval`/`Correct`/`Hintikka` →
-the SCC fairness predicates in `SccLasso`.
+→ `Formula` → `Sub` → `Deriv` → `State`/`Step` → the eventualities
+(currently `□Args` in `Skel`, read by `Fair` in `Lasso` and by `CompletePC`)
+→ `OrbitEval`/`Correct`/`Hintikka` → the SCC fairness predicates in
+`SccLasso`.

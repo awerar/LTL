@@ -29,7 +29,7 @@
 module LTL.SCC.SccExtract where
 
 open import LTL.SCC.SccLasso public
-open import LTL.Elimination.Extract  public
+open import LTL.States.Extract public
 open import LTL.Procedures.CompletePC public
 
 ------------------------------------------------------------------------

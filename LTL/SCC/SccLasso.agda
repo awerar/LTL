@@ -16,11 +16,8 @@
 --
 -- Fairness of the cycle: given □ A pending at the base point r, persistTo
 -- from r to the witness z either fulfils it or leaves it pending at z, where
--- evPred says A fails.
---
--- A Lasso's states must lie in Uinf P, but the graph search runs on Ust P.  So
--- sccLasso takes any vertex list with an inclusion into Uinf P as a
--- hypothesis; LTL.Procedures.Decide supplies it with uinfTrap.
+-- evPred says A fails.  The graph search runs on Ust P, whose members are
+-- states, so its loops are lassos as they stand.
 
 module LTL.SCC.SccLasso where
 
@@ -91,31 +88,29 @@ module _ (P : Formula) where
                 (persistTo us A mb wk (persist P v w A mb st e ea) k)
 
   ------------------------------------------------------------------------
-  -- A FairLoop inside any vertex list contained in Uinf P is a Lasso.  The
-  -- cycle is non-empty, so it splits at its head q, and the first edge of its
-  -- trail is the lasso's closing step from the base point r to q.
+  -- A FairLoop in Ust P is a Lasso.  The cycle is non-empty, so it splits at
+  -- its head q, and the first edge of its trail is the lasso's closing step
+  -- from the base point r to q.
 
-  sccLasso : (vs : List Val)
-          -> vs ⊆ Uinf P
-          -> (v0 : Val) -> v0 ∈ Uinf P
-          -> FairLoop vs (step P) evPreds v0 -> Lasso P v0
-  sccLasso vs sb v0 mv0 (fairLoop r stem (circuit [] tc () wit))
-  sccLasso vs sb v0 mv0 (fairLoop r (reachesBy st ts)
-                                  (circuit cy@(q ∷ qs) (tCons mq e tqs) nn wit)) =
+  sccLasso : (v0 : Val) -> v0 ∈ Ust P
+          -> FairLoop (Ust P) (step P) evPreds v0 -> Lasso P v0
+  sccLasso v0 mv0 (fairLoop r stem (circuit [] tc () wit))
+  sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
+                            (circuit cy@(q ∷ qs) (tCons mq e tqs) nn wit)) =
     mkLasso cyc fair (st ++ cy)
-            (vpos v0 (st ++ cy) mv0 (walkApp P (Uinf P) wst wcy))
+            (vpos v0 (st ++ cy) mv0 (walkApp P (Ust P) wst wcy))
     where
-      wst : Walk P (Uinf P) v0 st r
-      wst = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb ts)
+      wst : Walk P (Ust P) v0 st r
+      wst = trailWalk (Ust P) ts
 
-      wqs : Walk P (Uinf P) q qs r
-      wqs = trailWalk (Uinf P) (trailMono vs (Uinf P) (step P) sb tqs)
+      wqs : Walk P (Ust P) q qs r
+      wqs = trailWalk (Ust P) tqs
 
-      wcy : Walk P (Uinf P) r cy r
-      wcy = wcons (sb q mq) e wqs
+      wcy : Walk P (Ust P) r cy r
+      wcy = wcons mq e wqs
 
       cyc : Cycle P
-      cyc = mkCycle r (q , qs) (vpos q qs (sb q mq) wqs) e
+      cyc = mkCycle r (q , qs) (vpos q qs mq wqs) e
 
       -- Pending at the base point: go out to the witness the graph layer
       -- chose for evPred P A.
@@ -127,4 +122,4 @@ module _ (P : Formula) where
           onW (z , mz , ez) =
             sumElim (λ f -> f)
                     (λ pz -> ful z (there mz) (evWitness A z ez pz))
-                    (persistTo (Uinf P) A (□Args-mem (sub P) mA) wcy pr mz)
+                    (persistTo (Ust P) A (□Args-mem (sub P) mA) wcy pr mz)

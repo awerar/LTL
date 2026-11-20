@@ -5,16 +5,14 @@
 --
 --   Walk P us v ws x   --  v -> ws_1 -> ... -> ws_n = x, every ws_i in us
 --
--- Indexing by the endpoint keeps concatenation free of bookkeeping.  (Path of
--- LTL.Elimination.Gfp is the same relation without the list, for proofs that
--- build nothing.)
+-- Indexing by the endpoint keeps concatenation free of bookkeeping.
 --
 -- The main lemma is walkPersist: along a walk, an eventuality pending at the
 -- start is either fulfilled at a state visited, or still pending at the end.
 
 module LTL.Countermodel.Walk where
 
-open import LTL.Elimination.Elim public
+open import LTL.States.Closure public
 
 ------------------------------------------------------------------------
 -- Walks

@@ -324,6 +324,17 @@ module _ (P : Formula) where
     stCandSt (closeGoSt [] (λ z mz e -> stAllSat P z (stCandSt mz)) vecBar
                         emptyAcc m)
 
+  -- Named rather than applied inline: giving filter-prop its list argument
+  -- against the folded  St P  keeps the elaborator from unfolding Ust.
+
+  stIsState : {v : Val} -> v ∈ St P -> isState P v ≡ true
+  stIsState m = filter-prop (isState P) (allVecs (length (sub P))) m
+
+  -- Every member is a state, so (S1) and (S2) can be read off it.
+
+  ustState : {v : Val} -> v ∈ Ust -> isState P v ≡ true
+  ustState m = stIsState (ustSt m)
+
   ustSeed : {v : Val}
          -> v ∈ St P -> valOf P v P ≡ true -> v ∈ Ust
   ustSeed m e =

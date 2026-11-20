@@ -10,7 +10,7 @@
 -- By induction on A:
 --
 --   var       evalAt reads the state through valOf.
---   ¬, ⇒      (S1), at a state of Uinf.
+--   ¬, ⇒      (S1), at a state of Ust.
 --   ○         (T1), at the transition posStep supplies.
 --   □         If □ A is in the state, (T2) carries it along the run (carry)
 --             and (S2) gives A at every stage of the orbit.  If not,
@@ -19,21 +19,20 @@
 
 module LTL.Countermodel.Hintikka where
 
-open import LTL.Countermodel.Eval    public
-open import LTL.Elimination.Extract public
+open import LTL.Countermodel.Eval public
 
 ------------------------------------------------------------------------
--- Reading (S1) and (S2) off a survivor
+-- Reading (S1) and (S2) off a state of Ust P
 
-stateOk : (P : Formula) (s : Val) -> s ∈ Uinf P -> {A : Formula}
+stateOk : (P : Formula) (s : Val) -> s ∈ Ust P -> {A : Formula}
        -> A ∈ sub P -> okAt P s A ≡ true
 stateOk P s m mA =
   all-at (okAt P s) (sub P) mA
            (∧ᵇ-trueˡ (allOk P s (sub P)) (allCoh P s (length (sub P)))
-                     (uinfState P s m))
+                     (ustState P m))
 
 -- (S2)
-□S2 : (P : Formula) (s : Val) -> s ∈ Uinf P -> (B : Formula)
+□S2 : (P : Formula) (s : Val) -> s ∈ Ust P -> (B : Formula)
    -> □ B ∈ sub P -> valOf P s (□ B) ≡ true -> valOf P s B ≡ true
 □S2 P s m B mb e =
   ⇒ᵇ-mp (valOf P s (□ B)) (valOf P s B) (stateOk P s m mb) e

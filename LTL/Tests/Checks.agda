@@ -117,34 +117,23 @@ badVal-rejected = refl
 ¬BenAri-succ-counts = refl
 
 ------------------------------------------------------------------------
--- LTL.Elimination.Elim
-
--- ◇ p is satisfiable: all three states survive.
-
-Uinf-◇P : length (Uinf ◇P) ≡ 3
-Uinf-◇P = refl
+-- LTL.States.Closure
 
 -- ¬ benAri is unsatisfiable.  Ust holds only E, the one state containing
--- ¬ benAri; E has no successor, so the first round removes it by (R1).  (T2)
--- makes  □ p  and  ¬ ○ □ p  contradict in a single step, so no loop
--- invariant is needed.
+-- ¬ benAri, and E has no successor.  (T2) makes  □ p  and  ¬ ○ □ p
+-- contradict in a single step, so no loop invariant is needed.
 
 Ust-¬BenAri : length (Ust ¬BenAri) ≡ 1
 Ust-¬BenAri = refl
 
-Uinf-¬BenAri : length (Uinf ¬BenAri) ≡ 0
-Uinf-¬BenAri = refl
-
-------------------------------------------------------------------------
--- A small example that does exercise (R2):
+-- A small example with an unfulfillable eventuality:
 --
 --   bnb  =  □ p ⇒ □ ○ p
 --
 -- The closure of the states containing ¬ bnb has two members, differing only
--- at ○ p.  The one with ○ p false has no successor and goes by (R1) in the
--- first round; the other loops to itself, and then the eventuality □ ○ p
--- leaves pending is fulfilled nowhere, so it goes by (R2) in the second.  The
--- SCC certificate removes them in the same order (shape-bnb below).
+-- at ○ p.  The one with ○ p false has no successor; the other loops to
+-- itself, and the eventuality □ ○ p leaves pending is fulfilled nowhere
+-- (shape-bnb below).
 
 bnb : Formula
 bnb = □ (var zero) ⇒ □ ○ (var zero)
@@ -154,15 +143,6 @@ bnb = □ (var zero) ⇒ □ ○ (var zero)
 
 Ust-¬Bnb : length (Ust ¬Bnb) ≡ 2
 Ust-¬Bnb = refl
-
-round1-¬Bnb : length (elimRound ¬Bnb (Ust ¬Bnb)) ≡ 1
-round1-¬Bnb = refl
-
-round2-¬Bnb : length (elimRound ¬Bnb (elimRound ¬Bnb (Ust ¬Bnb))) ≡ 0
-round2-¬Bnb = refl
-
-Uinf-¬Bnb : length (Uinf ¬Bnb) ≡ 0
-Uinf-¬Bnb = refl
 
 ------------------------------------------------------------------------
 -- LTL.SCC.SccExtract

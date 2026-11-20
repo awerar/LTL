@@ -4,7 +4,7 @@
 --
 --   ⊢ Q ⊎ LassoCountermodel Q
 --
--- a derivation of Q, or a lasso countermodel: a lasso through states of Uinf
+-- a derivation of Q, or a lasso countermodel: a lasso through states of Ust
 -- (¬ Q) on which Q evaluates to false at stage 0.  LTL.Correct shows that
 -- this rules out a derivation of Q (cmUnderivable).  Neither branch is
 -- obtained by refuting the other, so no classical step is involved.

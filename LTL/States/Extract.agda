@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Elimination.Extract -- building blocks for refuting states.
+-- LTL.States.Extract -- building blocks for refuting states.
 --
 --   Refuted P us = every state of Ust P outside us is refutable.
 --
@@ -10,9 +10,9 @@
 -- run by LTL.SCC.SccExtract: extractR1 is its sink step, and extractBlock its
 -- block step.
 
-module LTL.Elimination.Extract where
+module LTL.States.Extract where
 
-open import LTL.Elimination.Elim      public
+open import LTL.States.Closure   public
 open import LTL.States.StepLemma public
 
 ------------------------------------------------------------------------
@@ -75,13 +75,18 @@ module _ (P : Formula) where
     (u : Val) -> u ∈ Ust P -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi P u)
 
   ------------------------------------------------------------------------
-  -- A state with no successor inside us.  stepLemma gives the successors of u
+  -- (R1): u has no successor inside us.
+
+  r1 : List Val -> Val -> Bool
+  r1 us u = null (succs P us u)
+
+  -- A state to which (R1) applies.  stepLemma gives the successors of u
   -- inside St P; one inside us would be in succs P us u, which (R1) says is
   -- empty.  So every disjunct of beta is refuted by the hypothesis, (D1) puts
   -- the refutation under ○, and (Lin) brings the negation out.
 
   extractR1 : (us : List Val) (u : Val)
-           -> u ∈ Ust P -> Refuted us -> r1 P us u ≡ true
+           -> u ∈ Ust P -> Refuted us -> r1 us u ≡ true
            -> ⊢ ¬ (chi P u)
   extractR1 us u mu ih e1 =
     refute (stepLemma P u (stLen P (ustSt P mu)))
