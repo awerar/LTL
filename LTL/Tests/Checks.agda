@@ -15,7 +15,7 @@ open import LTL.Correct   public
 import LTL.Trusted as T
 
 ------------------------------------------------------------------------
--- LTL.Syntax.Sub
+-- LTL.Syntax.Formula (subformulas)
 
 -- sub produces duplicates.  For Ben-Ari's  □ p ⇒ ○ □ p  it is
 --

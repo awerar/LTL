@@ -56,16 +56,15 @@ derivation or a certified finite lasso countermodel.
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
-  `Proj`, `NonState`, `Complete`, `StepLemma`, `Closure`, `Extract`,
-  `CompletePC`, `Walk`, `Lasso`, `Global`, `Eval`, `Hintikka`, `SccLasso`,
-  `SccExtract`, `SccSeed` — take it as a module parameter,
+  `Proj`, `Complete`, `StepLemma`, `Closure`, `Extract`, `CompletePC`,
+  `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,
   `module LTL.States.Step (P : Formula) where` (with `Formula` imported above
   the header), so P is never written at a call site inside them. A P-module
   opens `LTL.States.Common` and each P-module it uses at P
   (`open import LTL.States.State P`), privately, and re-exports nothing:
   applying a module copies its names, so two re-exported copies of `valOf`
   would be ambiguous. The exceptions are `Walk`, which re-exports its
-  application of `Graph` at `step`, and `Eval`, which re-exports `OrbitEval`
+  application of `Graph` at `step`, and `Lasso`, which re-exports `OrbitEval`
   at `readVal`. Code that does not mention P goes in an unparameterised
   module (`Common`, `Taut`, `VecBar`, `Reach`), or an importer opening the
   P-module unapplied would see a spurious P argument. `Decide` works the same
@@ -122,7 +121,7 @@ a module name.
    reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the
    hypothesis names).
 2. **Syntax and proof system** (`Syntax/`) — `Formula` (`Trusted`'s datatype,
-   abbreviations, decidable `≡ᶠ`); `Sub` (subformula list `sub`); `Skel` (propositional skeleton,
+   abbreviations, decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton,
    `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
@@ -131,8 +130,8 @@ a module name.
    `⋀`/`⋁`, `litList`); `Common` (the formula-independent base of the
    P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
    lemmas, `AllLen`, `allComplete`); P-modules `State` (`isState`, `St`,
-   `chi`, `beta`); `Step` (`step`, `succs`, T1–T3); `Proj`, `NonState`,
-   `Complete` (`stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas
+   `chi`, `beta`); `Step` (`step`, `succs`, T1–T3); `Proj`;
+   `Complete` (`nonState`, `stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas
    2.7–2.8). `Taut` (Boolean facts about chi/beta for (PC), stated for any
    P, and `tautChi`) is unparameterised.
 5. **Finite search infrastructure** (`States/`) — `Reach` (`≡ᵛ` on valuations, the
@@ -150,8 +149,8 @@ a module name.
    `trailPersist`);
    `Lasso` (the record of Prop 5.3: a `Cycle` whose head `loop` is a valid
    position, as in `Trusted`'s `Lasso`, fairness at its end `b`, and a valid
-   start);
-   `Global` (Lemma 5.4); `Eval` (`OrbitEval` at `Val`); `Hintikka`. All but
+   start; and `OrbitEval` at `Val`, giving `evalAt` and `eval`);
+   `Hintikka` (`globalFulfil`, Lemma 5.4, and Hintikka's lemma). All but
    `Orbit` and `OrbitEval` are P-modules.
 7. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes` and by the
@@ -193,7 +192,7 @@ a module name.
 ## Adding Until (expected touch points)
 
 `Trusted` (the constructor and its `⊨` clause; the user must make that change)
-→ `Formula` → `Sub` → `Deriv` → `State`/`Step` → the eventualities
+→ `Formula` (with `sub`) → `Deriv` → `State`/`Step` → the eventualities
 (currently `□Args` in `Skel`, read by `Fair` in `Lasso` and by `CompletePC`)
 → `OrbitEval`/`Correct`/`Hintikka` → the SCC fairness predicates in
 `SccLasso`.

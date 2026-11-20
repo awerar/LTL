@@ -16,7 +16,7 @@
 
 module LTL.Syntax.Skel where
 
-open import LTL.Syntax.Sub public
+open import LTL.Syntax.Formula public
 
 ------------------------------------------------------------------------
 -- Valuations, as bit vectors, and their enumeration

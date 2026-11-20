@@ -15,7 +15,6 @@ open import LTL.States.Taut             public
 open import LTL.States.State            public
 open import LTL.States.Step             public
 open import LTL.States.Proj             public
-open import LTL.States.NonState         public
 open import LTL.States.Complete         public
 open import LTL.States.StepLemma        public
 open import LTL.States.Closure          public
@@ -23,8 +22,6 @@ open import LTL.States.Extract          public
 open import LTL.Procedures.CompletePC   public
 open import LTL.Countermodel.Walk       public
 open import LTL.Countermodel.Lasso      public
-open import LTL.Countermodel.Global     public
-open import LTL.Countermodel.Eval       public
 open import LTL.Countermodel.Hintikka   public
 open import LTL.SCC.SccLasso            public
 open import LTL.SCC.SccExtract          public

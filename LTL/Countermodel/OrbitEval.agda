@@ -4,7 +4,7 @@
 -- and its soundness: every derivable formula is true at every position.
 --
 -- The states have any type S, and read s n is the truth value of variable n
--- in s.  LTL.Countermodel.Eval takes S to be valuations; LTL.Correct takes
+-- in s.  LTL.Countermodel.Lasso takes S to be valuations; LTL.Correct takes
 -- it to be LTL.Trusted's Instant.
 --
 -- evalAt has one clause per constructor: ○ is one step of nextPos and □ A is

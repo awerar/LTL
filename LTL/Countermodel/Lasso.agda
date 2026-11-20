@@ -13,6 +13,9 @@
 -- asked of b: every eventuality pending there is fulfilled on the cycle.
 -- sccLasso (LTL.SCC.SccLasso) builds a lasso from a fair loop of the state
 -- graph.
+--
+-- The module also applies LTL.Countermodel.OrbitEval at valuations and
+-- re-exports it, so evalAt and eval read formulas on these lassos.
 
 open import LTL.Syntax.Formula using (Formula)
 
@@ -23,6 +26,7 @@ open import LTL.States.State P
 open import LTL.States.Step P
 open import LTL.States.Closure P
 open import LTL.Countermodel.Walk P
+import LTL.Countermodel.OrbitEval
 
 ------------------------------------------------------------------------
 -- Valid positions
@@ -109,4 +113,26 @@ record Lasso (v0 : Val) : Set where
 -- the state at stage i of the run the lasso unwinds to
 stateAt : (v0 : Val) -> Lasso v0 -> Nat -> Val
 stateAt v0 l i = posState (posIter loop i (v0 , rest))
+  where open Lasso l
+
+------------------------------------------------------------------------
+-- The Boolean evaluation at a position
+--
+-- A variable is read off the state through valOf.  For a variable not in sub
+-- P this gives false (indexOf runs off the end of the vector), so the
+-- evaluation is total on all formulas, as soundness needs.
+
+-- a valuation read as an assignment to the variables
+readVal : Val -> Nat -> Bool
+readVal v n = valOf v (var n)
+
+open LTL.Countermodel.OrbitEval Val readVal public
+  using (evalAt; eval□-at; eval□-intro; eval□-false)
+
+------------------------------------------------------------------------
+-- The evaluation on a lasso, at stage i, iterating the successor from the
+-- start
+
+eval : (v0 : Val) -> Lasso v0 -> Formula -> Nat -> Bool
+eval v0 l A i = evalAt loop A (posIter loop i (v0 , rest))
   where open Lasso l

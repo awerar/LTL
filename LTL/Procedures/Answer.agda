@@ -17,7 +17,6 @@ module LTL.Procedures.Answer where
 
 open import LTL.States.Common public
 open import LTL.Countermodel.Lasso
-open import LTL.Countermodel.Eval
 
 ------------------------------------------------------------------------
 -- What a countermodel is.  Names starting with cm (cmEval, cmFrom, ...) are
@@ -106,7 +105,7 @@ derivPC   d = DerivCounts.pcs  (derivCounts d)
 
 ------------------------------------------------------------------------
 -- Looking at a countermodel: the truth value of a chosen formula at each stage
--- of the run, by eval of LTL.Countermodel.Eval.  The formula is arbitrary,
+-- of the run, by eval of LTL.Countermodel.Lasso.  The formula is arbitrary,
 -- since evalAt is total on all formulas.
 
 cmEval : (Q : Formula) -> LassoCountermodel Q -> Formula -> Nat -> Bool
