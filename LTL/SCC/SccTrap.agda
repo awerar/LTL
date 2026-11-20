@@ -126,16 +126,16 @@ record SeedTo (P : Formula) (w : Val) : Set where
   constructor seedTo
   field
     seed      : Val
-    visited   : List Val
     seedIn    : seed ∈ Ust P
     seedHolds : valOf P seed P ≡ true
-    trail     : Trail (Ust P) (step P) seed visited w
+    reaches   : Reaches (Ust P) (step P) seed w
 
 ustSeedTo : (P : Formula) (w : Val) -> w ∈ Ust P -> SeedTo P w
 ustSeedTo P w m = conv (ustSeeded P m)
   where
     conv : Seeded P w -> SeedTo P w
-    conv (seeded s zs ms es t) = seedTo s zs mu es (seedTrail P mu t)
+    conv (seeded s zs ms es t) =
+      seedTo s mu es (reachesBy zs (seedTrail P mu t))
       where
         mu : s ∈ Ust P
         mu = ustSeed P (stCandSt P ms) es

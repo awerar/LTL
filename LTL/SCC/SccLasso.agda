@@ -3,8 +3,8 @@
 -- LTL.SCC.SccLasso -- a fair loop of the state graph is a lasso.
 --
 -- LTL.SCC.Graph knows nothing about formulas; this module reads its positive
--- answer, a FairLoop (a stem, a non-empty cycle, and a witness on the cycle
--- for every fairness predicate), as a Lasso.
+-- answer, a FairLoop (a stem, then a Circuit: a non-empty cycle with a witness
+-- on it for every fairness predicate), as a Lasso.
 --
 -- The fairness predicate for the eventuality □ A is
 --
@@ -99,8 +99,9 @@ module _ (P : Formula) where
           -> vs ⊆ Uinf P
           -> (v0 : Val) -> v0 ∈ Uinf P
           -> FairLoop vs (step P) evPreds v0 -> Lasso P v0
-  sccLasso vs sb v0 mv0 (fairLoop r st [] ts tc () wit)
-  sccLasso vs sb v0 mv0 (fairLoop r st cy@(q ∷ qs) ts (tCons mq e tqs) nn wit) =
+  sccLasso vs sb v0 mv0 (fairLoop r stem (circuit [] tc () wit))
+  sccLasso vs sb v0 mv0 (fairLoop r (reachesBy st ts)
+                                  (circuit cy@(q ∷ qs) (tCons mq e tqs) nn wit)) =
     mkLasso cyc fair (st ++ cy)
             (vpos v0 (st ++ cy) mv0 (walkApp P (Uinf P) wst wcy))
     where

@@ -725,17 +725,15 @@ module _ (G : Edges) (fs : List Pred) where
 ------------------------------------------------------------------------
 -- The theorem
 
+-- A fair lasso from v: a stem from v to r, then a fair circuit at r.
+
 record FairLoop (vs : List Node) (G : Edges) (fs : List Pred)
                 (v : Node) : Set where
   constructor fairLoop
   field
-    r          : Node   -- where the cycle starts and ends
-    stem       : List Node
-    cycle      : List Node
-    stemTrail  : Trail vs G v stem r
-    cycleTrail : Trail vs G r cycle r
-    nonEmpty   : null cycle ≡ false
-    meets      : (f : Pred) -> f ∈ fs -> Σ[ z ∈ Node ] z ∈ cycle × f z ≡ true
+    r           : Node   -- where the cycle starts and ends
+    stem        : Reaches vs G v r
+    fairCircuit : Circuit vs G fs r
 
 fairGraph : (vs : List Node) (G : Edges) (fs : List Pred)
             (v : Node) -> v ∈ vs
@@ -750,12 +748,8 @@ fairGraph vs G fs v mv =
 
     toLoop : FairIn (reachSet vs G v) G fs -> FairLoop vs G fs v
     toLoop (fairIn r mr c) =
-      withStem (reachTrail vs G v mr)
-               (circMono (reachSet vs G v) vs G fs r into c)
-      where
-        withStem : Reaches vs G v r -> Circuit vs G fs r -> FairLoop vs G fs v
-        withStem (reachesBy st ts) (circuit cy t nn wit) =
-          fairLoop r st cy ts t nn wit
+      fairLoop r (reachTrail vs G v mr)
+                 (circMono (reachSet vs G v) vs G fs r into c)
 
 ------------------------------------------------------------------------
 -- What a certificate is for: an induction over the removal order.  R is the
@@ -942,12 +936,12 @@ certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
 fairNoLoop : (vs : List Node) (G : Edges) (fs : List Pred)
              (v : Node) -> v ∈ vs
           -> Cert G fs (reachSet vs G v) -> FairLoop vs G fs v -> Empty
-fairNoLoop vs G fs v mv c (fairLoop r st cy ts t nn wit) =
+fairNoLoop vs G fs v mv c (fairLoop r stem (circuit cy t nn wit)) =
   certNoCirc G fs c r
              (circuit cy (trailRestrict vs (reachSet vs G v) G t keep) nn wit)
   where
     keep : (z : Node) -> z ∈ cy -> z ∈ reachSet vs G v
-    keep z mz = onR (reachesApp vs G (reachesBy st ts) (trailTo vs G t mz))
+    keep z mz = onR (reachesApp vs G stem (trailTo vs G t mz))
       where
         onR : Reaches vs G v z -> z ∈ reachSet vs G v
         onR (reachesBy zs tz) = reachComplete vs G v mv tz

@@ -8,15 +8,15 @@
 -- a derivation (provableSCC, LTL.SCC.SccExtract).  A fair component gives a
 -- countermodel, in four steps:
 --
---   1. ustSeedTo: the component's representative is reached by a trail from a
---      state s containing ¬ Q.  Stem and cycle form a FairLoop from s.
---   2. The loop is cut down to the vertices it uses, C = s ∷ stem ++ cycle,
---      and C is a Trap: every vertex has a successor in C, and every pending
---      eventuality fails somewhere reachable in C (walk to the witness the
---      graph search chose, and read evPred there).
---   3. uinfTrap: C survives the elimination, so C lies in Uinf (¬ Q), as
---      sccLasso requires.
---   4. sccLasso, then buildCM: Hintikka's lemma at stage 0.
+--   1. ustSeedTo: the component's representative is reached from a state s
+--      containing ¬ Q.  Stem and circuit form a FairLoop from s.
+--   2. fairLasso: the loop is cut down to the vertices it uses,
+--      C = s ∷ stem ++ cycle, and C is a Trap: every vertex has a successor in
+--      C, and every pending eventuality fails somewhere reachable in C (walk
+--      to the witness the graph search chose, and read evPred there).
+--   3. uinfTrap: C survives the elimination, so C lies in Uinf (¬ Q), and
+--      sccLasso makes the loop a Lasso.
+--   4. buildCM: Hintikka's lemma at stage 0.
 --
 -- The search runs on all of Ust (¬ Q), not from one vertex, because the
 -- certificate has to cover every state.  The elimination is computed only in
@@ -66,21 +66,14 @@ module _ (P : Formula) where
             x , reachPath C (trailTo C (step P) t m) , e
 
 ------------------------------------------------------------------------
--- A fair loop, cut down to the vertices it uses, with its Trap: a TrapLoop.
+-- A fair loop is a lasso.  Cut down to the vertices it uses, it is a Trap, so
+-- it survives the elimination (uinfTrap) and sccLasso applies.
 
-record TrapLoop (P : Formula) (v0 : Val) : Set where
-  constructor trapLoop
-  field
-    C       : List Val
-    startIn : v0 ∈ C
-    inUst   : C ⊆ Ust P
-    trap    : Trap P C
-    loop    : FairLoop C (step P) (evPreds P) v0
-
-fairTrapLoop : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
-            -> FairLoop (Ust P) (step P) (evPreds P) v0 -> TrapLoop P v0
-fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
-  trapLoop C here inC (mkTrap succC fulC) (fairLoop r st cy tsC tcC nn wit)
+fairLasso : (P : Formula) (v0 : Val) -> v0 ∈ Ust P
+         -> FairLoop (Ust P) (step P) (evPreds P) v0 -> Lasso P v0
+fairLasso P v0 mv0 (fairLoop r (reachesBy st ts) (circuit cy tc nn wit)) =
+  sccLasso P C intoU v0 (intoU v0 here)
+           (fairLoop r (reachesBy st tsC) (circuit cy tcC nn wit))
   where
     C : List Val
     C = v0 ∷ st ++ cy
@@ -144,14 +137,8 @@ fairTrapLoop P v0 mv0 (fairLoop r st cy ts tc nn wit) =
           trapFail P C A (□Args-mem (sub P) mA) z w (reachW z mz w mw) pd
                    (evWitness P A w ew)
 
--- and then the trap survives the elimination, so sccLasso applies.
-
-trapLoopLasso : (P : Formula) (v0 : Val) -> TrapLoop P v0 -> Lasso P v0
-trapLoopLasso P v0 (trapLoop C mv0 inU tr flC) =
-  sccLasso P C intoU v0 (intoU v0 mv0) flC
-  where
     intoU : (z : Val) -> z ∈ C -> z ∈ Uinf P
-    intoU = uinfTrap P C tr inU
+    intoU = uinfTrap P C (mkTrap succC fulC) inC
 
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.
@@ -176,29 +163,20 @@ buildCM Q v0 l ev = countermodel v0 l evalFalse
     evalFalse =
       trans (sym (hintStart (¬ Q) v0 l Q (there (sub-self Q)))) valQ
 
+-- A fair circuit through r, reached from a state s containing ¬ Q, is a fair
+-- loop from s, and so a countermodel.
+
+fairCountermodel : (Q : Formula)
+                -> FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q))
+                -> LassoCountermodel Q
+fairCountermodel Q (fairIn r mr c) =
+  let seedTo s ms es stem = ustSeedTo (¬ Q) r mr
+  in  buildCM Q s (fairLasso (¬ Q) s ms (fairLoop r stem c)) es
+
 ------------------------------------------------------------------------
 -- The decision
 
 decide : (Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q
-decide Q = sumElim onFair (λ c -> inl (provableSCC Q c)) (sccGraph (¬ Q))
-  where
-    R : Formula
-    R = ¬ Q
-
-    fromLasso : (s : Val) -> valOf R s R ≡ true -> Lasso R s
-             -> ⊢ Q ⊎ LassoCountermodel Q
-    fromLasso s es l = inr (buildCM Q s l es)
-
-    onFair : FairIn (Ust R) (step R) (evPreds R)
-          -> ⊢ Q ⊎ LassoCountermodel Q
-    onFair (fairIn r mr c) = onCirc c
-      where
-        onCirc : Circuit (Ust R) (step R) (evPreds R) r
-              -> ⊢ Q ⊎ LassoCountermodel Q
-        onCirc (circuit cy tc nn wit) = onSeed (ustSeedTo R r mr)
-          where
-            onSeed : SeedTo R r -> ⊢ Q ⊎ LassoCountermodel Q
-            onSeed (seedTo s st ms es ts) =
-              fromLasso s es
-                (trapLoopLasso R s
-                   (fairTrapLoop R s ms (fairLoop r st cy ts tc nn wit)))
+decide Q with sccGraph (¬ Q)
+... | inl fair = inr (fairCountermodel Q fair)
+... | inr cert = inl (provableSCC Q cert)

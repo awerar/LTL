@@ -98,7 +98,7 @@ scc-gQ = refl
 
 loopCycle : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
          -> FairLoop vs G fs v -> List Nat
-loopCycle l = FairLoop.cycle l
+loopCycle l = Circuit.cycle (FairLoop.fairCircuit l)
 
 cycleOf : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
        -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
@@ -107,7 +107,7 @@ cycleOf (inr c) = []
 
 stemOf : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
       -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
-stemOf (inl l) = FairLoop.stem l
+stemOf (inl (fairLoop r (reachesBy st ts) c)) = st
 stemOf (inr c) = []
 
 fairQS : FairLoop gVs2 gE2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ []) gP ⊎
