@@ -19,7 +19,7 @@
 -- rule, so definitions that inspect a Pos match it as a pair.
 --
 -- LTL.Countermodel.Lasso instantiates S at valuations, and LTL.Correct at
--- LTL.Trusted's Instant; LTL.Countermodel.LassoEval evaluates formulas on
+-- LTL.Trusted's Instant; LTL.Countermodel.OrbitEval evaluates formulas on
 -- either.
 
 module LTL.Countermodel.Orbit (S : Set) where

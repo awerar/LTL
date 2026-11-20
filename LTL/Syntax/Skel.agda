@@ -182,7 +182,7 @@ valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
 -- The skeleton evaluation agrees with any reading f that respects ¬ and ⇒ on
 -- the subformulas of P.  Two instances are used: valOf at a state, where the
 -- hypotheses are (S1) (LTL.States.Closure), and evalAt at a position, where
--- they hold by definition (LTL.Countermodel.Sound).
+-- they hold by definition (LTL.Countermodel.OrbitEval).
 
 atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
         -> X ∈ᶠ Ats ≡ true

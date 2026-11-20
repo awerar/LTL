@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Eval -- the evaluation of LTL.Countermodel.LassoEval on the
+-- LTL.Countermodel.Eval -- the evaluation of LTL.Countermodel.OrbitEval on the
 -- lassos of LTL.Countermodel.Lasso.
 --
 -- A variable is read off the state through valOf.  For a variable not in sub
@@ -11,7 +11,7 @@
 module LTL.Countermodel.Eval where
 
 open import LTL.Countermodel.Global public
-import LTL.Countermodel.LassoEval
+import LTL.Countermodel.OrbitEval
 
 ------------------------------------------------------------------------
 -- The Boolean evaluation at a position
@@ -22,7 +22,7 @@ readVal P v n = valOf P v (var n)
 
 module _ (P : Formula) where
 
-  open LTL.Countermodel.LassoEval Val (readVal P) public
+  open LTL.Countermodel.OrbitEval Val (readVal P) public
     using (evalAt; eval□-at; eval□-intro; eval□-false)
 
   ------------------------------------------------------------------------

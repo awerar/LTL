@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.LassoEval -- the Boolean evaluation of formulas on a lasso,
+-- LTL.Countermodel.OrbitEval -- the Boolean evaluation of formulas on a lasso,
 -- and its soundness: every derivable formula is true at every position.
 --
 -- The states have any type S, and read s n is the truth value of variable n
@@ -21,7 +21,7 @@
 
 open import LTL.Syntax.Deriv
 
-module LTL.Countermodel.LassoEval (S : Set) (read : S -> Nat -> Bool) where
+module LTL.Countermodel.OrbitEval (S : Set) (read : S -> Nat -> Bool) where
 
 open import LTL.Countermodel.Orbit S
 

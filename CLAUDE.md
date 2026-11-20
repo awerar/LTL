@@ -114,12 +114,12 @@ a module name.
    countermodel's loop inside `Uinf` (`uinfTrap`).
 7. **Lasso countermodel branch (m4 §5)** (`Countermodel/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
-   `Trusted`'s `Position`/`step`); `LassoEval` (Boolean `evalAt` and its
-   soundness on a lasso of any state type, parameterised by `read`); `Walk`;
+   `Trusted`'s `Position`/`step`); `OrbitEval` (Boolean `evalAt` at positions,
+   □ over the forward orbit, and its soundness; any state type, read by `read`); `Walk`;
    `Lasso` (the record of Prop 5.3: a `Cycle` whose head `loop` is a valid
    position, as in `Trusted`'s `Lasso`, fairness at its end `b`, and a valid
    start; `Orbit` at `Val`);
-   `Global` (Lemma 5.4); `Eval` (`LassoEval` at `Val`); `Sound`; `Hintikka`.
+   `Global` (Lemma 5.4); `Eval` (`OrbitEval` at `Val`); `Hintikka`.
 8. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
    certificate theorem, largest module; parameterised like `Nodes`, imports
    only the generic layer, instantiated at `Val` in `SccLasso`); `SccLasso`,
@@ -130,7 +130,8 @@ a module name.
    Thm 6.1; `traceOf`, `shapeOf`). At the root:
    `Correct` (the bridge: on a `Trusted` lasso that starts at `pos0` and loops
    back to `loop`, `evalAt` is `Trusted`'s `⊨` (`evalAt-holds`,
-   `holds-evalAt`); `⊢-valid`, `toCounterModel`, and `decideSCCCorrect`).
+   `holds-evalAt`); `⊢-valid`, `toCounterModel`, `cmUnderivable`, and
+   `decideSCCCorrect`).
 9. **Examples and benchmarks** — in `Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (Graph's computational checks, at `Node = Nat`). In
@@ -153,5 +154,5 @@ a module name.
 
 `Trusted` (the constructor and its `⊨` clause; the user must make that change)
 → `Formula` → `Sub` → `Deriv` → `State`/`Step` → eventualities in `Elim`
-(currently indexed by box-subformulas) → `LassoEval`/`Correct`/`Hintikka` →
+(currently indexed by box-subformulas) → `OrbitEval`/`Correct`/`Hintikka` →
 the SCC fairness predicates in `SccLasso`.

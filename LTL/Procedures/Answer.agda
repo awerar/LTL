@@ -5,9 +5,9 @@
 --   ⊢ Q ⊎ LassoCountermodel Q
 --
 -- a derivation of Q, or a lasso countermodel: a lasso through states of Uinf
--- (¬ Q) on which Q evaluates to false at stage 0.  By soundness this rules
--- out a derivation of Q (cmUnderivable).  Neither branch is obtained by
--- refuting the other, so no classical step is involved.
+-- (¬ Q) on which Q evaluates to false at stage 0.  LTL.Correct shows that
+-- this rules out a derivation of Q (cmUnderivable).  Neither branch is
+-- obtained by refuting the other, so no classical step is involved.
 --
 -- Also the functions that read an answer: which branch it is, the shape of
 -- the lasso, the truth values of a formula along the run, and the size of a
@@ -27,11 +27,6 @@ record LassoCountermodel (Q : Formula) : Set where
     start        : Val
     lasso        : Lasso (¬ Q) start
     falseAtStart : eval (¬ Q) start lasso Q 0 ≡ false
-
--- Soundness evaluates a derivation of Q to true at stage 0.
-cmUnderivable : (Q : Formula) -> LassoCountermodel Q -> ⊢ Q -> Empty
-cmUnderivable Q (countermodel v0 l falseQ) d =
-  true≢false (trans (sym (soundLasso (¬ Q) v0 l d 0)) falseQ)
 
 ------------------------------------------------------------------------
 -- Reading the answer

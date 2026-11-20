@@ -243,8 +243,8 @@ decideSCC-◇P-lasso = refl
 ◇P-shape = refl
 
 -- p fails at every stage, and so does ◇ p, the formula decided.  traceOf uses
--- the evaluation soundness is proved against, so this and cmUnderivable are
--- the same fact from two ends.
+-- the evaluation that LTL.Correct carries over to Trusted's semantics, so this
+-- and cmUnderivable are the same fact from two ends.
 
 ◇P-trace : traceOf ◇P (var zero) 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 ◇P-trace = refl

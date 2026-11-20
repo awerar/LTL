@@ -19,7 +19,7 @@
 
 module LTL.Countermodel.Hintikka where
 
-open import LTL.Countermodel.Sound   public
+open import LTL.Countermodel.Eval    public
 open import LTL.Elimination.Extract public
 
 ------------------------------------------------------------------------

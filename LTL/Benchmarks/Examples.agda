@@ -329,8 +329,8 @@ check-K5 = refl
 -- shapeOf says where the run starts repeating: with shapeOf Q = r , c the run
 -- is  v0 , rest_0 , ... , rest_{r-1} , then the last c of those forever, so it
 -- is periodic from stage  1 + r - c  with period c.  traceOf uses the
--- evaluation soundness is proved against, so "traceOf Q Q 1 = false ∷ []"
--- and cmUnderivable are the same fact.
+-- evaluation that LTL.Correct carries over to Trusted's semantics, so
+-- "traceOf Q Q 1 = false ∷ []" and cmUnderivable are the same fact.
 
 ------------------------------------------------------------------------
 -- pb2 = p ⇒ □ p.  shapeOf pb2 = 4 , 2, so the run is periodic from stage 3
