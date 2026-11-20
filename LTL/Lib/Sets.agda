@@ -170,3 +170,11 @@ map-mem-inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
 map-mem-inv f []       ()
 map-mem-inv f (x ∷ xs) here      = x , here , refl
 map-mem-inv f (x ∷ xs) (there m) = there-Σ (map-mem-inv f xs m)
+
+------------------------------------------------------------------------
+-- The kinds of step in a certificate of LTL.SCC.Graph, one per constructor of
+-- Cert.  Declared here, outside that module, so that the type does not depend
+-- on its edge test.
+
+data CertStep : Set where
+  removedSink removedBlock emptied : CertStep

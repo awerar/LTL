@@ -3,7 +3,7 @@
 -- LTL.SCC.SccExtract -- a certificate gives a derivation.
 --
 --     provableSCC : (Q : Formula)
---                -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
+--                -> Cert (¬ Q) (evPreds (¬ Q)) (Ust (¬ Q))
 --                -> ⊢ Q
 --
 -- The graph search's NEGATIVE answer is a Cert: the order in which it removed
@@ -11,7 +11,7 @@
 -- fairness predicate).  certAll turns it into an induction, refuting every
 -- state of Ust (¬ Q):
 --
---   sink   null (outs ws (step P) x) ≡ true  is  r1 P ws x ≡ true
+--   sink   null (outs P ws x) ≡ true  is  r1 P ws x ≡ true
 --          definitionally, so extractR1 refutes x.
 --   block  the component C misses  evPred P A , i.e. at every state of C the
 --          eventuality □ A is pending and A holds.  extractBlock refutes the
@@ -109,10 +109,10 @@ module _ (P : Formula) where
   ------------------------------------------------------------------------
   -- certAll's two hypotheses.
 
-  -- The sink.  null (outs ws (step P) x) ≡ true  IS  r1 P ws x ≡ true .
+  -- The sink.  null (outs P ws x) ≡ true  IS  r1 P ws x ≡ true .
 
   sinkStep : (ws : List Val) (x : Val) -> x ∈ ws
-          -> null (outs ws (step P) x) ≡ true
+          -> null (outs P ws x) ≡ true
           -> HoldsOutside UstRef ws
           -> UstRef x
   sinkStep ws x mx e1 ih mu = extractR1 P ws x mu (refutedOf ws ih) e1
@@ -174,15 +174,15 @@ module _ (P : Formula) where
   -- A certificate refutes everything it covers.
 
   certRefuted : {ws : List Val}
-             -> Cert (step P) (evPreds P) ws -> Refuted P ws
+             -> Cert P (evPreds P) ws -> Refuted P ws
              -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
   certRefuted {ws} c ih =
-    certAll (step P) (evPreds P) UstRef sinkStep blockStep c
+    certAll P (evPreds P) UstRef sinkStep blockStep c
             (λ z e mu -> ih z mu e)
 
   -- Over Ust P itself the seed is vacuous: nothing is outside.
 
-  ustCertRefuted : Cert (step P) (evPreds P) (Ust P)
+  ustCertRefuted : Cert P (evPreds P) (Ust P)
                 -> (z : Val) -> z ∈ Ust P -> ⊢ ¬ (chi P z)
   ustCertRefuted c = certRefuted c (ustRefuted P)
 
@@ -191,10 +191,10 @@ module _ (P : Formula) where
   -- fairGraph certifies only the states reachable from one vertex, while the
   -- refutation has to cover every state of Ust P.
 
-  sccGraph : FairIn (Ust P) (step P) (evPreds P) ⊎
-             Cert (step P) (evPreds P) (Ust P)
+  sccGraph : FairIn P (Ust P) (evPreds P) ⊎
+             Cert P (evPreds P) (Ust P)
   sccGraph =
-    graphGo (step P) (evPreds P) (Ust P) (memAllSat (Ust P)) (listBar (Ust P))
+    graphGo P (evPreds P) (Ust P) (memAllSat (Ust P)) (listBar (Ust P))
 
 ------------------------------------------------------------------------
 -- The derivation of Q.  A state of St (¬ Q) outside Ust (¬ Q) cannot contain
@@ -203,7 +203,7 @@ module _ (P : Formula) where
 -- St (¬ Q), then gives Q.
 
 provableEachSCC : (Q : Formula)
-               -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q))
+               -> Cert (¬ Q) (evPreds (¬ Q)) (Ust (¬ Q))
                -> (w : Val) -> w ∈ St (¬ Q) -> ⊢ (chi (¬ Q) w) ⇒ Q
 provableEachSCC Q c w m = byPosition
   where
@@ -222,7 +222,7 @@ provableEachSCC Q c w m = byPosition
     ... | true = mp ¬Elim (ustCertRefuted R c w (∈ᵛ-sound w (Ust R) ec))
 
 provableSCC : (Q : Formula)
-           -> Cert (step (¬ Q)) (evPreds (¬ Q)) (Ust (¬ Q)) -> ⊢ Q
+           -> Cert (¬ Q) (evPreds (¬ Q)) (Ust (¬ Q)) -> ⊢ Q
 provableSCC Q c =
   mp (betaElimPC (¬ Q) (St (¬ Q)) (provableEachSCC Q c)) (stateCompletePC (¬ Q))
 
@@ -231,7 +231,7 @@ provableSCC Q c =
 -- derivation of Q.
 
 sccProof : (Q : Formula)
-        -> FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q)) ⊎ ⊢ Q
+        -> FairIn (¬ Q) (Ust (¬ Q)) (evPreds (¬ Q)) ⊎ ⊢ Q
 sccProof Q = sumElim inl (λ c -> inr (provableSCC Q c)) (sccGraph (¬ Q))
 
 -- Reading a derivation out, on the strength of the computed boolean: a refl
@@ -245,4 +245,4 @@ proofFrom (inr d) e = d
 -- The shape of the certificate: removedBlock, removedSink, then emptied.
 
 sccShape : (Q : Formula) -> List CertStep
-sccShape Q = sumElim (λ fi -> []) certShape (sccGraph (¬ Q))
+sccShape Q = sumElim (λ fi -> []) (certShape (¬ Q)) (sccGraph (¬ Q))

@@ -88,7 +88,7 @@ a module name.
    `≡`); `Prelude` (`⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
    `<`, index/nth, Boolean connectives and all Boolean lemmas, `refuteTrue`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
-   any node type: `Sets` (`≤`, `FindResult`, filter/any/all lemmas); `Bar`
+   any node type: `Sets` (`≤`, `FindResult`, filter/any/all lemmas, `CertStep`); `Bar`
    (inductively finite sets after Coquand–Siles, closure lemmas; all searches
    recurse on a Bar); `Nodes` (parameterised by a node type and a sound,
    reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the
@@ -119,8 +119,11 @@ a module name.
    start; `Orbit` at `Val`);
    `Global` (Lemma 5.4); `Eval` (`OrbitEval` at `Val`); `Hintikka`.
 7. **Decision procedure** — in `SCC/` (m5): `Graph` (the `fairGraph`
-   certificate theorem, largest module; parameterised like `Nodes`, imports
-   only the generic layer, instantiated at `Val` in `SccLasso`); `SccLasso`,
+   certificate theorem, largest module; parameterised like `Nodes` and by the
+   edge test `G`, imports only the generic layer; `SccLasso` instantiates it
+   once per formula at `G = step P`, so its names take `P` first, as in
+   `Trail P ws`, `Cert P fs ws`, and a constructor used as a term needs
+   `{P}`, as in `tNil {P}`); `SccLasso`,
    `SccExtract` (`provableSCC`, closed with (PC)), `SccSeed` (`ustSeedTo`:
    every state of `Ust P` is reached from one containing `P`). In `Procedures/`: `CompletePC` (`stateCompletePC`,
    `betaElimPC`: Lemma 2.6 and (L5) via (PC)); `Answer` (`LassoCountermodel`,

@@ -5,13 +5,15 @@
 --
 -- LTL.SCC.Graph is parameterised by its node type, so its checks live here.
 -- Nothing in the graph layer reads a node except through the equality test,
--- so the same fairGraph that runs on valuations runs here on numbers.
+-- so the same fairGraph that runs on valuations runs here on numbers.  The
+-- edge test is left as a parameter, so every name takes the graph first.
 
 module LTL.Tests.GraphExamples where
 
 open import LTL.Lib.Prelude
 open import LTL.SCC.Graph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
 open import LTL.Lib.Nodes _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl using (_∈ᵛ_; Edges; Pred)
+open import LTL.Lib.Sets using (CertStep; removedSink; removedBlock; emptied)
 
 ------------------------------------------------------------------------
 -- The first graph: a = 0 and b = 1, with a -> b and b -> b.  b's component
@@ -30,27 +32,27 @@ gVs = gA ∷ gB ∷ []
 gE : Edges
 gE v w = w ≡ⁿ gB
 
-reach-gA : reachSet gVs gE gA ≡ gB ∷ gA ∷ []
+reach-gA : reachSet gE gVs gA ≡ gB ∷ gA ∷ []
 reach-gA = refl
 
-term-gA : isTerminal gVs gE gA ≡ false
+term-gA : isTerminal gE gVs gA ≡ false
 term-gA = refl
 
-term-gB : isTerminal gVs gE gB ≡ true
+term-gB : isTerminal gE gVs gB ≡ true
 term-gB = refl
 
-scc-gB : sccOf gVs gE gB ≡ gB ∷ []
+scc-gB : sccOf gE gVs gB ≡ gB ∷ []
 scc-gB = refl
 
 -- Asking for b is fair: the cycle b -> b meets it.
 
-fair-gB : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gB) ∷ []) gA here) ≡ true
+fair-gB : isInl (fairGraph gE gVs ((λ v -> v ≡ⁿ gB) ∷ []) gA here) ≡ true
 fair-gB = refl
 
 -- Asking for a is not: a is transient, so the only recurrent component misses
 -- the predicate and the certificate branch is taken.
 
-fair-gA : isInl (fairGraph gVs gE ((λ v -> v ≡ⁿ gA) ∷ []) gA here) ≡ false
+fair-gA : isInl (fairGraph gE gVs ((λ v -> v ≡ⁿ gA) ∷ []) gA here) ≡ false
 fair-gA = refl
 
 ------------------------------------------------------------------------
@@ -77,13 +79,13 @@ gE2 v w = (v ≡ⁿ gP) ∧ᵇ (w ≡ⁿ gQ) ∨ᵇ
           (v ≡ⁿ gQ) ∧ᵇ (w ≡ⁿ gS) ∨ᵇ
           (v ≡ⁿ gS) ∧ᵇ (w ≡ⁿ gQ)
 
-term-gP : isTerminal gVs2 gE2 gP ≡ false
+term-gP : isTerminal gE2 gVs2 gP ≡ false
 term-gP = refl
 
-term-gQ : isTerminal gVs2 gE2 gQ ≡ true
+term-gQ : isTerminal gE2 gVs2 gQ ≡ true
 term-gQ = refl
 
-scc-gQ : map (λ z -> z ∈ᵛ sccOf gVs2 gE2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
+scc-gQ : map (λ z -> z ∈ᵛ sccOf gE2 gVs2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
 scc-gQ = refl
 
 -- The lasso the fair branch returns.  findTerm settles on s, so the stem is
@@ -96,24 +98,24 @@ scc-gQ = refl
 -- The loop goes in FRONT so that the witness is a vertex the leg visits.  It
 -- is not the shortest fair cycle; q s would do.
 
-loopCycle : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
-         -> FairLoop vs G fs v -> List Nat
+loopCycle : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}
+         -> FairLoop G vs fs v -> List Nat
 loopCycle l = Circuit.cycle (FairLoop.fairCircuit l)
 
-cycleOf : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
-       -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
+cycleOf : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}
+       -> FairLoop G vs fs v ⊎ Cert G fs (reachSet G vs v) -> List Nat
 cycleOf (inl l) = loopCycle l
 cycleOf (inr c) = []
 
-stemOf : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
-      -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List Nat
-stemOf (inl (fairLoop r (reachesBy st ts) c)) = st
+stemOf : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}
+      -> FairLoop G vs fs v ⊎ Cert G fs (reachSet G vs v) -> List Nat
+stemOf (inl l) = Reaches.via (FairLoop.stem l)
 stemOf (inr c) = []
 
-fairQS : FairLoop gVs2 gE2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ []) gP ⊎
+fairQS : FairLoop gE2 gVs2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ []) gP ⊎
          Cert gE2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ [])
-              (reachSet gVs2 gE2 gP)
-fairQS = fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ []) gP here
+              (reachSet gE2 gVs2 gP)
+fairQS = fairGraph gE2 gVs2 ((λ v -> v ≡ⁿ gQ) ∷ (λ v -> v ≡ⁿ gS) ∷ []) gP here
 
 fair-QS : isInl fairQS ≡ true
 fair-QS = refl
@@ -126,18 +128,18 @@ cycle-QS = refl
 
 -- And the unfair side: nothing recurrent meets "is p".
 
-fair-P : isInl (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
+fair-P : isInl (fairGraph gE2 gVs2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
 fair-P = refl
 
 -- The certificate it returns instead, as the list of its steps:  cBlock,
 -- cSink, cNil .  The component {q,s} misses "is p" and is refuted first, and
 -- only then is p a sink: p is refuted because its successor already was.
 
-certSteps : {vs : List Nat} {G : Edges} {fs : List Pred} {v : Nat}
-         -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v) -> List CertStep
+certSteps : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}
+         -> FairLoop G vs fs v ⊎ Cert G fs (reachSet G vs v) -> List CertStep
 certSteps (inl l) = []
-certSteps (inr c) = certShape c
+certSteps {G} (inr c) = certShape G c
 
-cert-P : certSteps (fairGraph gVs2 gE2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡
+cert-P : certSteps (fairGraph gE2 gVs2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡
          removedBlock ∷ removedSink ∷ emptied ∷ []
 cert-P = refl

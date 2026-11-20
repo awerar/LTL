@@ -48,11 +48,12 @@ buildCM Q v0 l ev = countermodel v0 l evalFalse
 -- loop from s, and so a countermodel.
 
 fairCountermodel : (Q : Formula)
-                -> FairIn (Ust (¬ Q)) (step (¬ Q)) (evPreds (¬ Q))
+                -> FairIn (¬ Q) (Ust (¬ Q)) (evPreds (¬ Q))
                 -> LassoCountermodel Q
 fairCountermodel Q (fairIn r mr c) =
-  let seedTo s ms es stem = ustSeedTo (¬ Q) r mr
-  in  buildCM Q s (sccLasso (¬ Q) s ms (fairLoop r stem c)) es
+  buildCM Q seed (sccLasso (¬ Q) seed seedIn (fairLoop {¬ Q} r reaches c))
+          seedHolds
+  where open SeedTo (ustSeedTo (¬ Q) r mr)
 
 ------------------------------------------------------------------------
 -- The decision

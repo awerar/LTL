@@ -24,7 +24,7 @@ record Seeded (P : Formula) (w : Val) : Set where
     visited   : List Val
     seedIn    : seed ∈ StCand P
     seedHolds : valOf P seed P ≡ true
-    trail     : Trail (StCand P) (step P) seed visited w
+    trail     : Trail P (StCand P) seed visited w
 
 -- One round: a state it adds is a seed, or a successor of something already in.
 
@@ -50,19 +50,17 @@ module _ (P : Formula) where
                           (filter-prop (missing P acc) (StCand P) m1)
 
           isSeed : valOf P z P ≡ true -> Seeded P z
-          isSeed e = seeded z [] mzs e tNil
+          isSeed e = seeded z [] mzs e (tNil {P})
 
           viaU : any (λ u -> step P u z) acc ≡ true -> Seeded P z
           viaU ea = pick (any-true (λ u -> step P u z) acc ea)
             where
               pick : (Σ[ u ∈ Val ] u ∈ acc × step P u z ≡ true)
                   -> Seeded P z
-              pick (u , mu , su) = ext (sd u mu)
-                where
-                  ext : Seeded P u -> Seeded P z
-                  ext (seeded s zs ms es t) =
-                    seeded s (zs ++ z ∷ []) ms es
-                           (trailApp (StCand P) (step P) t (tCons mzs su tNil))
+              pick (u , mu , su) =
+                seeded seed (visited ++ z ∷ []) seedIn seedHolds
+                       (trailApp P (StCand P) trail (tCons {P} mzs su (tNil {P})))
+                where open Seeded (sd u mu)
 
   closeGoSeeded   : {E : Pred} (acc : List Val)
                  -> (av : Avail E (StCand P) acc)
@@ -93,10 +91,10 @@ module _ (P : Formula) where
   -- A trail of states out of Ust P stays in Ust P.
 
   seedTrail : {s : Val} {zs : List Val} {w : Val}
-           -> s ∈ Ust P -> Trail (StCand P) (step P) s zs w
-           -> Trail (Ust P) (step P) s zs w
-  seedTrail ms tNil                   = tNil
-  seedTrail ms (tCons {x = y} m e t) = tCons my e (seedTrail my t)
+           -> s ∈ Ust P -> Trail P (StCand P) s zs w
+           -> Trail P (Ust P) s zs w
+  seedTrail ms tNil                   = tNil {P}
+  seedTrail ms (tCons {x = y} m e t) = tCons {P} my e (seedTrail my t)
     where
       my : y ∈ Ust P
       my = ustClosed P ms (stCandSt P m) e
@@ -107,14 +105,13 @@ record SeedTo (P : Formula) (w : Val) : Set where
     seed      : Val
     seedIn    : seed ∈ Ust P
     seedHolds : valOf P seed P ≡ true
-    reaches   : Reaches (Ust P) (step P) seed w
+    reaches   : Reaches P (Ust P) seed w
 
 ustSeedTo : (P : Formula) (w : Val) -> w ∈ Ust P -> SeedTo P w
-ustSeedTo P w m = conv (ustSeeded P m)
+ustSeedTo P w m =
+  seedTo seed mu seedHolds (reachesBy {P} visited (seedTrail P mu trail))
   where
-    conv : Seeded P w -> SeedTo P w
-    conv (seeded s zs ms es t) =
-      seedTo s mu es (reachesBy zs (seedTrail P mu t))
-      where
-        mu : s ∈ Ust P
-        mu = ustSeed P (stCandSt P ms) es
+    open Seeded (ustSeeded P m)
+
+    mu : seed ∈ Ust P
+    mu = ustSeed P (stCandSt P seedIn) seedHolds

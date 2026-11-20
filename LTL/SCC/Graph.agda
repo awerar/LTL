@@ -13,10 +13,11 @@
 -- (certNoCirc, fairNoLoop), so the negative answer is a decision.
 --
 -- There is no logic here: the module is parameterised by a node type with a
--- sound, reflexive equality test, and imports only the generic set layer.  The
--- graph is a vertex list with an edge test G : Edges, the fairness sets are
--- fs : List Pred.  LTL.SCC.SccLasso instantiates it at Val; LTL.Tests.
--- GraphExamples at Nat, for the computational checks.
+-- sound, reflexive equality test, and by the edge test G, which no definition
+-- changes; it imports only the generic set layer.  The graph is a vertex list
+-- ws with the edges of G, the fairness sets are fs : List Pred.
+-- LTL.SCC.SccLasso instantiates it at Val with G = step P, once per formula;
+-- LTL.Tests.GraphExamples at Nat, for the computational checks.
 --
 -- Design choices:
 --
@@ -41,6 +42,7 @@ module LTL.SCC.Graph {Node : Set}
                  (_≡ᵛ_     : Node -> Node -> Bool)
                  (≡ᵛ-sound : (v w : Node) -> v ≡ᵛ w ≡ true -> v ≡ w)
                  (≡ᵛ-refl  : (v : Node) -> v ≡ᵛ v ≡ true)
+                 (G        : Node -> Node -> Bool)
   where
 
 -- Not re-exported: an importer gets this module's own names only, and takes
@@ -64,58 +66,63 @@ null-notMem (w ∷ ws) z ()
 -- The out-neighbours of x inside ws.  For G = step P this is succs P ws x on
 -- the nose.
 
-outs : List Node -> Edges -> Node -> List Node
-outs ws G x = filter (G x) ws
+outs : List Node -> Node -> List Node
+outs ws x = filter (G x) ws
 
-hasOut : List Node -> Edges -> Node -> Bool
-hasOut ws G x = ¬ᵇ null (outs ws G x)
+hasOut : List Node -> Node -> Bool
+hasOut ws x = ¬ᵇ null (outs ws x)
 
 ------------------------------------------------------------------------
 -- Trails: finite paths inside ws, carrying the vertices visited and indexed by
 -- the endpoint (LTL.Countermodel.Walk with step P replaced by G).  A cycle is a
 -- trail from r to r with a non-empty list.
 
-data Trail (ws : List Node) (G : Edges) : Node -> List Node -> Node -> Set where
-  tNil  : {v : Node} -> Trail ws G v [] v
+data Trail (ws : List Node) : Node -> List Node -> Node -> Set where
+  tNil  : {v : Node} -> Trail ws v [] v
   tCons : {v x : Node} {zs : List Node} {w : Node}
-       -> x ∈ ws -> G v x ≡ true -> Trail ws G x zs w
-       -> Trail ws G v (x ∷ zs) w
+       -> x ∈ ws -> G v x ≡ true -> Trail ws x zs w
+       -> Trail ws v (x ∷ zs) w
 
-module _ (ws : List Node) (G : Edges) where
+module _ (ws : List Node) where
 
   trailApp : {u v w : Node} {xs zs : List Node}
-          -> Trail ws G u xs v -> Trail ws G v zs w -> Trail ws G u (xs ++ zs) w
+          -> Trail ws u xs v -> Trail ws v zs w -> Trail ws u (xs ++ zs) w
   trailApp tNil           t2 = t2
   trailApp (tCons m e t1) t2 = tCons m e (trailApp t1 t2)
 
   trailEnd : {v : Node} {zs : List Node} {w : Node}
-          -> Trail ws G v zs w -> w ∈ v ∷ zs
+          -> Trail ws v zs w -> w ∈ v ∷ zs
   trailEnd tNil          = here
   trailEnd (tCons m e t) = there (trailEnd t)
 
   -- A trail that takes at least one step ends at a vertex it visits.
 
   trailLast : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws G v zs w -> null zs ≡ false -> w ∈ zs
+           -> Trail ws v zs w -> null zs ≡ false -> w ∈ zs
   trailLast tNil          ()
   trailLast (tCons m e t) nn = trailEnd t
 
   trailIn : {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws G v zs w -> {z : Node} -> z ∈ zs -> z ∈ ws
+         -> Trail ws v zs w -> {z : Node} -> z ∈ zs -> z ∈ ws
   trailIn tNil          ()
   trailIn (tCons m e t) here      = m
   trailIn (tCons m e t) (there k) = trailIn t k
 
-trailMono : (ws vs : List Node) (G : Edges)
+trailMono : (ws vs : List Node)
          -> ws ⊆ vs
          -> {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws G v zs w -> Trail vs G v zs w
-trailMono ws vs G sb tNil                  = tNil
-trailMono ws vs G sb (tCons {x = x} m e t) =
-  tCons (sb x m) e (trailMono ws vs G sb t)
+         -> Trail ws v zs w -> Trail vs v zs w
+trailMono ws vs sb tNil                  = tNil
+trailMono ws vs sb (tCons {x = x} m e t) =
+  tCons (sb x m) e (trailMono ws vs sb t)
 
-data Reaches (ws : List Node) (G : Edges) (v w : Node) : Set where
-  reachesBy : (zs : List Node) -> Trail ws G v zs w -> Reaches ws G v w
+-- w is reachable from v inside ws: a trail, and the vertices it visits.
+
+record Reaches (ws : List Node) (v w : Node) : Set where
+  constructor reachesBy
+  field
+    via   : List Node
+    trail : Trail ws v via w
 
 ------------------------------------------------------------------------
 -- The reachable set, as a growing search.  A round adds every vertex of ws
@@ -124,53 +131,53 @@ data Reaches (ws : List Node) (G : Edges) (v w : Node) : Set where
 -- vertex, which is completeness.  (closeGo of LTL.States.Closure has the same
 -- shape.)
 
-reachWanted : Edges -> Node -> List Node -> Node -> Bool
-reachWanted G v acc x = (v ≡ᵛ x) ∨ᵇ any (λ y -> G y x) acc
+reachWanted : Node -> List Node -> Node -> Bool
+reachWanted v acc x = (v ≡ᵛ x) ∨ᵇ any (λ y -> G y x) acc
 
-reachMissing : Edges -> Node -> List Node -> Node -> Bool
-reachMissing G v acc x = reachWanted G v acc x ∧ᵇ ¬ᵇ (x ∈ᵛ acc)
+reachMissing : Node -> List Node -> Node -> Bool
+reachMissing v acc x = reachWanted v acc x ∧ᵇ ¬ᵇ (x ∈ᵛ acc)
 
-reachSettled : Edges -> Node -> List Node -> Node -> Bool
-reachSettled G v acc x = ¬ᵇ reachMissing G v acc x
+reachSettled : Node -> List Node -> Node -> Bool
+reachSettled v acc x = ¬ᵇ reachMissing v acc x
 
-reachRound : List Node -> Edges -> Node -> List Node -> List Node
-reachRound ws G v acc = filter (reachMissing G v acc) ws ++ acc
+reachRound : List Node -> Node -> List Node -> List Node
+reachRound ws v acc = filter (reachMissing v acc) ws ++ acc
 
-reachMissingOf : (G : Edges) (v : Node) (acc : List Node) (x : Node)
-              -> reachSettled G v acc x ≡ false -> reachMissing G v acc x ≡ true
-reachMissingOf G v acc x q = ¬ᵇ-false (reachMissing G v acc x) q
+reachMissingOf : (v : Node) (acc : List Node) (x : Node)
+              -> reachSettled v acc x ≡ false -> reachMissing v acc x ≡ true
+reachMissingOf v acc x q = ¬ᵇ-false (reachMissing v acc x) q
 
-reachNotInAcc : (G : Edges) (v : Node) (acc : List Node) (x : Node)
-             -> reachSettled G v acc x ≡ false -> x ∈ᵛ acc ≡ false
-reachNotInAcc G v acc x q =
+reachNotInAcc : (v : Node) (acc : List Node) (x : Node)
+             -> reachSettled v acc x ≡ false -> x ∈ᵛ acc ≡ false
+reachNotInAcc v acc x q =
   ¬ᵇ-true (x ∈ᵛ acc)
-          (∧ᵇ-trueʳ (reachWanted G v acc x) (¬ᵇ (x ∈ᵛ acc))
-                    (reachMissingOf G v acc x q))
+          (∧ᵇ-trueʳ (reachWanted v acc x) (¬ᵇ (x ∈ᵛ acc))
+                    (reachMissingOf v acc x q))
 
-module _ (ws : List Node) (G : Edges) (v : Node) where
+module _ (ws : List Node) (v : Node) where
 
   reachInRound : (acc : List Node) (x : Node)
-              -> x ∈ ws -> reachSettled G v acc x ≡ false
-              -> x ∈ reachRound ws G v acc
+              -> x ∈ ws -> reachSettled v acc x ≡ false
+              -> x ∈ reachRound ws v acc
   reachInRound acc x m q =
-    memAppL (filter (reachMissing G v acc) ws) acc
-            (filter-true (reachMissing G v acc) ws m
-                         (reachMissingOf G v acc x q))
+    memAppL (filter (reachMissing v acc) ws) acc
+            (filter-true (reachMissing v acc) ws m
+                         (reachMissingOf v acc x q))
 
   reachGo   : {E : Pred} (acc : List Node) -> Avail E ws acc
            -> IFin E -> List Node
   reachFind : {E : Pred} (acc : List Node) -> Avail E ws acc
-           -> IFin E -> FindResult (reachSettled G v acc) ws -> List Node
+           -> IFin E -> FindResult (reachSettled v acc) ws -> List Node
 
   reachGo acc av bar =
-    reachFind acc av bar (findFalse (reachSettled G v acc) ws)
+    reachFind acc av bar (findFalse (reachSettled v acc) ws)
 
   reachFind acc av bar          (allTrue f)   = acc
   reachFind {E} acc av (cBar h) (found x m q) =
-    reachGo (reachRound ws G v acc) av'
-            (h x (av x m (reachNotInAcc G v acc x q)))
+    reachGo (reachRound ws v acc) av'
+            (h x (av x m (reachNotInAcc v acc x q)))
     where
-      av' : Avail (λ z -> E z ∧ᵇ (x ≢ᵛ z)) ws (reachRound ws G v acc)
+      av' : Avail (λ z -> E z ∧ᵇ (x ≢ᵛ z)) ws (reachRound ws v acc)
       av' z mz e =
         ∧ᵇ-intro (E z) (x ≢ᵛ z)
                  (av z mz outAcc)
@@ -178,14 +185,14 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
         where
           outAcc : z ∈ᵛ acc ≡ false
           outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
-            ∈ᵛ-false z (reachRound ws G v acc) e
-             (memAppR (filter (reachMissing G v acc) ws) acc
+            ∈ᵛ-false z (reachRound ws v acc) e
+             (memAppR (filter (reachMissing v acc) ws) acc
                       (∈ᵛ-sound z acc eb))
 
           outX : x ≡ᵛ z ≡ false
           outX = refuteTrue (x ≡ᵛ z) λ eb ->
-            ∈ᵛ-false z (reachRound ws G v acc) e
-             (subst (λ y -> y ∈ reachRound ws G v acc)
+            ∈ᵛ-false z (reachRound ws v acc) e
+             (subst (λ y -> y ∈ reachRound ws v acc)
                     (≡ᵛ-sound x z eb)
                     (reachInRound acc x m q))
 
@@ -200,119 +207,117 @@ module _ (ws : List Node) (G : Edges) (v : Node) where
              -> acc ⊆ ws
              -> {z : Node} -> z ∈ reachGo acc av bar -> z ∈ ws
   reachFindIn : {E : Pred} (acc : List Node) (av : Avail E ws acc)
-                (bar : IFin E) (fr : FindResult (reachSettled G v acc) ws)
+                (bar : IFin E) (fr : FindResult (reachSettled v acc) ws)
              -> acc ⊆ ws
              -> {z : Node} -> z ∈ reachFind acc av bar fr -> z ∈ ws
 
   reachGoIn acc av bar =
-    reachFindIn acc av bar (findFalse (reachSettled G v acc) ws)
+    reachFindIn acc av bar (findFalse (reachSettled v acc) ws)
 
   reachFindIn acc av bar          (allTrue f)      sb {z} m = sb z m
   reachFindIn acc av (cBar h) (found x mx q) sb       m =
-    reachGoIn (reachRound ws G v acc) _
-              (h x (av x mx (reachNotInAcc G v acc x q))) sb' m
+    reachGoIn (reachRound ws v acc) _
+              (h x (av x mx (reachNotInAcc v acc x q))) sb' m
     where
-      sb' : reachRound ws G v acc ⊆ ws
-      sb' z mz = sumElim (λ m1 -> filter-sub (reachMissing G v acc) ws m1)
+      sb' : reachRound ws v acc ⊆ ws
+      sb' z mz = sumElim (λ m1 -> filter-sub (reachMissing v acc) ws m1)
                          (λ m2 -> sb z m2)
-                         (memAppCase (filter (reachMissing G v acc) ws) acc mz)
+                         (memAppCase (filter (reachMissing v acc) ws) acc mz)
 
   -- Every vertex a round adds is reached by a trail: it is v, or a successor
   -- of a member of acc, whose trail grows by one step.
 
   addReaches : (acc : List Node)
-            -> ((z : Node) -> z ∈ acc -> Reaches ws G v z)
-            -> (z : Node) -> z ∈ reachRound ws G v acc -> Reaches ws G v z
+            -> ((z : Node) -> z ∈ acc -> Reaches ws v z)
+            -> (z : Node) -> z ∈ reachRound ws v acc -> Reaches ws v z
   addReaches acc rc z m =
     sumElim fromNew (λ m2 -> rc z m2)
-            (memAppCase (filter (reachMissing G v acc) ws) acc m)
+            (memAppCase (filter (reachMissing v acc) ws) acc m)
     where
-      fromNew : z ∈ filter (reachMissing G v acc) ws -> Reaches ws G v z
+      fromNew : z ∈ filter (reachMissing v acc) ws -> Reaches ws v z
       fromNew m1 =
         sumElim isV viaY (∨ᵇ-true (v ≡ᵛ z) (any (λ y -> G y z) acc) want)
         where
           mzw : z ∈ ws
-          mzw = filter-sub (reachMissing G v acc) ws m1
+          mzw = filter-sub (reachMissing v acc) ws m1
 
-          want : reachWanted G v acc z ≡ true
-          want = ∧ᵇ-trueˡ (reachWanted G v acc z) (¬ᵇ (z ∈ᵛ acc))
-                          (filter-prop (reachMissing G v acc) ws m1)
+          want : reachWanted v acc z ≡ true
+          want = ∧ᵇ-trueˡ (reachWanted v acc z) (¬ᵇ (z ∈ᵛ acc))
+                          (filter-prop (reachMissing v acc) ws m1)
 
-          isV : v ≡ᵛ z ≡ true -> Reaches ws G v z
-          isV ev = subst (λ y -> Reaches ws G v y) (≡ᵛ-sound v z ev)
+          isV : v ≡ᵛ z ≡ true -> Reaches ws v z
+          isV ev = subst (λ y -> Reaches ws v y) (≡ᵛ-sound v z ev)
                          (reachesBy [] tNil)
 
-          viaY : any (λ y -> G y z) acc ≡ true -> Reaches ws G v z
+          viaY : any (λ y -> G y z) acc ≡ true -> Reaches ws v z
           viaY ea = pick (any-true (λ y -> G y z) acc ea)
             where
               pick : (Σ[ y ∈ Node ] y ∈ acc × G y z ≡ true)
-                  -> Reaches ws G v z
-              pick (y , my , gy) = ext (rc y my)
-                where
-                  ext : Reaches ws G v y -> Reaches ws G v z
-                  ext (reachesBy zs t) =
-                    reachesBy (zs ++ z ∷ [])
-                              (trailApp ws G t (tCons mzw gy tNil))
+                  -> Reaches ws v z
+              pick (y , my , gy) =
+                reachesBy (via ++ z ∷ [])
+                          (trailApp ws trail (tCons mzw gy tNil))
+                where open Reaches (rc y my)
 
   reachGoTrail   : {E : Pred} (acc : List Node) (av : Avail E ws acc)
                    (bar : IFin E)
-                -> ((z : Node) -> z ∈ acc -> Reaches ws G v z)
-                -> {z : Node} -> z ∈ reachGo acc av bar -> Reaches ws G v z
+                -> ((z : Node) -> z ∈ acc -> Reaches ws v z)
+                -> {z : Node} -> z ∈ reachGo acc av bar -> Reaches ws v z
   reachFindTrail : {E : Pred} (acc : List Node) (av : Avail E ws acc)
-                   (bar : IFin E) (fr : FindResult (reachSettled G v acc) ws)
-                -> ((z : Node) -> z ∈ acc -> Reaches ws G v z)
-                -> {z : Node} -> z ∈ reachFind acc av bar fr -> Reaches ws G v z
+                   (bar : IFin E) (fr : FindResult (reachSettled v acc) ws)
+                -> ((z : Node) -> z ∈ acc -> Reaches ws v z)
+                -> {z : Node} -> z ∈ reachFind acc av bar fr -> Reaches ws v z
 
   reachGoTrail acc av bar =
-    reachFindTrail acc av bar (findFalse (reachSettled G v acc) ws)
+    reachFindTrail acc av bar (findFalse (reachSettled v acc) ws)
 
   reachFindTrail acc av bar          (allTrue f)      rc {z} m = rc z m
   reachFindTrail acc av (cBar h) (found x mx q) rc       m =
-    reachGoTrail (reachRound ws G v acc) _
-                 (h x (av x mx (reachNotInAcc G v acc x q)))
+    reachGoTrail (reachRound ws v acc) _
+                 (h x (av x mx (reachNotInAcc v acc x q)))
                  (addReaches acc rc) m
 
   reachGoSeed   : {E : Pred} (acc : List Node) (av : Avail E ws acc)
                   (bar : IFin E)
                -> v ∈ ws -> v ∈ reachGo acc av bar
   reachFindSeed : {E : Pred} (acc : List Node) (av : Avail E ws acc)
-                  (bar : IFin E) (fr : FindResult (reachSettled G v acc) ws)
+                  (bar : IFin E) (fr : FindResult (reachSettled v acc) ws)
                -> v ∈ ws -> v ∈ reachFind acc av bar fr
 
   reachGoSeed acc av bar =
-    reachFindSeed acc av bar (findFalse (reachSettled G v acc) ws)
+    reachFindSeed acc av bar (findFalse (reachSettled v acc) ws)
 
   reachFindSeed acc av bar          (allTrue f)      mv =
     ∈ᵛ-sound v acc
       (¬ᵇ-false (v ∈ᵛ acc)
-                (¬ᵇ∧ᵇ-cancelˡ (reachWanted G v acc v) (¬ᵇ (v ∈ᵛ acc)) (f mv)
+                (¬ᵇ∧ᵇ-cancelˡ (reachWanted v acc v) (¬ᵇ (v ∈ᵛ acc)) (f mv)
                    (∨ᵇ-introˡ (v ≡ᵛ v) (any (λ y -> G y v) acc) (≡ᵛ-refl v))))
   reachFindSeed acc av (cBar h) (found x mx q) mv =
-    reachGoSeed (reachRound ws G v acc) _
-                (h x (av x mx (reachNotInAcc G v acc x q))) mv
+    reachGoSeed (reachRound ws v acc) _
+                (h x (av x mx (reachNotInAcc v acc x q))) mv
 
   reachGoClosed   : {E : Pred} (acc : List Node) (av : Avail E ws acc)
                     (bar : IFin E) {u w : Node}
                  -> u ∈ reachGo acc av bar -> w ∈ ws -> G u w ≡ true
                  -> w ∈ reachGo acc av bar
   reachFindClosed : {E : Pred} (acc : List Node) (av : Avail E ws acc)
-                    (bar : IFin E) (fr : FindResult (reachSettled G v acc) ws)
+                    (bar : IFin E) (fr : FindResult (reachSettled v acc) ws)
                     {u w : Node}
                  -> u ∈ reachFind acc av bar fr -> w ∈ ws -> G u w ≡ true
                  -> w ∈ reachFind acc av bar fr
 
   reachGoClosed acc av bar =
-    reachFindClosed acc av bar (findFalse (reachSettled G v acc) ws)
+    reachFindClosed acc av bar (findFalse (reachSettled v acc) ws)
 
   reachFindClosed acc av bar      (allTrue f)      {u} {w} mu mw st =
     ∈ᵛ-sound w acc
       (¬ᵇ-false (w ∈ᵛ acc)
-                (¬ᵇ∧ᵇ-cancelˡ (reachWanted G v acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
+                (¬ᵇ∧ᵇ-cancelˡ (reachWanted v acc w) (¬ᵇ (w ∈ᵛ acc)) (f mw)
                               (∨ᵇ-introʳ (v ≡ᵛ w) (any (λ y -> G y w) acc)
                                          (any-intro (λ y -> G y w) acc mu st))))
   reachFindClosed acc av (cBar h) (found x mx q) mu mw st =
-    reachGoClosed (reachRound ws G v acc) _
-                  (h x (av x mx (reachNotInAcc G v acc x q)))
+    reachGoClosed (reachRound ws v acc) _
+                  (h x (av x mx (reachNotInAcc v acc x q)))
                   mu mw st
 
 ------------------------------------------------------------------------
@@ -325,111 +330,109 @@ reachAvInit ws z mz e = ∈ᵛ-complete z ws mz
 emptyAccIn : (ws : List Node) (z : Node) -> z ∈ [] {A = Node} -> z ∈ ws
 emptyAccIn ws z ()
 
-emptyAccReaches : (ws : List Node) (G : Edges) (v : Node) (z : Node)
-               -> z ∈ [] {A = Node} -> Reaches ws G v z
-emptyAccReaches ws G v z ()
+emptyAccReaches : (ws : List Node) (v : Node) (z : Node)
+               -> z ∈ [] {A = Node} -> Reaches ws v z
+emptyAccReaches ws v z ()
 
-reachSet : List Node -> Edges -> Node -> List Node
-reachSet ws G v = reachGo ws G v [] (reachAvInit ws) (listBar ws)
+reachSet : List Node -> Node -> List Node
+reachSet ws v = reachGo ws v [] (reachAvInit ws) (listBar ws)
 
-reachIn : (ws : List Node) (G : Edges) (v : Node) {z : Node}
-       -> z ∈ reachSet ws G v -> z ∈ ws
-reachIn ws G v =
-  reachGoIn ws G v [] (reachAvInit ws) (listBar ws) (emptyAccIn ws)
+reachIn : (ws : List Node) (v : Node) {z : Node}
+       -> z ∈ reachSet ws v -> z ∈ ws
+reachIn ws v =
+  reachGoIn ws v [] (reachAvInit ws) (listBar ws) (emptyAccIn ws)
 
-reachTrail : (ws : List Node) (G : Edges) (v : Node) {z : Node}
-          -> z ∈ reachSet ws G v -> Reaches ws G v z
-reachTrail ws G v =
-  reachGoTrail ws G v [] (reachAvInit ws) (listBar ws)
-               (emptyAccReaches ws G v)
+reachTrail : (ws : List Node) (v : Node) {z : Node}
+          -> z ∈ reachSet ws v -> Reaches ws v z
+reachTrail ws v =
+  reachGoTrail ws v [] (reachAvInit ws) (listBar ws)
+               (emptyAccReaches ws v)
 
-reachSeed : (ws : List Node) (G : Edges) (v : Node)
-         -> v ∈ ws -> v ∈ reachSet ws G v
-reachSeed ws G v = reachGoSeed ws G v [] (reachAvInit ws) (listBar ws)
+reachSeed : (ws : List Node) (v : Node)
+         -> v ∈ ws -> v ∈ reachSet ws v
+reachSeed ws v = reachGoSeed ws v [] (reachAvInit ws) (listBar ws)
 
-reachClosed : (ws : List Node) (G : Edges) (v : Node) {u w : Node}
-           -> u ∈ reachSet ws G v -> w ∈ ws -> G u w ≡ true
-           -> w ∈ reachSet ws G v
-reachClosed ws G v = reachGoClosed ws G v [] (reachAvInit ws) (listBar ws)
+reachClosed : (ws : List Node) (v : Node) {u w : Node}
+           -> u ∈ reachSet ws v -> w ∈ ws -> G u w ≡ true
+           -> w ∈ reachSet ws v
+reachClosed ws v = reachGoClosed ws v [] (reachAvInit ws) (listBar ws)
 
 -- Completeness: a trail from a member of the set stays in the set, by
 -- induction along the trail against the stopping condition.
 
-reachTrailIn : (ws : List Node) (G : Edges) (v : Node)
+reachTrailIn : (ws : List Node) (v : Node)
                {u : Node} {zs : List Node} {w : Node}
-            -> u ∈ reachSet ws G v -> Trail ws G u zs w -> w ∈ reachSet ws G v
-reachTrailIn ws G v mu tNil                   = mu
-reachTrailIn ws G v mu (tCons {x = x} mx e t) =
-  reachTrailIn ws G v (reachClosed ws G v mu mx e) t
+            -> u ∈ reachSet ws v -> Trail ws u zs w -> w ∈ reachSet ws v
+reachTrailIn ws v mu tNil                   = mu
+reachTrailIn ws v mu (tCons {x = x} mx e t) =
+  reachTrailIn ws v (reachClosed ws v mu mx e) t
 
-reachComplete : (ws : List Node) (G : Edges) (v : Node) -> v ∈ ws
-             -> {zs : List Node} {w : Node} -> Trail ws G v zs w
-             -> w ∈ reachSet ws G v
-reachComplete ws G v mv t = reachTrailIn ws G v (reachSeed ws G v mv) t
+reachComplete : (ws : List Node) (v : Node) -> v ∈ ws
+             -> {zs : List Node} {w : Node} -> Trail ws v zs w
+             -> w ∈ reachSet ws v
+reachComplete ws v mv t = reachTrailIn ws v (reachSeed ws v mv) t
 
-reachTrans : (ws : List Node) (G : Edges) (v u w : Node)
-          -> u ∈ reachSet ws G v -> w ∈ reachSet ws G u
-          -> w ∈ reachSet ws G v
-reachTrans ws G v u w mu mw = onR (reachTrail ws G u mw)
-  where
-    onR : Reaches ws G u w -> w ∈ reachSet ws G v
-    onR (reachesBy zs t) = reachTrailIn ws G v mu t
+reachTrans : (ws : List Node) (v u w : Node)
+          -> u ∈ reachSet ws v -> w ∈ reachSet ws u
+          -> w ∈ reachSet ws v
+reachTrans ws v u w mu mw =
+  reachTrailIn ws v mu (Reaches.trail (reachTrail ws u mw))
 
 ------------------------------------------------------------------------
--- Components, without component objects: sccOf ws G r is the vertices r
+-- Components, without component objects: sccOf ws r is the vertices r
 -- reaches that reach r back.  A filter of a list, nothing more.
 
-sccOf : List Node -> Edges -> Node -> List Node
-sccOf ws G r = filter (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r)
+sccOf : List Node -> Node -> List Node
+sccOf ws r = filter (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 
-sccReach : (ws : List Node) (G : Edges) (r : Node) (w : Node)
-        -> w ∈ sccOf ws G r -> w ∈ reachSet ws G r
-sccReach ws G r w m =
-  filter-sub (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r) m
+sccReach : (ws : List Node) (r : Node) (w : Node)
+        -> w ∈ sccOf ws r -> w ∈ reachSet ws r
+sccReach ws r w m =
+  filter-sub (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
 
-sccIn : (ws : List Node) (G : Edges) (r : Node) (w : Node)
-     -> w ∈ sccOf ws G r -> w ∈ ws
-sccIn ws G r w m = reachIn ws G r (sccReach ws G r w m)
+sccIn : (ws : List Node) (r : Node) (w : Node)
+     -> w ∈ sccOf ws r -> w ∈ ws
+sccIn ws r w m = reachIn ws r (sccReach ws r w m)
 
-sccTo : (ws : List Node) (G : Edges) (r : Node) (w : Node)
-     -> w ∈ sccOf ws G r -> Reaches ws G r w
-sccTo ws G r w m = reachTrail ws G r (sccReach ws G r w m)
+sccTo : (ws : List Node) (r : Node) (w : Node)
+     -> w ∈ sccOf ws r -> Reaches ws r w
+sccTo ws r w m = reachTrail ws r (sccReach ws r w m)
 
-sccFrom : (ws : List Node) (G : Edges) (r : Node) (w : Node)
-       -> w ∈ sccOf ws G r -> Reaches ws G w r
-sccFrom ws G r w m =
-  reachTrail ws G w
-    (∈ᵛ-sound r (reachSet ws G w)
-      (filter-prop (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r) m))
+sccFrom : (ws : List Node) (r : Node) (w : Node)
+       -> w ∈ sccOf ws r -> Reaches ws w r
+sccFrom ws r w m =
+  reachTrail ws w
+    (∈ᵛ-sound r (reachSet ws w)
+      (filter-prop (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m))
 
-sccRep : (ws : List Node) (G : Edges) (r : Node)
-      -> r ∈ ws -> r ∈ sccOf ws G r
-sccRep ws G r mr =
-  filter-true (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r)
-              (reachSeed ws G r mr)
-              (∈ᵛ-complete r (reachSet ws G r) (reachSeed ws G r mr))
+sccRep : (ws : List Node) (r : Node)
+      -> r ∈ ws -> r ∈ sccOf ws r
+sccRep ws r mr =
+  filter-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
+              (reachSeed ws r mr)
+              (∈ᵛ-complete r (reachSet ws r) (reachSeed ws r mr))
 
 ------------------------------------------------------------------------
 -- r's component is terminal when everything r reaches reaches r back, i.e.
 -- the reachable set of r IS its component.
 
-isTerminal : List Node -> Edges -> Node -> Bool
-isTerminal ws G r = all (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r)
+isTerminal : List Node -> Node -> Bool
+isTerminal ws r = all (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 
-termScc : (ws : List Node) (G : Edges) (r : Node)
-       -> isTerminal ws G r ≡ true
-       -> {w : Node} -> w ∈ reachSet ws G r -> w ∈ sccOf ws G r
-termScc ws G r et {w} m =
-  filter-true (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r) m
-              (all-at (λ z -> r ∈ᵛ reachSet ws G z) (reachSet ws G r) m et)
+termScc : (ws : List Node) (r : Node)
+       -> isTerminal ws r ≡ true
+       -> {w : Node} -> w ∈ reachSet ws r -> w ∈ sccOf ws r
+termScc ws r et {w} m =
+  filter-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
+              (all-at (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m et)
 
 -- A terminal component is closed under successors inside ws: the refutation
 -- needs exactly this of it.
 
-termClosed : (ws : List Node) (G : Edges) (r : Node)
-          -> isTerminal ws G r ≡ true -> Closed ws G (sccOf ws G r)
-termClosed ws G r et z y mz my e =
-  termScc ws G r et (reachClosed ws G r (sccReach ws G r z mz) my e)
+termClosed : (ws : List Node) (r : Node)
+          -> isTerminal ws r ≡ true -> Closed ws G (sccOf ws r)
+termClosed ws r et z y mz my e =
+  termScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
 
 ------------------------------------------------------------------------
 -- A non-empty graph has a terminal component.  While r's component is not
@@ -441,47 +444,47 @@ termClosed ws G r et z y mz my e =
 
 -- A vertex whose component is terminal, found by the search above.
 
-data Terminal (ws : List Node) (G : Edges) : Set where
-  terminalAt : (r : Node) -> r ∈ ws -> isTerminal ws G r ≡ true -> Terminal ws G
+data Terminal (ws : List Node) : Set where
+  terminalAt : (r : Node) -> r ∈ ws -> isTerminal ws r ≡ true -> Terminal ws
 
-module _ (ws : List Node) (G : Edges) where
+module _ (ws : List Node) where
 
   termGo   : (r : Node) -> r ∈ ws -> {E : Pred}
-          -> AllSat E (reachSet ws G r) -> IFin E -> Terminal ws G
+          -> AllSat E (reachSet ws r) -> IFin E -> Terminal ws
   termFind : (r : Node) -> r ∈ ws -> {E : Pred}
-          -> AllSat E (reachSet ws G r) -> IFin E
-          -> FindResult (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r)
-          -> Terminal ws G
+          -> AllSat E (reachSet ws r) -> IFin E
+          -> FindResult (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+          -> Terminal ws
 
   termGo r mr av bar =
     termFind r mr av bar
-             (findFalse (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r))
+             (findFalse (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r))
 
   termFind r mr av bar          (allTrue f)       =
     terminalAt r mr
-               (all-intro (λ w -> r ∈ᵛ reachSet ws G w) (reachSet ws G r) f)
+               (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r) f)
   termFind r mr {E} av (cBar h) (found w mw q) =
-    termGo w (reachIn ws G r mw) av' (h r (av r (reachSeed ws G r mr)))
+    termGo w (reachIn ws r mw) av' (h r (av r (reachSeed ws r mr)))
     where
-      av' : (z : Node) -> z ∈ reachSet ws G w -> E z ∧ᵇ (r ≢ᵛ z) ≡ true
+      av' : (z : Node) -> z ∈ reachSet ws w -> E z ∧ᵇ (r ≢ᵛ z) ≡ true
       av' z mz =
         ∧ᵇ-intro (E z) (r ≢ᵛ z)
-                 (av z (reachTrans ws G r w z mw mz))
+                 (av z (reachTrans ws r w z mw mz))
                  (cong ¬ᵇ_ notR)
         where
           notR : r ≡ᵛ z ≡ false
           notR = refuteTrue (r ≡ᵛ z) λ eb ->
             true≢false (trans (sym (rIn eb)) q)
             where
-              rIn : r ≡ᵛ z ≡ true -> r ∈ᵛ reachSet ws G w ≡ true
-              rIn eb = ∈ᵛ-complete r (reachSet ws G w)
-                         (subst (λ y -> y ∈ reachSet ws G w)
+              rIn : r ≡ᵛ z ≡ true -> r ∈ᵛ reachSet ws w ≡ true
+              rIn eb = ∈ᵛ-complete r (reachSet ws w)
+                         (subst (λ y -> y ∈ reachSet ws w)
                                 (sym (≡ᵛ-sound r z eb)) mz)
 
   findTerm : (r : Node) -> r ∈ ws
-          -> Terminal ws G
+          -> Terminal ws
   findTerm r mr =
-    termGo r mr (λ z mz -> ∈ᵛ-complete z ws (reachIn ws G r mz)) (listBar ws)
+    termGo r mr (λ z mz -> ∈ᵛ-complete z ws (reachIn ws r mz)) (listBar ws)
 
 ------------------------------------------------------------------------
 -- The positive certificate: a fair circuit at r, a non-empty closed trail
@@ -489,43 +492,49 @@ module _ (ws : List Node) (G : Edges) where
 -- picking a witness for each predicate and joining them by trails inside the
 -- component.
 
-record Circuit (ws : List Node) (G : Edges) (fs : List Pred)
+record Circuit (ws : List Node) (fs : List Pred)
                (r : Node) : Set where
   constructor circuit
   field
     cycle    : List Node
-    trail    : Trail ws G r cycle r
+    trail    : Trail ws r cycle r
     nonEmpty : null cycle ≡ false
     meets    : (f : Pred) -> f ∈ fs -> Σ[ z ∈ Node ] z ∈ cycle × f z ≡ true
 
-circMono : (ws vs : List Node) (G : Edges) (fs : List Pred)
+circMono : (ws vs : List Node) (fs : List Pred)
            (r : Node) -> ws ⊆ vs
-        -> Circuit ws G fs r -> Circuit vs G fs r
-circMono ws vs G fs r sb (circuit cy t nn wit) =
-  circuit cy (trailMono ws vs G sb t) nn wit
+        -> Circuit ws fs r -> Circuit vs fs r
+circMono ws vs fs r sb (circuit cy t nn wit) =
+  circuit cy (trailMono ws vs sb t) nn wit
 
 -- C meets every fairness predicate: each f in fs holds somewhere in C.
 
 meetsAll : List Pred -> List Node -> Bool
 meetsAll fs C = all (λ g -> any g C) fs
 
-data Loop (ws : List Node) (G : Edges) (r : Node) : Set where
-  loopBy : (cy : List Node) -> Trail ws G r cy r -> null cy ≡ false
-        -> Loop ws G r
+-- A closed trail through r that takes at least one step: a Circuit with no
+-- fairness predicates yet.
+
+record Loop (ws : List Node) (r : Node) : Set where
+  constructor loopBy
+  field
+    cycle    : List Node
+    trail    : Trail ws r cycle r
+    nonEmpty : null cycle ≡ false
 
 -- A terminal component of a vertex that has a successor is non-trivial: the
 -- successor is reached, so terminality sends a trail back.  No separate cycle
 -- detection is needed.
 
-module _ (ws : List Node) (G : Edges) (r : Node) where
+module _ (ws : List Node) (r : Node) where
 
   loopAt : r ∈ ws
-        -> isTerminal ws G r ≡ true -> hasOut ws G r ≡ true -> Loop ws G r
+        -> isTerminal ws r ≡ true -> hasOut ws r ≡ true -> Loop ws r
   loopAt mr et ho =
-    pick (null-false (outs ws G r) (¬ᵇ-true (null (outs ws G r)) ho))
+    pick (null-false (outs ws r) (¬ᵇ-true (null (outs ws r)) ho))
     where
-      pick : (Σ[ x ∈ Node ] x ∈ outs ws G r) -> Loop ws G r
-      pick (x , mx) = back (sccFrom ws G r x (termScc ws G r et inR))
+      pick : (Σ[ x ∈ Node ] x ∈ outs ws r) -> Loop ws r
+      pick (x , mx) = loopBy (x ∷ via) (tCons mxw grx trail) refl
         where
           mxw : x ∈ ws
           mxw = filter-sub (G r) ws mx
@@ -533,31 +542,30 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
           grx : G r x ≡ true
           grx = filter-prop (G r) ws mx
 
-          inR : x ∈ reachSet ws G r
-          inR = reachClosed ws G r (reachSeed ws G r mr) mxw grx
+          inR : x ∈ reachSet ws r
+          inR = reachClosed ws r (reachSeed ws r mr) mxw grx
 
-          back : Reaches ws G x r -> Loop ws G r
-          back (reachesBy zs t) = loopBy (x ∷ zs) (tCons mxw grx t) refl
+          open Reaches (sccFrom ws r x (termScc ws r et inR))
 
   -- One fairness predicate added to a circuit.  The leg is  loop ++ (r to w)
   -- ++ (w to r) , with the loop in front so that the r-to-w half is non-empty
   -- and w is a vertex the leg VISITS.  trailApp is left-nested so that
   -- associativity never appears.
 
-  consCirc : (cy0 : List Node) -> Trail ws G r cy0 r -> null cy0 ≡ false
+  consCirc : (cy0 : List Node) -> Trail ws r cy0 r -> null cy0 ≡ false
           -> (f : Pred) (w : Node) -> f w ≡ true
-          -> Reaches ws G r w -> Reaches ws G w r
-          -> (fs : List Pred) -> Circuit ws G fs r
-          -> Circuit ws G (f ∷ fs) r
+          -> Reaches ws r w -> Reaches ws w r
+          -> (fs : List Pred) -> Circuit ws fs r
+          -> Circuit ws (f ∷ fs) r
   consCirc cy0 t0 nn f w fw (reachesBy as ta) (reachesBy bs tb) fs
            (circuit cy t nnc wit) =
-    circuit (leg ++ cy) (trailApp ws G legT t) (appNotNull leg cy legNN) each
+    circuit (leg ++ cy) (trailApp ws legT t) (appNotNull leg cy legNN) each
     where
       front : List Node
       front = cy0 ++ as
 
-      frontT : Trail ws G r front w
-      frontT = trailApp ws G t0 ta
+      frontT : Trail ws r front w
+      frontT = trailApp ws t0 ta
 
       frontNN : null front ≡ false
       frontNN = appNotNull cy0 as nn
@@ -565,14 +573,14 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
       leg : List Node
       leg = front ++ bs
 
-      legT : Trail ws G r leg r
-      legT = trailApp ws G frontT tb
+      legT : Trail ws r leg r
+      legT = trailApp ws frontT tb
 
       legNN : null leg ≡ false
       legNN = appNotNull front bs frontNN
 
       mw : w ∈ leg
-      mw = memAppL front bs (trailLast ws G frontT frontNN)
+      mw = memAppL front bs (trailLast ws frontT frontNN)
 
       each : (g : Pred) -> g ∈ f ∷ fs
           -> Σ[ z ∈ Node ] z ∈ leg ++ cy × g z ≡ true
@@ -583,12 +591,12 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
                -> Σ[ z ∈ Node ] z ∈ leg ++ cy × g z ≡ true
           shift (z , mz , gz) = z , memAppR leg cy mz , gz
 
-  mkCirc : (cy0 : List Node) -> Trail ws G r cy0 r -> null cy0 ≡ false
+  mkCirc : (cy0 : List Node) -> Trail ws r cy0 r -> null cy0 ≡ false
         -> (C : List Node)
-        -> ((u : Node) -> u ∈ C -> Reaches ws G r u)
-        -> ((u : Node) -> u ∈ C -> Reaches ws G u r)
+        -> ((u : Node) -> u ∈ C -> Reaches ws r u)
+        -> ((u : Node) -> u ∈ C -> Reaches ws u r)
         -> (fs : List Pred) -> meetsAll fs C ≡ true
-        -> Circuit ws G fs r
+        -> Circuit ws fs r
   mkCirc cy0 t0 nn C to from []        e = circuit cy0 t0 nn noF
     where
       noF : (f : Pred) -> f ∈ []
@@ -597,12 +605,12 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
   mkCirc cy0 t0 nn C to from (f ∷ fs) e =
     pick (any-true f C (∧ᵇ-trueˡ (any f C) (meetsAll fs C) e))
     where
-      rest : Circuit ws G fs r
+      rest : Circuit ws fs r
       rest = mkCirc cy0 t0 nn C to from fs
                     (∧ᵇ-trueʳ (any f C) (meetsAll fs C) e)
 
       pick : (Σ[ w ∈ Node ] w ∈ C × f w ≡ true)
-          -> Circuit ws G (f ∷ fs) r
+          -> Circuit ws (f ∷ fs) r
       pick (w , mw , fw) =
         consCirc cy0 t0 nn f w fw (to w mw) (from w mw) fs rest
 
@@ -612,34 +620,31 @@ module _ (ws : List Node) (G : Edges) (r : Node) where
 -- built, or it misses some f and is a block to be refuted.  Nothing here
 -- recurses.
 
-data Block (ws : List Node) (G : Edges) (fs : List Pred) : Set where
-  bEmpty  : null ws ≡ true -> Block ws G fs
-  bFair   : (r : Node) -> r ∈ ws -> Circuit ws G fs r -> Block ws G fs
-  bUnfair : (r : Node) -> r ∈ ws -> isTerminal ws G r ≡ true
-         -> (f : Pred) -> f ∈ fs -> any f (sccOf ws G r) ≡ false
-         -> Block ws G fs
+data Block (ws : List Node) (fs : List Pred) : Set where
+  bEmpty  : null ws ≡ true -> Block ws fs
+  bFair   : (r : Node) -> r ∈ ws -> Circuit ws fs r -> Block ws fs
+  bUnfair : (r : Node) -> r ∈ ws -> isTerminal ws r ≡ true
+         -> (f : Pred) -> f ∈ fs -> any f (sccOf ws r) ≡ false
+         -> Block ws fs
 
-blockOf : (ws : List Node) (G : Edges) (fs : List Pred)
-       -> ({x : Node} -> x ∈ ws -> hasOut ws G x ≡ true)
-       -> Terminal ws G -> Block ws G fs
-blockOf ws G fs h (terminalAt r mr et) with meetsAll fs (sccOf ws G r) in eb
-... | true  = fromLoop (loopAt ws G r mr et (h mr))
+blockOf : (ws : List Node) (fs : List Pred)
+       -> ({x : Node} -> x ∈ ws -> hasOut ws x ≡ true)
+       -> Terminal ws -> Block ws fs
+blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
+... | true  = bFair r mr (mkCirc ws r cycle trail nonEmpty (sccOf ws r)
+                                 (sccTo ws r) (sccFrom ws r) fs eb)
+  where open Loop (loopAt ws r mr et (h mr))
+... | false = unf (all-false (λ g -> any g (sccOf ws r)) fs eb)
   where
-    fromLoop : Loop ws G r -> Block ws G fs
-    fromLoop (loopBy cy t nn) =
-      bFair r mr (mkCirc ws G r cy t nn (sccOf ws G r)
-                         (sccTo ws G r) (sccFrom ws G r) fs eb)
-... | false = unf (all-false (λ g -> any g (sccOf ws G r)) fs eb)
-  where
-    unf : (Σ[ g ∈ Pred ] g ∈ fs × any g (sccOf ws G r) ≡ false)
-       -> Block ws G fs
+    unf : (Σ[ g ∈ Pred ] g ∈ fs × any g (sccOf ws r) ≡ false)
+       -> Block ws fs
     unf (g , mg , eg) = bUnfair r mr et g mg eg
 
-pickBlock : (ws : List Node) (G : Edges) (fs : List Pred)
-         -> ({x : Node} -> x ∈ ws -> hasOut ws G x ≡ true) -> Block ws G fs
-pickBlock []       G fs h = bEmpty refl
-pickBlock (u ∷ ws) G fs h =
-  blockOf (u ∷ ws) G fs h (findTerm (u ∷ ws) G u here)
+pickBlock : (ws : List Node) (fs : List Pred)
+         -> ({x : Node} -> x ∈ ws -> hasOut ws x ≡ true) -> Block ws fs
+pickBlock []       fs h = bEmpty refl
+pickBlock (u ∷ ws) fs h =
+  blockOf (u ∷ ws) fs h (findTerm (u ∷ ws) u here)
 
 ------------------------------------------------------------------------
 -- The negative certificate: a well-founded record of the removal order,
@@ -655,66 +660,72 @@ ws ∖ᵛ x = filter (x ≢ᵛ_) ws
 _∖_ : List Node -> List Node -> List Node
 ws ∖ C = filter (λ z -> ¬ᵇ (z ∈ᵛ C)) ws
 
-data Cert (G : Edges) (fs : List Pred) : List Node -> Set where
-  cNil   : (ws : List Node) -> null ws ≡ true -> Cert G fs ws
+data Cert (fs : List Pred) : List Node -> Set where
+  cNil   : (ws : List Node) -> null ws ≡ true -> Cert fs ws
   cSink  : (ws : List Node) (x : Node) -> x ∈ ws
-        -> null (outs ws G x) ≡ true
-        -> Cert G fs (ws ∖ᵛ x) -> Cert G fs ws
+        -> null (outs ws x) ≡ true
+        -> Cert fs (ws ∖ᵛ x) -> Cert fs ws
   cBlock : (ws C : List Node) (f : Pred) -> f ∈ fs
         -> C ⊆ ws -> Closed ws G C -> NoneSat f C
-        -> Cert G fs (ws ∖ C) -> Cert G fs ws
+        -> Cert fs (ws ∖ C) -> Cert fs ws
 
 ------------------------------------------------------------------------
 -- The theorem, on a sub-list
 
-data FairIn (ws : List Node) (G : Edges) (fs : List Pred) : Set where
-  fairIn : (r : Node) -> r ∈ ws -> Circuit ws G fs r -> FairIn ws G fs
+-- A fair circuit somewhere in ws, at the representative r.
 
-fairInMono : (ws vs : List Node) (G : Edges) (fs : List Pred)
+record FairIn (ws : List Node) (fs : List Pred) : Set where
+  constructor fairIn
+  field
+    r           : Node
+    rIn         : r ∈ ws
+    fairCircuit : Circuit ws fs r
+
+fairInMono : (ws vs : List Node) (fs : List Pred)
           -> ws ⊆ vs
-          -> FairIn ws G fs -> FairIn vs G fs
-fairInMono ws vs G fs sb (fairIn r mr c) =
-  fairIn r (sb r mr) (circMono ws vs G fs r sb c)
+          -> FairIn ws fs -> FairIn vs fs
+fairInMono ws vs fs sb (fairIn r mr c) =
+  fairIn r (sb r mr) (circMono ws vs fs r sb c)
 
 -- Terminal-component removal, a REMOVING iteration: whichever step applies,
 -- the vertex it names (the sink x, or the block's representative r) leaves ws
 -- and the Bar's predicate with it (dropAllSat).
 
-module _ (G : Edges) (fs : List Pred) where
+module _ (fs : List Pred) where
 
   graphGo    : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
-            -> FairIn ws G fs ⊎ Cert G fs ws
+            -> FairIn ws fs ⊎ Cert fs ws
   graphFind  : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
-            -> FindResult (hasOut ws G) ws
-            -> FairIn ws G fs ⊎ Cert G fs ws
+            -> FindResult (hasOut ws) ws
+            -> FairIn ws fs ⊎ Cert fs ws
   graphBlock : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
-            -> Block ws G fs -> FairIn ws G fs ⊎ Cert G fs ws
+            -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
 
-  graphGo ws sb bar = graphFind ws sb bar (findFalse (hasOut ws G) ws)
+  graphGo ws sb bar = graphFind ws sb bar (findFalse (hasOut ws) ws)
 
   graphFind ws sb bar      (allTrue f)       =
-    graphBlock ws sb bar (pickBlock ws G fs f)
+    graphBlock ws sb bar (pickBlock ws fs f)
   graphFind ws sb (cBar h) (found x mx q) =
-    sumElim (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws G fs
+    sumElim (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws fs
                                      (λ z m -> filter-sub (x ≢ᵛ_) ws m) fi))
-            (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws G x)) q) c))
+            (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws x)) q) c))
             (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws sb x (≢ᵛ-self x))
                      (h x (sb x mx)))
 
   graphBlock ws sb bar      (bEmpty e)                 = inr (cNil ws e)
   graphBlock ws sb bar      (bFair r mr c)             = inl (fairIn r mr c)
   graphBlock ws sb (cBar h) (bUnfair r mr et g mg eg) =
-    sumElim (λ fi -> inl (fairInMono (ws ∖ C) ws G fs
+    sumElim (λ fi -> inl (fairInMono (ws ∖ C) ws fs
                                      (λ z m -> filter-sub notInC ws m) fi))
-            (λ c  -> inr (cBlock ws C g mg (sccIn ws G r)
-                                 (termClosed ws G r et) miss c))
+            (λ c  -> inr (cBlock ws C g mg (sccIn ws r)
+                                 (termClosed ws r et) miss c))
             (graphGo (ws ∖ C)
                      (dropAllSat notInC ws sb r
-                        (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws G r mr))))
+                        (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws r mr))))
                      (h r (sb r mr)))
     where
       C : List Node
-      C = sccOf ws G r
+      C = sccOf ws r
 
       notInC : Pred
       notInC y = ¬ᵇ (y ∈ᵛ C)
@@ -727,29 +738,29 @@ module _ (G : Edges) (fs : List Pred) where
 
 -- A fair lasso from v: a stem from v to r, then a fair circuit at r.
 
-record FairLoop (vs : List Node) (G : Edges) (fs : List Pred)
+record FairLoop (vs : List Node) (fs : List Pred)
                 (v : Node) : Set where
   constructor fairLoop
   field
     r           : Node   -- where the cycle starts and ends
-    stem        : Reaches vs G v r
-    fairCircuit : Circuit vs G fs r
+    stem        : Reaches vs v r
+    fairCircuit : Circuit vs fs r
 
-fairGraph : (vs : List Node) (G : Edges) (fs : List Pred)
+fairGraph : (vs : List Node) (fs : List Pred)
             (v : Node) -> v ∈ vs
-         -> FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v)
-fairGraph vs G fs v mv =
+         -> FairLoop vs fs v ⊎ Cert fs (reachSet vs v)
+fairGraph vs fs v mv =
   sumElim (λ fi -> inl (toLoop fi)) inr
-          (graphGo G fs (reachSet vs G v) (memAllSat (reachSet vs G v))
-                   (listBar (reachSet vs G v)))
+          (graphGo fs (reachSet vs v) (memAllSat (reachSet vs v))
+                   (listBar (reachSet vs v)))
   where
-    into : (z : Node) -> z ∈ reachSet vs G v -> z ∈ vs
-    into z m = reachIn vs G v m
+    into : (z : Node) -> z ∈ reachSet vs v -> z ∈ vs
+    into z m = reachIn vs v m
 
-    toLoop : FairIn (reachSet vs G v) G fs -> FairLoop vs G fs v
+    toLoop : FairIn (reachSet vs v) fs -> FairLoop vs fs v
     toLoop (fairIn r mr c) =
-      fairLoop r (reachTrail vs G v mr)
-                 (circMono (reachSet vs G v) vs G fs r into c)
+      fairLoop r (reachTrail vs v mr)
+                 (circMono (reachSet vs v) vs fs r into c)
 
 ------------------------------------------------------------------------
 -- What a certificate is for: an induction over the removal order.  R is the
@@ -757,16 +768,16 @@ fairGraph vs G fs v mv =
 -- of chi), and the hypothesis carried is "R holds outside ws".  The sink and
 -- block cases are the two hypotheses of certAll.
 
-module _ (G : Edges) (fs : List Pred) (R : Node -> Set)
+module _ (fs : List Pred) (R : Node -> Set)
          (sinkCase  : (ws : List Node) (x : Node) -> x ∈ ws
-                   -> null (outs ws G x) ≡ true
+                   -> null (outs ws x) ≡ true
                    -> HoldsOutside R ws -> R x)
          (blockCase : (ws C : List Node) (f : Pred) -> f ∈ fs
                    -> C ⊆ ws -> Closed ws G C -> NoneSat f C
                    -> HoldsOutside R ws -> (z : Node) -> z ∈ C -> R z)
          where
 
-  certAll : {ws : List Node} -> Cert G fs ws -> HoldsOutside R ws
+  certAll : {ws : List Node} -> Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z
   certAll (cNil ws e)          ih z = ih z (null-notMem ws z e)
   certAll (cSink ws x mx e c)  ih z = certAll c ih' z
@@ -802,26 +813,26 @@ module _ (G : Edges) (fs : List Pred) (R : Node -> Set)
 -- The suffix of a trail from any vertex it visits, and the prefix to one: all
 -- the "rotation" of a cycle the argument needs.
 
-module _ (ws : List Node) (G : Edges) where
+module _ (ws : List Node) where
 
   reachesCons : {v x s : Node}
-             -> x ∈ ws -> G v x ≡ true -> Reaches ws G x s -> Reaches ws G v s
+             -> x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
   reachesCons m e (reachesBy zs t) = reachesBy (_ ∷ zs) (tCons m e t)
 
   reachesApp : {u v w : Node}
-            -> Reaches ws G u v -> Reaches ws G v w -> Reaches ws G u w
+            -> Reaches ws u v -> Reaches ws v w -> Reaches ws u w
   reachesApp (reachesBy as ta) (reachesBy bs tb) =
-    reachesBy (as ++ bs) (trailApp ws G ta tb)
+    reachesBy (as ++ bs) (trailApp ws ta tb)
 
   trailFrom : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws G v zs w -> {s : Node} -> s ∈ v ∷ zs -> Reaches ws G s w
+           -> Trail ws v zs w -> {s : Node} -> s ∈ v ∷ zs -> Reaches ws s w
   trailFrom tNil          here      = reachesBy [] tNil
   trailFrom tNil          (there ())
   trailFrom (tCons m e t) here      = reachesBy _ (tCons m e t)
   trailFrom (tCons m e t) (there k) = trailFrom t k
 
   trailTo : {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws G v zs w -> {s : Node} -> s ∈ zs -> Reaches ws G v s
+         -> Trail ws v zs w -> {s : Node} -> s ∈ zs -> Reaches ws v s
   trailTo tNil          ()
   trailTo (tCons m e t) here      = reachesBy (_ ∷ []) (tCons m e tNil)
   trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
@@ -830,31 +841,31 @@ module _ (ws : List Node) (G : Edges) where
 -- trail every vertex visited has one provided the endpoint has, and for a
 -- closed trail the endpoint is the start, whose successor is the first step.
 
-data HasSucc (ws : List Node) (G : Edges) (x : Node) : Set where
-  hasSucc : (y : Node) -> y ∈ ws -> G x y ≡ true -> HasSucc ws G x
+data HasSucc (ws : List Node) (x : Node) : Set where
+  hasSucc : (y : Node) -> y ∈ ws -> G x y ≡ true -> HasSucc ws x
 
-module _ (ws : List Node) (G : Edges) where
+module _ (ws : List Node) where
 
   firstStep : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws G v zs w -> null zs ≡ false -> HasSucc ws G v
+           -> Trail ws v zs w -> null zs ≡ false -> HasSucc ws v
   firstStep tNil                  ()
   firstStep (tCons {x = y} m e t) nn = hasSucc y m e
 
   headSucc : {v : Node} {zs : List Node} {w : Node}
-          -> Trail ws G v zs w -> HasSucc ws G w -> HasSucc ws G v
+          -> Trail ws v zs w -> HasSucc ws w -> HasSucc ws v
   headSucc tNil                  hw = hw
   headSucc (tCons {x = y} m e t) hw = hasSucc y m e
 
   trailSucc : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws G v zs w -> HasSucc ws G w
-           -> {x : Node} -> x ∈ zs -> HasSucc ws G x
+           -> Trail ws v zs w -> HasSucc ws w
+           -> {x : Node} -> x ∈ zs -> HasSucc ws x
   trailSucc tNil          hw ()
   trailSucc (tCons m e t) hw here      = headSucc t hw
   trailSucc (tCons m e t) hw (there k) = trailSucc t hw k
 
   cycSucc : (r : Node) (cy : List Node)
-         -> Trail ws G r cy r -> null cy ≡ false
-         -> {x : Node} -> x ∈ cy -> HasSucc ws G x
+         -> Trail ws r cy r -> null cy ≡ false
+         -> {x : Node} -> x ∈ cy -> HasSucc ws x
   cycSucc r cy t nn mx = trailSucc t (firstStep t nn) mx
 
   -- Observation two: any vertex of a cycle reaches any other (suffix to the
@@ -862,52 +873,52 @@ module _ (ws : List Node) (G : Edges) where
   -- starts in contains everything the trail reaches.
 
   cycConn : (r : Node) (cy : List Node)
-         -> Trail ws G r cy r -> (u z : Node) -> u ∈ cy -> z ∈ cy
-         -> Reaches ws G u z
+         -> Trail ws r cy r -> (u z : Node) -> u ∈ cy -> z ∈ cy
+         -> Reaches ws u z
   cycConn r cy t u z mu mz =
-    reachesApp ws G (trailFrom ws G t (there mu)) (trailTo ws G t mz)
+    reachesApp ws (trailFrom ws t (there mu)) (trailTo ws t mz)
 
-blockAlong : (ws C : List Node) (G : Edges) -> Closed ws G C
+blockAlong : (ws C : List Node) -> Closed ws G C
           -> {u : Node} {zs : List Node} {z : Node}
-          -> Trail ws G u zs z -> u ∈ C -> z ∈ C
-blockAlong ws C G cl tNil                       mu = mu
-blockAlong ws C G cl (tCons {x = y} m e t)      mu =
-  blockAlong ws C G cl t (cl _ y mu m e)
+          -> Trail ws u zs z -> u ∈ C -> z ∈ C
+blockAlong ws C cl tNil                       mu = mu
+blockAlong ws C cl (tCons {x = y} m e t)      mu =
+  blockAlong ws C cl t (cl _ y mu m e)
 
-trailRestrict : (ws vs : List Node) (G : Edges)
+trailRestrict : (ws vs : List Node)
                 {v : Node} {zs : List Node} {w : Node}
-             -> Trail ws G v zs w -> zs ⊆ vs
-             -> Trail vs G v zs w
-trailRestrict ws vs G tNil                 h = tNil
-trailRestrict ws vs G (tCons {x = y} m e t) h =
-  tCons (h y here) e (trailRestrict ws vs G t (λ z mz -> h z (there mz)))
+             -> Trail ws v zs w -> zs ⊆ vs
+             -> Trail vs v zs w
+trailRestrict ws vs tNil                 h = tNil
+trailRestrict ws vs (tCons {x = y} m e t) h =
+  tCons (h y here) e (trailRestrict ws vs t (λ z mz -> h z (there mz)))
 
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when
 -- nothing is left, which cNil forbids.
 
-certNoCirc : (G : Edges) (fs : List Pred) {ws : List Node}
-          -> Cert G fs ws -> (r : Node) -> Circuit ws G fs r -> Empty
-certNoCirc G fs (cNil ws e)         r (circuit cy t nn wit) =
-  null-mem ws e (trailIn ws G t (trailLast ws G t nn))
-certNoCirc G fs (cSink ws x mx e c) r (circuit cy t nn wit) =
-  certNoCirc G fs c r (circuit cy (trailRestrict ws (ws ∖ᵛ x) G t keep) nn wit)
+certNoCirc : (fs : List Pred) {ws : List Node}
+          -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
+certNoCirc fs (cNil ws e)         r (circuit cy t nn wit) =
+  null-mem ws e (trailIn ws t (trailLast ws t nn))
+certNoCirc fs (cSink ws x mx e c) r (circuit cy t nn wit) =
+  certNoCirc fs c r (circuit cy (trailRestrict ws (ws ∖ᵛ x) t keep) nn wit)
   where
     offCycle : x ∈ cy -> Empty
-    offCycle m = onS (cycSucc ws G r cy t nn m)
+    offCycle m = onS (cycSucc ws r cy t nn m)
       where
-        onS : HasSucc ws G x -> Empty
+        onS : HasSucc ws x -> Empty
         onS (hasSucc y my gy) =
-          null-mem (outs ws G x) e (filter-true (G x) ws my gy)
+          null-mem (outs ws x) e (filter-true (G x) ws my gy)
 
     keep : (z : Node) -> z ∈ cy -> z ∈ ws ∖ᵛ x
-    keep z mz = filter-true (x ≢ᵛ_) ws (trailIn ws G t mz) (cong ¬ᵇ_ out)
+    keep z mz = filter-true (x ≢ᵛ_) ws (trailIn ws t mz) (cong ¬ᵇ_ out)
       where
         out : x ≡ᵛ z ≡ false
         out = refuteTrue (x ≡ᵛ z) λ eb ->
           offCycle (subst (λ y -> y ∈ cy) (sym (≡ᵛ-sound x z eb)) mz)
-certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
-  certNoCirc G fs c r (circuit cy (trailRestrict ws (ws ∖ C) G t keep) nn wit)
+certNoCirc fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
+  certNoCirc fs c r (circuit cy (trailRestrict ws (ws ∖ C) t keep) nn wit)
   where
     inBlock : (z : Node) -> z ∈ cy -> z ∈ C -> Empty
     inBlock z mz mzc = onW (wit f mf)
@@ -916,13 +927,11 @@ certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
         onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
           where
             inC : y ∈ C
-            inC = along (cycConn ws G r cy t z y mz my)
-              where
-                along : Reaches ws G z y -> y ∈ C
-                along (reachesBy as ta) = blockAlong ws C G cl ta mzc
+            inC = blockAlong ws C cl
+                             (Reaches.trail (cycConn ws r cy t z y mz my)) mzc
 
     keep : (z : Node) -> z ∈ cy -> z ∈ ws ∖ C
-    keep z mz = filter-true (λ y -> ¬ᵇ (y ∈ᵛ C)) ws (trailIn ws G t mz)
+    keep z mz = filter-true (λ y -> ¬ᵇ (y ∈ᵛ C)) ws (trailIn ws t mz)
                             (cong ¬ᵇ_ out)
       where
         out : z ∈ᵛ C ≡ false
@@ -933,38 +942,34 @@ certNoCirc G fs (cBlock ws C f mf sb cl mis c) r (circuit cy t nn wit) =
 -- if a fair lasso from v exists, fairGraph returns one.  Restricting the
 -- lasso's cycle to the reachable set uses reachComplete.
 
-fairNoLoop : (vs : List Node) (G : Edges) (fs : List Pred)
+fairNoLoop : (vs : List Node) (fs : List Pred)
              (v : Node) -> v ∈ vs
-          -> Cert G fs (reachSet vs G v) -> FairLoop vs G fs v -> Empty
-fairNoLoop vs G fs v mv c (fairLoop r stem (circuit cy t nn wit)) =
-  certNoCirc G fs c r
-             (circuit cy (trailRestrict vs (reachSet vs G v) G t keep) nn wit)
+          -> Cert fs (reachSet vs v) -> FairLoop vs fs v -> Empty
+fairNoLoop vs fs v mv c (fairLoop r stem (circuit cy t nn wit)) =
+  certNoCirc fs c r
+             (circuit cy (trailRestrict vs (reachSet vs v) t keep) nn wit)
   where
-    keep : (z : Node) -> z ∈ cy -> z ∈ reachSet vs G v
-    keep z mz = onR (reachesApp vs G stem (trailTo vs G t mz))
-      where
-        onR : Reaches vs G v z -> z ∈ reachSet vs G v
-        onR (reachesBy zs tz) = reachComplete vs G v mv tz
+    keep : (z : Node) -> z ∈ cy -> z ∈ reachSet vs v
+    keep z mz = reachComplete vs v mv
+                  (Reaches.trail (reachesApp vs stem (trailTo vs t mz)))
 
-fairComplete : (vs : List Node) (G : Edges) (fs : List Pred)
+fairComplete : (vs : List Node) (fs : List Pred)
                (v : Node) (mv : v ∈ vs)
-            -> FairLoop vs G fs v -> isInl (fairGraph vs G fs v mv) ≡ true
-fairComplete vs G fs v mv fl = onS (fairGraph vs G fs v mv) refl
+            -> FairLoop vs fs v -> isInl (fairGraph vs fs v mv) ≡ true
+fairComplete vs fs v mv fl = onS (fairGraph vs fs v mv) refl
   where
-    onS : (s : FairLoop vs G fs v ⊎ Cert G fs (reachSet vs G v))
-       -> fairGraph vs G fs v mv ≡ s
-       -> isInl (fairGraph vs G fs v mv) ≡ true
+    onS : (s : FairLoop vs fs v ⊎ Cert fs (reachSet vs v))
+       -> fairGraph vs fs v mv ≡ s
+       -> isInl (fairGraph vs fs v mv) ≡ true
     onS (inl l) es = cong isInl es
-    onS (inr c) es = emptyElim (fairNoLoop vs G fs v mv c fl)
+    onS (inr c) es = emptyElim (fairNoLoop vs fs v mv c fl)
 
 ------------------------------------------------------------------------
--- The removal order as a list of step kinds, one per constructor of Cert.
+-- The removal order as a list of step kinds (CertStep, LTL.Lib.Sets), one per
+-- constructor of Cert.
 
-data CertStep : Set where
-  removedSink removedBlock emptied : CertStep
-
-certShape : {G : Edges} {fs : List Pred} {ws : List Node}
-         -> Cert G fs ws -> List CertStep
+certShape : {fs : List Pred} {ws : List Node}
+         -> Cert fs ws -> List CertStep
 certShape (cNil ws e)                    = emptied ∷ []
 certShape (cSink ws x mx e c)            = removedSink ∷ certShape c
 certShape (cBlock ws C f mf sb cl mis c) = removedBlock ∷ certShape c

@@ -22,16 +22,24 @@
 module LTL.SCC.SccLasso where
 
 open import LTL.Countermodel.Lasso public
-open import LTL.SCC.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl public
+import LTL.SCC.Graph as Graph
+
+-- The graph layer at the state graph of P: every name of LTL.SCC.Graph takes
+-- the formula P first, as in  Trail P ws v zs w ,  FairIn P ws fs ,
+-- Cert P fs ws .  These unfold to the graph of step P, which does not
+-- determine P, so a constructor used as a term is given it: tNil {P}.
+
+module _ (P : Formula) where
+  open Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl (step P) public
 
 ------------------------------------------------------------------------
--- Trails are walks: Trail us (step P) has the same three fields as
+-- Trails are walks: Trail P us has the same three fields as
 -- Walk P us.
 
 module _ (P : Formula) where
 
   trailWalk : (us : List Val) {v : Val} {zs : List Val} {w : Val}
-           -> Trail us (step P) v zs w -> Walk P us v zs w
+           -> Trail P us v zs w -> Walk P us v zs w
   trailWalk us tNil          = wnil
   trailWalk us (tCons m e t) = wcons m e (trailWalk us t)
 
@@ -93,7 +101,7 @@ module _ (P : Formula) where
   -- from the base point r to q.
 
   sccLasso : (v0 : Val) -> v0 ∈ Ust P
-          -> FairLoop (Ust P) (step P) evPreds v0 -> Lasso P v0
+          -> FairLoop P (Ust P) evPreds v0 -> Lasso P v0
   sccLasso v0 mv0 (fairLoop r stem (circuit [] tc () wit))
   sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
                             (circuit cy@(q ∷ qs) (tCons mq e tqs) nn wit)) =
