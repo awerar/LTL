@@ -24,8 +24,8 @@ that depend on it), --order tree lists it in tree order.
 ROOT defaults to decideCorrect.  NAME is a definition's name (`decide`), or
 qualified by the end of its module path when the name is ambiguous
 (`Lasso.Fair`, `Countermodel.Lasso.Fair`); operators may omit underscores.
-For done and undo, NAME may also be an Agda file (`LTL/Lib/Bar.agda`) or a
-module (`LTL.Lib.Bar`), standing for every definition in it.
+For done and undo, NAME may also be an Agda file (`LTL/1-Lib/Bar.agda`) or a
+module (`LTL.1-Lib.Bar`), standing for every definition in it.
 
 The graph comes from `agda --html` on LTL/Correct.agda (written to
 _build/proof-map/), whose output links every name to its definition site.  A
@@ -57,7 +57,7 @@ TOP_FILE = "LTL/Correct.agda"
 HTML_DIR = os.path.join(REPO, "_build", "proof-map")
 LEDGER = os.path.join(REPO, "docs", "review.tsv")
 DEFAULT_ROOT = "decideCorrect"
-LEAF_MODULES = ("Agda.", "LTL.Lib.Base", "LTL.Lib.Prelude", "LTL.Statement")
+LEAF_MODULES = ("Agda.", "LTL.1-Lib.Base", "LTL.1-Lib.Prelude", "LTL.Statement")
 
 # Token classes that name a definition (Bound, Module, Symbol, ... do not).
 DEF_CLASSES = {"Function", "Datatype", "Record", "InductiveConstructor",

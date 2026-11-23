@@ -6,7 +6,7 @@
 -- false only with a lasso on which the formula fails.  decide answers with
 -- ⊢ Q ⊎ LassoCountermodel Q , and the two branches meet Statement through one
 -- bridge: when a Statement lasso L starts at pos0 and loops back to loop, the
--- Boolean evaluation of LTL.Semantics.OrbitEval at stage n IS truth at time
+-- Boolean evaluation of LTL.4-Semantics.OrbitEval at stage n IS truth at time
 -- n of T.interpret L (evalAt-holds, holds-evalAt, by induction on the
 -- formula).  The □ case uses the finite forward orbit: every iterate of a
 -- position is in its orbit, and every member of the orbit is an iterate.
@@ -18,11 +18,11 @@
 
 module LTL.Correct where
 
-open import LTL.Procedures.Everything public
+open import LTL.8-Procedures.Everything public
 import LTL.Statement as T
 open T using (_,_⊨_)
-import LTL.Semantics.Orbit
-import LTL.Semantics.OrbitEval
+import LTL.4-Semantics.Orbit
+import LTL.4-Semantics.OrbitEval
 
 ------------------------------------------------------------------------
 -- The bridge.  States have any type S, and read gives the instant of a state;
@@ -31,8 +31,8 @@ import LTL.Semantics.OrbitEval
 module _ {S : Set} (read : S -> T.Instant) where
 
   private
-    module O = LTL.Semantics.Orbit S
-    module E = LTL.Semantics.OrbitEval S read
+    module O = LTL.4-Semantics.Orbit S
+    module E = LTL.4-Semantics.OrbitEval S read
 
   toPosition : O.Pos -> T.Position
   toPosition (s , ws) = T.at (read s) (map read ws)
@@ -122,7 +122,7 @@ module _ {S : Set} (read : S -> T.Instant) where
   evalAt-holds read loop l pos0
     (cong (T.at _) (sym (map-id (T.Position.rest (T.Lasso.loop l)))))
     (cong (T.at _) (sym (map-id (T.Position.rest (T.initial l)))))
-    A zero (LTL.Semantics.OrbitEval.sound T.Instant read loop d pos0)
+    A zero (LTL.4-Semantics.OrbitEval.sound T.Instant read loop d pos0)
   where
     read : T.Instant -> T.Instant
     read i = i

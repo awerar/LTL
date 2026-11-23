@@ -14,7 +14,7 @@
 --   proveLines Q     prove Q as one String per line.
 --   proveTree n Q    the tree view of decide Q.
 --
--- Formulas are printed with the fixities of LTL.Syntax.Formula and minimal
+-- Formulas are printed with the fixities of LTL.2-Syntax.Formula and minimal
 -- parentheses.  ∧, ⇔ and ◇ are put back; ∨, ⊤ and ⊥ are not, since ¬ A ⇒ B
 -- and p ⇒ p usually mean what they say.  showFormulaRaw uses no abbreviations.
 -- Variables are p q r s t, then x5, x6, ...
@@ -27,7 +27,7 @@
 
 module LTL.Pretty where
 
-open import LTL.Procedures.Everything public
+open import LTL.8-Procedures.Everything public
 open import Agda.Builtin.String public using (String)
 open import Agda.Builtin.String using (primStringAppend; primShowNat; primStringToList)
 

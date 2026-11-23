@@ -6,7 +6,7 @@ r"""Print a derivation or countermodel for an LTL formula, readably.
     tools/show-proof --tree 6 'G p -> p'      the proof tree, to depth 6
     tools/show-proof --expr 'renderDeriv (dne {pv})'   any String expression
 
-FORMULA may be written in ASCII or in the Agda syntax of LTL.Syntax.Formula; the two
+FORMULA may be written in ASCII or in the Agda syntax of LTL.2-Syntax.Formula; the two
 can be mixed.  ASCII words and operators are translated as follows:
 
     ~  !  not          ¬          ->  =>             ⇒
@@ -19,7 +19,7 @@ and the variables p q r s t and x0, x1, ... become var 0 .. var 4 and
 var N, the names LTL.Pretty prints them with.  Precedence is Agda's: the
 prefix operators bind tightest, then ∧, ∨, ⇒ (right associative), ⇔.
 Any other name is passed to Agda unchanged.  The formula is evaluated in a
-module that opens LTL.Pretty and LTL.Benchmarks.Examples, so pv, qv, axT, ... can be
+module that opens LTL.Pretty and LTL.9-Benchmarks.Examples, so pv, qv, axT, ... can be
 used as well.
 The rendering is done by LTL.Pretty; this script only runs
 `agda --interaction-json`, asks it to normalise the expression, and prints the
@@ -39,7 +39,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRATCH = """{-# OPTIONS --safe --without-K --exact-split #-}
 module ShowProofScratch where
 open import LTL.Pretty
-open import LTL.Benchmarks.Examples
+open import LTL.9-Benchmarks.Examples
 """
 
 
@@ -68,7 +68,7 @@ def _ascii_word(tok):
 
 
 def translate(formula):
-    """ASCII LTL syntax to the Agda syntax of LTL.Syntax.Formula.
+    """ASCII LTL syntax to the Agda syntax of LTL.2-Syntax.Formula.
 
     The input is split at whitespace and parentheses.  A chunk that is pure
     ASCII is tokenised and translated; any other chunk (Agda's own Unicode

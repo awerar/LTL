@@ -207,7 +207,7 @@ exports.run = async () => {
     await api.mark([data.root], false);
 
     // A whole file: marked, its top CodeLens, then the Undo path.
-    const barFile = 'LTL/Lib/Bar.agda';
+    const barFile = 'LTL/1-Lib/Bar.agda';
     const inBar = () => Object.entries(api.data.defs).filter(([, d]) => d.path === barFile);
     const fresh = inBar().filter(([, d]) => d.status !== 'done').map(([k]) => k);
     await api.markFile({ file: barFile });
@@ -229,9 +229,9 @@ exports.run = async () => {
       .map(f => vscode.Uri.file(path.join(folder, f)));
     const decos = uris.map(deco).filter(Boolean);
     assert(decos.every(x => x.badge.length === 1 || x.badge.length === 2), 'badge too long');
-    const lib = deco(vscode.Uri.file(path.join(folder, 'LTL/Lib')));
-    const prelude = deco(vscode.Uri.file(path.join(folder, 'LTL/Lib/Prelude.agda')));
-    log(`explorer: ${decos.length} decorations; LTL/Lib "${lib.badge}" | ${lib.tooltip}; Prelude: ${prelude}`);
+    const lib = deco(vscode.Uri.file(path.join(folder, 'LTL/1-Lib')));
+    const prelude = deco(vscode.Uri.file(path.join(folder, 'LTL/1-Lib/Prelude.agda')));
+    log(`explorer: ${decos.length} decorations; LTL/1-Lib "${lib.badge}" | ${lib.tooltip}; Prelude: ${prelude}`);
     assert.strictEqual(prelude, undefined);
     await api.mark(fresh, false);
     assert(inBar().every(([k, d]) => fresh.includes(k) ? d.status !== 'done' : true));

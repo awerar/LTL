@@ -24,9 +24,9 @@ implemented.**
   hand-checked module stating the LTL semantics and what a decision procedure
   must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for the
   procedure.
-- [LTL/Procedures/Decide.agda](LTL/Procedures/Decide.agda): the public
-  decision procedure, [LTL/Procedures/Answer.agda](LTL/Procedures/Answer.agda):
-  what it returns, and [LTL/Procedures/Inspect.agda](LTL/Procedures/Inspect.agda):
+- [LTL/8-Procedures/Decide.agda](LTL/8-Procedures/Decide.agda): the public
+  decision procedure, [LTL/8-Procedures/Answer.agda](LTL/8-Procedures/Answer.agda):
+  what it returns, and [LTL/8-Procedures/Inspect.agda](LTL/8-Procedures/Inspect.agda):
   how to look inside an answer.
 
 ## Check the development
@@ -37,10 +37,10 @@ root (`LTL.agda-lib` supplies the include path; interfaces go to `_build/`):
 ```sh
 agda LTL/Correct.agda
 agda LTL/Pretty.agda
-agda LTL/Tests/Checks.agda
-agda LTL/Tests/GraphExamples.agda
-agda LTL/Benchmarks/Examples.agda
-agda LTL/Benchmarks/Lecture.agda
+agda LTL/9-Tests/Checks.agda
+agda LTL/9-Tests/GraphExamples.agda
+agda LTL/9-Benchmarks/Examples.agda
+agda LTL/9-Benchmarks/Lecture.agda
 ```
 
 `Checks` and `GraphExamples` hold the computational checks of the core
@@ -98,7 +98,7 @@ ASCII forms are:
 The variables `p q r s t` and `x0`, `x1`, … are `var 0` to `var 4` and `var N`,
 which are also the names used in the output. Precedence is Agda's: prefix
 operators bind tightest, then `∧`, `∨`, `⇒` (right associative), `⇔`. The
-formula is evaluated with `LTL.Pretty` and `LTL.Benchmarks.Examples` open, so `pv`, `qv`,
+formula is evaluated with `LTL.Pretty` and `LTL.9-Benchmarks.Examples` open, so `pv`, `qv`,
 `axT`, … can also be used. `tools/show-proof --help` lists all of this. Set
 `AGDA` to choose the Agda binary.
 
@@ -131,7 +131,7 @@ tools/proof-map next --up                # open definitions whose uses are revie
 tools/proof-map tree closure --up        # who uses closure, upwards
 tools/proof-map show provableSCC --src   # uses, users and source
 tools/proof-map done decide -m "note"    # mark as reviewed
-tools/proof-map done LTL/Lib/Bar.agda    # mark a whole file (or LTL.Lib.Bar)
+tools/proof-map done LTL/1-Lib/Bar.agda    # mark a whole file (or LTL.1-Lib.Bar)
 tools/proof-map status                   # progress per module
 tools/proof-map stale                    # reviews that are out of date
 ```
@@ -217,27 +217,27 @@ the extension in a separate VS Code instance; the command is at its top.
 
 The notes (`m4`, `m5`), the thesis proposal and the methodology are in
 [docs/](docs). The Agda modules are grouped by the part of the argument they
-formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
-`LTL.Syntax.Formula`.
+formalise. A module's name follows its path, so `LTL/2-Syntax/Formula.agda` is
+`LTL.2-Syntax.Formula`.
 
 | Folder | Modules | What it is |
 |---|---|---|
 | `LTL/` | `Statement`, `Correct`, `Pretty` | the specification; the proof that the Boolean evaluation is its semantics (so derivable formulas are valid) and that the procedure is a `DecisionProcedure`; readable output |
-| `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes`, `Graph`, `FairGraph` | foundations without the standard library; inductively finite sets; graph search and the generic fair-graph certificate theorem of m5 |
-| `LTL/Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
-| `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
-| `LTL/Semantics/` | `Orbit`, `OrbitEval` | positions on a lasso and Boolean evaluation of formulas there |
-| `LTL/States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
-| `LTL/Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
-| `LTL/SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
-| `LTL/Procedures/` | `Answer`, `Inspect`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1; functions that look inside an answer |
-| `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
-| `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
+| `LTL/1-Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes`, `Graph`, `FairGraph` | foundations without the standard library; inductively finite sets; graph search and the generic fair-graph certificate theorem of m5 |
+| `LTL/2-Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
+| `LTL/3-Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
+| `LTL/4-Semantics/` | `Orbit`, `OrbitEval` | positions on a lasso and Boolean evaluation of formulas there |
+| `LTL/5-States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
+| `LTL/6-Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
+| `LTL/7-SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
+| `LTL/8-Procedures/` | `Answer`, `Inspect`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1; functions that look inside an answer |
+| `LTL/9-Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
+| `LTL/9-Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 
-The modules that work over one fixed formula P (most of `States/`,
-and all of `Countermodel/` and `SCC/`) take it as a module parameter,
+The modules that work over one fixed formula P (most of `5-States/`,
+and all of `6-Countermodel/` and `7-SCC/`) take it as a module parameter,
 so P is not passed around inside them. `Decide` is parameterised the same way
-by the input Q, and opens them at `¬ Q`. `LTL/Procedures/Everything.agda`
+by the input Q, and opens them at `¬ Q`. `LTL/8-Procedures/Everything.agda`
 opens all of these modules without arguments for everyone else, so there
 every name takes its formula first: `St P`, `Lasso (¬ Q) v0`, `decide Q`.
 
