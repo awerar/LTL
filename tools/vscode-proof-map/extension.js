@@ -301,6 +301,47 @@ class NextProvider {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Explorer decorations: per Agda file (and folder), a badge with the number
+// of open definitions, ✓ when all are reviewed (green) and ~ when some
+// changed since their review (yellow). Partly reviewed files get no colour,
+// so git's colours still show. Leaf modules have no tracked definitions and
+// get nothing.
+
+class Decorations {
+  constructor() {
+    this.emitter = new vscode.EventEmitter();
+    this.onDidChangeFileDecorations = this.emitter.event;
+  }
+  provideFileDecoration(uri) {
+    if (!data || uri.scheme !== 'file' ||
+        !vscode.workspace.getConfiguration('proofMap').get('explorerBadges')) {
+      return undefined;
+    }
+    const rel = path.relative(folder, uri.fsPath).split(path.sep).join('/');
+    if (!rel || rel.startsWith('..')) return undefined;
+    const isFile = rel.endsWith('.agda');
+    const defs = Object.values(data.defs)
+      .filter(d => isFile ? d.path === rel : d.path.startsWith(rel + '/'));
+    if (!defs.length) return undefined;
+    const done = defs.filter(d => d.status === 'done').length;
+    const stale = defs.filter(d => d.status === 'stale').length;
+    const open = defs.length - done;
+    const where = isFile ? '' : ' in this folder';
+    const tooltip = `Proof Map: ${done === defs.length ? `all ${defs.length}` : `${done}/${defs.length}`}` +
+      ` reviewed${where}` + (stale ? ` · ${stale} changed since review` : '');
+    if (stale) {
+      return new vscode.FileDecoration('~', tooltip,
+        new vscode.ThemeColor('list.warningForeground'));
+    }
+    if (!open) {
+      return new vscode.FileDecoration('✓', tooltip,
+        new vscode.ThemeColor('testing.iconPassed'));
+    }
+    return new vscode.FileDecoration(open > 99 ? '9+' : String(open), tooltip);
+  }
+}
+
 // The path from the configured root down to the focused branch, by names.
 function breadcrumb() {
   if (!data || !state.get('root')) return null;
@@ -393,6 +434,7 @@ function activate(context) {
   const next = new NextProvider(false);
   const nextUp = new NextProvider(true);
   const lenses = new Lenses();
+  const decorations = new Decorations();
   const treeView = vscode.window.createTreeView('proofMap.tree',
     { treeDataProvider: tree, manageCheckboxStateManually: true, showCollapseAll: true });
   const nextView = vscode.window.createTreeView('proofMap.next',
@@ -415,6 +457,7 @@ function activate(context) {
     next.emitter.fire();
     nextUp.emitter.fire();
     lenses.emitter.fire();
+    decorations.emitter.fire(undefined);
     if (!data) return;
     const below = Object.values(data.defs).filter(d => d.belowRoot);
     const done = below.filter(d => d.status === 'done').length;
@@ -554,6 +597,7 @@ function activate(context) {
     treeView.onDidChangeCheckboxState(onCheck),
     nextView.onDidChangeCheckboxState(onCheck),
     nextUpView.onDidChangeCheckboxState(onCheck),
+    vscode.window.registerFileDecorationProvider(decorations),
     vscode.languages.registerCodeLensProvider(
       [{ language: 'agda', scheme: 'file' }, { pattern: '**/*.agda', scheme: 'file' }],
       lenses),
@@ -611,6 +655,7 @@ function activate(context) {
   // For the tests in test/.
   return { refresh, mark, reveal, showUsers, markFile, unmarkFile, tree, next, nextUp, lenses, treeView,
     setFocus: qn => vscode.commands.executeCommand('proofMap.setRoot', { qn }),
+    decorations,
     nextView,
     get data() { return data; } };
 }

@@ -172,9 +172,27 @@ exports.run = async () => {
     const topLens = barLenses.find(l => l.range.start.line === 0 && l.command);
     log(`file ${barFile}: ${inBar().length} definitions marked; top lens: ${topLens && topLens.command.title}`);
     assert(topLens && topLens.command.command === 'proofMap.unmarkFile');
+
+    // Explorer decorations: ✓ for the marked file, and VS Code's badge rule
+    // (one or two characters) for every file and folder that gets one.
+    const deco = u => api.decorations.provideFileDecoration(u);
+    const barDeco = deco(barUri);
+    log(`explorer: Bar.agda "${barDeco.badge}" ${barDeco.color && barDeco.color.id} | ${barDeco.tooltip}`);
+    assert.strictEqual(barDeco.badge, '✓');
+    const uris = [...new Set(Object.values(api.data.defs).map(d => d.path))]
+      .flatMap(f => [f, path.dirname(f)])
+      .map(f => vscode.Uri.file(path.join(folder, f)));
+    const decos = uris.map(deco).filter(Boolean);
+    assert(decos.every(x => x.badge.length === 1 || x.badge.length === 2), 'badge too long');
+    const lib = deco(vscode.Uri.file(path.join(folder, 'LTL/Lib')));
+    const prelude = deco(vscode.Uri.file(path.join(folder, 'LTL/Lib/Prelude.agda')));
+    log(`explorer: ${decos.length} decorations; LTL/Lib "${lib.badge}" | ${lib.tooltip}; Prelude: ${prelude}`);
+    assert.strictEqual(prelude, undefined);
     await api.mark(fresh, false);
     assert(inBar().every(([k, d]) => fresh.includes(k) ? d.status !== 'done' : true));
-    log(`after undo: ${inBar().filter(([, d]) => d.status === 'done').length} marked`);
+    log(`after undo: ${inBar().filter(([, d]) => d.status === 'done').length} marked; ` +
+      `explorer badge "${deco(barUri).badge}"`);
+    assert.notStrictEqual(deco(barUri).badge, '✓');
   } catch (e) {
     failed = true;
     log('FAIL ' + (e.stack || e));

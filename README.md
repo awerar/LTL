@@ -182,6 +182,11 @@ needs no npm packages or build step. It adds:
   click to mark them all. *Mark File Reviewed* is also in the explorer's,
   the editor tab's and the tree's context menus, with an Undo button
   afterwards; *Remove File's Review Marks* asks first.
+- in the explorer and on editor tabs, a badge per Agda file and folder: the
+  number of open definitions (`9+` beyond 99), a green `✓` when all are
+  reviewed, a yellow `~` when some changed since their review; the tooltip
+  gives the counts. Partly reviewed files keep git's colours. The setting
+  `proofMap.explorerBadges` turns this off.
 - the overall count in the status bar; its tooltip gives the number of open
   definitions between reviewed ones.
 

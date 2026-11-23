@@ -253,6 +253,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show review status above each definition in Agda files."
+        },
+        "proofMap.explorerBadges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show review status on Agda files and folders in the explorer and on editor tabs."
         }
       }
     }
