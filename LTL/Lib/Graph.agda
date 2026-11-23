@@ -75,7 +75,7 @@ module _ (ws : List Node) where
   trailLast (tCons m e t) nn = trailEnd t
 
   trailIn : {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws v zs w -> {z : Node} -> z ∈ zs -> z ∈ ws
+         -> Trail ws v zs w -> ∀ⁱ[ z ∈ zs ] z ∈ ws
   trailIn tNil          ()
   trailIn (tCons m e t) here      = m
   trailIn (tCons m e t) (there k) = trailIn t k
@@ -205,10 +205,10 @@ module _ (S : Pred) (ws : List Node) where
             (round acc i)
 
   growDone     : {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
-              -> {x : Node} -> x ∈ ws -> settled (growGo acc av bar) x ≡ true
+              -> ∀ⁱ[ x ∈ ws ] settled (growGo acc av bar) x ≡ true
   growDoneFind : {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
                  (fr : FindResult (settled acc) ws)
-              -> {x : Node} -> x ∈ ws -> settled (growFind acc av bar fr) x ≡ true
+              -> ∀ⁱ[ x ∈ ws ] settled (growFind acc av bar fr) x ≡ true
 
   growDone acc av bar = growDoneFind acc av bar (findFalse (settled acc) ws)
 
@@ -285,7 +285,7 @@ module _ (S : Pred) (ws : List Node) {E : Pred} (sb : AllSat E ws)
     av0 : Avail E ws []
     av0 z mz e = sb z mz
 
-    done : {x : Node} -> x ∈ ws -> settled S ws (closure S ws sb bar) x ≡ true
+    done : ∀ⁱ[ x ∈ ws ] settled S ws (closure S ws sb bar) x ≡ true
     done = growDone S ws [] av0 bar
 
   closureIn : ∀[ z ∈ closure S ws sb bar ] z ∈ ws
@@ -314,12 +314,12 @@ module _ (S : Pred) (ws : List Node) {E : Pred} (sb : AllSat E ws)
 reachSet : List Node -> Node -> List Node
 reachSet ws v = closure (v ≡ᵛ_) ws (memAllSat ws) (listBar ws)
 
-reachIn : (ws : List Node) (v : Node) {z : Node}
-       -> z ∈ reachSet ws v -> z ∈ ws
+reachIn : (ws : List Node) (v : Node)
+       -> ∀ⁱ[ z ∈ reachSet ws v ] z ∈ ws
 reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (memAllSat ws) (listBar ws) z
 
-reachTrail : (ws : List Node) (v : Node) {z : Node}
-          -> z ∈ reachSet ws v -> Reaches ws v z
+reachTrail : (ws : List Node) (v : Node)
+          -> ∀ⁱ[ z ∈ reachSet ws v ] Reaches ws v z
 reachTrail ws v {z} m =
   subst (λ y -> Reaches ws y z) (sym (≡ᵛ-sound v seed seedHolds)) reaches
   where open Seeded (closureSeeded (v ≡ᵛ_) ws (memAllSat ws) (listBar ws) z m)

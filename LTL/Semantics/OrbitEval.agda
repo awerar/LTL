@@ -40,45 +40,49 @@ module _ (loop : Pos) where
   ------------------------------------------------------------------------
   -- The two ways of using it
 
-  eval□-at : (A : Formula) (pos q : Pos)
-          -> evalAt (□ A) pos ≡ true -> q ∈ orbit loop pos
-          -> evalAt A q ≡ true
-  eval□-at A pos q e m =
-    all-at (evalAt A) (orbit loop pos) m e
+  eval□-true : (A : Formula) (pos : Pos)
+            -> evalAt (□ A) pos ≡ true
+            -> ∀[ q ∈ orbit loop pos ] evalAt A q ≡ true
+  eval□-true A pos = all-true (evalAt A) (orbit loop pos)
 
   eval□-intro : (A : Formula) (pos : Pos)
              -> (∀[ q ∈ orbit loop pos ] evalAt A q ≡ true)
              -> evalAt (□ A) pos ≡ true
-  eval□-intro A pos f =
-    all-intro (evalAt A) (orbit loop pos) (λ {q} m -> f q m)
+  eval□-intro A pos = all-intro (evalAt A) (orbit loop pos)
 
-  eval□-false : (A : Formula) (pos q : Pos)
-             -> q ∈ orbit loop pos -> evalAt A q ≡ false
-             -> evalAt (□ A) pos ≡ false
-  eval□-false A pos q m e =
-    all-atFalse (evalAt A) (orbit loop pos) m e
+  eval□-false-intro : (A : Formula) (pos : Pos)
+                   -> (∃[ q ∈ orbit loop pos ] evalAt A q ≡ false)
+                   -> evalAt (□ A) pos ≡ false
+  eval□-false-intro A pos = all-false-intro (evalAt A) (orbit loop pos)
 
   ------------------------------------------------------------------------
   -- Conjunction, as (Exp) and (Lin) need it
 
-  ∧True : (X Y : Formula) (pos : Pos)
-       -> evalAt X pos ≡ true -> evalAt Y pos ≡ true
-       -> evalAt (X ∧ Y) pos ≡ true
-  ∧True X Y pos = ¬ᵇ⇒ᵇ¬ᵇ-intro (evalAt X pos) (evalAt Y pos)
+  eval∧-intro : (A B : Formula) (pos : Pos)
+             -> evalAt A pos ≡ true -> evalAt B pos ≡ true
+             -> evalAt (A ∧ B) pos ≡ true
+  eval∧-intro A B pos = ¬ᵇ⇒ᵇ¬ᵇ-intro (evalAt A pos) (evalAt B pos)
 
   ------------------------------------------------------------------------
   -- (K □)
 
   k□Sound : (A B : Formula) (pos : Pos)
-         -> evalAt (□ (A ⇒ B)) pos ≡ true
-         -> evalAt (□ A) pos ≡ true
-         -> evalAt (□ B) pos ≡ true
-  k□Sound A B pos e1 e2 =
-    all-intro (evalAt B) (orbit loop pos)
-      (λ {q} m ->
-         ⇒ᵇ-mp (evalAt A q) (evalAt B q)
-               (all-at (evalAt (A ⇒ B)) (orbit loop pos) m e1)
-               (all-at (evalAt A) (orbit loop pos) m e2))
+         -> evalAt (□ (A ⇒ B) ⇒ □ A ⇒ □ B) pos ≡ true
+  k□Sound A B pos =
+    ⇒ᵇ-intro (evalAt (□ (A ⇒ B)) pos)
+             (evalAt (□ A) pos ⇒ᵇ evalAt (□ B) pos)
+             (λ e1 -> ⇒ᵇ-intro (evalAt (□ A) pos)
+                               (evalAt (□ B) pos) (body e1))
+    where
+      body : evalAt (□ (A ⇒ B)) pos ≡ true
+          -> evalAt (□ A) pos ≡ true
+          -> evalAt (□ B) pos ≡ true
+      body e1 e2 =
+        eval□-intro B pos
+          (λ q m ->
+             ⇒ᵇ-mp (evalAt A q) (evalAt B q)
+                   (eval□-true (A ⇒ B) pos e1 q m)
+                   (eval□-true A pos e2 q m))
 
   ------------------------------------------------------------------------
   -- (Exp)
@@ -93,18 +97,15 @@ module _ (loop : Pos) where
       body : evalAt (□ A) pos ≡ true
           -> evalAt (A ∧ ○ A ∧ ○ □ A) pos ≡ true
       body eb =
-        ∧True A (○ A ∧ ○ □ A) pos
-              (all-at (evalAt A) (orbit loop pos)
-                        (iter∈orbit loop zero pos) eb)
-                (∧True (○ A) (○ □ A) pos
-                       (all-at (evalAt A) (orbit loop pos)
-                                 (iter∈orbit loop (suc zero) pos) eb)
-                         (all-intro (evalAt A)
-                                    (orbit loop (nextPos loop pos))
-                                    (λ {q} m ->
-                                       all-at (evalAt A)
-                                              (orbit loop pos)
-                                              (nextOrbit⊆orbit loop pos q m) eb)))
+        eval∧-intro A (○ A ∧ ○ □ A) pos
+          (eval□-true A pos eb pos (iter∈orbit loop zero pos))
+          (eval∧-intro (○ A) (○ □ A) pos
+            (eval□-true A pos eb (nextPos loop pos)
+                        (iter∈orbit loop (suc zero) pos))
+            (eval□-intro A (nextPos loop pos)
+                         (λ q m ->
+                            eval□-true A pos eb q
+                                       (nextOrbit⊆orbit loop pos q m))))
 
   ------------------------------------------------------------------------
   -- (Ind): A propagates along the run, since the hypothesis is available at
@@ -132,9 +133,8 @@ module _ (loop : Pos) where
                   (⇒ᵇ-mp (evalAt A (posIter loop t pos))
                             (evalAt A
                                     (nextPos loop (posIter loop t pos)))
-                            (all-at (evalAt (A ⇒ ○ A))
-                                    (orbit loop pos)
-                                    (iter∈orbit loop t pos) e1)
+                            (eval□-true (A ⇒ ○ A) pos e1 (posIter loop t pos)
+                                        (iter∈orbit loop t pos))
                             (along t))
 
   ------------------------------------------------------------------------
@@ -152,12 +152,7 @@ module _ (loop : Pos) where
   sound (p3 {A} {B}) pos =
     ⇒ᵇ-P3 (evalAt A pos) (evalAt B pos)
 
-  sound (k□ {A} {B}) pos =
-    ⇒ᵇ-intro (evalAt (□ (A ⇒ B)) pos)
-              (evalAt (□ A) pos ⇒ᵇ evalAt (□ B) pos)
-              (λ e1 -> ⇒ᵇ-intro (evalAt (□ A) pos)
-                                 (evalAt (□ B) pos)
-                                 (λ e2 -> k□Sound A B pos e1 e2))
+  sound (k□ {A} {B}) pos = k□Sound A B pos
 
   -- both sides are evalAt A (nextPos pos) ⇒ᵇ evalAt B (nextPos pos)
   sound (k○ {A} {B}) pos =
@@ -171,7 +166,7 @@ module _ (loop : Pos) where
   -- ○ ¬ A and ¬ ○ A evaluate to the same Boolean, so both halves of
   -- the biconditional are z ⇒ᵇ z
   sound (lin {A}) pos =
-    ∧True (○ ¬ A ⇒ ¬ ○ A) (¬ ○ A ⇒ ○ ¬ A) pos
+    eval∧-intro (○ ¬ A ⇒ ¬ ○ A) (¬ ○ A ⇒ ○ ¬ A) pos
           (⇒ᵇ-refl (¬ᵇ evalAt A (nextPos loop pos)))
           (⇒ᵇ-refl (¬ᵇ evalAt A (nextPos loop pos)))
 
@@ -187,5 +182,4 @@ module _ (loop : Pos) where
              (sound e pos)
 
   sound (gen {A} d) pos =
-    all-intro (evalAt A) (orbit loop pos)
-              (λ {q} m -> sound d q)
+    eval□-intro A pos (λ q m -> sound d q)

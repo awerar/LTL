@@ -43,6 +43,6 @@ allIntoMap f (w ∷ ws) h = intoCons (h w here) (allIntoMap f ws (λ z m -> h z 
 ------------------------------------------------------------------------
 -- A state met from b is a state of a cycle that contains b
 
-cycMem : {b z : Val} {qs : List Val} -> b ∈ qs -> z ∈ b ∷ qs -> z ∈ qs
+cycMem : {b : Val} {qs : List Val} -> b ∈ qs -> ∀ⁱ[ z ∈ b ∷ qs ] z ∈ qs
 cycMem mb here      = mb
 cycMem mb (there m) = m

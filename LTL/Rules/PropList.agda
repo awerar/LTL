@@ -72,7 +72,7 @@ data AllFrom (C : Formula) : List Formula -> Set where
           -> ⊢ C ⇒ A -> AllFrom C As -> AllFrom C (A ∷ As)
 
 allFrom-map : {C : Formula} (As : List Formula)
-           -> ({A : Formula} -> A ∈ As -> ⊢ C ⇒ A) -> AllFrom C As
+           -> (∀ⁱ[ A ∈ As ] ⊢ C ⇒ A) -> AllFrom C As
 allFrom-map []       f = fromNil
 allFrom-map (A ∷ As) f = fromCons (f here) (allFrom-map As (λ m -> f (there m)))
 
@@ -98,7 +98,7 @@ data AllInto (C : Formula) : List Formula -> Set where
           -> ⊢ A ⇒ C -> AllInto C As -> AllInto C (A ∷ As)
 
 allInto-map : {C : Formula} (As : List Formula)
-           -> ({A : Formula} -> A ∈ As -> ⊢ A ⇒ C) -> AllInto C As
+           -> (∀ⁱ[ A ∈ As ] ⊢ A ⇒ C) -> AllInto C As
 allInto-map []       f = intoNil
 allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m)))
 
@@ -165,7 +165,7 @@ splitD {A} Cs d = mp (⋁Elim Cs (allInto-map Cs each)) d
     Z : Formula
     Z = ⋁ (splitOn A Cs)
 
-    each : {C : Formula} -> C ∈ Cs -> ⊢ C ⇒ Z
+    each : ∀ⁱ[ C ∈ Cs ] ⊢ C ⇒ Z
     each {C} m = ⇒Trans (¬IntroU h1 h2) dne
       where
         j1 : ⊢ A ∧ C ⇒ Z

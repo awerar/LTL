@@ -86,10 +86,10 @@ isTerminal ws r = all (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 
 termScc : (ws : List Node) (r : Node)
        -> isTerminal ws r ≡ true
-       -> {w : Node} -> w ∈ reachSet ws r -> w ∈ sccOf ws r
+       -> ∀ⁱ[ w ∈ reachSet ws r ] w ∈ sccOf ws r
 termScc ws r et {w} m =
   filter-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
-              (all-at (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m et)
+              (all-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) et w m)
 
 -- A terminal component is closed under successors inside ws: the refutation
 -- needs exactly this of it.
@@ -131,7 +131,8 @@ module _ (ws : List Node) where
 
   termFind r mr av bar          (allTrue f)       =
     terminalAt r mr
-               (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r) f)
+               (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+                          (λ w m -> f m))
   termFind r mr {E} av (cBar h) (found w mw q) =
     termGo w (reachIn ws r mw) av' (h r (av r (reachSeed ws r mr)))
     where
@@ -294,7 +295,7 @@ data Block (ws : List Node) (fs : List Pred) : Set where
          -> Block ws fs
 
 blockOf : (ws : List Node) (fs : List Pred)
-       -> ({x : Node} -> x ∈ ws -> hasOut ws x ≡ true)
+       -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true)
        -> Terminal ws -> Block ws fs
 blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
 ... | true  = bFair r mr (mkCirc ws r (loopAt ws r mr et (h mr)) (sccOf ws r)
@@ -306,7 +307,7 @@ blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
     unf (g , mg , eg) = bUnfair r mr et g mg eg
 
 pickBlock : (ws : List Node) (fs : List Pred)
-         -> ({x : Node} -> x ∈ ws -> hasOut ws x ≡ true) -> Block ws fs
+         -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true) -> Block ws fs
 pickBlock []       fs h = bEmpty refl
 pickBlock (u ∷ ws) fs h =
   blockOf (u ∷ ws) fs h (findTerm (u ∷ ws) u here)
@@ -494,14 +495,14 @@ module _ (ws : List Node) where
     reachesBy (as ++ bs) (trailApp ws ta tb)
 
   trailFrom : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws v zs w -> {s : Node} -> s ∈ v ∷ zs -> Reaches ws s w
+           -> Trail ws v zs w -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
   trailFrom tNil          here      = reachesBy [] tNil
   trailFrom tNil          (there ())
   trailFrom (tCons m e t) here      = reachesBy _ (tCons m e t)
   trailFrom (tCons m e t) (there k) = trailFrom t k
 
   trailTo : {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws v zs w -> {s : Node} -> s ∈ zs -> Reaches ws v s
+         -> Trail ws v zs w -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
   trailTo tNil          ()
   trailTo (tCons m e t) here      = reachesBy (_ ∷ []) (tCons m e tNil)
   trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
@@ -531,14 +532,14 @@ module _ (ws : List Node) where
 
   trailSucc : {v : Node} {zs : List Node} {w : Node}
            -> Trail ws v zs w -> HasSucc ws w
-           -> {x : Node} -> x ∈ zs -> HasSucc ws x
+           -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
   trailSucc tNil          hw ()
   trailSucc (tCons m e t) hw here      = headSucc t hw
   trailSucc (tCons m e t) hw (there k) = trailSucc t hw k
 
   cycSucc : (r : Node) (cy : List Node)
          -> Trail ws r cy r -> null cy ≡ false
-         -> {x : Node} -> x ∈ cy -> HasSucc ws x
+         -> ∀ⁱ[ x ∈ cy ] HasSucc ws x
   cycSucc r cy t nn mx = trailSucc t (firstStep t nn) mx
 
   -- Observation two: any vertex of a cycle reaches any other (suffix to the

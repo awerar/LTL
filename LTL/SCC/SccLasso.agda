@@ -41,12 +41,10 @@ evPred A z = valOf z (□ A) ∨ᵇ ¬ᵇ valOf z A
 evPreds : List Pred
 evPreds = map evPred (eventualities)
 
-evPredsMem : {A : Formula} -> A ∈ eventualities
-          -> evPred A ∈ evPreds
+evPredsMem : ∀ⁱ[ A ∈ eventualities ] evPred A ∈ evPreds
 evPredsMem m = memMap evPred m
 
-evPredsInv : {g : Pred} -> g ∈ evPreds
-          -> ∃[ A ∈ eventualities ] g ≡ evPred A
+evPredsInv : ∀ⁱ[ g ∈ evPreds ] ∃[ A ∈ eventualities ] g ≡ evPred A
 evPredsInv m = map-mem-inv evPred (eventualities) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
@@ -67,8 +65,7 @@ evWitness A z ez pd =
 persistTo : (us : List Val) (A : Formula) -> □ A ∈ sub P
          -> {v : Val} {ws : List Val} {x : Val} -> Trail us v ws x
          -> valOf v (□ A) ≡ false
-         -> {z : Val} -> z ∈ ws
-         -> Fulfil A v ws ⊎ valOf z (□ A) ≡ false
+         -> ∀ⁱ[ z ∈ ws ] (Fulfil A v ws ⊎ valOf z (□ A) ≡ false)
 persistTo us A mb tNil e ()
 persistTo us A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
   onA z mz

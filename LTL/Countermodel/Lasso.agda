@@ -124,7 +124,7 @@ readVal : Val -> Nat -> Bool
 readVal v n = valOf v (var n)
 
 open LTL.Semantics.OrbitEval Val readVal public
-  using (evalAt; eval□-at; eval□-intro; eval□-false)
+  using (evalAt; eval□-true; eval□-intro; eval□-false-intro)
 
 ------------------------------------------------------------------------
 -- The evaluation on a lasso, at stage i, iterating the successor from the

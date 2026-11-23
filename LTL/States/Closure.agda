@@ -54,18 +54,18 @@ stAllSat x m = hasLength-intro (length stateAtoms) x (stLen m)
 Ust : List Val
 Ust = closure containsP St stAllSat vecBar
 
-ustSt : {v : Val} -> v ∈ Ust -> v ∈ St
+ustSt : ∀ⁱ[ v ∈ Ust ] v ∈ St
 ustSt {v} m = closureIn containsP St stAllSat vecBar v m
 
 -- Named rather than applied inline: giving filter-prop its list argument
 -- against the folded  St  keeps the elaborator from unfolding Ust.
 
-stIsState : {v : Val} -> v ∈ St -> isState v ≡ true
+stIsState : ∀ⁱ[ v ∈ St ] isState v ≡ true
 stIsState m = filter-prop isState (allVecs (length stateAtoms)) m
 
 -- Every member is a state, so (S2) can be read off it.
 
-ustState : {v : Val} -> v ∈ Ust -> isState v ≡ true
+ustState : ∀ⁱ[ v ∈ Ust ] isState v ≡ true
 ustState m = stIsState (ustSt m)
 
 ustSeed : {v : Val}

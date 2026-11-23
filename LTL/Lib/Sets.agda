@@ -40,14 +40,14 @@ lePred (leSuc l) = l
 
 data FindResult {A : Set} (p : A -> Bool) (xs : List A) : Set where
   found   : (x : A) -> x ∈ xs -> p x ≡ false -> FindResult p xs
-  allTrue : ({x : A} -> x ∈ xs -> p x ≡ true)  -> FindResult p xs
+  allTrue : (∀ⁱ[ x ∈ xs ] p x ≡ true)         -> FindResult p xs
 
-emptyAll : {A : Set} (p : A -> Bool) {x : A} -> x ∈ [] -> p x ≡ true
+emptyAll : {A : Set} (p : A -> Bool) -> ∀ⁱ[ x ∈ [] ] p x ≡ true
 emptyAll p ()
 
 consAll : {A : Set} {p : A -> Bool} {y : A} {ys : List A}
-       -> p y ≡ true -> ({x : A} -> x ∈ ys -> p x ≡ true)
-       -> {x : A} -> x ∈ y ∷ ys -> p x ≡ true
+       -> p y ≡ true -> (∀ⁱ[ x ∈ ys ] p x ≡ true)
+       -> ∀ⁱ[ x ∈ y ∷ ys ] p x ≡ true
 consAll e f here      = e
 consAll e f (there m) = f m
 
@@ -70,8 +70,8 @@ filterCons-case true  ys here      = inl refl
 filterCons-case true  ys (there m) = inr m
 filterCons-case false ys m         = inr m
 
-filter-sub : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-          -> x ∈ filter p xs -> x ∈ xs
+filter-sub : {A : Set} (p : A -> Bool) (xs : List A)
+          -> ∀ⁱ[ x ∈ filter p xs ] x ∈ xs
 filter-sub p []       ()
 filter-sub p (y ∷ ys) m =
   sumElim (λ e  -> subst (λ z -> z ∈ y ∷ ys) (sym e) here)
@@ -85,8 +85,8 @@ filterCons-prop true  e ys here      k = e
 filterCons-prop true  e ys (there m) k = k m
 filterCons-prop false e ys m         k = k m
 
-filter-prop : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-           -> x ∈ filter p xs -> p x ≡ true
+filter-prop : {A : Set} (p : A -> Bool) (xs : List A)
+           -> ∀ⁱ[ x ∈ filter p xs ] p x ≡ true
 filter-prop p []       ()
 filter-prop p (y ∷ ys) m =
   filterCons-prop (p y) refl (filter p ys) m (filter-prop p ys)
@@ -148,7 +148,7 @@ any-intro p (y ∷ ys) (there m) e =
   ∨ᵇ-introʳ (p y) (any p ys) (any-intro p ys m e)
 
 any-false : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ false
-         -> {x : A} -> x ∈ xs -> p x ≡ false
+         -> ∀ⁱ[ x ∈ xs ] p x ≡ false
 any-false p []       e  ()
 any-false p (y ∷ ys) e here      = ∨ᵇ-falseˡ (p y) (any p ys) e
 any-false p (y ∷ ys) e (there m) =
@@ -170,8 +170,8 @@ appNotNull (x ∷ xs) ys e = refl
 ------------------------------------------------------------------------
 -- map against membership
 
-map-mem-inv : {A B : Set} (f : A -> B) (xs : List A) {y : B}
-           -> y ∈ map f xs -> ∃[ x ∈ xs ] y ≡ f x
+map-mem-inv : {A B : Set} (f : A -> B) (xs : List A)
+           -> ∀ⁱ[ y ∈ map f xs ] ∃[ x ∈ xs ] y ≡ f x
 map-mem-inv f []       ()
 map-mem-inv f (x ∷ xs) here      = x , here , refl
 map-mem-inv f (x ∷ xs) (there m) = there-∃ (map-mem-inv f xs m)

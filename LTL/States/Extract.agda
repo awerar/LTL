@@ -30,8 +30,8 @@ betaElim : {C : Formula} (ws : List Val)
         -> ⊢ (beta ws) ⇒ C
 betaElim ws h = ⋁Elim (map chi ws) (allIntoMap chi ws h)
 
-betaIntro : (ws : List Val) {w : Val}
-         -> w ∈ ws -> ⊢ (chi w) ⇒ (beta ws)
+betaIntro : (ws : List Val)
+         -> ∀ⁱ[ w ∈ ws ] ⊢ (chi w) ⇒ (beta ws)
 betaIntro ws m = ⋁Intro (map chi ws) (memMap chi m)
 
 ¬Beta : (ws : List Val)

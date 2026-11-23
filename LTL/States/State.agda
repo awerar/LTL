@@ -50,13 +50,13 @@ nexts = ○Args stateAtoms
 evIn : {A : Formula} -> □ A ∈ sub P -> A ∈ eventualities
 evIn m = □Args-of stateAtoms (atomMem (sub P) m refl)
 
-evSub : {A : Formula} -> A ∈ eventualities -> □ A ∈ sub P
+evSub : ∀ⁱ[ A ∈ eventualities ] □ A ∈ sub P
 evSub m = atomSub (sub P) (□Args-mem stateAtoms m)
 
 nextIn : {A : Formula} -> ○ A ∈ sub P -> A ∈ nexts
 nextIn m = ○Args-of stateAtoms (atomMem (sub P) m refl)
 
-nextSub : {A : Formula} -> A ∈ nexts -> ○ A ∈ sub P
+nextSub : ∀ⁱ[ A ∈ nexts ] ○ A ∈ sub P
 nextSub m = atomSub (sub P) (○Args-mem stateAtoms m)
 
 ------------------------------------------------------------------------
@@ -88,6 +88,6 @@ St = filter isState (allVecs (length stateAtoms))
 
 -- Every state has the length the search's Bar expects.
 
-stLen : {v : Val} -> v ∈ St -> length v ≡ length stateAtoms
+stLen : ∀ⁱ[ v ∈ St ] length v ≡ length stateAtoms
 stLen {v} m =
   allVecs-len (length stateAtoms) v (filter-sub isState (allVecs (length stateAtoms)) m)

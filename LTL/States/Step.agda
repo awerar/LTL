@@ -48,21 +48,21 @@ rest23 v w st = snd (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)
 
 stepT1 : (v w : Val) {B : Formula} -> step v w ≡ true -> ○ B ∈ sub P
       -> t1At v w B ≡ true
-stepT1 v w st m =
-  all-at (t1At v w) nexts (nextIn m)
-         (fst (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st))
+stepT1 v w {B} st m =
+  all-true (t1At v w) nexts
+           (fst (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)) B (nextIn m)
 
 stepT2 : (v w : Val) {A : Formula} -> step v w ≡ true -> □ A ∈ sub P
       -> t2At v w A ≡ true
-stepT2 v w st m =
-  all-at (t2At v w) eventualities (evIn m)
-         (fst (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st)))
+stepT2 v w {A} st m =
+  all-true (t2At v w) eventualities
+           (fst (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A (evIn m)
 
 stepT3 : (v w : Val) {A : Formula} -> step v w ≡ true -> □ A ∈ sub P
       -> t3At v w A ≡ true
-stepT3 v w st m =
-  all-at (t3At v w) eventualities (evIn m)
-         (snd (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st)))
+stepT3 v w {A} st m =
+  all-true (t3At v w) eventualities
+           (snd (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A (evIn m)
 
 -- A failed step fails one condition at one formula.
 
@@ -94,8 +94,8 @@ stepFails v w e =
 succs : List Val -> Val -> List Val
 succs us v = filter (step v) us
 
-succsMem : (us : List Val) (v : Val) {w : Val}
-        -> w ∈ succs us v -> w ∈ us × step v w ≡ true
+succsMem : (us : List Val) (v : Val)
+        -> ∀ⁱ[ w ∈ succs us v ] w ∈ us × step v w ≡ true
 succsMem us v m =
   filter-sub (step v) us m , filter-prop (step v) us m
 

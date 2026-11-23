@@ -169,8 +169,7 @@ sub-self (□ A)   = here
 -- Transitivity: sub is closed under passing to subformulas of its members.
 -- The here cases are all  k  itself, since there Q is P.
 
-sub-mono : (P : Formula) {Q : Formula} -> Q ∈ sub P
-        -> {X : Formula} -> X ∈ sub Q -> X ∈ sub P
+sub-mono : (P : Formula) -> ∀ⁱ[ Q ∈ sub P ] ∀ⁱ[ X ∈ sub Q ] X ∈ sub P
 sub-mono (var n) here       k = k
 sub-mono (var n) (there ()) k
 sub-mono (¬ A)   here       k = k

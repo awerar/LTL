@@ -76,8 +76,7 @@ sumElim : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
 sumElim f g (inl a) = f a
 sumElim f g (inr b) = g b
 
--- Does a sum hold its left alternative?  (LTL.Procedures.Answer calls this
--- isProof, since a procedure's proofs are on the left.)
+-- Does a sum hold its left alternative?
 
 isInl : {A B : Set} -> A ⊎ B -> Bool
 isInl (inl _) = true
@@ -375,16 +374,23 @@ data _∈_ {A : Set} (x : A) : List A -> Set where
   there : {y : A} {xs : List A} -> x ∈ xs -> x ∈ y ∷ xs
 
 -- Quantifiers bounded by a list.  ∀[ x ∈ xs ] B  is  (x : _) -> x ∈ xs -> B,
--- and  ∃[ x ∈ xs ] B  is  Σ[ x ∈ _ ] x ∈ xs × B; here ∈ is list membership.
--- Arrows are parsed before notations, so the body of ∀ ends at the first
--- unparenthesised ->; when more hypotheses follow, write the telescope out.
+-- ∀ⁱ[ x ∈ xs ] B  is  {x : _} -> x ∈ xs -> B, for when x is read off the
+-- membership proof, and  ∃[ x ∈ xs ] B  is  Σ[ x ∈ _ ] x ∈ xs × B; here ∈ is
+-- list membership.  Arrows are parsed before notations, so the body of ∀ ends
+-- at the first unparenthesised ->; when more hypotheses follow, write the
+-- telescope out.
 
-infix 2 ∀∈-syntax ∃∈-syntax
+infix 2 ∀∈-syntax ∀ⁱ∈-syntax ∃∈-syntax
 
 ∀∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
 ∀∈-syntax xs B = (x : _) -> x ∈ xs -> B x
 
 syntax ∀∈-syntax xs (λ x -> B) = ∀[ x ∈ xs ] B
+
+∀ⁱ∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
+∀ⁱ∈-syntax xs B = {x : _} -> x ∈ xs -> B x
+
+syntax ∀ⁱ∈-syntax xs (λ x -> B) = ∀ⁱ[ x ∈ xs ] B
 
 ∃∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
 ∃∈-syntax xs B = Σ[ x ∈ _ ] x ∈ xs × B x
@@ -430,8 +436,8 @@ filter-true p (y ∷ ys) here      e = filterCons-hd (p y) y (filter p ys) e
 filter-true p (y ∷ ys) (there m) e =
   filterCons-mem (p y) y (filter p ys) (filter-true p ys m e)
 
-memMap : {A B : Set} (f : A -> B) {x : A} {xs : List A}
-      -> x ∈ xs -> f x ∈ map f xs
+memMap : {A B : Set} (f : A -> B) {xs : List A}
+      -> ∀ⁱ[ x ∈ xs ] f x ∈ map f xs
 memMap f here      = here
 memMap f (there h) = there (memMap f h)
 
@@ -510,18 +516,18 @@ all : {A : Set} -> (A -> Bool) -> List A -> Bool
 all p []       = true
 all p (x ∷ xs) = p x ∧ᵇ all p xs
 
-all-at : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-      -> x ∈ xs -> all p xs ≡ true -> p x ≡ true
-all-at p []       ()        e
-all-at p (y ∷ ys) here      e = ∧ᵇ-trueˡ (p y) (all p ys) e
-all-at p (y ∷ ys) (there m) e = all-at p ys m (∧ᵇ-trueʳ (p y) (all p ys) e)
+all-true : {A : Set} (p : A -> Bool) (xs : List A)
+        -> all p xs ≡ true -> ∀[ x ∈ xs ] p x ≡ true
+all-true p []       e x ()
+all-true p (y ∷ ys) e x here      = ∧ᵇ-trueˡ (p y) (all p ys) e
+all-true p (y ∷ ys) e x (there m) = all-true p ys (∧ᵇ-trueʳ (p y) (all p ys) e) x m
 
-all-atFalse : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-           -> x ∈ xs -> p x ≡ false -> all p xs ≡ false
-all-atFalse p []       ()        e
-all-atFalse p (y ∷ ys) here      e = cong (λ c -> c ∧ᵇ all p ys) e
-all-atFalse p (y ∷ ys) (there m) e =
-  ∧ᵇ-false-introʳ (p y) (all p ys) (all-atFalse p ys m e)
+all-false-intro : {A : Set} (p : A -> Bool) (xs : List A)
+               -> ∃[ x ∈ xs ] p x ≡ false -> all p xs ≡ false
+all-false-intro p []       (x , ()      , e)
+all-false-intro p (y ∷ ys) (x , here    , e) = cong (λ c -> c ∧ᵇ all p ys) e
+all-false-intro p (y ∷ ys) (x , there m , e) =
+  ∧ᵇ-false-introʳ (p y) (all p ys) (all-false-intro p ys (x , m , e))
 
 all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
          -> ∃[ x ∈ xs ] p x ≡ false
@@ -532,7 +538,7 @@ all-false p (y ∷ ys) e =
           (∧ᵇ-false (p y) (all p ys) e)
 
 all-intro : {A : Set} (p : A -> Bool) (xs : List A)
-         -> ({x : A} -> x ∈ xs -> p x ≡ true) -> all p xs ≡ true
+         -> (∀[ x ∈ xs ] p x ≡ true) -> all p xs ≡ true
 all-intro p []       f = refl
 all-intro p (y ∷ ys) f =
-  ∧ᵇ-intro (p y) (all p ys) (f here) (all-intro p ys (λ m -> f (there m)))
+  ∧ᵇ-intro (p y) (all p ys) (f y here) (all-intro p ys (λ x m -> f x (there m)))

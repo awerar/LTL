@@ -32,17 +32,19 @@ record LassoCountermodel (Q : Formula) : Set where
 ------------------------------------------------------------------------
 -- Reading the answer
 
-isProof : {A B : Set} -> A ⊎ B -> Bool
+-- Did the procedure answer with a derivation?  This is the Boolean that
+-- LTL.Correct hands to Statement as decideValid.
+isProof : {Q : Formula} -> ⊢ Q ⊎ LassoCountermodel Q -> Bool
 isProof = isInl
 
--- The countermodel, on the strength of the computed boolean: refl for the
--- second argument says the procedure was actually run.
+-- The countermodel, given that isProof says the answer is one.  On a closed
+-- answer, such as decide Q for a concrete Q, the equation is refl.
 countermodelFrom : {Q : Formula} (s : ⊢ Q ⊎ LassoCountermodel Q)
                 -> isProof s ≡ false -> LassoCountermodel Q
 countermodelFrom (inl d) ()
 countermodelFrom (inr c) e = c
 
--- The derivation, the same way.
+-- The derivation, given that isProof says the answer is one.
 proofFrom : {Q : Formula} (s : ⊢ Q ⊎ LassoCountermodel Q)
          -> isProof s ≡ true -> ⊢ Q
 proofFrom (inl d) e = d

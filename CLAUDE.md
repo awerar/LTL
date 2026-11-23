@@ -31,11 +31,13 @@ derivation or a certified finite lasso countermodel.
   built with `_,_`; `fst`/`snd`; `Statement`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
   (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
   `if b then x else y`, and list helpers `filter any all null concat`.
-  Quantifiers bounded by a list: `∀[ x ∈ xs ] B` for `(x : _) -> x ∈ xs -> B`
-  and `∃[ x ∈ xs ] B` for `Σ[ x ∈ _ ] x ∈ xs × B`. Use ∀ only when `B` is a
-  single conclusion: the notation's body stops at the first unparenthesised
-  `->`, so when more hypotheses follow, write the telescope out. Implicit
-  binders (`{x : A} -> x ∈ xs -> …`) have no notation.
+  Quantifiers bounded by a list: `∀[ x ∈ xs ] B` for `(x : _) -> x ∈ xs -> B`,
+  `∀ⁱ[ x ∈ xs ] B` for `{x : _} -> x ∈ xs -> B` (x read off the membership
+  proof; callers pass only `m`), and `∃[ x ∈ xs ] B` for
+  `Σ[ x ∈ _ ] x ∈ xs × B` (the witness is a pair field, so it has no implicit
+  variant). Use ∀/∀ⁱ only when `B` is a single conclusion: the notation's body
+  stops at the first unparenthesised `->` (and a `⊎` body needs parentheses),
+  so when more hypotheses follow, write the telescope out.
   Boolean-valued operators carry a superscript naming their domain:
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,
@@ -169,8 +171,8 @@ a module name.
    `SccExtract` (`ustCertRefuted`: a certificate refutes every state of
    `Ust`), `SccSeed` (`ustSeedTo`: every state of `Ust` is `Seeded`, reached from
    one containing `P`). In `Procedures/`: `Answer`
-   (`LassoCountermodel`, `isProof`, `countermodelFrom`, `cmLasso`,
-   `cmTrace`, `cmShape`, `countermodelFrom`, `proofFrom`, `derivCounts`);
+   (`LassoCountermodel`, `isProof` with `proofFrom` and `countermodelFrom`,
+   `cmLasso`, `cmTrace`, `cmShape`, `derivCounts`);
    `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
    `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
    all of the above unapplied, for importers). At the root:

@@ -95,8 +95,8 @@ module _ {S : Set} (read : S -> T.Instant) where
     evalAt-holds (□ A) n e k =
       evalAt-holds A (k + n)
         (subst (EvalsTrue A) (sym (O.posIter-+ʳ loop k n pos0))
-               (E.eval□-at loop A (stage n) (O.posIter loop k (stage n)) e
-                           (O.iter∈orbit loop k (stage n))))
+               (E.eval□-true loop A (stage n) e (O.posIter loop k (stage n))
+                             (O.iter∈orbit loop k (stage n))))
 
     holds-evalAt (var x) n h = subst (λ i -> i x ≡ true) (interpretAgree n) h
 
@@ -169,8 +169,9 @@ cmUnderivable Q c d with toCountermodel Q c
 ... | T.counter L notQ = notQ (⊢-valid d L)
 
 ------------------------------------------------------------------------
--- decide as a Statement DecisionProcedure.  The test is which branch it took:
--- a derivation is valid by ⊢-valid, and a countermodel translates by
+-- decide as a Statement DecisionProcedure.  The test is which branch it took
+-- (isProof), and proofFrom / countermodelFrom read that branch off: a
+-- derivation is valid by ⊢-valid, and a countermodel translates by
 -- toCountermodel.
 
 decideCorrect : T.DecisionProcedure
@@ -181,12 +182,8 @@ decideCorrect = record
   }
   where
     validIfTrue : (Q : Formula) -> isProof (decide Q) ≡ true -> T.valid Q
-    validIfTrue Q e with decide Q
-    ... | inl d = ⊢-valid d
-    ... | inr c = emptyElim (true≢false (sym e))
+    validIfTrue Q e = ⊢-valid (proofFrom (decide Q) e)
 
     counterIfFalse : (Q : Formula) -> isProof (decide Q) ≡ false
                   -> T.LassoCountermodel Q
-    counterIfFalse Q e with decide Q
-    ... | inl d = emptyElim (true≢false e)
-    ... | inr c = toCountermodel Q c
+    counterIfFalse Q e = toCountermodel Q (countermodelFrom (decide Q) e)

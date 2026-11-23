@@ -24,7 +24,7 @@ open import LTL.States.CompletePC P
 -- through it: a Boolean condition fails, so chi carries two contradictory
 -- literals.
 
-chiProj : (v : Val) {A : Formula} -> A ∈ sub P -> ⊢ (chi v) ⇒ (litOf v A)
+chiProj : (v : Val) -> ∀ⁱ[ A ∈ sub P ] ⊢ (chi v) ⇒ (litOf v A)
 chiProj v m = ⋀Proj (map (litOf v) subformulas) (memMap (litOf v) (nub-mem (sub P) m))
 
 ------------------------------------------------------------------------
@@ -38,10 +38,10 @@ notSucc v w e = byCondition (stepFails v w e)
     R : Formula
     R = (chi v) ∧ ○ (chi w)
 
-    pv : {A : Formula} -> A ∈ sub P -> ⊢ R ⇒ (lit A (valOf v A))
+    pv : ∀ⁱ[ A ∈ sub P ] ⊢ R ⇒ (lit A (valOf v A))
     pv m = ⇒Trans ∧Fst (chiProj v m)
 
-    pw : {A : Formula} -> A ∈ sub P -> ⊢ R ⇒ ○ (lit A (valOf w A))
+    pw : ∀ⁱ[ A ∈ sub P ] ⊢ R ⇒ ○ (lit A (valOf w A))
     pw m = ⇒Trans ∧Snd (○Mono (chiProj w m))
 
     pvAt : {A : Formula} -> A ∈ sub P -> (c : Bool) -> valOf v A ≡ c

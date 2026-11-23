@@ -118,7 +118,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
    -> □ B ∈ sub P -> valOf s (□ B) ≡ true -> valOf s B ≡ true
 □S2 s m B mb e =
   ⇒ᵇ-mp (valOf s (□ B)) (valOf s B)
-        (all-at (s2At s) eventualities (evIn mb) (ustState m)) e
+        (all-true (s2At s) eventualities (ustState m) B (evIn mb)) e
 
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
@@ -185,7 +185,7 @@ module _ (cy : Cycle) where
       □Holds : valOf (posState pos) (□ B) ≡ true
             -> evalAt loop (□ B) pos ≡ true
       □Holds e =
-        all-intro (evalAt loop B) (orbit loop pos) (λ {q} m -> atQ q m)
+        all-intro (evalAt loop B) (orbit loop pos) atQ
         where
           atQ : ∀[ q ∈ orbit loop pos ] evalAt loop B q ≡ true
           atQ q m =
@@ -201,9 +201,8 @@ module _ (cy : Cycle) where
           fromGF : (∃[ q ∈ orbit loop pos ] valOf (posState q) B ≡ false)
                 -> evalAt loop (□ B) pos ≡ false
           fromGF (q , mq , eq) =
-            eval□-false loop B pos q mq
-              (trans (sym (ih q (orbitValid cy pos q vp mq)))
-                     eq)
+            eval□-false-intro loop B pos
+              (q , mq , trans (sym (ih q (orbitValid cy pos q vp mq))) eq)
 
       by□ : valOf (posState pos) (□ B) ≡ evalAt loop (□ B) pos
       by□ with valOf (posState pos) (□ B) in e

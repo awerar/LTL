@@ -8,11 +8,11 @@
 -- Boolean condition on the formula alone, so (PC) needs no substitution
 -- relation.
 --
--- valFrom reads a formula from an assignment to atoms; LTL.States.Closure uses
--- it to build states.  skelEval says it agrees with any reading that is
--- compositional on ¬ and ⇒: valOf at a state, and evalAt at a position of a
--- lasso.  That one lemma serves both state construction and the soundness of
--- (PC).
+-- valFrom reads a formula from an assignment to atoms.  A state of
+-- LTL.States.State is such an assignment to the atoms of sub P, and valOf is
+-- valFrom.  skelEval says valFrom agrees with any reading that is
+-- compositional on ¬ and ⇒; tautSound applies it at a lasso position for the
+-- soundness of (PC), and LTL.States.Taut at a row of a tautology's table.
 
 module LTL.Syntax.Skel where
 
@@ -76,7 +76,7 @@ indexOf : List Formula -> Formula -> Nat
 indexOf []       A = zero
 indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
 
-indexOf-lt : (xs : List Formula) {X : Formula} -> X ∈ xs -> indexOf xs X < length xs
+indexOf-lt : (xs : List Formula) -> ∀ⁱ[ X ∈ xs ] indexOf xs X < length xs
 indexOf-lt []       ()
 indexOf-lt (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
@@ -89,8 +89,8 @@ indexOf-lt (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
     aux true  = ltZero
     aux false = ltSuc (indexOf-lt Bs m)
 
-indexOf-nth : (xs : List Formula) {X : Formula} -> X ∈ xs
-           -> nth xs (indexOf xs X) ⊥ ≡ X
+indexOf-nth : (xs : List Formula)
+           -> ∀ⁱ[ X ∈ xs ] nth xs (indexOf xs X) ⊥ ≡ X
 indexOf-nth []       ()
 indexOf-nth (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
@@ -113,7 +113,7 @@ nub : List Formula -> List Formula
 nub []       = []
 nub (A ∷ As) = A ∷ filter (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
 
-nub-mem : (As : List Formula) {X : Formula} -> X ∈ As -> X ∈ nub As
+nub-mem : (As : List Formula) -> ∀ⁱ[ X ∈ As ] X ∈ nub As
 nub-mem []       ()
 nub-mem (A ∷ As) here = here
 nub-mem (A ∷ As) {X} (there m) with A ≡ᶠ X in e
@@ -121,7 +121,7 @@ nub-mem (A ∷ As) {X} (there m) with A ≡ᶠ X in e
 ... | false = there (filter-true (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
                                  (nub-mem As m) (cong ¬ᵇ_ e))
 
-nub-sub : (As : List Formula) {X : Formula} -> X ∈ nub As -> X ∈ As
+nub-sub : (As : List Formula) -> ∀ⁱ[ X ∈ nub As ] X ∈ As
 nub-sub []       ()
 nub-sub (A ∷ As) here      = here
 nub-sub (A ∷ As) (there m) =
@@ -145,7 +145,7 @@ atomMem : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
        -> A ∈ atoms As
 atomMem As m e = filter-true isAtomB (nub As) (nub-mem As m) e
 
-atomSub : (As : List Formula) {A : Formula} -> A ∈ atoms As -> A ∈ As
+atomSub : (As : List Formula) -> ∀ⁱ[ A ∈ atoms As ] A ∈ As
 atomSub As m = nub-sub As (filter-sub isAtomB (nub As) m)
 
 ------------------------------------------------------------------------
@@ -175,8 +175,8 @@ atomSub As m = nub-sub As (filter-sub isAtomB (nub As) m)
 
 -- and back: the eventualities really are box-subformulas.
 
-□Args-mem : (As : List Formula) {A : Formula}
-         -> A ∈ □Args As -> □ A ∈ As
+□Args-mem : (As : List Formula)
+         -> ∀ⁱ[ A ∈ □Args As ] □ A ∈ As
 □Args-mem []           ()
 □Args-mem (var n ∷ As) m         = there (□Args-mem As m)
 □Args-mem (¬ B   ∷ As) m         = there (□Args-mem As m)
@@ -205,8 +205,8 @@ atomSub As m = nub-sub As (filter-sub isAtomB (nub As) m)
 ○Args-of (○ B   ∷ As) (there m) = there (○Args-of As m)
 ○Args-of (□ B   ∷ As) (there m) = ○Args-of As m
 
-○Args-mem : (As : List Formula) {A : Formula}
-         -> A ∈ ○Args As -> ○ A ∈ As
+○Args-mem : (As : List Formula)
+         -> ∀ⁱ[ A ∈ ○Args As ] ○ A ∈ As
 ○Args-mem []           ()
 ○Args-mem (var n ∷ As) m         = there (○Args-mem As m)
 ○Args-mem (¬ B   ∷ As) m         = there (○Args-mem As m)
@@ -228,9 +228,9 @@ valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation agrees with any reading f that respects ¬ and ⇒ on
--- the subformulas of P.  Two instances are used: valOf at a state, where the
--- hypotheses are (S1) (LTL.States.Closure), and evalAt at a position, where
--- they hold by definition (LTL.Semantics.OrbitEval).
+-- the subformulas of P.  Its instances, evalAt at a position (through
+-- tautSound) and valFrom at another row (LTL.States.Taut), respect them by
+-- definition.
 
 atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
         -> X ∈ Ats
@@ -273,7 +273,7 @@ isTaut-intro : (A : Formula) -> ((a : Val) -> valFrom (atomsOf A) a A ≡ true)
             -> isTaut A ≡ true
 isTaut-intro A h =
   all-intro (λ a -> valFrom (atomsOf A) a A) (allVecs (length (atomsOf A)))
-            (λ {a} m -> h a)
+            (λ a m -> h a)
 
 -- and its soundness: any compositional reading of a skeleton tautology is true
 
@@ -287,8 +287,7 @@ tautSound f A fn fi e =
   trans (sym (skelEval f (atomsOf A) A
                        (λ X mX aX -> atomMem (sub A) mX aX) fn fi A
                        (sub-self A)))
-        (all-at (λ a -> valFrom (atomsOf A) a A)
-                (allVecs (length (atomsOf A)))
-                (allVecs-complete (length (atomsOf A)) (map f (atomsOf A))
-                                  (map-length f (atomsOf A)))
-                e)
+        (all-true (λ a -> valFrom (atomsOf A) a A)
+                  (allVecs (length (atomsOf A))) e (map f (atomsOf A))
+                  (allVecs-complete (length (atomsOf A)) (map f (atomsOf A))
+                                    (map-length f (atomsOf A))))

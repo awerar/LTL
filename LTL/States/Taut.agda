@@ -64,7 +64,7 @@ module _ (Ats : List Formula) (a : Val) where
     ⇒ᵇ-const (¬ᵇ valFrom Ats a D) (valFrom Ats a (⋁ Cs)) (⋁True Cs m e)
 
   ⋀True : (Cs : List Formula)
-       -> ({C : Formula} -> C ∈ Cs -> valFrom Ats a C ≡ true)
+       -> (∀ⁱ[ C ∈ Cs ] valFrom Ats a C ≡ true)
        -> valFrom Ats a (⋀ Cs) ≡ true
   ⋀True []       h = ⇒ᵇ-refl (valFrom Ats a (var zero))
   ⋀True (D ∷ Cs) h =
@@ -83,7 +83,7 @@ module _ (Ats : List Formula) (a : Val) where
   -- (L5): walk the disjunction to a true disjunct and use the premise there.
 
   ⋁ElimTrue : (Cs : List Formula) (C : Formula)
-           -> ({D : Formula} -> D ∈ Cs -> valFrom Ats a (C ⇐ D) ≡ true)
+           -> (∀ⁱ[ D ∈ Cs ] valFrom Ats a (C ⇐ D) ≡ true)
            -> valFrom Ats a (⋁ Cs) ≡ true -> valFrom Ats a C ≡ true
   ⋁ElimTrue []       C k e =
     emptyElim (true≢false (trans (sym e)
@@ -96,7 +96,7 @@ module _ (Ats : List Formula) (a : Val) where
   -- ⇒Chain: reading a chain as true is assuming its premises.
 
   ⇒Chain : (As : List Formula) (C : Formula)
-        -> (({A : Formula} -> A ∈ As -> valFrom Ats a A ≡ true)
+        -> ((∀ⁱ[ A ∈ As ] valFrom Ats a A ≡ true)
               -> valFrom Ats a C ≡ true)
         -> valFrom Ats a (⇒List As C) ≡ true
   ⇒Chain []       C h = h (λ ())
@@ -105,8 +105,8 @@ module _ (Ats : List Formula) (a : Val) where
              (λ eA -> ⇒Chain As C (λ g -> h (more eA g)))
     where
       more : valFrom Ats a A ≡ true
-          -> ({X : Formula} -> X ∈ As -> valFrom Ats a X ≡ true)
-          -> {X : Formula} -> X ∈ A ∷ As -> valFrom Ats a X ≡ true
+          -> (∀ⁱ[ X ∈ As ] valFrom Ats a X ≡ true)
+          -> ∀ⁱ[ X ∈ A ∷ As ] valFrom Ats a X ≡ true
       more eA g here      = eA
       more eA g (there m) = g m
 
@@ -151,8 +151,8 @@ module _ (Ats : List Formula) (a : Val) where
   chiTrue : (P : Formula) -> valFrom Ats a (chi P (skelVec P)) ≡ true
   chiTrue P = ⋀True (map (litOf P (skelVec P)) (subformulas P)) conj
     where
-      conj : {C : Formula} -> C ∈ map (litOf P (skelVec P)) (subformulas P)
-          -> valFrom Ats a C ≡ true
+      conj : ∀ⁱ[ C ∈ map (litOf P (skelVec P)) (subformulas P) ]
+               valFrom Ats a C ≡ true
       conj {C} m = fromSig (map-mem-inv (litOf P (skelVec P)) (subformulas P) m)
         where
           fromSig : (∃[ A ∈ subformulas P ] C ≡ litOf P (skelVec P) A)
@@ -182,7 +182,7 @@ module _ (Ats : List Formula) (a : Val) where
                 (allVecs-complete (length (stateAtoms P)) (skelVec P)
                                   (map-length (valFrom Ats a) (stateAtoms P)))
                 (all-intro (s2At P (skelVec P)) (eventualities P)
-                           (λ {B} mB -> s2Skel P s2 B mB))
+                           (s2Skel P s2))
 
   -- Hence beta P (St P) is true in any row satisfying (S2): chi P (skelVec
   -- P) is a disjunct (memStSkel) and is true (chiTrue).
