@@ -170,7 +170,7 @@ a module name.
    (`LassoCountermodel`, `isProof`, `countermodelFrom`, `cmLasso`,
    `cmTrace`, `cmShape`, `countermodelFrom`, `proofFrom`, `derivCounts`);
    `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
-   `sccProof`, `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
+   `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
    all of the above unapplied, for importers). At the root:
    `Correct` (the bridge: on a `Statement` lasso that starts at `pos0` and loops
    back to `loop`, `evalAt` is `Statement`'s `⊨` (`evalAt-holds`,

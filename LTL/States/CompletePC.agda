@@ -38,7 +38,7 @@ s2List = map s2Fml (□Args (sub P))
 ------------------------------------------------------------------------
 -- State completeness.  Fix the atom list of the implication and any row a of
 -- its truth table.  The premises say □ B ⇒ B holds in row a for every □ B in
--- sub P (□Ok), so skelVec is a state and its chi is a true disjunct of
+-- sub P (S2At), so skelVec is a state and its chi is a true disjunct of
 -- beta St.  No valuation is enumerated: the row IS the state.
 
 -- The tautology: the (S2) premises of s2List imply beta St.
@@ -48,18 +48,9 @@ stateFml = ⇒List s2List (beta St)
 
 tautState : isTaut stateFml ≡ true
 tautState =
-  all-intro (λ a -> valFrom (atomsOf stateFml) a stateFml)
-            (allVecs (length (atomsOf stateFml)))
-            row
-  where
-    Ats : List Formula
-    Ats = atomsOf stateFml
-
-    row : {a : Val} -> a ∈ allVecs (length Ats)
-       -> valFrom Ats a stateFml ≡ true
-    row {a} m =
-      □Chain Ats a (□Args (sub P)) (beta St)
-               (λ g -> betaSkel Ats a P (λ B mb -> g B (□Args-of (sub P) mb)))
+  isTaut-intro stateFml λ a ->
+    □Chain (atomsOf stateFml) a (□Args (sub P)) (beta St)
+           (betaSkel (atomsOf stateFml) a P)
 
 stateCompletePC : ⊢ beta St
 stateCompletePC = mpChain (□Args (sub P)) (pc tautState)

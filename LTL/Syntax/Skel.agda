@@ -238,6 +238,14 @@ isTaut : Formula -> Bool
 isTaut A = all (λ a -> valFrom (atomsOf A) a A)
                (allVecs (length (atomsOf A)))
 
+-- A formula true in every row passes the test.
+
+isTaut-intro : (A : Formula) -> ((a : Val) -> valFrom (atomsOf A) a A ≡ true)
+            -> isTaut A ≡ true
+isTaut-intro A h =
+  all-intro (λ a -> valFrom (atomsOf A) a A) (allVecs (length (atomsOf A)))
+            (λ {a} m -> h a)
+
 -- and its soundness: any compositional reading of a skeleton tautology is true
 
 tautSound : (f : Formula -> Bool) (A : Formula)

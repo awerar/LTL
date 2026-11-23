@@ -145,23 +145,7 @@ Ust-¬Bnb : length (Ust ¬Bnb) ≡ 2
 Ust-¬Bnb = refl
 
 ------------------------------------------------------------------------
--- LTL.Procedures.Decide: the derivation branch
-
--- Ben-Ari's formula and  □ p ⇒ □ ○ p , decided by the graph search.  Both
--- derivations are produced, so the search, certAll, extractR1 and
--- extractBlock all run.
-
-scc-benAri : isInl (sccProof benAri) ≡ false
-scc-benAri = refl
-
-benAriProofSCC : ⊢ benAri
-benAriProofSCC = proofFrom (sccProof benAri) refl
-
-scc-bnb : isInl (sccProof bnb) ≡ false
-scc-bnb = refl
-
-bnbProofSCC : ⊢ bnb
-bnbProofSCC = proofFrom (sccProof bnb) refl
+-- LTL.Procedures.Decide: the graph search
 
 -- The certificates, as removal orders.  For Ben-Ari's formula Ust has one
 -- state, a sink, so only extractR1 runs.  For  □ p ⇒ □ ○ p  one state is a
@@ -184,12 +168,20 @@ scc-◇P = refl
 -- LTL.Procedures.Decide
 
 -- Ben-Ari's formula and  □ p ⇒ □ ○ p  are valid: the answer is a derivation.
+-- Both derivations are produced, so the search, certAll, extractR1 and
+-- extractBlock all run.
 
 decide-benAri : isProof (decide benAri) ≡ true
 decide-benAri = refl
 
+benAriProof : ⊢ benAri
+benAriProof = proofFrom (decide benAri) refl
+
 decide-bnb : isProof (decide bnb) ≡ true
 decide-bnb = refl
+
+bnbProof : ⊢ bnb
+bnbProof = proofFrom (decide bnb) refl
 
 -- The certificates are short.  For (T),  □ p ⇒ p , the derivation has 55
 -- constructors, 5 of them pc nodes: state completeness is one pc node and one
@@ -197,8 +189,8 @@ decide-bnb = refl
 -- more (betaElimPC), and each state is one pc node or a refutation.
 -- stateComplete alone, by case split, has 296839.
 
-axT-size : derivSize (proofFrom (sccProof (□ var zero ⇒ var zero)) refl)
-           ∷ derivPC (proofFrom (sccProof (□ var zero ⇒ var zero)) refl)
+axT-size : derivSize (proofFrom (decide (□ var zero ⇒ var zero)) refl)
+           ∷ derivPC (proofFrom (decide (□ var zero ⇒ var zero)) refl)
            ∷ [] ≡ 55 ∷ 5 ∷ []
 axT-size = refl
 

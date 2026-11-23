@@ -29,7 +29,7 @@ open import LTL.States.Taut using (tautChi)
 open import LTL.States.State           (¬ Q)
 open import LTL.States.Closure         (¬ Q)
 open import LTL.States.Extract         (¬ Q)
-open import LTL.States.CompletePC  (¬ Q)
+open import LTL.States.CompletePC      (¬ Q)
 open import LTL.Countermodel.Walk      (¬ Q)
 open import LTL.Countermodel.Lasso     (¬ Q)
 open import LTL.Countermodel.Hintikka  (¬ Q)
@@ -62,13 +62,6 @@ provableEachSCC c w m = byPosition
 provableSCC : Cert evPreds Ust -> ⊢ Q
 provableSCC c =
   mp (betaElimPC St (provableEachSCC c)) stateCompletePC
-
-------------------------------------------------------------------------
--- The two branches of the search, side by side: a fair component, or a
--- derivation of Q.  proofFrom (LTL.Procedures.Answer) reads the second out.
-
-sccProof : FairIn Ust evPreds ⊎ ⊢ Q
-sccProof = sumElim inl (λ c -> inr (provableSCC c)) sccGraph
 
 -- The shape of the certificate: removedBlock, removedSink, then emptied.
 
@@ -104,9 +97,10 @@ fairCountermodel (fairIn r mr c) =
   where open Seeded (ustSeedTo r mr)
 
 ------------------------------------------------------------------------
--- The decision: sccProof, with the fair component read as a countermodel.
+-- The decision: the search's certificate gives a derivation, its fair
+-- component a countermodel.
 
 decide : ⊢ Q ⊎ LassoCountermodel Q
-decide with sccProof
-... | inl fair  = inr (fairCountermodel fair)
-... | inr proof = inl proof
+decide with sccGraph
+... | inl fair = inr (fairCountermodel fair)
+... | inr cert = inl (provableSCC cert)
