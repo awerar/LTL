@@ -77,11 +77,11 @@ module _ (cy : Cycle) (fair : Fair cy) where
           fromFul (ful z mz ez) =
             fromStretch (stretch-mem loop (cycMem (endOnCycle cy) mz))
             where
-              fromStretch : (∃[ q ∈ loopStretch loop ] posState q ≡ z)
+              fromStretch : (∃[ q ∈ stretch loop ] posState q ≡ z)
                     -> ∃[ q ∈ orbit loop (s , rest) ]
                                         valOf (posState q) A ≡ false
               fromStretch (q , mq , eq) =
-                place q (loopStretch⊆orbit loop (s , rest) q mq) eq ez
+                place q (cycle⊆orbit loop (s , rest) q mq) eq ez
 
 ------------------------------------------------------------------------
 -- Reading (S2) off a state of Ust

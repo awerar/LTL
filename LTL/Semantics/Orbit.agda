@@ -11,8 +11,11 @@
 --    (s , [])      |->  loop              loop back
 --
 -- which is Position, step and Lasso.loop of LTL.Statement.  This avoids index
--- arithmetic: the forward orbit of pos is literally  stretch pos ++ loopStretch
--- (orbit-split), and everything about orbits follows from that equation.
+-- arithmetic: the forward orbit of pos is literally
+--
+--    stretch pos ++ stretch loop                          (orbit-split)
+--
+-- and everything about orbits follows from that equation.
 --
 -- Positions and stretches do not depend on the lasso; everything else sits in
 -- a block parameterised by loop, which callers pass first.  Σ has no eta
@@ -93,11 +96,6 @@ module _ (loop : Pos) where
   ------------------------------------------------------------------------
   -- The forward orbit
 
-  -- One turn of the cycle, from loop.
-
-  loopStretch : List Pos
-  loopStretch = stretch loop
-
   -- The first n positions of the orbit from pos.
 
   orbitN : Nat -> Pos -> List Pos
@@ -117,32 +115,31 @@ module _ (loop : Pos) where
       go s []       = refl
       go s (w ∷ ws) = cong (λ L -> (s , w ∷ ws) ∷ L) (go w ws)
 
-  orbitN-loopStretch : orbitN (length loopStretch) loop ≡ loopStretch ++ []
-  orbitN-loopStretch =
-    subst (λ k -> orbitN k loop ≡ loopStretch ++ [])
-          (+-identityʳ (length loopStretch))
-          (orbitN-split loop zero)
+  -- Walking as many steps as a stretch has positions gives the stretch.
+  orbitN-stretch : (pos : Pos) -> orbitN (length (stretch pos)) pos ≡ stretch pos
+  orbitN-stretch pos =
+    subst (λ k -> orbitN k pos ≡ stretch pos)
+          (+-identityʳ (length (stretch pos)))
+          (trans (orbitN-split pos zero) (++-identityʳ (stretch pos)))
 
-  -- The rest of the stretch from pos, then one turn of the cycle.
+  -- The rest of the stretch from pos, then one turn of the cycle: the
+  -- stretch from loop.
 
   orbit : Pos -> List Pos
-  orbit pos = orbitN (length (stretch pos) + length loopStretch) pos
+  orbit pos = orbitN (length (stretch pos) + length (stretch loop)) pos
 
   -- Every position of an orbit is reached from its start by iterating.  The
   -- search starts at the j-th iterate and counts j up as it walks on.
 
-  ∈orbitN-iter : (pos : Pos) (n j : Nat) (q : Pos)
-              -> q ∈ orbitN n (posIter pos j)
-              -> Σ[ t ∈ Nat ] posIter pos t ≡ q
+  ∈orbitN-iter : (pos : Pos) (n j : Nat)
+              -> ∀[ q ∈ orbitN n (posIter pos j) ] Σ[ t ∈ Nat ] posIter pos t ≡ q
   ∈orbitN-iter pos zero    j q ()
   ∈orbitN-iter pos (suc n) j q here      = j , refl
   ∈orbitN-iter pos (suc n) j q (there m) = ∈orbitN-iter pos n (suc j) q m
 
-  ∈orbit-iter : (pos q : Pos)
-             -> q ∈ orbit pos
-             -> Σ[ t ∈ Nat ] posIter pos t ≡ q
+  ∈orbit-iter : (pos : Pos) -> ∀[ q ∈ orbit pos ] Σ[ t ∈ Nat ] posIter pos t ≡ q
   ∈orbit-iter pos q m =
-    ∈orbitN-iter pos (length (stretch pos) + length loopStretch) zero q m
+    ∈orbitN-iter pos (length (stretch pos) + length (stretch loop)) zero q m
 
   -- So what holds at every iterate holds on the whole orbit.
 
@@ -156,21 +153,20 @@ module _ (loop : Pos) where
   -- The orbit as a plain concatenation: the rest of the stretch, then one
   -- turn of the cycle.  Everything below is read off this equation.
 
-  orbit-split : (pos : Pos) -> orbit pos ≡ stretch pos ++ loopStretch
+  orbit-split : (pos : Pos) -> orbit pos ≡ stretch pos ++ stretch loop
   orbit-split pos =
-    trans (orbitN-split pos (length loopStretch))
-          (cong (λ L -> stretch pos ++ L)
-                (trans orbitN-loopStretch (++-identityʳ loopStretch)))
+    trans (orbitN-split pos (length (stretch loop)))
+          (cong (λ L -> stretch pos ++ L) (orbitN-stretch loop))
 
   stretch⊆orbit : (pos : Pos) -> stretch pos ⊆ orbit pos
   stretch⊆orbit pos q m =
     subst (λ L -> q ∈ L) (sym (orbit-split pos))
-          (memAppL (stretch pos) loopStretch m)
+          (memAppL (stretch pos) (stretch loop) m)
 
-  loopStretch⊆orbit : (pos : Pos) -> loopStretch ⊆ orbit pos
-  loopStretch⊆orbit pos q m =
+  cycle⊆orbit : (pos : Pos) -> stretch loop ⊆ orbit pos
+  cycle⊆orbit pos q m =
     subst (λ L -> q ∈ L) (sym (orbit-split pos))
-          (memAppR (stretch pos) loopStretch m)
+          (memAppR (stretch pos) (stretch loop) m)
 
   orbitHead : (pos : Pos) -> pos ∈ orbit pos
   orbitHead pos = stretch⊆orbit pos pos (stretch-head pos)
@@ -179,34 +175,32 @@ module _ (loop : Pos) where
   -- The orbit is closed under the successor: walking on stays in the same
   -- stretch until it runs out, then lands on loop.
 
-  stretch-next : (pos q : Pos)
-              -> q ∈ stretch pos
-              -> nextPos q ∈ stretch pos ⊎ nextPos q ≡ loop
+  stretch-next : (pos : Pos)
+              -> ∀[ q ∈ stretch pos ] (nextPos q ∈ stretch pos ⊎ nextPos q ≡ loop)
   stretch-next (s , [])     q here      = inr refl
   stretch-next (s , [])     q (there ())
   stretch-next (s , w ∷ ws) q here      = inl (there (stretch-head (w , ws)))
   stretch-next (s , w ∷ ws) q (there m) =
     sumElim (λ mm -> inl (there mm)) inr (stretch-next (w , ws) q m)
 
-  orbitClosed : (pos q : Pos)
-             -> q ∈ orbit pos -> nextPos q ∈ orbit pos
+  orbitClosed : (pos : Pos) -> ∀[ q ∈ orbit pos ] nextPos q ∈ orbit pos
   orbitClosed pos q m =
     subst (λ L -> nextPos q ∈ L) (sym (orbit-split pos))
           (sumElim onStretch onCycle
-                   (memAppCase (stretch pos) loopStretch
+                   (memAppCase (stretch pos) (stretch loop)
                                (subst (λ L -> q ∈ L) (orbit-split pos) m)))
     where
-      intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ loopStretch
+      intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ stretch loop
       intoCycle e =
-        subst (λ r -> r ∈ stretch pos ++ loopStretch) (sym e)
-              (memAppR (stretch pos) loopStretch (stretch-head loop))
+        subst (λ r -> r ∈ stretch pos ++ stretch loop) (sym e)
+              (memAppR (stretch pos) (stretch loop) (stretch-head loop))
 
-      onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ loopStretch
-      onStretch mq = sumElim (λ mm -> memAppL (stretch pos) loopStretch mm)
+      onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ stretch loop
+      onStretch mq = sumElim (λ mm -> memAppL (stretch pos) (stretch loop) mm)
                              intoCycle (stretch-next pos q mq)
 
-      onCycle : q ∈ loopStretch -> nextPos q ∈ stretch pos ++ loopStretch
-      onCycle mq = sumElim (λ mm -> memAppR (stretch pos) loopStretch mm)
+      onCycle : q ∈ stretch loop -> nextPos q ∈ stretch pos ++ stretch loop
+      onCycle mq = sumElim (λ mm -> memAppR (stretch pos) (stretch loop) mm)
                            intoCycle (stretch-next loop q mq)
 
   iter∈orbit : (pos : Pos) (t : Nat) -> posIter pos t ∈ orbit pos
