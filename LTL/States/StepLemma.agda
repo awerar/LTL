@@ -25,7 +25,7 @@ open import LTL.States.CompletePC P
 -- literals.
 
 chiProj : (v : Val) {A : Formula} -> A ∈ sub P -> ⊢ (chi v) ⇒ (litOf v A)
-chiProj v m = ⋀Proj (map (litOf v) (sub P)) (memMap (litOf v) m)
+chiProj v m = ⋀Proj (map (litOf v) subformulas) (memMap (litOf v) (nub-mem (sub P) m))
 
 ------------------------------------------------------------------------
 -- Refuting a non-successor
@@ -33,7 +33,7 @@ chiProj v m = ⋀Proj (map (litOf v) (sub P)) (memMap (litOf v) m)
 notSucc : (v w : Val)
        -> step v w ≡ false
        -> ⊢ ¬ ((chi v) ∧ ○ (chi w))
-notSucc v w e = sigElim (all-false (stepAt v w) (sub P) e)
+notSucc v w e = byCondition (stepFails v w e)
   where
     R : Formula
     R = (chi v) ∧ ○ (chi w)
@@ -53,11 +53,9 @@ notSucc v w e = sigElim (all-false (stepAt v w) (sub P) e)
     pwAt m c eq = subst (λ d -> ⊢ R ⇒ ○ (lit _ d)) eq (pw m)
 
     ----------------------------------------------------------------
-    -- (T1)
+    -- (T1): ○ B at v disagrees with B at w.
 
-    case○ : {B : Formula} -> ○ B ∈ sub P
-         -> valOf v (○ B) ⇔ᵇ valOf w B ≡ false
-         -> ⊢ ¬ R
+    case○ : {B : Formula} -> ○ B ∈ sub P -> t1At v w B ≡ false -> ⊢ ¬ R
     case○ {B} m q =
       refute○ (valOf w B)
                 (pvAt m (¬ᵇ valOf w B)
@@ -65,60 +63,45 @@ notSucc v w e = sigElim (all-false (stepAt v w) (sub P) e)
                 (pwAt (sub-○ P m) (valOf w B) refl)
 
     ----------------------------------------------------------------
-    -- (T2) and (T3)
+    -- (T2): □ B holds at v, so it must hold at w; it does not.
 
-    case□ : {B : Formula} -> □ B ∈ sub P
-         -> (valOf v (□ B) ⇒ᵇ valOf w (□ B)) ∧ᵇ
-            (¬ᵇ valOf v (□ B) ∧ᵇ valOf v B ⇒ᵇ ¬ᵇ valOf w (□ B)) ≡ false
-         -> ⊢ ¬ R
-    case□ {B} m q = sumElim t2 t3 (∧ᵇ-false _ _ q)
+    case□T2 : {B : Formula} -> □ B ∈ sub P -> t2At v w B ≡ false -> ⊢ ¬ R
+    case□T2 {B} m q = refute (⇒Trans (pvAt m true (fst pr)) □○□)
+                              (⇒Trans (pwAt m false (snd pr)) linFwd)
       where
-        -- (T2): □ B holds at v, so it must hold at w; it does not.
-        t2 : valOf v (□ B) ⇒ᵇ valOf w (□ B) ≡ false
-          -> ⊢ ¬ R
-        t2 q2 = refute (⇒Trans (pvAt m true (fst pr)) □○□)
-                       (⇒Trans (pwAt m false (snd pr)) linFwd)
-          where
-            pr : valOf v (□ B) ≡ true × valOf w (□ B) ≡ false
-            pr = ⇒ᵇ-false (valOf v (□ B)) (valOf w (□ B)) q2
+        pr : valOf v (□ B) ≡ true × valOf w (□ B) ≡ false
+        pr = ⇒ᵇ-false (valOf v (□ B)) (valOf w (□ B)) q
 
-        -- (T3): □ B fails at v while B holds, so □ B must fail at w;
-        -- it holds, and (D6) turns B with ○ □ B back into □ B.
-        t3 : ¬ᵇ valOf v (□ B) ∧ᵇ valOf v B ⇒ᵇ ¬ᵇ valOf w (□ B) ≡ false
-          -> ⊢ ¬ R
-        t3 q3 = refute (⇒Trans (∧Pair (pvAt (sub-□ P m) true eB)
-                                          (pwAt m true eW))
-                                 expConv)
-                       (pvAt m false eV)
-          where
-            pr : ¬ᵇ valOf v (□ B) ∧ᵇ valOf v B ≡ true ×
-                 ¬ᵇ valOf w (□ B) ≡ false
-            pr = ⇒ᵇ-false _ _ q3
+    ----------------------------------------------------------------
+    -- (T3): □ B fails at v while B holds, so □ B must fail at w; it holds,
+    -- and (D6) turns B with ○ □ B back into □ B.
 
-            eV : valOf v (□ B) ≡ false
-            eV = ¬ᵇ-true (valOf v (□ B))
-                         (∧ᵇ-trueˡ (¬ᵇ valOf v (□ B)) (valOf v B)
-                                   (fst pr))
+    case□T3 : {B : Formula} -> □ B ∈ sub P -> t3At v w B ≡ false -> ⊢ ¬ R
+    case□T3 {B} m q = refute (⇒Trans (∧Pair (pvAt (sub-□ P m) true eB)
+                                              (pwAt m true eW))
+                                       expConv)
+                              (pvAt m false eV)
+      where
+        pr : ¬ᵇ valOf v (□ B) ∧ᵇ valOf v B ≡ true ×
+             ¬ᵇ valOf w (□ B) ≡ false
+        pr = ⇒ᵇ-false (¬ᵇ valOf v (□ B) ∧ᵇ valOf v B) (¬ᵇ valOf w (□ B)) q
 
-            eB : valOf v B ≡ true
-            eB = ∧ᵇ-trueʳ (¬ᵇ valOf v (□ B)) (valOf v B) (fst pr)
+        eV : valOf v (□ B) ≡ false
+        eV = ¬ᵇ-true (valOf v (□ B))
+                     (∧ᵇ-trueˡ (¬ᵇ valOf v (□ B)) (valOf v B) (fst pr))
 
-            eW : valOf w (□ B) ≡ true
-            eW = ¬ᵇ-false (valOf w (□ B)) (snd pr)
+        eB : valOf v B ≡ true
+        eB = ∧ᵇ-trueʳ (¬ᵇ valOf v (□ B)) (valOf v B) (fst pr)
+
+        eW : valOf w (□ B) ≡ true
+        eW = ¬ᵇ-false (valOf w (□ B)) (snd pr)
 
     ----------------------------------------------------------------
 
-    byShape : {A : Formula} -> A ∈ sub P -> stepAt v w A ≡ false
-           -> ⊢ ¬ R
-    byShape {var n}   m ()
-    byShape {¬ B}   m ()
-    byShape {B ⇒ D} m ()
-    byShape {○ B}   m q = case○ m q
-    byShape {□ B}   m q = case□ m q
-
-    sigElim : (∃[ A ∈ sub P ] stepAt v w A ≡ false)
-           -> ⊢ ¬ R
-    sigElim (A , m , q) = byShape m q
+    byCondition : StepFails v w -> ⊢ ¬ R
+    byCondition (failsT1 B m q) = case○ (nextSub m) q
+    byCondition (failsT2 A m q) = case□T2 (evSub m) q
+    byCondition (failsT3 A m q) = case□T3 (evSub m) q
 
 badSucc : (v w : Val)
        -> step v w ≡ false

@@ -39,15 +39,15 @@ evPred : Formula -> Val -> Bool
 evPred A z = valOf z (□ A) ∨ᵇ ¬ᵇ valOf z A
 
 evPreds : List Pred
-evPreds = map evPred (□Args (sub P))
+evPreds = map evPred (eventualities)
 
-evPredsMem : {A : Formula} -> A ∈ □Args (sub P)
+evPredsMem : {A : Formula} -> A ∈ eventualities
           -> evPred A ∈ evPreds
 evPredsMem m = memMap evPred m
 
 evPredsInv : {g : Pred} -> g ∈ evPreds
-          -> ∃[ A ∈ □Args (sub P) ] g ≡ evPred A
-evPredsInv m = map-mem-inv evPred (□Args (sub P)) m
+          -> ∃[ A ∈ eventualities ] g ≡ evPred A
+evPredsInv m = map-mem-inv evPred (eventualities) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
 -- pending there, so the first disjunct is out and the second says A fails.
@@ -111,4 +111,4 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
         onW (z , mz , ez) =
           sumElim (λ f -> f)
                   (λ pz -> ful z (there mz) (evWitness A z ez pz))
-                  (persistTo Ust A (□Args-mem (sub P) mA) tcy pr mz)
+                  (persistTo Ust A (evSub mA) tcy pr mz)

@@ -44,12 +44,12 @@ module _ (cy : Cycle) (fair : Fair cy) where
   open Cycle cy
 
   globalFulfil : {pos : Pos} -> ValidPos b pos
-              -> (A : Formula) -> A ∈ □Args (sub P)
+              -> (A : Formula) -> A ∈ eventualities
               -> valOf (posState pos) (□ A) ≡ false
               -> ∃[ q ∈ orbit loop pos ] valOf (posState q) A ≡ false
   globalFulfil (vpos s rest ms wk) A mA pend =
     sumElim onStem onCycle
-            (trailPersist Ust A (□Args-mem (sub P) mA) wk pend)
+            (trailPersist Ust A (evSub mA) wk pend)
     where
       place : (q : Pos) -> q ∈ orbit loop (s , rest) -> {z : Val}
            -> posState q ≡ z -> valOf z A ≡ false
@@ -89,7 +89,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
 
   globalFulfilAfter : (start : Pos) (i : Nat)
                    -> ValidPos b (posIter loop i start)
-                   -> (A : Formula) -> A ∈ □Args (sub P)
+                   -> (A : Formula) -> A ∈ eventualities
                    -> valOf (posState (posIter loop i start)) (□ A) ≡ false
                    -> Σ[ t ∈ Nat ]
                         valOf (posState (posIter loop (i + t) start)) A ≡ false
@@ -118,7 +118,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
    -> □ B ∈ sub P -> valOf s (□ B) ≡ true -> valOf s B ≡ true
 □S2 s m B mb e =
   ⇒ᵇ-mp (valOf s (□ B)) (valOf s B)
-        (all-at (s2At s) (□Args (sub P)) (□Args-of (sub P) mb) (ustState m)) e
+        (all-at (s2At s) eventualities (evIn mb) (ustState m)) e
 
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
@@ -170,9 +170,8 @@ module _ (cy : Cycle) where
   hintikka fair (○ B) mA pos vp =
     trans (⇔ᵇ-sound (valOf (posState pos) (○ B))
                     (valOf (posState (nextPos loop pos)) B)
-                    (all-at (stepAt (posState pos)
-                                    (posState (nextPos loop pos))) (sub P) mA
-                                (snd (posStep cy vp))))
+                    (stepT1 (posState pos) (posState (nextPos loop pos))
+                            (snd (posStep cy vp)) mA))
           (hintikka fair B (sub-○ P mA)
                     (nextPos loop pos) (fst (posStep cy vp)))
 
@@ -197,7 +196,7 @@ module _ (cy : Cycle) where
       allFalse : valOf (posState pos) (□ B) ≡ false
               -> evalAt loop (□ B) pos ≡ false
       allFalse e =
-        fromGF (globalFulfil cy fair vp B (□Args-of (sub P) mA) e)
+        fromGF (globalFulfil cy fair vp B (evIn mA) e)
         where
           fromGF : (∃[ q ∈ orbit loop pos ] valOf (posState q) B ≡ false)
                 -> evalAt loop (□ B) pos ≡ false

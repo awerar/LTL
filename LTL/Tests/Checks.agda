@@ -36,14 +36,18 @@ subBenAri-dup = refl
 ------------------------------------------------------------------------
 -- LTL.Syntax.Skel (atoms)
 
--- The atoms of sub benAri, the positions of its states: 8 rows, not the 64
--- vectors over sub benAri.
+-- The atoms of sub benAri, in order of first occurrence, are the positions of
+-- its states: 8 rows, not the 64 vectors over sub benAri.  Its one
+-- eventuality p is listed once, though □ p occurs twice.
 
-atomsBenAri : stateAtoms benAri ≡ ○ □ var zero ∷ □ var zero ∷ var zero ∷ []
+atomsBenAri : stateAtoms benAri ≡ □ var zero ∷ var zero ∷ ○ □ var zero ∷ []
 atomsBenAri = refl
 
 allVecs-three : length (allVecs 3) ≡ 8
 allVecs-three = refl
+
+evBenAri : eventualities benAri ≡ var zero ∷ []
+evBenAri = refl
 
 ------------------------------------------------------------------------
 -- LTL.States.State
@@ -86,20 +90,20 @@ St-¬BenAri-count = refl
 ◇P-succ-counts = refl
 
 -- For ¬ benAri the six states are, in the order allVecs produces them, writing
--- the bits of the atoms  [ ○ □ p , □ p , p ] :
+-- the bits of the atoms  [ □ p , p , ○ □ p ] :
 --
 --   F = 1 1 1
---   D = 1 0 1
---   B = 1 0 0
---   E = 0 1 1     □ p true, ○ □ p false: the only state containing ¬ benAri
---   C = 0 0 1
+--   E = 1 1 0     □ p true, ○ □ p false: the only state containing ¬ benAri
+--   D = 0 1 1
+--   C = 0 1 0
+--   B = 0 0 1
 --   A = 0 0 0
 --
 -- E and D have no successor.
 
 ¬BenAri-succ-counts
   : map (λ v -> length (succs ¬BenAri (St ¬BenAri) v)) (St ¬BenAri) ≡
-    2 ∷ 0 ∷ 2 ∷ 0 ∷ 4 ∷ 4 ∷ []
+    2 ∷ 0 ∷ 0 ∷ 4 ∷ 2 ∷ 4 ∷ []
 ¬BenAri-succ-counts = refl
 
 ------------------------------------------------------------------------
@@ -219,7 +223,7 @@ decide-◇P-lasso = refl
 
 ------------------------------------------------------------------------
 -- c5 = □ (p ∨ q) ⇒ □ p ∨ □ q  is not valid.  sub of its negation has length
--- 13, but only five atoms,  [ □ (p ∨ q) , □ p , p , □ q , q ] : 32 rows, 17
+-- 13, but only five atoms,  [ □ (p ∨ q) , p , q , □ p , □ q ] : 32 rows, 17
 -- of them states, and the closure of those containing the negation has 8
 -- members.
 --
@@ -245,11 +249,11 @@ c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
 
 -- q, not p
 c5q : Val
-c5q = true ∷ false ∷ false ∷ false ∷ true ∷ []
+c5q = true ∷ false ∷ true ∷ false ∷ false ∷ []
 
 -- p, not q, and p forever
 c5p : Val
-c5p = true ∷ true ∷ true ∷ false ∷ false ∷ []
+c5p = true ∷ true ∷ false ∷ true ∷ false ∷ []
 
 -- p and q, both forever
 c5pq : Val

@@ -53,7 +53,7 @@ R = ¬ fab
 lec-sizes : length (sub R) ∷ length (stateAtoms R)
              ∷ length (allVecs (length (stateAtoms R)))
              ∷ length (St R) ∷ length (Ust R)
-             ∷ length (□Args (sub R)) ∷ [] ≡
+             ∷ length (eventualities R) ∷ [] ≡
                21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 3 ∷ []
 lec-sizes = refl
 

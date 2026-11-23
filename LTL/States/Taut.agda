@@ -149,44 +149,45 @@ module _ (Ats : List Formula) (a : Val) where
   ... | false = cong ¬ᵇ_ e
 
   chiTrue : (P : Formula) -> valFrom Ats a (chi P (skelVec P)) ≡ true
-  chiTrue P = ⋀True (map (litOf P (skelVec P)) (sub P)) conj
+  chiTrue P = ⋀True (map (litOf P (skelVec P)) (subformulas P)) conj
     where
-      conj : {C : Formula} -> C ∈ map (litOf P (skelVec P)) (sub P)
+      conj : {C : Formula} -> C ∈ map (litOf P (skelVec P)) (subformulas P)
           -> valFrom Ats a C ≡ true
-      conj {C} m = fromSig (map-mem-inv (litOf P (skelVec P)) (sub P) m)
+      conj {C} m = fromSig (map-mem-inv (litOf P (skelVec P)) (subformulas P) m)
         where
-          fromSig : (∃[ A ∈ sub P ] C ≡ litOf P (skelVec P) A)
+          fromSig : (∃[ A ∈ subformulas P ] C ≡ litOf P (skelVec P) A)
                  -> valFrom Ats a C ≡ true
           fromSig (A , mA , eq) =
             subst (λ D -> valFrom Ats a D ≡ true) (sym eq)
                   (subst (λ b -> valFrom Ats a (lit A b) ≡ true)
-                         (sym (valOfSkelVec P A mA)) (litTrue A))
+                         (sym (valOfSkelVec P A (nub-sub (sub P) mA)))
+                         (litTrue A))
 
   ----------------------------------------------------------------------
   -- It is a state, given (S2) in row a at the eventualities.
 
-  s2Skel : (P : Formula) -> S2At (□Args (sub P))
-        -> ∀[ B ∈ □Args (sub P) ] s2At P (skelVec P) B ≡ true
+  s2Skel : (P : Formula) -> S2At (eventualities P)
+        -> ∀[ B ∈ eventualities P ] s2At P (skelVec P) B ≡ true
   s2Skel P s2 B mB =
     trans (cong₂ _⇒ᵇ_ (valOfSkelVec P (□ B) m□)
                       (valOfSkelVec P B (sub-□ P m□)))
           (s2 B mB)
     where
       m□ : □ B ∈ sub P
-      m□ = □Args-mem (sub P) mB
+      m□ = evSub P mB
 
-  memStSkel : (P : Formula) -> S2At (□Args (sub P)) -> skelVec P ∈ St P
+  memStSkel : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
   memStSkel P s2 =
     filter-true (isState P) (allVecs (length (stateAtoms P)))
                 (allVecs-complete (length (stateAtoms P)) (skelVec P)
                                   (map-length (valFrom Ats a) (stateAtoms P)))
-                (all-intro (s2At P (skelVec P)) (□Args (sub P))
+                (all-intro (s2At P (skelVec P)) (eventualities P)
                            (λ {B} mB -> s2Skel P s2 B mB))
 
   -- Hence beta P (St P) is true in any row satisfying (S2): chi P (skelVec
   -- P) is a disjunct (memStSkel) and is true (chiTrue).
 
-  betaSkel : (P : Formula) -> S2At (□Args (sub P))
+  betaSkel : (P : Formula) -> S2At (eventualities P)
           -> valFrom Ats a (beta P (St P)) ≡ true
   betaSkel P s2 =
     ⋁True (map (chi P) (St P)) (memMap (chi P) (memStSkel P s2)) (chiTrue P)
@@ -234,7 +235,7 @@ tautChi Q w ev =
   isTaut-intro F λ a ->
     ⇒ᵇ-intro (valFrom Ats a (chi R w)) (valFrom Ats a Q)
              (λ ec -> ¬ᵇ¬ᵇ-true (valFrom Ats a Q)
-                                (⋀ProjTrue Ats a (map (litOf R w) (sub R)) mneg ec))
+                                (⋀ProjTrue Ats a (map (litOf R w) (subformulas R)) mneg ec))
   where
     R : Formula
     R = ¬ Q
@@ -246,6 +247,6 @@ tautChi Q w ev =
     Ats = atomsOf F
 
     -- the conjunct  lit R false , i.e.  ¬ ¬ Q
-    mneg : ¬ R ∈ map (litOf R w) (sub R)
-    mneg = subst (λ b -> lit R b ∈ map (litOf R w) (sub R)) ev
-                 (memMap (litOf R w) (sub-self R))
+    mneg : ¬ R ∈ map (litOf R w) (subformulas R)
+    mneg = subst (λ b -> lit R b ∈ map (litOf R w) (subformulas R)) ev
+                 (memMap (litOf R w) (nub-mem (sub R) (sub-self R)))

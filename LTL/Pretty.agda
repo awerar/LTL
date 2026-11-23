@@ -359,15 +359,10 @@ isVar (A ⇒ B) = false
 isVar (○ A)   = false
 isVar (□ A)   = false
 
--- sub P may list a formula more than once
-nubFormulas : List Formula -> List Formula
-nubFormulas []       = []
-nubFormulas (A ∷ As) = A ∷ filter (λ B -> ¬ᵇ (A ≡ᶠ B)) (nubFormulas As)
-
 stateStr : Formula -> Val -> String
 stateStr P v =
   "{" <> commaSep (map showFormula (filter (λ A -> valOf P v A)
-                                           (nubFormulas (filter isVar (sub P))))) <> "}"
+                                           (nub (filter isVar (sub P))))) <> "}"
 
 statesLines : Formula -> Nat -> List Val -> List String
 statesLines P i []       = []

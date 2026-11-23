@@ -3,9 +3,9 @@
 -- LTL.States.CompletePC -- state completeness and (L5) with the
 -- propositional bookkeeping discharged by (PC).
 --
---   stateCompletePC = mpChain (□Args (sub P)) (pc tautState)
+--   stateCompletePC = mpChain eventualities (pc tautState)
 --
--- proves ⊢ beta St in  1 + 46 |□Args (sub P)|  constructors: one pc
+-- proves ⊢ beta St in  1 + 46 |eventualities|  constructors: one pc
 -- node, and one modus ponens against an instance of (T) per eventuality.
 -- The step lemma (LTL.States.StepLemma) and provableSCC
 -- (LTL.Procedures.Decide) use it.  betaElimPC does the same for the
@@ -32,7 +32,7 @@ open import LTL.States.State P
 -- free, since the skeleton reads □ A and A as unrelated atoms.
 
 s2List : List Formula
-s2List = map s2Fml (□Args (sub P))
+s2List = map s2Fml eventualities
 
 ------------------------------------------------------------------------
 -- State completeness.  Fix the atom list of the implication and any row a of
@@ -48,11 +48,11 @@ stateFml = ⇒List s2List (beta St)
 tautState : isTaut stateFml ≡ true
 tautState =
   isTaut-intro stateFml λ a ->
-    □Chain (atomsOf stateFml) a (□Args (sub P)) (beta St)
+    □Chain (atomsOf stateFml) a eventualities (beta St)
            (betaSkel (atomsOf stateFml) a P)
 
 stateCompletePC : ⊢ beta St
-stateCompletePC = mpChain (□Args (sub P)) (pc tautState)
+stateCompletePC = mpChain eventualities (pc tautState)
 
 ------------------------------------------------------------------------
 -- (L5) the same way.  ⋁Elim costs 426 constructors per disjunct.  The

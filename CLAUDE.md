@@ -40,7 +40,7 @@ derivation or a certified finite lasso countermodel.
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,
   `v ∈ᵛ us` on nodes (`LTL/Lib/Nodes.agda`; valuations at the `Val` instance made in
-  `LTL/States/Reach.agda`), `A ≡ᶠ B`, `A ∈ᶠ As` on formulas (all `infix 4.5`,
+  `LTL/States/Reach.agda`), `A ≡ᶠ B` on formulas (all `infix 4.5`,
   so `v ∈ᵛ us ≡ true` needs no parentheses). Lemmas about a symbol use the
   stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`); never `foo_bar`, which Agda
   reads as a mixfix operator. The Boolean lemmas, all in the "Boolean lemmas"
@@ -129,7 +129,7 @@ a module name.
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations, decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton,
-   `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`);
+   `indexOf`, `nub`, `atoms`, `□Args`/`○Args`, `valFrom`, `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`);
    `Val` (literals, `⋀`/`⋁`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
@@ -143,8 +143,9 @@ a module name.
    P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
    lemmas); P-modules `State` (a valuation is a row of bits over
    `stateAtoms = atoms (sub P)`, read by the skeleton evaluation, so (S1) holds
-   by definition and `isState` is (S2) alone; `valOf`, `St`, `stLen`, `chi`,
-   `beta`); `Step` (`step`, `succs`, T1–T3); `StepLemma` (`chiProj`, Lemmas
+   by definition and `isState` is (S2) alone; `valOf`, `subformulas`,
+   `eventualities`, `nexts`, `St`, `stLen`, `chi`, `beta`); `Step` (`step` as
+   T1–T3 over `nexts` and `eventualities`, `StepFails`, `succs`); `StepLemma` (`chiProj`, Lemmas
    2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness
    and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated
    for any P, and `tautChi`) is unparameterised.
@@ -210,7 +211,7 @@ which writes the same ledger.
 
 `Statement` (the constructor and its `⊨` clause; the user must make that change)
 → `Formula` (with `sub`) → `Deriv` → `State`/`Step` → the eventualities
-(currently `□Args` in `Skel`, read by `isState` in `State`, `Fair` in `Lasso`
-and `CompletePC`)
+(`eventualities` in `State`, read by `isState`, `step`, `Fair` in `Lasso`,
+`evPreds` in `SccLasso` and `CompletePC`)
 → `OrbitEval`/`Correct`/`Hintikka` → the SCC fairness predicates in
 `SccLasso`.

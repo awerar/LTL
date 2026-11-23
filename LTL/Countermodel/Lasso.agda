@@ -55,7 +55,7 @@ record Cycle : Set where
 
 Fair : Cycle -> Set
 Fair cy =
-  (A : Formula) -> A ∈ □Args (sub P) -> valOf b (□ A) ≡ false
+  (A : Formula) -> A ∈ eventualities -> valOf b (□ A) ≡ false
   -> Fulfil A b (stretchStates loop)
   where open Cycle cy
 

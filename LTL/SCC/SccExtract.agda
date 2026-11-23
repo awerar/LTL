@@ -120,10 +120,10 @@ blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
          -> ∀[ z ∈ C ] UstRef z
 blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
   where
-    onA : (∃[ A ∈ □Args (sub P) ] f ≡ evPred A)
+    onA : (∃[ A ∈ eventualities ] f ≡ evPred A)
        -> ⊢ ¬ (chi z)
     onA (A , mA , ef) =
-      extractBlock ws D z mzU (refutedOf ws ih) A (□Args-mem (sub P) mA)
+      extractBlock ws D z mzU (refutedOf ws ih) A (evSub mA)
                    dUst dCl dHold pend mzD
       where
         missA : ∀[ y ∈ C ] evPred A y ≡ false
