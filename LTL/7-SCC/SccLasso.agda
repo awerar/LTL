@@ -45,7 +45,7 @@ evPredsMem : ∀ⁱ[ A ∈ eventualities ] evPred A ∈ evPreds
 evPredsMem m = ∈-map⁺ evPred m
 
 evPredsInv : ∀ⁱ[ g ∈ evPreds ] ∃[ A ∈ eventualities ] g ≡ evPred A
-evPredsInv m = map-mem-inv evPred (eventualities) m
+evPredsInv m = ∈-map⁻ evPred (eventualities) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
 -- pending there, so the first disjunct is out and the second says A fails.

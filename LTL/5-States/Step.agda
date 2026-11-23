@@ -17,7 +17,6 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.Step (P : Formula) where
 
 open import LTL.2-Syntax.Val
-open import LTL.1-Lib.Sets
 open import LTL.5-States.State P
 
 ------------------------------------------------------------------------
@@ -97,7 +96,7 @@ succs us v = filter (step v) us
 succsMem : (us : List Val) (v : Val)
         -> ∀ⁱ[ w ∈ succs us v ] w ∈ us × step v w ≡ true
 succsMem us v m =
-  filter-sub (step v) us m , filter-prop (step v) us m
+  ∈-filter⁻ (step v) us m , filter-prop (step v) us m
 
 succsIn : (us : List Val) (v : Val) {w : Val}
        -> w ∈ us -> step v w ≡ true -> w ∈ succs us v

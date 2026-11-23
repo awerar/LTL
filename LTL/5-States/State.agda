@@ -21,7 +21,6 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.State (P : Formula) where
 
 open import LTL.2-Syntax.Val
-open import LTL.1-Lib.Sets using (filter-sub)
 
 ------------------------------------------------------------------------
 -- Reading a valuation
@@ -90,4 +89,4 @@ St = filter isState (allVecs (length stateAtoms))
 
 stLen : ∀ⁱ[ v ∈ St ] length v ≡ length stateAtoms
 stLen {v} m =
-  allVecs-len (length stateAtoms) v (filter-sub isState (allVecs (length stateAtoms)) m)
+  allVecs-len (length stateAtoms) v (∈-filter⁻ isState (allVecs (length stateAtoms)) m)

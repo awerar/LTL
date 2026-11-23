@@ -7,10 +7,6 @@
 -- builtins to them, and LTL.Statement uses the same Bool.  Empty is
 -- LTL.Statement's own, so the semantics of ¬ is literally a function into it.
 -- Empty and Unit keep these names because ⊥ and ⊤ are LTL formulas.
---
--- Boolean-valued tests carry a superscript naming the type they compare (≡ⁿ on
--- Nat here, ≡ᵛ on nodes, ≡ᶠ on formulas).  They are infix 4.5: tighter than
--- ≡, looser than ∷ and ++.
 
 module LTL.1-Lib.Base where
 
@@ -30,14 +26,6 @@ infix 0 if_then_else_
 if_then_else_ : {A : Set} -> Bool -> A -> A -> A
 if true  then x else _ = x
 if false then _ else y = y
-
-infix 4.5 _≡ⁿ_
-
-_≡ⁿ_ : Nat -> Nat -> Bool
-zero  ≡ⁿ zero  = true
-zero  ≡ⁿ suc _ = false
-suc _ ≡ⁿ zero  = false
-suc n ≡ⁿ suc m = n ≡ⁿ m
 
 ------------------------------------------------------------------------
 -- Empty and Unit

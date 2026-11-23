@@ -134,7 +134,7 @@ blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
         D = filter (λ y -> y ∈ᵛ Ust) C
 
         dC : ∀[ y ∈ D ] y ∈ C
-        dC y m = filter-sub (λ t -> t ∈ᵛ Ust) C m
+        dC y m = ∈-filter⁻ (λ t -> t ∈ᵛ Ust) C m
 
         dUst : ∀[ y ∈ D ] y ∈ Ust
         dUst y m = ∈ᵛ-sound y Ust (filter-prop (λ t -> t ∈ᵛ Ust) C m)

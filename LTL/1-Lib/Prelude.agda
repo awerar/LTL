@@ -1,7 +1,8 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.1-Lib.Prelude -- Boolean connectives and their lemmas, sums, Σ-types and
--- products, and lists with membership, inclusion and indexing.
+-- products, and lists with membership, inclusion and indexing: for each list
+-- operation (++, map, filter, any, all), membership in both directions.
 --
 -- The notation is that of Agda's standard library.  The Boolean connectives
 -- carry a superscript b (∧ᵇ, ∨ᵇ, ¬ᵇ, ⇒ᵇ, ⇔ᵇ) because the plain symbols are
@@ -52,7 +53,19 @@ _≢ᵇ_ : Bool -> Bool -> Bool
 a ≢ᵇ b = ¬ᵇ (a ⇔ᵇ b)
 
 ------------------------------------------------------------------------
--- ≡ⁿ
+-- Natural numbers
+--
+-- Boolean-valued tests carry a superscript naming the type they compare (≡ⁿ on
+-- Nat here, ≡ᵛ on nodes, ≡ᶠ on formulas).  They are infix 4.5: tighter than
+-- ≡, looser than ∷ and ++.
+
+infix 4.5 _≡ⁿ_
+
+_≡ⁿ_ : Nat -> Nat -> Bool
+zero  ≡ⁿ zero  = true
+zero  ≡ⁿ suc _ = false
+suc _ ≡ⁿ zero  = false
+suc n ≡ⁿ suc m = n ≡ⁿ m
 
 ≡ⁿ-refl : (n : Nat) -> n ≡ⁿ n ≡ true
 ≡ⁿ-refl zero    = refl
@@ -102,16 +115,6 @@ infix 4 _<_
 data _<_ : Nat -> Nat -> Set where
   z<s : {n : Nat}            -> zero < suc n
   s<s : {n m : Nat} -> n < m -> suc n < suc m
-
--- Two facts about <, named as in the standard library
-
-n<1+n : (n : Nat) -> n < suc n
-n<1+n zero    = z<s
-n<1+n (suc n) = s<s (n<1+n n)
-
-<-step : {i n : Nat} -> i < n -> i < suc n
-<-step z<s     = z<s
-<-step (s<s l) = s<s (<-step l)
 
 ------------------------------------------------------------------------
 -- Σ-types and products
@@ -220,9 +223,6 @@ refuteTrue false no = refl
 ∨ᵇ-falseʳ true  b ()
 ∨ᵇ-falseʳ false b e = e
 
-∨ᵇ-false-intro : (a b : Bool) -> a ≡ false -> b ≡ false -> a ∨ᵇ b ≡ false
-∨ᵇ-false-intro a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
-
 -- Conjunction over disjunction
 
 ∧ᵇ∨ᵇ-distribʳ : (a b c : Bool) -> (a ∨ᵇ b) ∧ᵇ c ≡ true
@@ -245,10 +245,6 @@ refuteTrue false no = refl
 ¬ᵇ-false : (b : Bool) -> ¬ᵇ b ≡ false -> b ≡ true
 ¬ᵇ-false true  e = refl
 ¬ᵇ-false false ()
-
-¬ᵇ-involutive : (b : Bool) -> ¬ᵇ ¬ᵇ b ≡ b
-¬ᵇ-involutive true  = refl
-¬ᵇ-involutive false = refl
 
 ¬ᵇ¬ᵇ-true : (x : Bool) -> ¬ᵇ ¬ᵇ x ≡ true -> x ≡ true
 ¬ᵇ¬ᵇ-true true  e = refl
@@ -320,13 +316,6 @@ refuteTrue false no = refl
 
 -- Equivalence
 
-⇔ᵇ-refl : (b : Bool) -> b ⇔ᵇ b ≡ true
-⇔ᵇ-refl true  = refl
-⇔ᵇ-refl false = refl
-
-⇔ᵇ-complete : (x y : Bool) -> x ≡ y -> x ⇔ᵇ y ≡ true
-⇔ᵇ-complete x y refl = ⇔ᵇ-refl x
-
 ⇔ᵇ-sound : (a b : Bool) -> a ⇔ᵇ b ≡ true -> a ≡ b
 ⇔ᵇ-sound true  true  e = refl
 ⇔ᵇ-sound true  false ()
@@ -376,6 +365,10 @@ filter p (x ∷ xs) = filterCons (p x) x (filter p xs)
 any : {A : Set} -> (A -> Bool) -> List A -> Bool
 any p []       = false
 any p (x ∷ xs) = p x ∨ᵇ any p xs
+
+all : {A : Set} -> (A -> Bool) -> List A -> Bool
+all p []       = true
+all p (x ∷ xs) = p x ∧ᵇ all p xs
 
 null : {A : Set} -> List A -> Bool
 null []       = true
@@ -461,20 +454,45 @@ filterCons-hd false y ys ()
 ∈-filter⁺ p (y ∷ ys) (there m) e =
   filterCons-mem (p y) y (filter p ys) (∈-filter⁺ p ys m e)
 
+-- A member of filter p xs is a member of xs, and passes p.
+
+filterCons-case : {A : Set} {x y : A} (b : Bool) (ys : List A)
+               -> x ∈ filterCons b y ys -> x ≡ y ⊎ x ∈ ys
+filterCons-case true  ys here      = inl refl
+filterCons-case true  ys (there m) = inr m
+filterCons-case false ys m         = inr m
+
+∈-filter⁻ : {A : Set} (p : A -> Bool) (xs : List A)
+         -> ∀ⁱ[ x ∈ filter p xs ] x ∈ xs
+∈-filter⁻ p []       ()
+∈-filter⁻ p (y ∷ ys) m =
+  [ (λ e  -> subst (λ z -> z ∈ y ∷ ys) (sym e) here)
+  , (λ m' -> there (∈-filter⁻ p ys m'))
+  ] (filterCons-case (p y) (filter p ys) m)
+
+filterCons-prop : {A : Set} {p : A -> Bool} {x y : A} (b : Bool) -> p y ≡ b
+               -> (ys : List A) -> x ∈ filterCons b y ys
+               -> (x ∈ ys -> p x ≡ true) -> p x ≡ true
+filterCons-prop true  e ys here      k = e
+filterCons-prop true  e ys (there m) k = k m
+filterCons-prop false e ys m         k = k m
+
+filter-prop : {A : Set} (p : A -> Bool) (xs : List A)
+           -> ∀ⁱ[ x ∈ filter p xs ] p x ≡ true
+filter-prop p []       ()
+filter-prop p (y ∷ ys) m =
+  filterCons-prop (p y) refl (filter p ys) m (filter-prop p ys)
+
 ∈-map⁺ : {A B : Set} (f : A -> B) {xs : List A}
       -> ∀ⁱ[ x ∈ xs ] f x ∈ map f xs
 ∈-map⁺ f here      = here
 ∈-map⁺ f (there h) = there (∈-map⁺ f h)
 
-map-++ : {A B : Set} (f : A -> B) (xs ys : List A)
-      -> map f (xs ++ ys) ≡ map f xs ++ map f ys
-map-++ f []       ys = refl
-map-++ f (x ∷ xs) ys = cong (λ zs -> f x ∷ zs) (map-++ f xs ys)
-
-map-map : {A B C : Set} (f : B -> C) (g : A -> B) (xs : List A)
-       -> map f (map g xs) ≡ map (λ x -> f (g x)) xs
-map-map f g []       = refl
-map-map f g (x ∷ xs) = cong (λ zs -> f (g x) ∷ zs) (map-map f g xs)
+∈-map⁻ : {A B : Set} (f : A -> B) (xs : List A)
+      -> ∀ⁱ[ y ∈ map f xs ] ∃[ x ∈ xs ] y ≡ f x
+∈-map⁻ f []       ()
+∈-map⁻ f (x ∷ xs) here      = x , here , refl
+∈-map⁻ f (x ∷ xs) (there m) = there-∃ (∈-map⁻ f xs m)
 
 map-id : {A : Set} (xs : List A) -> map (λ x -> x) xs ≡ xs
 map-id []       = refl
@@ -488,33 +506,13 @@ map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
   [ (λ k -> inl (there k)) , inr ] (∈-++⁻ xs ys h)
 
 ------------------------------------------------------------------------
--- The index / nth round-trip.  Every projection of a conjunct out of  chi v
--- goes through this pair.
-
-index : {A : Set} {x : A} {xs : List A} -> x ∈ xs -> Nat
-index here      = zero
-index (there h) = suc (index h)
+-- Indexing.  nth xs i d is the i-th member of xs, or d out of range;
+-- LTL.2-Syntax.Skel's indexOf is its inverse on formulas.
 
 nth : {A : Set} -> List A -> Nat -> A -> A
 nth []       n       d = d
 nth (x ∷ xs) zero    d = x
 nth (x ∷ xs) (suc n) d = nth xs n d
-
-index-nth : {A : Set} {x : A} {xs : List A} (h : x ∈ xs) (d : A)
-         -> nth xs (index h) d ≡ x
-index-nth here      d = refl
-index-nth (there h) d = index-nth h d
-
-index-length : {A : Set} {x : A} {xs : List A} (h : x ∈ xs)
-            -> index h < length xs
-index-length here      = z<s
-index-length (there h) = s<s (index-length h)
-
-nth-∈ : {A : Set} (xs : List A) (i : Nat) -> i < length xs -> (d : A)
-     -> nth xs i d ∈ xs
-nth-∈ []       i       ()      d
-nth-∈ (x ∷ xs) zero    lt      d = here
-nth-∈ (x ∷ xs) (suc i) (s<s l) d = there (nth-∈ xs i l d)
 
 map-length : {A B : Set} (f : A -> B) (xs : List A)
           -> length (map f xs) ≡ length xs
@@ -527,19 +525,29 @@ nth-map f []       i       ()      d e
 nth-map f (x ∷ xs) zero    lt      d e = refl
 nth-map f (x ∷ xs) (suc i) (s<s l) d e = nth-map f xs i l d e
 
-<-suc-case : (i n : Nat) -> i < suc n -> i ≡ n ⊎ i < n
-<-suc-case zero    zero    lt       = inl refl
-<-suc-case zero    (suc n) lt       = inr z<s
-<-suc-case (suc j) zero    (s<s ())
-<-suc-case (suc j) (suc n) (s<s l)  =
-  [ (λ e -> inl (cong suc e)) , (λ l' -> inr (s<s l')) ] (<-suc-case j n l)
-
 ------------------------------------------------------------------------
--- Conjunction over a list.
+-- any and all against membership
 
-all : {A : Set} -> (A -> Bool) -> List A -> Bool
-all p []       = true
-all p (x ∷ xs) = p x ∧ᵇ all p xs
+any-true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
+        -> ∃[ x ∈ xs ] p x ≡ true
+any-true p []       ()
+any-true p (y ∷ ys) e =
+  [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (any-true p ys e2)) ]
+    (∨ᵇ-true (p y) (any p ys) e)
+
+any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+         -> x ∈ xs -> p x ≡ true -> any p xs ≡ true
+any-intro p []       ()        e
+any-intro p (y ∷ ys) here      e = ∨ᵇ-introˡ (p y) (any p ys) e
+any-intro p (y ∷ ys) (there m) e =
+  ∨ᵇ-introʳ (p y) (any p ys) (any-intro p ys m e)
+
+any-false : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ false
+         -> ∀ⁱ[ x ∈ xs ] p x ≡ false
+any-false p []       e  ()
+any-false p (y ∷ ys) e here      = ∨ᵇ-falseˡ (p y) (any p ys) e
+any-false p (y ∷ ys) e (there m) =
+  any-false p ys (∨ᵇ-falseʳ (p y) (any p ys) e) m
 
 all-true : {A : Set} (p : A -> Bool) (xs : List A)
         -> all p xs ≡ true -> ∀[ x ∈ xs ] p x ≡ true

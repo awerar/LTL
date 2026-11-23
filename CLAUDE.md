@@ -48,7 +48,7 @@ derivation or a certified finite lasso countermodel.
   stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`); never `foo_bar`, which Agda
   reads as a mixfix operator. The Boolean lemmas, all in the "Boolean lemmas"
   section of `LTL/1-Lib/Prelude.agda`, follow one scheme: `∧ᵇ-trueˡ`, `∧ᵇ-split`,
-  `∨ᵇ-introʳ`, `¬ᵇ-true`, `⇒ᵇ-mp`, `⇔ᵇ-complete`; add new ones there. `⊢ A` (`data ⊢_` in
+  `∨ᵇ-introʳ`, `¬ᵇ-true`, `⇒ᵇ-mp`, `⇔ᵇ-sound`; add new ones there. `⊢ A` (`data ⊢_` in
   `LTL/2-Syntax/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
   `⊥`/`⊤` are formulas; `Empty` is `Statement`'s, re-exported by `Base`.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
@@ -117,10 +117,12 @@ module name). Folder names never equal a module name.
 
 0. **Specification** (root) — `Statement` (read-only, see above).
 1. **Foundations** (`1-Lib/`) — `Base` (Nat and Bool from `Agda.Builtin`, `Statement`'s Empty, Unit,
-   `≡`); `Prelude` (`⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
-   `<`, index/nth, Boolean connectives and all Boolean lemmas, `refuteTrue`).
+   `≡`); `Prelude` (`≡ⁿ`, `⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
+   `<`, `nth`, Boolean connectives and all Boolean lemmas, `refuteTrue`, and
+   membership in both directions for `++`, `map`, `filter`, `any`, `all`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
-   any node type: `Sets` (`≤`, `FindResult`, filter/any/all lemmas, `CertStep`); `Bar`
+   any node type: `Sets` (what the searches run on: `≤`, `FindResult`, a
+   shrinking filter, the `null` lemmas, `CertStep`); `Bar`
    (inductively finite sets after Coquand–Siles, closure lemmas; all searches
    recurse on a Bar); `Nodes` (parameterised by a node type and a sound,
    reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the

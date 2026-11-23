@@ -54,7 +54,7 @@ sccOf ws r = filter (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 sccReach : (ws : List Node) (r : Node) (w : Node)
         -> w ∈ sccOf ws r -> w ∈ reachSet ws r
 sccReach ws r w m =
-  filter-sub (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
+  ∈-filter⁻ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
 
 sccIn : (ws : List Node) (r : Node) (w : Node)
      -> w ∈ sccOf ws r -> w ∈ ws
@@ -206,7 +206,7 @@ module _ (ws : List Node) (r : Node) where
       pick (x , mx) = loopBy (x ∷ via) (tCons mxw grx trail) refl
         where
           mxw : x ∈ ws
-          mxw = filter-sub (G r) ws mx
+          mxw = ∈-filter⁻ (G r) ws mx
 
           grx : G r x ≡ true
           grx = filter-prop (G r) ws mx
@@ -228,7 +228,7 @@ module _ (ws : List Node) (r : Node) where
           -> Circuit ws (f ∷ fs) r
   consCirc (loopBy cy0 t0 nn) f w fw (reachesBy as ta) (reachesBy bs tb) fs
            (circuit (loopBy cy t nnc) wit) =
-    circuit (loopBy (leg ++ cy) (trailApp ws legT t) (appNotNull leg cy legNN))
+    circuit (loopBy (leg ++ cy) (trailApp ws legT t) (null-++-false-introˡ leg cy legNN))
             each
     where
       front : List Node
@@ -238,7 +238,7 @@ module _ (ws : List Node) (r : Node) where
       frontT = trailApp ws t0 ta
 
       frontNN : null front ≡ false
-      frontNN = appNotNull cy0 as nn
+      frontNN = null-++-false-introˡ cy0 as nn
 
       leg : List Node
       leg = front ++ bs
@@ -247,7 +247,7 @@ module _ (ws : List Node) (r : Node) where
       legT = trailApp ws frontT tb
 
       legNN : null leg ≡ false
-      legNN = appNotNull front bs frontNN
+      legNN = null-++-false-introˡ front bs frontNN
 
       mw : w ∈ leg
       mw = ∈-++⁺ˡ front bs (trailLast ws frontT frontNN)
@@ -374,7 +374,7 @@ module _ (fs : List Pred) where
     graphBlock ws sb bar (pickBlock ws fs f)
   graphFind ws sb (cBar h) (found x mx q) =
     [ (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws fs
-                               (λ z m -> filter-sub (x ≢ᵛ_) ws m) fi))
+                               (λ z m -> ∈-filter⁻ (x ≢ᵛ_) ws m) fi))
     , (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws x)) q) c))
     ] (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws sb x (≢ᵛ-self x))
                (h x (sb x mx)))
@@ -383,7 +383,7 @@ module _ (fs : List Pred) where
   graphBlock ws sb bar      (bFair r mr c)             = inl (fairIn r mr c)
   graphBlock ws sb (cBar h) (bUnfair r mr et g mg eg) =
     [ (λ fi -> inl (fairInMono (ws ∖ C) ws fs
-                               (λ z m -> filter-sub notInC ws m) fi))
+                               (λ z m -> ∈-filter⁻ notInC ws m) fi))
     , (λ c  -> inr (cBlock ws C g mg (sccIn ws r)
                            (termClosed ws r et) miss c))
     ] (graphGo (ws ∖ C)

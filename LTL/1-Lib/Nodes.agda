@@ -99,10 +99,10 @@ IFin E = Bar _≢ᵛ_ E
 barOfList : {E : Pred} (n : Nat) (xs : List Node) -> length xs ≤ n
          -> ((x : Node) -> E x ≡ true -> x ∈ xs) -> IFin E
 barOfList         zero    xs le sb =
-  cBar (λ x ex -> emptyElim (leZeroNil xs le (sb x ex)))
+  cBar (λ x ex -> emptyElim (length-≤0-mem xs le (sb x ex)))
 barOfList {E = E} (suc n) xs le sb =
   cBar (λ x ex -> barOfList n (filter (x ≢ᵛ_) xs)
-                    (lePred (leTrans (filter-lt (x ≢ᵛ_) xs (sb x ex)
+                    (≤-pred (≤-trans (filter-lt (x ≢ᵛ_) xs (sb x ex)
                                                 (≢ᵛ-self x)) le))
                     (λ z ez -> ∈-filter⁺ (x ≢ᵛ_) xs
                                (sb z (∧ᵇ-trueˡ (E z) (x ≢ᵛ z) ez))
@@ -134,7 +134,7 @@ memAllSat : (xs : List Node) -> AllSat (λ v -> v ∈ᵛ xs) xs
 memAllSat xs x m = ∈ᵛ-complete x xs m
 
 listBar : (xs : List Node) -> IFin (λ v -> v ∈ᵛ xs)
-listBar xs = barOfList (length xs) xs (leRefl (length xs))
+listBar xs = barOfList (length xs) xs (≤-refl (length xs))
                        (λ x ex -> ∈ᵛ-sound x xs ex)
 
 -- Dropping x from the list is dropping x from the predicate.
@@ -144,7 +144,7 @@ dropAllSat : {E : Pred} (p : Pred) (xs : List Node) -> AllSat E xs
           -> AllSat (λ y -> E y ∧ᵇ (x ≢ᵛ y)) (filter p xs)
 dropAllSat {E} p xs sb x q z mz =
   ∧ᵇ-intro (E z) (x ≢ᵛ z)
-           (sb z (filter-sub p xs mz))
+           (sb z (∈-filter⁻ p xs mz))
            (cong ¬ᵇ_ onEq)
   where
     onEq : x ≡ᵛ z ≡ false

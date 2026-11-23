@@ -153,7 +153,7 @@ module _ (Ats : List Formula) (a : Val) where
     where
       conj : ∀ⁱ[ C ∈ map (litOf P (skelVec P)) (subformulas P) ]
                valFrom Ats a C ≡ true
-      conj {C} m = fromSig (map-mem-inv (litOf P (skelVec P)) (subformulas P) m)
+      conj {C} m = fromSig (∈-map⁻ (litOf P (skelVec P)) (subformulas P) m)
         where
           fromSig : (∃[ A ∈ subformulas P ] C ≡ litOf P (skelVec P) A)
                  -> valFrom Ats a C ≡ true

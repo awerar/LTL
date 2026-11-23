@@ -17,7 +17,6 @@
 module LTL.2-Syntax.Skel where
 
 open import LTL.2-Syntax.Formula public
-open import LTL.1-Lib.Sets using (filter-sub)
 
 ------------------------------------------------------------------------
 -- Valuations, as bit vectors, and their enumeration
@@ -125,7 +124,7 @@ nub-sub : (As : List Formula) -> ∀ⁱ[ X ∈ nub As ] X ∈ As
 nub-sub []       ()
 nub-sub (A ∷ As) here      = here
 nub-sub (A ∷ As) (there m) =
-  there (nub-sub As (filter-sub (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As) m))
+  there (nub-sub As (∈-filter⁻ (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As) m))
 
 ------------------------------------------------------------------------
 -- The atoms of a list of formulas: its var, ○ and □ entries, each once (a
@@ -146,7 +145,7 @@ atomMem : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
 atomMem As m e = ∈-filter⁺ isAtomB (nub As) (nub-mem As m) e
 
 atomSub : (As : List Formula) -> ∀ⁱ[ A ∈ atoms As ] A ∈ As
-atomSub As m = nub-sub As (filter-sub isAtomB (nub As) m)
+atomSub As m = nub-sub As (∈-filter⁻ isAtomB (nub As) m)
 
 ------------------------------------------------------------------------
 -- The arguments of the box-subformulas.
