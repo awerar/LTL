@@ -159,7 +159,34 @@ exports.run = async () => {
     await vscode.commands.executeCommand('proofMap.setRoot');
     log(`focus from the editor at ${d.path}:${d.line + 1}: ${api.data.defs[api.data.root].name}`);
     assert.strictEqual(api.data.root, pscc);
-    await vscode.commands.executeCommand('proofMap.resetRoot');
+    log(`unfocus button: ${api.unfocusItem.tooltip}`);
+    await vscode.commands.executeCommand('proofMap.unfocus');
+    assert.strictEqual(api.data.root, data.root);
+    assert.strictEqual(api.treeView.description, undefined);
+    log(`after unfocus: root ${api.data.defs[api.data.root].name}, tree message ${api.treeView.message}`);
+
+    // An out-of-date review: its own view, an editor highlight, a warning.
+    await api.mark([data.root], true);
+    const text = fs.readFileSync(ledger, 'utf8').split('\n').map(l =>
+      l.startsWith(data.root + '\t') ? l.replace(/\t[0-9a-f]{12}\t/, '\t000000000000\t') : l);
+    fs.writeFileSync(ledger, text.join('\n'));
+    await api.refresh(false);
+    assert.strictEqual(api.data.defs[data.root].status, 'stale');
+    const staleItems = api.staleList.getChildren();
+    const rootItem = api.staleList.getTreeItem(staleItems.find(e => e.qn === data.root));
+    const orphanCount = staleItems.filter(e => e.orphan).length;
+    log(`stale view: ${staleItems.length} items (${orphanCount} no longer exist); ` +
+      `${rootItem.label.label} | ${rootItem.description} | badge ${api.staleView.badge && api.staleView.badge.value}`);
+    const rootDoc = await vscode.workspace.openTextDocument(
+      path.join(folder, api.data.defs[data.root].path));
+    const ranges = api.staleRanges(rootDoc);
+    log(`highlight: ${ranges.map(r => `${r.range.start.line + 1}-${r.range.end.line + 1}`).join(', ')}; ` +
+      `"${rootDoc.lineAt(ranges[0].range.start.line).text.trim().slice(0, 30)}"`);
+    assert(rootDoc.lineAt(ranges[0].range.start.line).text.startsWith('decideCorrect'));
+    await api.mark([data.root], true);              // reviewed again
+    assert.strictEqual(api.data.defs[data.root].status, 'done');
+    assert(!api.staleList.getChildren().some(e => e.qn === data.root));
+    await api.mark([data.root], false);
 
     // A whole file: marked, its top CodeLens, then the Undo path.
     const barFile = 'LTL/Lib/Bar.agda';

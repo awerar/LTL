@@ -6,6 +6,7 @@ r"""Map the proof top down and track which definitions have been reviewed.
     tools/proof-map next [ROOT] [-n N] [--up] [--order O]  what to review next
     tools/proof-map show NAME [--src]                  one definition
     tools/proof-map status [ROOT]                      progress per module
+    tools/proof-map stale                              changed since review
     tools/proof-map done NAME... [-m NOTE]             mark as reviewed
     tools/proof-map undo NAME...                       remove the marks
     tools/proof-map json [ROOT]                        everything, for editors
@@ -672,6 +673,34 @@ def cmd_status(g, marks, args):
           f"{total['done']:4} {total['stale']:4} {total['open']:4}")
     gap = between(g, marks, g.find(args.root))
     print(f"open between reviewed definitions: {len(gap)}")
+    stale, orphans = stale_marks(g, marks)
+    if stale or orphans:
+        print(f"changed since review: {len(stale)}; marks of definitions that "
+              f"no longer exist: {len(orphans)} (see tools/proof-map stale)")
+
+
+def stale_marks(g, marks):
+    """Reviewed definitions whose code changed since (in file order), and
+    marks whose definition no longer exists (renamed or removed)."""
+    stale = sorted((k for k, d in g.defs.items()
+                    if not d.leaf and status(d, marks) == "stale"),
+                   key=lambda k: (g.defs[k].path, g.defs[k].line))
+    known = {d.qname for d in g.defs.values()}
+    return stale, sorted(q for q in marks if q not in known)
+
+
+def cmd_stale(g, marks, args):
+    stale, orphans = stale_marks(g, marks)
+    if not stale and not orphans:
+        print("no review is out of date")
+    for k in stale:
+        d = g.defs[k]
+        _, date, note = marks[d.qname]
+        print(f"~ {d.name}  {loc(d)}  reviewed {date}" + (f": {note}" if note else ""))
+    if orphans:
+        print("marks of definitions that no longer exist (undo removes them):")
+        for q in orphans:
+            print(f"? {q}  reviewed {marks[q][1]}")
 
 
 def targets(g, name):
@@ -708,7 +737,12 @@ def cmd_done(g, marks, args):
 
 
 def cmd_undo(g, marks, args):
+    known = {d.qname for d in g.defs.values()}
     for name in args.names:
+        if name in marks and name not in known:   # its definition is gone
+            marks.pop(name)
+            print(f"· {name}")
+            continue
         keys = targets(g, name)
         gone = [k for k in keys if marks.pop(g.defs[k].qname, None)]
         if len(keys) == 1 and gone:
@@ -761,6 +795,8 @@ def cmd_json(g, marks, args, error):
                     "up": [g.defs[k].qname for k in up]}
                    for b, down, up in grouped(g, marks, root)],
                "between": [g.defs[k].qname for k in between(g, marks, root)],
+               "orphans": [{"qname": q, "date": marks[q][1]}
+                           for q in stale_marks(g, marks)[1]],
                "defs": out}, sys.stdout, ensure_ascii=False)
 
 
@@ -791,6 +827,7 @@ def main():
     s.add_argument("--src", action="store_true", help="print its source")
     st = sub.add_parser("status", help="progress per module")
     st.add_argument("root", nargs="?", default=DEFAULT_ROOT)
+    sub.add_parser("stale", help="reviews that are out of date")
     d = sub.add_parser("done", help="mark definitions (or files) as reviewed")
     d.add_argument("names", nargs="+", help="definitions, Agda files or modules")
     d.add_argument("-m", help="a note")
@@ -807,7 +844,8 @@ def main():
         cmd_json(g, marks, args, error)
         return
     {"tree": cmd_tree, "next": cmd_next, "show": cmd_show,
-     "status": cmd_status, "done": cmd_done, "undo": cmd_undo}[args.cmd](
+     "status": cmd_status, "done": cmd_done, "undo": cmd_undo,
+     "stale": cmd_stale}[args.cmd](
         g, marks, args)
 
 

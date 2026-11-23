@@ -181,15 +181,19 @@ function treeItem(el, description) {
   const d = def(el.qn);
   const recursive = el.path.indexOf(el.qn) < el.path.length - 1;
   const kids = !el.flat && !recursive && children(el).length > 0;
-  const item = new vscode.TreeItem(d.name,
+  // A stale definition's name is highlighted and its description says so.
+  const label = d.status === 'stale'
+    ? { label: d.name, highlights: [[0, d.name.length]] } : d.name;
+  const item = new vscode.TreeItem(label,
     !kids ? vscode.TreeItemCollapsibleState.None
       : el.path.length === 1 ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.Collapsed);
   item.id = (el.flat ? 'next-' + el.flat : 'tree') + SEP + el.path.join(SEP);
-  item.description = description !== undefined ? description
+  item.description = (d.status === 'stale' ? 'changed since review · ' : '') +
+    (description !== undefined ? description
     : (recursive ? '↻ ' : '') +
       (!usersOf() && d.open && d.uses.length ? `${d.open} open · ` : '') +
-      moduleShort(d);
+      moduleShort(d));
   item.tooltip = tooltip(d);
   item.checkboxState = d.status === 'done'
     ? vscode.TreeItemCheckboxState.Checked
@@ -342,6 +346,74 @@ class Decorations {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Out-of-date reviews: definitions changed since their review, and marks
+// whose definition no longer exists (renamed or removed). They get their own
+// view (shown only when there are some), a highlight in the editor and a
+// warning in the status bar.
+
+function staleDefs() {
+  if (!data) return [];
+  return Object.entries(data.defs).filter(([, d]) => d.status === 'stale')
+    .sort(([, a], [, b]) => a.path.localeCompare(b.path) || a.line - b.line)
+    .map(([k]) => k);
+}
+
+class StaleProvider {
+  constructor() {
+    this.emitter = new vscode.EventEmitter();
+    this.onDidChangeTreeData = this.emitter.event;
+  }
+  getTreeItem(el) {
+    if (el.orphan) {
+      const item = new vscode.TreeItem(el.orphan.qname.replace(/^LTL\./, ''));
+      item.id = 'orphan' + SEP + el.orphan.qname;
+      item.description = `no longer exists · reviewed ${el.orphan.date}`;
+      item.tooltip = 'Renamed or removed since its review. Right-click to remove the mark.';
+      item.iconPath = new vscode.ThemeIcon('question',
+        new vscode.ThemeColor('list.warningForeground'));
+      item.contextValue = 'orphan';
+      return item;
+    }
+    const d = def(el.qn);
+    return treeItem(el, `reviewed ${d.reviewed.date} · ${moduleShort(d)}`);
+  }
+  getChildren(el) {
+    if (!data || el) return [];
+    return [...staleDefs().map(qn => ({ qn, path: [qn], flat: 'stale' })),
+      ...(data.orphans || []).map(o => ({ orphan: o }))];
+  }
+}
+
+const staleHighlight = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: new vscode.ThemeColor('proofMap.staleBackground'),
+  overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.warningForeground'),
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+});
+
+// The lines of each stale definition in a document, with a hover.
+function staleRanges(doc) {
+  if (!data) return [];
+  const rel = path.relative(folder, doc.uri.fsPath).split(path.sep).join('/');
+  return staleDefs().map(def).filter(d => d.path === rel).map(d => {
+    const start = locate(doc, d);
+    const end = Math.min(start + (d.end - d.line), doc.lineCount - 1);
+    return {
+      range: new vscode.Range(start, 0, end, 0),
+      hoverMessage: `Proof Map: changed since its review on ${d.reviewed.date}`,
+    };
+  });
+}
+
+function highlightStale() {
+  for (const ed of vscode.window.visibleTextEditors) {
+    if (ed.document.uri.fsPath.endsWith('.agda')) {
+      ed.setDecorations(staleHighlight, staleRanges(ed.document));
+    }
+  }
+}
+
 // The path from the configured root down to the focused branch, by names.
 function breadcrumb() {
   if (!data || !state.get('root')) return null;
@@ -398,7 +470,8 @@ class Lenses {
       if (d.path !== rel) continue;
       const range = new vscode.Range(locate(doc, d), 0, locate(doc, d), 0);
       const title = d.status === 'done' ? `$(pass) reviewed ${d.reviewed.date}`
-        : d.status === 'stale' ? '$(warning) changed since review'
+        : d.status === 'stale'
+          ? `$(warning) changed since its review on ${d.reviewed.date} · mark reviewed again`
           : '$(circle-large-outline) not reviewed';
       lenses.push(new vscode.CodeLens(range,
         { title, command: 'proofMap.toggleReview', arguments: [qn] }));
@@ -435,20 +508,28 @@ function activate(context) {
   const nextUp = new NextProvider(true);
   const lenses = new Lenses();
   const decorations = new Decorations();
+  const staleList = new StaleProvider();
   const treeView = vscode.window.createTreeView('proofMap.tree',
     { treeDataProvider: tree, manageCheckboxStateManually: true, showCollapseAll: true });
   const nextView = vscode.window.createTreeView('proofMap.next',
     { treeDataProvider: next, manageCheckboxStateManually: true });
+  const staleView = vscode.window.createTreeView('proofMap.stale',
+    { treeDataProvider: staleList, manageCheckboxStateManually: true });
   const nextUpView = vscode.window.createTreeView('proofMap.nextUp',
     { treeDataProvider: nextUp, manageCheckboxStateManually: true });
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
   status.command = 'proofMap.tree.focus';
+  // Beside the count while focused: a button that unfocuses.
+  const unfocusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 49);
+  unfocusItem.text = '$(close)';
+  unfocusItem.command = 'proofMap.unfocus';
 
   const setContext = () => {
     vscode.commands.executeCommand('setContext', 'proofMap.openOnly', openOnly());
     vscode.commands.executeCommand('setContext', 'proofMap.customRoot',
       !!state.get('root') || !!state.get('usersOf'));
     vscode.commands.executeCommand('setContext', 'proofMap.focused', !!state.get('root'));
+    vscode.commands.executeCommand('setContext', 'proofMap.usersMode', !!state.get('usersOf'));
   };
   setContext();
 
@@ -458,25 +539,41 @@ function activate(context) {
     nextUp.emitter.fire();
     lenses.emitter.fire();
     decorations.emitter.fire(undefined);
+    staleList.emitter.fire();
+    highlightStale();
     if (!data) return;
+    const outdated = staleDefs().length + (data.orphans || []).length;
+    vscode.commands.executeCommand('setContext', 'proofMap.hasStale', outdated > 0);
+    staleView.badge = outdated
+      ? { value: outdated, tooltip: `${outdated} reviews out of date` } : undefined;
     const below = Object.values(data.defs).filter(d => d.belowRoot);
     const done = below.filter(d => d.status === 'done').length;
-    const stale = below.filter(d => d.status === 'stale').length;
     const focus = state.get('root') && def(data.root) ? def(data.root).name : null;
     status.text = `${data.agdaError ? '$(warning)' : '$(checklist)'} ` +
       `${done}/${below.length} reviewed${focus ? ` in ${focus}` : ''}` +
-      `${stale ? ` · ${stale} stale` : ''}`;
+      `${outdated ? ` · $(warning) ${outdated} out of date` : ''}`;
+    status.backgroundColor = outdated
+      ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
     for (const v of [treeView, nextView, nextUpView]) {
       v.description = focus ? `focus: ${focus}` : undefined;
     }
-    // While focused, the status bar takes you to the focused definition.
-    status.command = focus ? 'proofMap.goToFocus' : 'proofMap.tree.focus';
+    // Out-of-date reviews come first; while focused, the status bar takes
+    // you to the focused definition.
+    status.command = outdated ? 'proofMap.stale.focus'
+      : focus ? 'proofMap.goToFocus' : 'proofMap.tree.focus';
+    if (focus) {
+      unfocusItem.tooltip = `Unfocus ${focus}: back to the whole proof`;
+      unfocusItem.show();
+    } else {
+      unfocusItem.hide();
+    }
     const gap = data.between.length
       ? `\n${data.between.length} open between reviewed definitions` : '';
     status.tooltip = data.agdaError
       ? `Agda failed; showing the last checked state.\n\n${firstLine(data.agdaError)}`
       : `Proof Map: definitions under ${def(data.root) ? def(data.root).name : data.root}${gap}` +
-        (focus ? `\nClick to go to ${focus}.` : '');
+        (outdated ? `\n${outdated} reviews out of date: click to list them.`
+          : focus ? `\nClick to go to ${focus}.` : '');
     status.show();
     const crumb = breadcrumb();
     treeView.message = [
@@ -593,7 +690,21 @@ function activate(context) {
   };
 
   const sub = (...ds) => context.subscriptions.push(...ds);
-  sub(treeView, nextView, nextUpView, status, output,
+  sub(treeView, nextView, nextUpView, staleView, staleHighlight, status, unfocusItem, output,
+    staleView.onDidChangeCheckboxState(e => onCheck(e)),
+    vscode.window.onDidChangeVisibleTextEditors(highlightStale),
+    vscode.workspace.onDidChangeTextDocument(e => {
+      if (e.document.uri.fsPath.endsWith('.agda')) highlightStale();
+    }),
+    vscode.commands.registerCommand('proofMap.forgetMark', async el => {
+      if (!el || !el.orphan) return;
+      try {
+        await run(['--cached', 'undo', el.orphan.qname]);
+      } catch (e) {
+        vscode.window.showErrorMessage(`Proof Map: ${firstLine(e.message)}`);
+      }
+      await refresh(false);
+    }),
     treeView.onDidChangeCheckboxState(onCheck),
     nextView.onDidChangeCheckboxState(onCheck),
     nextUpView.onDidChangeCheckboxState(onCheck),
@@ -621,6 +732,9 @@ function activate(context) {
       await state.update('usersOf', undefined);
       await state.update('root', undefined); setContext(); await refresh(false);
     }),
+    // Unfocus: back to the whole proof (and out of users mode).
+    vscode.commands.registerCommand('proofMap.unfocus', () =>
+      vscode.commands.executeCommand('proofMap.resetRoot')),
     vscode.commands.registerCommand('proofMap.showUsers', showUsers),
     vscode.commands.registerCommand('proofMap.goToFocus', () => data && openDef(data.root)),
     vscode.commands.registerCommand('proofMap.markFile', markFile),
@@ -656,7 +770,7 @@ function activate(context) {
   return { refresh, mark, reveal, showUsers, markFile, unmarkFile, tree, next, nextUp, lenses, treeView,
     setFocus: qn => vscode.commands.executeCommand('proofMap.setRoot', { qn }),
     decorations,
-    nextView,
+    nextView, unfocusItem, staleList, staleView, staleRanges,
     get data() { return data; } };
 }
 

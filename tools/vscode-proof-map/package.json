@@ -33,6 +33,11 @@
           "name": "Tree"
         },
         {
+          "id": "proofMap.stale",
+          "name": "Changed since review",
+          "when": "proofMap.hasStale"
+        },
+        {
           "id": "proofMap.next",
           "name": "Next, top down"
         },
@@ -107,6 +112,17 @@
         "title": "Go to the Focused Definition",
         "category": "Proof Map",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "proofMap.unfocus",
+        "title": "Unfocus",
+        "category": "Proof Map",
+        "icon": "$(close)"
+      },
+      {
+        "command": "proofMap.forgetMark",
+        "title": "Remove This Mark",
+        "category": "Proof Map"
       }
     ],
     "menus": {
@@ -128,11 +144,16 @@
         },
         {
           "command": "proofMap.resetRoot",
-          "when": "view == proofMap.tree && proofMap.customRoot",
+          "when": "view == proofMap.tree && proofMap.usersMode",
           "group": "navigation@2"
         },
         {
           "command": "proofMap.goToFocus",
+          "when": "view =~ /^proofMap\\./ && proofMap.focused",
+          "group": "navigation@0"
+        },
+        {
+          "command": "proofMap.unfocus",
           "when": "view =~ /^proofMap\\./ && proofMap.focused",
           "group": "navigation@0"
         }
@@ -157,6 +178,11 @@
           "command": "proofMap.markFile",
           "when": "viewItem == def",
           "group": "2@1"
+        },
+        {
+          "command": "proofMap.forgetMark",
+          "when": "viewItem == orphan",
+          "group": "1@1"
         }
       ],
       "editor/context": [
@@ -179,6 +205,11 @@
           "command": "proofMap.markFile",
           "when": "editorLangId == agda",
           "group": "navigation@92"
+        },
+        {
+          "command": "proofMap.unfocus",
+          "when": "editorLangId == agda && proofMap.focused",
+          "group": "navigation@89"
         }
       ],
       "commandPalette": [
@@ -209,6 +240,14 @@
         {
           "command": "proofMap.goToFocus",
           "when": "proofMap.focused"
+        },
+        {
+          "command": "proofMap.unfocus",
+          "when": "proofMap.focused"
+        },
+        {
+          "command": "proofMap.forgetMark",
+          "when": "false"
         }
       ],
       "editor/title/context": [
@@ -260,6 +299,18 @@
           "description": "Show review status on Agda files and folders in the explorer and on editor tabs."
         }
       }
-    }
+    },
+    "colors": [
+      {
+        "id": "proofMap.staleBackground",
+        "description": "Background of definitions whose code changed since their review.",
+        "defaults": {
+          "dark": "#cca70026",
+          "light": "#ffcc0033",
+          "highContrast": "#cca70040",
+          "highContrastLight": "#ffcc0040"
+        }
+      }
+    ]
   }
 }
