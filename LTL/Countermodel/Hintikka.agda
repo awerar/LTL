@@ -83,34 +83,6 @@ module _ (cy : Cycle) (fair : Fair cy) where
               fromStretch (q , mq , eq) =
                 place q (loopStretch⊆orbit loop (s , rest) q mq) eq ez
 
-  ------------------------------------------------------------------------
-  -- Some LATER stage of the run fulfils it: j = i + t, so j >= i is built
-  -- into the statement.
-
-  globalFulfilAfter : (start : Pos) (i : Nat)
-                   -> ValidPos b (posIter loop i start)
-                   -> (A : Formula) -> A ∈ eventualities
-                   -> valOf (posState (posIter loop i start)) (□ A) ≡ false
-                   -> Σ[ t ∈ Nat ]
-                        valOf (posState (posIter loop (i + t) start)) A ≡ false
-  globalFulfilAfter start i vp A mA pend =
-    fromOrbit (globalFulfil vp A mA pend)
-    where
-      fromOrbit : (∃[ q ∈ orbit loop (posIter loop i start) ]
-                                    valOf (posState q) A ≡ false)
-               -> Σ[ t ∈ Nat ]
-                    valOf (posState (posIter loop (i + t) start)) A ≡ false
-      fromOrbit (q , mq , eq) =
-        fromIter (∈orbit-iter loop (posIter loop i start) q mq)
-        where
-          fromIter : (Σ[ t ∈ Nat ] posIter loop t (posIter loop i start) ≡ q)
-                  -> Σ[ t ∈ Nat ]
-                       valOf (posState (posIter loop (i + t) start)) A ≡ false
-          fromIter (t , et) =
-            t , subst (λ r -> valOf (posState r) A ≡ false)
-                      (sym (trans (posIter-+ˡ loop i t start) et))
-                      eq
-
 ------------------------------------------------------------------------
 -- Reading (S2) off a state of Ust
 
@@ -130,15 +102,14 @@ module _ (cy : Cycle) where
   open Cycle cy
 
   □Along : (B : Formula) -> □ B ∈ sub P
-        -> (t : Nat) (pos : Pos) -> ValidPos b pos
+        -> (pos : Pos) (t : Nat) -> ValidPos b pos
         -> valOf (posState pos) (□ B) ≡ true
-        -> valOf (posState (posIter loop t pos)) (□ B) ≡ true
-  □Along B mb zero    pos vp e = e
-  □Along B mb (suc t) pos vp e =
-    □Along B mb t (nextPos loop pos)
-             (fst (posStep cy vp))
-             (carry (posState pos) (posState (nextPos loop pos)) B mb
-                    (snd (posStep cy vp)) e)
+        -> valOf (posState (posIter loop pos t)) (□ B) ≡ true
+  □Along B mb pos zero    vp e = e
+  □Along B mb pos (suc t) vp e =
+    carry (posState (posIter loop pos t)) (posState (posIter loop pos (suc t)))
+          B mb (snd (posStep cy (posIterValid cy pos t vp)))
+          (□Along B mb pos t vp e)
 
   □True : (B : Formula) -> □ B ∈ sub P
        -> (pos q : Pos) -> ValidPos b pos -> q ∈ orbit loop pos
@@ -146,9 +117,9 @@ module _ (cy : Cycle) where
        -> valOf (posState q) B ≡ true
   □True B mb pos q vp m e =
     orbit-all loop (λ r -> valOf (posState r) B ≡ true) pos
-      (λ t -> □S2 (posState (posIter loop t pos))
-                  (posIn b (posIterValid cy t pos vp))
-                  B mb (□Along B mb t pos vp e))
+      (λ t -> □S2 (posState (posIter loop pos t))
+                  (posIn b (posIterValid cy pos t vp))
+                  B mb (□Along B mb pos t vp e))
       q m
 
   ------------------------------------------------------------------------
@@ -215,8 +186,8 @@ module _ (cy : Cycle) where
 hintLasso : (v0 : Val) (l : Lasso v0) (A : Formula) -> A ∈ sub P
        -> (i : Nat) -> valOf (stateAt v0 l i) A ≡ eval v0 l A i
 hintLasso v0 (mkLasso cy fair rest sv) A mA i =
-  hintikka cy fair A mA (posIter (Cycle.loop cy) i (v0 , rest))
-           (posIterValid cy i (v0 , rest) sv)
+  hintikka cy fair A mA (posIter (Cycle.loop cy) (v0 , rest) i)
+           (posIterValid cy (v0 , rest) i sv)
 
 hintStart : (v0 : Val) (l : Lasso v0) -> ∀[ A ∈ sub P ]
             valOf v0 A ≡ eval v0 l A 0

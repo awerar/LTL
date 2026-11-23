@@ -51,7 +51,7 @@ module _ {S : Set} (read : S -> T.Instant) where
 
     private
       stage : Nat -> O.Pos
-      stage n = O.posIter loop n pos0
+      stage n = O.posIter loop pos0 n
 
       EvalsTrue : Formula -> O.Pos -> Set
       EvalsTrue A q = E.evalAt loop A q ≡ true
@@ -62,9 +62,7 @@ module _ {S : Set} (read : S -> T.Instant) where
     positionAgree : (n : Nat) -> T.position L n ≡ toPosition (stage n)
     positionAgree zero    = initialAgree
     positionAgree (suc n) =
-      trans (cong (T.step L) (positionAgree n))
-            (trans (stepAgree (stage n))
-                   (cong toPosition (sym (O.posIter-suc loop n pos0))))
+      trans (cong (T.step L) (positionAgree n)) (stepAgree (stage n))
 
     interpretAgree : (n : Nat) -> T.interpret L n ≡ read (O.posState (stage n))
     interpretAgree n =
@@ -88,15 +86,13 @@ module _ {S : Set} (read : S -> T.Instant) where
         (⇒ᵇ-mp (E.evalAt loop A (stage n)) (E.evalAt loop B (stage n))
                e (holds-evalAt A n h))
 
-    evalAt-holds (○ A) n e =
-      evalAt-holds A (suc n)
-        (subst (EvalsTrue A) (sym (O.posIter-suc loop n pos0)) e)
+    evalAt-holds (○ A) n e = evalAt-holds A (suc n) e
 
     evalAt-holds (□ A) n e k =
       evalAt-holds A (k + n)
-        (subst (EvalsTrue A) (sym (O.posIter-+ʳ loop k n pos0))
-               (E.eval□-true loop A (stage n) e (O.posIter loop k (stage n))
-                             (O.iter∈orbit loop k (stage n))))
+        (subst (EvalsTrue A) (sym (O.posIter-+ loop pos0 k n))
+               (E.eval□-true loop A (stage n) e (O.posIter loop (stage n) k)
+                             (O.iter∈orbit loop (stage n) k)))
 
     holds-evalAt (var x) n h = subst (λ i -> i x ≡ true) (interpretAgree n) h
 
@@ -108,13 +104,12 @@ module _ {S : Set} (read : S -> T.Instant) where
       ⇒ᵇ-intro (E.evalAt loop A (stage n)) (E.evalAt loop B (stage n))
                (λ ea -> holds-evalAt B n (h (evalAt-holds A n ea)))
 
-    holds-evalAt (○ A) n h =
-      subst (EvalsTrue A) (O.posIter-suc loop n pos0) (holds-evalAt A (suc n) h)
+    holds-evalAt (○ A) n h = holds-evalAt A (suc n) h
 
     holds-evalAt (□ A) n h =
       E.eval□-intro loop A (stage n)
         (O.orbit-all loop (EvalsTrue A) (stage n)
-           (λ t -> subst (EvalsTrue A) (O.posIter-+ʳ loop t n pos0)
+           (λ t -> subst (EvalsTrue A) (O.posIter-+ loop pos0 t n)
                          (holds-evalAt A (t + n) (h t))))
 
 ------------------------------------------------------------------------

@@ -75,31 +75,20 @@ module _ (loop : Pos) where
   nextPos (s , [])     = loop
   nextPos (s , w ∷ ws) = w , ws
 
-  posIter : Nat -> Pos -> Pos
-  posIter zero    pos = pos
-  posIter (suc i) pos = posIter i (nextPos pos)
+  -- The position after t steps.  The last step is taken outermost, as in
+  -- LTL.Statement's position, so posIter pos (suc t) is nextPos (posIter pos t)
+  -- by definition.
 
-  -- Iterating i + t times is iterating i times and then t more.
-
-  posIter-+ˡ : (i t : Nat) (pos : Pos)
-            -> posIter (i + t) pos ≡ posIter t (posIter i pos)
-  posIter-+ˡ zero    t pos = refl
-  posIter-+ˡ (suc i) t pos = posIter-+ˡ i t (nextPos pos)
-
-  posIter-suc : (t : Nat) (pos : Pos)
-             -> posIter (suc t) pos ≡ nextPos (posIter t pos)
-  posIter-suc zero    pos = refl
-  posIter-suc (suc t) pos = posIter-suc t (nextPos pos)
+  posIter : Pos -> Nat -> Pos
+  posIter pos zero    = pos
+  posIter pos (suc t) = nextPos (posIter pos t)
 
   -- Iterating k + n times is iterating n times and then k more.
 
-  posIter-+ʳ : (k n : Nat) (pos : Pos)
-            -> posIter (k + n) pos ≡ posIter k (posIter n pos)
-  posIter-+ʳ zero    n pos = refl
-  posIter-+ʳ (suc k) n pos =
-    trans (posIter-suc (k + n) pos)
-          (trans (cong nextPos (posIter-+ʳ k n pos))
-                 (sym (posIter-suc k (posIter n pos))))
+  posIter-+ : (pos : Pos) (k n : Nat)
+           -> posIter pos (k + n) ≡ posIter (posIter pos n) k
+  posIter-+ pos zero    n = refl
+  posIter-+ pos (suc k) n = cong nextPos (posIter-+ pos k n)
 
   ------------------------------------------------------------------------
   -- The forward orbit
@@ -139,26 +128,26 @@ module _ (loop : Pos) where
   orbit : Pos -> List Pos
   orbit pos = orbitN (length (stretch pos) + length loopStretch) pos
 
-  -- Every position of an orbit is reached from its start by iterating.
+  -- Every position of an orbit is reached from its start by iterating.  The
+  -- search starts at the j-th iterate and counts j up as it walks on.
 
-  ∈orbitN-iter : (n : Nat) (pos q : Pos)
-              -> q ∈ orbitN n pos
-              -> Σ[ t ∈ Nat ] posIter t pos ≡ q
-  ∈orbitN-iter zero    pos q ()
-  ∈orbitN-iter (suc n) pos q here      = zero , refl
-  ∈orbitN-iter (suc n) pos q (there m) with ∈orbitN-iter n (nextPos pos) q m
-  ... | t , e = suc t , e
+  ∈orbitN-iter : (pos : Pos) (n j : Nat) (q : Pos)
+              -> q ∈ orbitN n (posIter pos j)
+              -> Σ[ t ∈ Nat ] posIter pos t ≡ q
+  ∈orbitN-iter pos zero    j q ()
+  ∈orbitN-iter pos (suc n) j q here      = j , refl
+  ∈orbitN-iter pos (suc n) j q (there m) = ∈orbitN-iter pos n (suc j) q m
 
   ∈orbit-iter : (pos q : Pos)
              -> q ∈ orbit pos
-             -> Σ[ t ∈ Nat ] posIter t pos ≡ q
+             -> Σ[ t ∈ Nat ] posIter pos t ≡ q
   ∈orbit-iter pos q m =
-    ∈orbitN-iter (length (stretch pos) + length loopStretch) pos q m
+    ∈orbitN-iter pos (length (stretch pos) + length loopStretch) zero q m
 
   -- So what holds at every iterate holds on the whole orbit.
 
   orbit-all : (R : Pos -> Set) (pos : Pos)
-           -> ((t : Nat) -> R (posIter t pos))
+           -> ((t : Nat) -> R (posIter pos t))
            -> ∀[ q ∈ orbit pos ] R q
   orbit-all R pos h q m with ∈orbit-iter pos q m
   ... | t , et = subst R et (h t)
@@ -220,13 +209,14 @@ module _ (loop : Pos) where
       onCycle mq = sumElim (λ mm -> memAppR (stretch pos) loopStretch mm)
                            intoCycle (stretch-next loop q mq)
 
-  iter∈orbit : (t : Nat) (pos : Pos) -> posIter t pos ∈ orbit pos
-  iter∈orbit zero    pos = orbitHead pos
-  iter∈orbit (suc t) pos =
-    subst (λ r -> r ∈ orbit pos) (sym (posIter-suc t pos))
-          (orbitClosed pos (posIter t pos) (iter∈orbit t pos))
+  iter∈orbit : (pos : Pos) (t : Nat) -> posIter pos t ∈ orbit pos
+  iter∈orbit pos zero    = orbitHead pos
+  iter∈orbit pos (suc t) = orbitClosed pos (posIter pos t) (iter∈orbit pos t)
 
   -- so the orbit of a successor is contained in the orbit
   nextOrbit⊆orbit : (pos : Pos) -> orbit (nextPos pos) ⊆ orbit pos
-  nextOrbit⊆orbit pos =
-    orbit-all (λ r -> r ∈ orbit pos) (nextPos pos) (λ t -> iter∈orbit (suc t) pos)
+  nextOrbit⊆orbit pos = orbit-all (λ r -> r ∈ orbit pos) (nextPos pos) along
+    where
+      along : (t : Nat) -> posIter (nextPos pos) t ∈ orbit pos
+      along zero    = orbitClosed pos pos (orbitHead pos)
+      along (suc t) = orbitClosed pos (posIter (nextPos pos) t) (along t)

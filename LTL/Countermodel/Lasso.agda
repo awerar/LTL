@@ -79,16 +79,15 @@ module _ (cy : Cycle) where
   posStep (vpos s []        ms tNil)             = loopValid , closingStep
   posStep (vpos s (w ∷ ws) ms (tCons mw st wk)) = vpos w ws mw wk , st
 
-  posIterValid : (t : Nat) (pos : Pos) -> ValidPos b pos
-              -> ValidPos b (posIter loop t pos)
-  posIterValid zero    pos vp = vp
-  posIterValid (suc t) pos vp =
-    posIterValid t (nextPos loop pos) (fst (posStep vp))
+  posIterValid : (pos : Pos) (t : Nat) -> ValidPos b pos
+              -> ValidPos b (posIter loop pos t)
+  posIterValid pos zero    vp = vp
+  posIterValid pos (suc t) vp = fst (posStep (posIterValid pos t vp))
 
   orbitValid : (pos q : Pos) -> ValidPos b pos -> q ∈ orbit loop pos
             -> ValidPos b q
   orbitValid pos q vp m =
-    orbit-all loop (ValidPos b) pos (λ t -> posIterValid t pos vp) q m
+    orbit-all loop (ValidPos b) pos (λ t -> posIterValid pos t vp) q m
 
 ------------------------------------------------------------------------
 -- The lasso.  rest is everything after v0 up to the first return to b: the
@@ -109,7 +108,7 @@ record Lasso (v0 : Val) : Set where
 
 -- the state at stage i of the run the lasso unwinds to
 stateAt : (v0 : Val) -> Lasso v0 -> Nat -> Val
-stateAt v0 l i = posState (posIter loop i (v0 , rest))
+stateAt v0 l i = posState (posIter loop (v0 , rest) i)
   where open Lasso l
 
 ------------------------------------------------------------------------
@@ -131,5 +130,5 @@ open LTL.Semantics.OrbitEval Val readVal public
 -- start
 
 eval : (v0 : Val) -> Lasso v0 -> Formula -> Nat -> Bool
-eval v0 l A i = evalAt loop A (posIter loop i (v0 , rest))
+eval v0 l A i = evalAt loop A (posIter loop (v0 , rest) i)
   where open Lasso l

@@ -16,7 +16,7 @@
 -- because evalAt commutes with ○ definitionally.  (K □) is pointwise on one
 -- orbit; (Exp) needs the orbit to contain the position, its successor and the
 -- successor's orbit (iter∈orbit).  (Ind) is the one with content: A propagates
--- along posIter t pos by induction on t, and every member of the orbit is
+-- along posIter pos t by induction on t, and every member of the orbit is
 -- such a posIter (orbit-all).
 
 open import LTL.Syntax.Deriv
@@ -98,10 +98,10 @@ module _ (loop : Pos) where
           -> evalAt (A ∧ ○ A ∧ ○ □ A) pos ≡ true
       body eb =
         eval∧-intro A (○ A ∧ ○ □ A) pos
-          (eval□-true A pos eb pos (iter∈orbit loop zero pos))
+          (eval□-true A pos eb pos (iter∈orbit loop pos zero))
           (eval∧-intro (○ A) (○ □ A) pos
             (eval□-true A pos eb (nextPos loop pos)
-                        (iter∈orbit loop (suc zero) pos))
+                        (iter∈orbit loop pos (suc zero)))
             (eval□-intro A (nextPos loop pos)
                          (λ q m ->
                             eval□-true A pos eb q
@@ -125,17 +125,14 @@ module _ (loop : Pos) where
       body e1 e2 =
         eval□-intro A pos (orbit-all loop (λ r -> evalAt A r ≡ true) pos along)
         where
-          along : (t : Nat) -> evalAt A (posIter loop t pos) ≡ true
+          along : (t : Nat) -> evalAt A (posIter loop pos t) ≡ true
           along zero    = e2
           along (suc t) =
-            subst (λ r -> evalAt A r ≡ true)
-                  (sym (posIter-suc loop t pos))
-                  (⇒ᵇ-mp (evalAt A (posIter loop t pos))
-                            (evalAt A
-                                    (nextPos loop (posIter loop t pos)))
-                            (eval□-true (A ⇒ ○ A) pos e1 (posIter loop t pos)
-                                        (iter∈orbit loop t pos))
-                            (along t))
+            ⇒ᵇ-mp (evalAt A (posIter loop pos t))
+                  (evalAt A (posIter loop pos (suc t)))
+                  (eval□-true (A ⇒ ○ A) pos e1 (posIter loop pos t)
+                              (iter∈orbit loop pos t))
+                  (along t)
 
   ------------------------------------------------------------------------
   -- Soundness
