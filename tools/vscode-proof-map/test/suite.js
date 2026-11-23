@@ -97,6 +97,12 @@ exports.run = async () => {
     const up = api.nextUp.getChildren().map(e => api.nextUp.getTreeItem(e));
     log(`bottom up: ${upBefore} before, ${up.length} after marking Val; first: ` +
       up.slice(0, 3).map(i => `${i.label} (${i.description})`).join(', '));
+    const weights = api.data.frontierUp.map(k => api.data.defs[k].above);
+    assert(weights.every((w, i) => i === 0 || weights[i - 1] >= w), 'bottom up not ranked');
+    const opens = api.data.frontier.map(k => api.data.defs[k].open);
+    assert(opens.every((w, i) => i === 0 || opens[i - 1] >= w), 'top down not ranked');
+    log('top down: ' + api.next.getChildren().slice(0, 3).map(e =>
+      `${api.next.getTreeItem(e).label} (${api.next.getTreeItem(e).description})`).join(', '));
     log(`between: ${api.data.between.length}`);
     assert(api.data.between.length > 0, 'nothing between root and Val');
     assert(!api.data.frontierUp.includes(val));
@@ -112,6 +118,63 @@ exports.run = async () => {
     await vscode.commands.executeCommand('proofMap.resetRoot');
     assert.strictEqual(api.tree.getChildren()[0].qn, data.root);
     await api.mark([data.root, val], false);
+
+    // Branch groups hold exactly the next list.
+    for (const [name, prov, list] of [['down', api.next, api.data.frontier],
+      ['up', api.nextUp, api.data.frontierUp]]) {
+      const tops = prov.getChildren();
+      const all = tops.flatMap(t => [t.qn, ...prov.getChildren(t).map(c => c.qn)]);
+      const listed = new Set(list);
+      const extra = all.filter(q => !listed.has(q));   // reviewed branch headers
+      assert(extra.every(q => api.data.defs[q].status === 'done' ||
+        api.data.branches.some(b => b.branch === q)), `${name}: stray items`);
+      assert(list.every(q => all.includes(q)), `${name}: items missing from groups`);
+      log(`${name} groups: ` + tops.map(t => `${api.data.defs[t.qn].name}` +
+        (t.group ? ` (+${t.group.length})` : '')).join(', '));
+    }
+
+    // Focus on a branch: the lists stay inside it, with a breadcrumb.
+    const pscc = Object.keys(api.data.defs).find(k => api.data.defs[k].name === 'provableSCC');
+    await api.setFocus(pscc);
+    assert.strictEqual(api.data.root, pscc);
+    assert(api.data.frontier.every(k => api.data.defs[k].belowRoot));
+    log(`focus: ${api.treeView.message} | next: ${api.nextView.message} | ` +
+      `${api.data.frontier.length} next, ${api.data.frontierUp.length} bottom up`);
+    assert(/decideCorrect › decide › provableSCC/.test(api.treeView.message));
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await vscode.commands.executeCommand('proofMap.goToFocus');
+    const ed0 = vscode.window.activeTextEditor;
+    const went = ed0 && `${path.relative(folder, ed0.document.uri.fsPath)}:${ed0.selection.active.line + 1}`;
+    log(`go to focus: ${went}: ${ed0 && ed0.document.lineAt(ed0.selection.active.line).text.trim().slice(0, 40)}`);
+    assert(ed0 && ed0.document.lineAt(ed0.selection.active.line).text.startsWith('provableSCC'));
+    await vscode.commands.executeCommand('proofMap.resetRoot');
+    assert.strictEqual(api.data.root, data.root);
+
+    // The same from the editor: the definition at the cursor.
+    const d = api.data.defs[pscc];
+    const ed = await vscode.window.showTextDocument(
+      await vscode.workspace.openTextDocument(path.join(folder, d.path)));
+    const at = new vscode.Position(d.line, 0);   // the line after its signature
+    ed.selection = new vscode.Selection(at, at);
+    await vscode.commands.executeCommand('proofMap.setRoot');
+    log(`focus from the editor at ${d.path}:${d.line + 1}: ${api.data.defs[api.data.root].name}`);
+    assert.strictEqual(api.data.root, pscc);
+    await vscode.commands.executeCommand('proofMap.resetRoot');
+
+    // A whole file: marked, its top CodeLens, then the Undo path.
+    const barFile = 'LTL/Lib/Bar.agda';
+    const inBar = () => Object.entries(api.data.defs).filter(([, d]) => d.path === barFile);
+    const fresh = inBar().filter(([, d]) => d.status !== 'done').map(([k]) => k);
+    await api.markFile({ file: barFile });
+    assert(inBar().every(([, d]) => d.status === 'done'), 'file not fully marked');
+    const barUri = vscode.Uri.file(path.join(folder, barFile));
+    const barLenses = await vscode.commands.executeCommand('vscode.executeCodeLensProvider', barUri);
+    const topLens = barLenses.find(l => l.range.start.line === 0 && l.command);
+    log(`file ${barFile}: ${inBar().length} definitions marked; top lens: ${topLens && topLens.command.title}`);
+    assert(topLens && topLens.command.command === 'proofMap.unmarkFile');
+    await api.mark(fresh, false);
+    assert(inBar().every(([k, d]) => fresh.includes(k) ? d.status !== 'done' : true));
+    log(`after undo: ${inBar().filter(([, d]) => d.status === 'done').length} marked`);
   } catch (e) {
     failed = true;
     log('FAIL ' + (e.stack || e));

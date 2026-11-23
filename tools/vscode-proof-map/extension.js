@@ -252,28 +252,78 @@ class TreeProvider {
 }
 
 // The definitions to review next: top down, those with a reviewed user;
-// bottom up, those whose uses are all reviewed.
+// bottom up, those whose uses are all reviewed. The script groups them by
+// branch (the children of the root, heaviest first) and orders each branch
+// so that a subtree is finished before the next. A branch is shown as its
+// own item, holding the rest of its group; the first one starts expanded.
 class NextProvider {
   constructor(up) {
     this.up = up;
+    this.dir = up ? 'up' : 'down';
     this.emitter = new vscode.EventEmitter();
     this.onDidChangeTreeData = this.emitter.event;
   }
   getTreeItem(el) {
     const d = def(el.qn);
+    let desc;
     if (this.up) {
-      return treeItem(el, d.uses.length
+      desc = `${d.above} above · ` + (d.uses.length
         ? `uses ${d.uses.length}, all reviewed · ${moduleShort(d)}` : moduleShort(d));
+    } else {
+      const by = d.usedBy.filter(u => def(u) && def(u).status === 'done')
+        .map(u => def(u).name);
+      desc = `${d.open} open below · ` +
+        (by.length ? `used by ${by.join(', ')}` : moduleShort(d));
     }
-    const by = d.usedBy.filter(u => def(u) && def(u).status === 'done')
-      .map(u => def(u).name);
-    return treeItem(el, by.length ? `used by ${by.join(', ')}` : moduleShort(d));
+    if (el.group) desc = `${el.group.length} next · ${d.open} open below`;
+    const item = treeItem(el, desc);
+    if (el.group && el.group.length) {
+      item.collapsibleState = el.first
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.Collapsed;
+    }
+    return item;
   }
   getChildren(el) {
-    if (!data || el) return [];
-    const list = this.up ? data.frontierUp : data.frontier;
-    return list.filter(def).map(qn => ({ qn, path: [qn], flat: this.up ? 'up' : 'down' }));
+    if (!data) return [];
+    if (el) {
+      return (el.group || []).map(qn => ({ qn, path: [el.qn, qn], flat: this.dir }));
+    }
+    const groups = data.branches
+      .map(b => ({ branch: b.branch, items: b[this.dir].filter(def) }))
+      .filter(b => b.items.length && def(b.branch));
+    return groups.map((b, i) => {
+      const rest = b.items.filter(qn => qn !== b.branch);
+      return rest.length
+        ? { qn: b.branch, path: [b.branch], flat: this.dir, group: rest, first: i === 0 }
+        : { qn: b.branch, path: [b.branch], flat: this.dir };
+    });
   }
+}
+
+// The path from the configured root down to the focused branch, by names.
+function breadcrumb() {
+  if (!data || !state.get('root')) return null;
+  const want = vscode.workspace.getConfiguration('proofMap').get('root');
+  const top = Object.keys(data.defs).find(k => {
+    const d = data.defs[k];
+    return d.name === want || k === want || k.endsWith('.' + want);
+  });
+  if (!top || top === data.root) return null;
+  const prev = new Map([[data.root, null]]);
+  const todo = [data.root];
+  while (todo.length) {
+    const k = todo.shift();
+    if (k === top) {
+      const names = [];
+      for (let x = k; x !== null; x = prev.get(x)) names.push(def(x).name);
+      return names.join(' › ');
+    }
+    for (const u of def(k).usedBy) {
+      if (def(u) && !prev.has(u)) { prev.set(u, k); todo.push(u); }
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +340,19 @@ class Lenses {
     }
     const rel = path.relative(folder, doc.uri.fsPath).split(path.sep).join('/');
     const lenses = [];
+    // At the top of the file: how much of it is reviewed, and a way to mark
+    // (or, once complete, unmark) all of it.
+    const inFile = Object.values(data.defs).filter(d => d.path === rel);
+    if (inFile.length) {
+      const done = inFile.filter(d => d.status === 'done').length;
+      const top = new vscode.Range(0, 0, 0, 0);
+      lenses.push(new vscode.CodeLens(top, done < inFile.length
+        ? { title: `$(checklist) ${done}/${inFile.length} reviewed in this file · mark all`,
+            command: 'proofMap.markFile', arguments: [{ file: rel }] }
+        : { title: `$(pass-filled) all ${inFile.length} reviewed in this file`,
+            tooltip: 'Remove the marks of this file', command: 'proofMap.unmarkFile',
+            arguments: [{ file: rel }] }));
+    }
     for (const [qn, d] of Object.entries(data.defs)) {
       if (d.path !== rel) continue;
       const range = new vscode.Range(locate(doc, d), 0, locate(doc, d), 0);
@@ -343,6 +406,7 @@ function activate(context) {
     vscode.commands.executeCommand('setContext', 'proofMap.openOnly', openOnly());
     vscode.commands.executeCommand('setContext', 'proofMap.customRoot',
       !!state.get('root') || !!state.get('usersOf'));
+    vscode.commands.executeCommand('setContext', 'proofMap.focused', !!state.get('root'));
   };
   setContext();
 
@@ -355,18 +419,29 @@ function activate(context) {
     const below = Object.values(data.defs).filter(d => d.belowRoot);
     const done = below.filter(d => d.status === 'done').length;
     const stale = below.filter(d => d.status === 'stale').length;
+    const focus = state.get('root') && def(data.root) ? def(data.root).name : null;
     status.text = `${data.agdaError ? '$(warning)' : '$(checklist)'} ` +
-      `${done}/${below.length} reviewed${stale ? ` · ${stale} stale` : ''}`;
+      `${done}/${below.length} reviewed${focus ? ` in ${focus}` : ''}` +
+      `${stale ? ` · ${stale} stale` : ''}`;
+    for (const v of [treeView, nextView, nextUpView]) {
+      v.description = focus ? `focus: ${focus}` : undefined;
+    }
+    // While focused, the status bar takes you to the focused definition.
+    status.command = focus ? 'proofMap.goToFocus' : 'proofMap.tree.focus';
     const gap = data.between.length
       ? `\n${data.between.length} open between reviewed definitions` : '';
     status.tooltip = data.agdaError
       ? `Agda failed; showing the last checked state.\n\n${firstLine(data.agdaError)}`
-      : `Proof Map: definitions under ${def(data.root) ? def(data.root).name : data.root}${gap}`;
+      : `Proof Map: definitions under ${def(data.root) ? def(data.root).name : data.root}${gap}` +
+        (focus ? `\nClick to go to ${focus}.` : '');
     status.show();
+    const crumb = breadcrumb();
     treeView.message = [
       data.agdaError && 'Agda failed: showing the last checked state (see Output → Proof Map).',
       usersOf() && `Definitions that use ${def(usersOf()).name}, upwards.`,
+      !usersOf() && crumb && `Focused on ${crumb}.`,
     ].filter(Boolean).join(' ') || undefined;
+    nextView.message = nextUpView.message = crumb ? `Only within ${crumb}.` : undefined;
   });
 
   const onCheck = e => {
@@ -394,6 +469,58 @@ function activate(context) {
 
   // From a tree item, a CodeLens (a name) or the editor (nothing).
   const target = arg => (arg && arg.qn) || (typeof arg === 'string' && arg) || atCursor();
+
+  // The Agda file meant: from the explorer or an editor title (a Uri), a
+  // tree item (its definition's file), a CodeLens ({ file }) or the editor.
+  const fileOf = arg => {
+    let p = null;
+    if (arg instanceof vscode.Uri) p = arg.fsPath;
+    else if (arg && arg.qn && def(arg.qn)) return def(arg.qn).path;
+    else if (arg && arg.file) return arg.file;
+    else if (vscode.window.activeTextEditor) {
+      p = vscode.window.activeTextEditor.document.uri.fsPath;
+    }
+    return p && p.endsWith('.agda')
+      ? path.relative(folder, p).split(path.sep).join('/') : null;
+  };
+
+  const markFile = async arg => {
+    const rel = fileOf(arg);
+    if (!rel || !data) return;
+    const fresh = Object.entries(data.defs)
+      .filter(([, d]) => d.path === rel && d.status !== 'done').map(([k]) => k);
+    if (!fresh.length) {
+      vscode.window.showInformationMessage(`Proof Map: everything in ${rel} is already reviewed.`);
+      return;
+    }
+    try {
+      await run(['--cached', 'done', rel]);
+    } catch (e) {
+      vscode.window.showErrorMessage(`Proof Map: ${firstLine(e.message)}`);
+      return;
+    }
+    await refresh(false);
+    vscode.window.showInformationMessage(
+      `Proof Map: marked ${fresh.length} definition${fresh.length > 1 ? 's' : ''} in ${rel} as reviewed.`,
+      'Undo').then(c => c && mark(fresh, false));
+  };
+
+  const unmarkFile = async arg => {
+    const rel = fileOf(arg);
+    if (!rel || !data) return;
+    const marked = Object.values(data.defs).filter(d => d.path === rel && d.reviewed);
+    if (!marked.length) return;
+    const ok = await vscode.window.showWarningMessage(
+      `Remove the ${marked.length} review mark${marked.length > 1 ? 's' : ''} in ${rel}?`,
+      { modal: true }, 'Remove');
+    if (ok !== 'Remove') return;
+    try {
+      await run(['--cached', 'undo', rel]);
+    } catch (e) {
+      vscode.window.showErrorMessage(`Proof Map: ${firstLine(e.message)}`);
+    }
+    await refresh(false);
+  };
 
   const showUsers = async arg => {
     const qn = target(arg);
@@ -438,15 +565,22 @@ function activate(context) {
     vscode.commands.registerCommand('proofMap.showAll', async () => {
       await state.update('openOnly', false); setContext(); listeners.forEach(f => f());
     }),
-    vscode.commands.registerCommand('proofMap.setRoot', async el => {
+    // Focus on a branch: from a tree item, or the definition at the cursor.
+    vscode.commands.registerCommand('proofMap.setRoot', async arg => {
+      const qn = target(arg);
+      if (!qn) return;
       await state.update('usersOf', undefined);
-      await state.update('root', el.qn); setContext(); await refresh(false);
+      await state.update('root', qn); setContext(); await refresh(false);
+      await vscode.commands.executeCommand('proofMap.tree.focus');
     }),
     vscode.commands.registerCommand('proofMap.resetRoot', async () => {
       await state.update('usersOf', undefined);
       await state.update('root', undefined); setContext(); await refresh(false);
     }),
     vscode.commands.registerCommand('proofMap.showUsers', showUsers),
+    vscode.commands.registerCommand('proofMap.goToFocus', () => data && openDef(data.root)),
+    vscode.commands.registerCommand('proofMap.markFile', markFile),
+    vscode.commands.registerCommand('proofMap.unmarkFile', unmarkFile),
     vscode.commands.registerCommand('proofMap.markWithNote', async el => {
       const d = def(el.qn);
       const note = await vscode.window.showInputBox({
@@ -475,7 +609,9 @@ function activate(context) {
 
   refresh(true);
   // For the tests in test/.
-  return { refresh, mark, reveal, showUsers, tree, next, nextUp, lenses, treeView,
+  return { refresh, mark, reveal, showUsers, markFile, unmarkFile, tree, next, nextUp, lenses, treeView,
+    setFocus: qn => vscode.commands.executeCommand('proofMap.setRoot', { qn }),
+    nextView,
     get data() { return data; } };
 }
 

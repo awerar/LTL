@@ -194,11 +194,11 @@ a module name.
 The user reviews the proof top down from `decideCorrect` and bottom up from
 the foundations, refactoring along the way. `tools/proof-map` (see README)
 prints the dependency tree in either direction and keeps
-the review marks in `docs/review.tsv`. Mark a definition (`tools/proof-map
-done NAME`) only once the user says they are satisfied with it, after any
-refactor of it, and commit the ledger along with that refactor. The user may
-also tick definitions in the VS Code extension `tools/vscode-proof-map`,
-which writes the same ledger.
+the review marks in `docs/review.tsv`, a local file that git ignores. Mark a
+definition (`tools/proof-map done NAME`) only once the user says they are
+satisfied with it, after any refactor of it. The user may also tick
+definitions in the VS Code extension `tools/vscode-proof-map`, which writes
+the same ledger.
 
 ## Public API
 

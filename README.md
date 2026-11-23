@@ -125,10 +125,12 @@ also records which definitions have been reviewed:
 tools/proof-map tree --depth 2           # the top of the tree
 tools/proof-map tree sccGraph --open     # a subtree, reviewed parts folded
 tools/proof-map next                     # open definitions with a reviewed user
+tools/proof-map next provableSCC         # ... only inside that branch
 tools/proof-map next --up                # open definitions whose uses are reviewed
 tools/proof-map tree closure --up        # who uses closure, upwards
 tools/proof-map show provableSCC --src   # uses, users and source
 tools/proof-map done decide -m "note"    # mark as reviewed
+tools/proof-map done LTL/Lib/Bar.agda    # mark a whole file (or LTL.Lib.Bar)
 tools/proof-map status                   # progress per module
 ```
 
@@ -138,7 +140,16 @@ of mutually recursive definitions becomes ready together), or from both ends.
 `status` then also counts the open definitions left between a reviewed
 definition above and one below, where the two meet.
 
-Review marks are kept in `docs/review.tsv` (written by the first `done`), with a
+The next lists are grouped by branch (the children of the root), the branch
+with the most open definitions first. Inside a branch they follow the tree,
+heaviest subtree first, so a review finishes one part before moving on
+rather than jumping around. To review one part of the proof on its own, give
+its top definition as the root: `next provableSCC` lists only what lies
+under `provableSCC`. `--order weight` gives a single list ranked by what each
+definition carries, `--order tree` a single list in tree order.
+
+Review marks are kept in `docs/review.tsv` (written by the first `done`; a
+local file, ignored by git), with a
 hash of each definition's source (comments and spacing are ignored). When the
 code of a reviewed definition changes, its mark shows as stale (`~`) until it
 is marked again. Names from `Base`, `Prelude`, `Statement` and Agda's
@@ -153,14 +164,25 @@ needs no npm packages or build step. It adds:
 - a **Proof Map** view in the activity bar: the tree under the root, with a
   checkbox per definition (ticking it runs `done` or `undo`), the number of
   open definitions below each node, and a filter that hides fully reviewed
-  subtrees. Right-click a node to make it the root or to add a note.
+  subtrees. Right-click a node to focus on its branch (*Focus on This
+  Branch*, also in the editor's context menu for the definition at the
+  cursor) or to add a note. While focused, the tree, both next lists and the
+  status bar count cover only that branch, and the view shows where it sits
+  (`decideCorrect › decide › provableSCC`). The go-to-file button in each
+  view's title, or a click on the status bar, opens the focused definition;
+  the home button returns to the whole proof.
   *Show Users* switches the tree to the definitions that use a node, upwards
   (as `tree --up`); the home button returns to the main tree.
-- **Next, top down** and **Next, bottom up** lists (`next` and `next --up`).
+- **Next, top down** and **Next, bottom up** lists (`next` and `next --up`),
+  grouped by branch the same way, each entry showing its weight.
 - above each definition in an Agda file, its review status (click to toggle),
   how many definitions it uses (click to reveal it in the tree) and how many
   use it (click for its users). The editor's context menu has *Reveal in
   Proof Map* and *Show Users*.
+- at the top of each Agda file, how many of its definitions are reviewed;
+  click to mark them all. *Mark File Reviewed* is also in the explorer's,
+  the editor tab's and the tree's context menus, with an Undo button
+  afterwards; *Remove File's Review Marks* asks first.
 - the overall count in the status bar; its tooltip gives the number of open
   definitions between reviewed ones.
 

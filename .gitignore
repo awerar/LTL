@@ -18,5 +18,6 @@ _build/
 /*-PLAN.md
 /SIEFKES-*.md
 /notes
+/docs/review.tsv
 /*.pdf
 !/docs/

@@ -63,7 +63,7 @@
       },
       {
         "command": "proofMap.setRoot",
-        "title": "Use as Root",
+        "title": "Focus on This Branch",
         "category": "Proof Map"
       },
       {
@@ -73,7 +73,7 @@
       },
       {
         "command": "proofMap.resetRoot",
-        "title": "Back to the Main Tree",
+        "title": "Back to the Whole Proof",
         "category": "Proof Map",
         "icon": "$(home)"
       },
@@ -91,6 +91,22 @@
         "command": "proofMap.reveal",
         "title": "Reveal in Proof Map",
         "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.markFile",
+        "title": "Mark File Reviewed",
+        "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.unmarkFile",
+        "title": "Remove File's Review Marks",
+        "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.goToFocus",
+        "title": "Go to the Focused Definition",
+        "category": "Proof Map",
+        "icon": "$(go-to-file)"
       }
     ],
     "menus": {
@@ -114,6 +130,11 @@
           "command": "proofMap.resetRoot",
           "when": "view == proofMap.tree && proofMap.customRoot",
           "group": "navigation@2"
+        },
+        {
+          "command": "proofMap.goToFocus",
+          "when": "view =~ /^proofMap\\./ && proofMap.focused",
+          "group": "navigation@0"
         }
       ],
       "view/item/context": [
@@ -131,9 +152,19 @@
           "command": "proofMap.markWithNote",
           "when": "viewItem == def",
           "group": "1@3"
+        },
+        {
+          "command": "proofMap.markFile",
+          "when": "viewItem == def",
+          "group": "2@1"
         }
       ],
       "editor/context": [
+        {
+          "command": "proofMap.setRoot",
+          "when": "editorLangId == agda",
+          "group": "navigation@89"
+        },
         {
           "command": "proofMap.reveal",
           "when": "editorLangId == agda",
@@ -143,12 +174,17 @@
           "command": "proofMap.showUsers",
           "when": "editorLangId == agda",
           "group": "navigation@91"
+        },
+        {
+          "command": "proofMap.markFile",
+          "when": "editorLangId == agda",
+          "group": "navigation@92"
         }
       ],
       "commandPalette": [
         {
           "command": "proofMap.setRoot",
-          "when": "false"
+          "when": "editorLangId == agda"
         },
         {
           "command": "proofMap.markWithNote",
@@ -161,6 +197,42 @@
         {
           "command": "proofMap.showUsers",
           "when": "editorLangId == agda"
+        },
+        {
+          "command": "proofMap.markFile",
+          "when": "resourceExtname == .agda"
+        },
+        {
+          "command": "proofMap.unmarkFile",
+          "when": "resourceExtname == .agda"
+        },
+        {
+          "command": "proofMap.goToFocus",
+          "when": "proofMap.focused"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "proofMap.markFile",
+          "when": "resourceExtname == .agda",
+          "group": "7_proofmap@1"
+        },
+        {
+          "command": "proofMap.unmarkFile",
+          "when": "resourceExtname == .agda",
+          "group": "7_proofmap@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "proofMap.markFile",
+          "when": "resourceExtname == .agda",
+          "group": "7_proofmap@1"
+        },
+        {
+          "command": "proofMap.unmarkFile",
+          "when": "resourceExtname == .agda",
+          "group": "7_proofmap@2"
         }
       ]
     },

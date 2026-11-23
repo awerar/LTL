@@ -3,7 +3,7 @@ r"""Map the proof top down and track which definitions have been reviewed.
 
     tools/proof-map tree [ROOT] [--depth N] [--open]   dependency tree
     tools/proof-map tree NAME --up [--depth N]         who uses NAME, upwards
-    tools/proof-map next [ROOT] [-n N] [--up]          what to review next
+    tools/proof-map next [ROOT] [-n N] [--up] [--order O]  what to review next
     tools/proof-map show NAME [--src]                  one definition
     tools/proof-map status [ROOT]                      progress per module
     tools/proof-map done NAME... [-m NOTE]             mark as reviewed
@@ -12,11 +12,19 @@ r"""Map the proof top down and track which definitions have been reviewed.
 
 Reviews can go top down (`next`: open definitions with a reviewed user),
 bottom up (`next --up`: open definitions whose uses are all reviewed), or
-both; `status` counts the open definitions left between the two.
+both; `status` counts the open definitions left between the two.  The next
+lists are grouped by branch, the children of ROOT, heaviest branch (most
+open definitions below) first; inside a branch they follow the tree, so a
+review finishes one part before the next.  To stay in one branch, give it as
+ROOT (`next provableSCC`).  --order weight ranks one flat list by what each
+definition carries (open definitions below; bottom up, definitions above
+that depend on it), --order tree lists it in tree order.
 
 ROOT defaults to decideCorrect.  NAME is a definition's name (`decide`), or
 qualified by the end of its module path when the name is ambiguous
 (`Lasso.Fair`, `Countermodel.Lasso.Fair`); operators may omit underscores.
+For done and undo, NAME may also be an Agda file (`LTL/Lib/Bar.agda`) or a
+module (`LTL.Lib.Bar`), standing for every definition in it.
 
 The graph comes from `agda --html` on LTL/Correct.agda (written to
 _build/proof-map/), whose output links every name to its definition site.  A
@@ -425,13 +433,38 @@ def cmd_tree(g, marks, args):
     walk(root, "", True, 0)
 
 
-def frontier(g, marks, root):
+def open_below(g, marks, k):
+    """How many open definitions k leads to, k included."""
+    return sum(status(g.defs[r], marks) != "done" for r in g.reach(k))
+
+
+def above(g, root):
+    """For each definition below root, how many others below root use it,
+    directly or not."""
+    below = set(g.reach(root))
+    counts = {}
+    for k in below:
+        seen, todo = set(), [k]
+        while todo:
+            for u in g.users[todo.pop()]:
+                if u in below and u not in seen and u != k:
+                    seen.add(u)
+                    todo.append(u)
+        counts[k] = len(seen)
+    return counts
+
+
+def frontier(g, marks, root, ranked=True):
     """Definitions below root that are not reviewed but have a reviewed
-    user (or are the root), in depth-first order."""
+    user (or are the root); those leading to the most open definitions
+    first, then in depth-first order."""
     order = g.reach(root)
     done = {k for k in order if status(g.defs[k], marks) == "done"}
-    return [k for i, k in enumerate(order) if k not in done and
-            (i == 0 or any(u in done for u in g.users[k]))], done
+    ready = [k for i, k in enumerate(order) if k not in done and
+             (i == 0 or any(u in done for u in g.users[k]))]
+    if ranked:
+        ready.sort(key=lambda k: -open_below(g, marks, k))
+    return ready, done
 
 
 def components(g, keys):
@@ -474,10 +507,11 @@ def components(g, keys):
     return comps
 
 
-def frontier_up(g, marks, root):
+def frontier_up(g, marks, root, ranked=True):
     """Definitions below root that are not reviewed but whose uses are all
-    reviewed, lowest first.  Mutually recursive definitions count as one:
-    only their uses outside the group must be reviewed."""
+    reviewed; those most depended on first, then lowest first.  Mutually
+    recursive definitions count as one: only their uses outside the group
+    must be reviewed."""
     order = g.reach(root)
     done = {k for k in order if status(g.defs[k], marks) == "done"}
     ready = []
@@ -485,6 +519,9 @@ def frontier_up(g, marks, root):
         group = set(comp)
         if all(c in done for m in comp for c in g.expand(m) if c not in group):
             ready += sorted((m for m in comp if m not in done), key=order.index)
+    if ranked:
+        counts = above(g, root)
+        ready.sort(key=lambda k: -counts[k])
     return ready, done
 
 
@@ -503,23 +540,95 @@ def between(g, marks, root):
     return [k for k in order if k not in done and k in under and k in over]
 
 
+def heavy_first(g, marks, root, post):
+    """reach(root) depth first, visiting the children with the most open
+    definitions below first: each subtree stays together, the main path
+    comes first.  In postorder (post) each definition follows its uses."""
+    weight = {}
+
+    def kids(k):
+        for c in g.expand(k):
+            if c not in weight:
+                weight[c] = open_below(g, marks, c)
+        return iter(sorted(g.expand(k), key=lambda c: -weight[c]))
+
+    seen, order, stack = {root}, [] if post else [root], [(root, kids(root))]
+    while stack:
+        k, it = stack[-1]
+        for c in it:
+            if c not in seen:
+                seen.add(c)
+                if not post:
+                    order.append(c)
+                stack.append((c, kids(c)))
+                break
+        else:
+            stack.pop()
+            if post:
+                order.append(k)
+    return order
+
+
+def by_branch(g, marks, root, items, up):
+    """items grouped by the child of root they lie under, as (branch,
+    items) pairs: the root itself first, then the branches with the most
+    open definitions below.  A definition shared by several branches goes
+    to the heaviest.  Inside a branch they follow heavy_first, bottom up in
+    postorder."""
+    kids = sorted(g.expand(root), key=lambda c: -open_below(g, marks, c))
+    under = {c: set(g.reach(c)) for c in kids}
+    place = {k: i for i, k in enumerate(heavy_first(g, marks, root, up))}
+    groups = {}
+    for k in items:
+        branch = root if k == root else next(
+            (c for c in kids if k in under[c]), root)
+        groups.setdefault(branch, []).append(k)
+    return [(b, sorted(groups[b], key=place.get))
+            for b in [root] + kids if b in groups]
+
+
 def cmd_next(g, marks, args):
+    root = g.find(args.root)
     find = frontier_up if args.up else frontier
-    frontier_, done = find(g, marks, g.find(args.root))
+    frontier_, done = find(g, marks, root, ranked=args.order == "weight")
     if not frontier_:
         print("everything below the root is reviewed")
         return
-    for k in frontier_[:args.n]:
+    counts = above(g, root) if args.up else {}
+
+    def line(k, indent):
         d = g.defs[k]
         if args.up:
             uses = g.expand(k)
             why = f"  (uses {len(uses)}, all reviewed)" if uses else ""
+            weight = f"[{counts[k]} above]"
         else:
             by = [g.defs[u].name for u in g.users[k] if u in done]
             why = f"  (used by {', '.join(by)})" if by else ""
-        print(f"{MARK[status(d, marks)]} {d.name}  {loc(d)}{why}")
-    if len(frontier_) > args.n:
-        print(f"… and {len(frontier_) - args.n} more")
+            weight = f"[{open_below(g, marks, k)} open below]"
+        print(f"{indent}{MARK[status(d, marks)]} {d.name}  {weight}  {loc(d)}{why}")
+
+    if args.order != "branch":
+        n = args.n or 10
+        for k in frontier_[:n]:
+            line(k, "")
+        if len(frontier_) > n:
+            print(f"… and {len(frontier_) - n} more")
+        return
+    # Each branch under a header; a branch that is itself next is the header.
+    n = args.n or 5
+    for branch, items in by_branch(g, marks, root, frontier_, args.up):
+        if branch in items:
+            line(branch, "")
+            items = [k for k in items if k != branch]
+        else:
+            b = g.defs[branch]
+            print(f"{MARK[status(b, marks)]} {b.name}  "
+                  f"[{open_below(g, marks, branch)} open below]  {loc(b)}")
+        for k in items[:n]:
+            line(k, "  ")
+        if len(items) > n:
+            print(f"  … and {len(items) - n} more")
 
 
 def cmd_show(g, marks, args):
@@ -565,21 +674,57 @@ def cmd_status(g, marks, args):
     print(f"open between reviewed definitions: {len(gap)}")
 
 
+def targets(g, name):
+    """The definitions a name stands for: one definition, or every
+    definition of an Agda file or module."""
+    if name.endswith(".agda"):
+        rel = os.path.relpath(os.path.abspath(name), REPO)
+        module = rel.removesuffix(".agda").replace(os.sep, ".")
+    else:
+        module = name
+    keys = [k for k, d in g.defs.items() if d.module == module]
+    if not keys:
+        if name.endswith(".agda"):
+            sys.exit(f"proof-map: no definitions in {name}")
+        return [g.find(name)]
+    if all(g.defs[k].leaf for k in keys):
+        sys.exit(f"proof-map: {module} is a leaf module; its definitions "
+                 "are not tracked")
+    return sorted(keys, key=lambda k: g.defs[k].line)
+
+
 def cmd_done(g, marks, args):
     today = datetime.date.today().isoformat()
     for name in args.names:
-        d = g.defs[g.find(name)]
-        marks[d.qname] = (d.digest(), today, args.m or "")
-        print(f"✓ {d.qname}")
+        keys = targets(g, name)
+        for k in keys:
+            d = g.defs[k]
+            marks[d.qname] = (d.digest(), today, args.m or "")
+            if len(keys) == 1:
+                print(f"✓ {d.qname}")
+        if len(keys) > 1:
+            print(f"✓ {len(keys)} definitions in {g.defs[keys[0]].path}")
     write_ledger(marks)
 
 
 def cmd_undo(g, marks, args):
     for name in args.names:
-        d = g.defs[g.find(name)]
-        if marks.pop(d.qname, None):
-            print(f"· {d.qname}")
+        keys = targets(g, name)
+        gone = [k for k in keys if marks.pop(g.defs[k].qname, None)]
+        if len(keys) == 1 and gone:
+            print(f"· {g.defs[gone[0]].qname}")
+        elif len(keys) > 1:
+            print(f"· {len(gone)} marks removed in {g.defs[keys[0]].path}")
     write_ledger(marks)
+
+
+def grouped(g, marks, root):
+    """Both next lists by branch, as (branch, top down, bottom up)."""
+    down = dict(by_branch(g, marks, root, frontier(g, marks, root)[0], False))
+    up = dict(by_branch(g, marks, root, frontier_up(g, marks, root)[0], True))
+    order = [root] + sorted(g.expand(root), key=lambda c: -open_below(g, marks, c))
+    return [(b, down.get(b, []), up.get(b, [])) for b in order
+            if b in down or b in up]
 
 
 def cmd_json(g, marks, args, error):
@@ -587,6 +732,7 @@ def cmd_json(g, marks, args, error):
     uses and users, and the number of open definitions below it."""
     root = g.find(args.root)
     below = set(g.reach(root))
+    counts = above(g, root)
     out = {}
     for k, d in g.defs.items():
         if d.leaf:
@@ -603,11 +749,17 @@ def cmd_json(g, marks, args, error):
                        if not g.defs[x].leaf],
             "library": [g.defs[x].name for x in g.deps[k] if g.defs[x].leaf],
             "belowRoot": k in below,
+            "above": counts.get(k, 0),
         }
     json.dump({"root": g.defs[root].qname, "agdaError": error,
                "frontier": [g.defs[k].qname for k in frontier(g, marks, root)[0]],
                "frontierUp": [g.defs[k].qname
                               for k in frontier_up(g, marks, root)[0]],
+               "branches": [
+                   {"branch": g.defs[b].qname,
+                    "down": [g.defs[k].qname for k in down],
+                    "up": [g.defs[k].qname for k in up]}
+                   for b, down, up in grouped(g, marks, root)],
                "between": [g.defs[k].qname for k in between(g, marks, root)],
                "defs": out}, sys.stdout, ensure_ascii=False)
 
@@ -626,19 +778,24 @@ def main():
                    help="the definitions that use ROOT, upwards")
     n = sub.add_parser("next", help="what to review next")
     n.add_argument("root", nargs="?", default=DEFAULT_ROOT)
-    n.add_argument("-n", type=int, default=10)
+    n.add_argument("-n", type=int,
+                   help="how many to list (default 5 per branch, or 10)")
     n.add_argument("--up", action="store_true",
                    help="bottom up: open definitions whose uses are reviewed")
+    n.add_argument("--order", choices=["branch", "weight", "tree"],
+                   default="branch",
+                   help="grouped by branch (default), one list ranked by "
+                        "weight, or one list in tree order")
     s = sub.add_parser("show", help="one definition, its uses and users")
     s.add_argument("name")
     s.add_argument("--src", action="store_true", help="print its source")
     st = sub.add_parser("status", help="progress per module")
     st.add_argument("root", nargs="?", default=DEFAULT_ROOT)
-    d = sub.add_parser("done", help="mark definitions as reviewed")
-    d.add_argument("names", nargs="+")
+    d = sub.add_parser("done", help="mark definitions (or files) as reviewed")
+    d.add_argument("names", nargs="+", help="definitions, Agda files or modules")
     d.add_argument("-m", help="a note")
     u = sub.add_parser("undo", help="remove review marks")
-    u.add_argument("names", nargs="+")
+    u.add_argument("names", nargs="+", help="definitions, Agda files or modules")
     j = sub.add_parser("json", help="the whole map as JSON, for editors")
     j.add_argument("root", nargs="?", default=DEFAULT_ROOT)
     p.add_argument("--cached", action="store_true",
