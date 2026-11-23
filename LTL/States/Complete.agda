@@ -10,7 +10,7 @@
 -- splitting on the next formula with (L6) (splitD).  The non-states are
 -- dropped with ⋁Drop and nonState.  stepEq lines up the shapes: allVecs
 -- (suc n) and splitOn both cons onto a list and append, and agree once chi is
--- applied.  The proof is exponential in |sub P|; LTL.Procedures.CompletePC
+-- applied.  The proof is exponential in |sub P|; LTL.States.CompletePC
 -- proves the same formula with (PC).
 
 open import LTL.Syntax.Formula using (Formula)

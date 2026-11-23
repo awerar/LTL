@@ -5,11 +5,12 @@
 -- Defines the equality test _≡ᵛ_ on valuations, proves it sound and reflexive,
 -- and instantiates LTL.Lib.Nodes at Val with it.  That instance supplies ∈ᵛ,
 -- ≢ᵛ, the hypothesis names (Closed, AllSat, ...) and listBar to the rest of
--- the development; LTL.Countermodel.Walk instantiates LTL.SCC.Graph the same way.
+-- the development; LTL.Countermodel.Walk instantiates LTL.Lib.Graph the same
+-- way.
 
 module LTL.States.Reach where
 
-open import LTL.States.Val public
+open import LTL.Syntax.Val public
 open import LTL.Lib.Bar  public
 
 ------------------------------------------------------------------------

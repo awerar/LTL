@@ -1,14 +1,14 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.OrbitEval -- the Boolean evaluation of formulas on a lasso,
+-- LTL.Semantics.OrbitEval -- the Boolean evaluation of formulas on a lasso,
 -- and its soundness: every derivable formula is true at every position.
 --
 -- The states have any type S, and read s n is the truth value of variable n
 -- in s.  LTL.Countermodel.Lasso takes S to be valuations; LTL.Correct takes
--- it to be LTL.Trusted's Instant.
+-- it to be LTL.Statement's Instant.
 --
 -- evalAt has one clause per constructor: ○ is one step of nextPos and □ A is
--- the conjunction of A over the forward orbit (LTL.Countermodel.Orbit), so the
+-- the conjunction of A over the forward orbit (LTL.Semantics.Orbit), so the
 -- recursion is structural.  It is total on all formulas and positions, so
 -- soundness holds for any derivable C at any position.
 --
@@ -21,9 +21,9 @@
 
 open import LTL.Syntax.Deriv
 
-module LTL.Countermodel.OrbitEval (S : Set) (read : S -> Nat -> Bool) where
+module LTL.Semantics.OrbitEval (S : Set) (read : S -> Nat -> Bool) where
 
-open import LTL.Countermodel.Orbit S
+open import LTL.Semantics.Orbit S
 
 module _ (loop : Pos) where
 

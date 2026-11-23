@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.Countermodel.Lasso -- a fair lasso from v0, and its positions as those
--- of LTL.Countermodel.Orbit at valuations.
+-- of LTL.Semantics.Orbit at valuations.
 --
 -- A position (s , rest) is VALID when rest is a walk in Ust from s back to
 -- b, the last state of the cycle.  Both the start (v0 , rest) and the
@@ -14,7 +14,7 @@
 -- sccLasso (LTL.SCC.SccLasso) builds a lasso from a fair loop of the state
 -- graph.
 --
--- The module also applies LTL.Countermodel.OrbitEval at valuations and
+-- The module also applies LTL.Semantics.OrbitEval at valuations and
 -- re-exports it, so evalAt and eval read formulas on these lassos.
 
 open import LTL.Syntax.Formula using (Formula)
@@ -26,7 +26,7 @@ open import LTL.States.State P
 open import LTL.States.Step P
 open import LTL.States.Closure P
 open import LTL.Countermodel.Walk P
-import LTL.Countermodel.OrbitEval
+import LTL.Semantics.OrbitEval
 
 ------------------------------------------------------------------------
 -- Valid positions
@@ -41,7 +41,7 @@ posIn b (vpos s rest ms wk) = ms
 
 ------------------------------------------------------------------------
 -- The cycle: from loop, a walk to b, and b steps back to loop.  The cycle is
--- split at its head, as in LTL.Trusted's Lasso, which makes nextPos total.
+-- split at its head, as in LTL.Statement's Lasso, which makes nextPos total.
 
 record Cycle : Set where
   constructor mkCycle
@@ -123,7 +123,7 @@ stateAt v0 l i = posState (posIter loop i (v0 , rest))
 readVal : Val -> Nat -> Bool
 readVal v n = valOf v (var n)
 
-open LTL.Countermodel.OrbitEval Val readVal public
+open LTL.Semantics.OrbitEval Val readVal public
   using (evalAt; eval□-at; eval□-intro; eval□-false)
 
 ------------------------------------------------------------------------

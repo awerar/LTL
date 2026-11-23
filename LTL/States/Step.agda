@@ -14,7 +14,7 @@ open import LTL.Syntax.Formula using (Formula)
 
 module LTL.States.Step (P : Formula) where
 
-open import LTL.States.Val
+open import LTL.Syntax.Val
 open import LTL.Lib.Sets
 open import LTL.States.State P
 

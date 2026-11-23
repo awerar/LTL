@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Procedures.CompletePC -- state completeness and (L5) with the
+-- LTL.States.CompletePC -- state completeness and (L5) with the
 -- propositional bookkeeping discharged by (PC).
 --
 --   stateCompletePC = mpChain (□Args (sub P)) (pc tautState)
@@ -19,7 +19,7 @@
 
 open import LTL.Syntax.Formula using (Formula)
 
-module LTL.Procedures.CompletePC (P : Formula) where
+module LTL.States.CompletePC (P : Formula) where
 
 open import LTL.States.Common
 open import LTL.States.Taut

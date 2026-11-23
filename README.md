@@ -20,7 +20,7 @@ implemented.**
   ([LaTeX](docs/m4.tex)): the state-elimination argument.
 - [The SCC decision procedure](docs/m5.pdf)
   ([LaTeX](docs/m5.tex)): the graph certificate argument and comparison.
-- [LTL/Trusted.agda](LTL/Trusted.agda): the specification, a small
+- [LTL/Statement.agda](LTL/Statement.agda): the specification, a small
   hand-checked module stating the LTL semantics and what a decision procedure
   must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for the
   procedure.
@@ -31,15 +31,15 @@ implemented.**
 ## Check the development
 
 Tested with **Agda 2.8.0**. No Agda standard library is needed. From the repository
-root:
+root (`LTL.agda-lib` supplies the include path; interfaces go to `_build/`):
 
 ```sh
-agda -i . LTL/Correct.agda
-agda -i . LTL/Pretty.agda
-agda -i . LTL/Tests/Checks.agda
-agda -i . LTL/Tests/GraphExamples.agda
-agda -i . LTL/Benchmarks/Examples.agda
-agda -i . LTL/Benchmarks/Lecture.agda
+agda LTL/Correct.agda
+agda LTL/Pretty.agda
+agda LTL/Tests/Checks.agda
+agda LTL/Tests/GraphExamples.agda
+agda LTL/Benchmarks/Examples.agda
+agda LTL/Benchmarks/Lecture.agda
 ```
 
 `Checks` and `GraphExamples` hold the computational checks of the core
@@ -52,7 +52,7 @@ method.
 The files use `--safe --without-K --exact-split`. There are no postulates,
 unfinished goals, or termination overrides. The procedures return a derivation
 or a finite lasso countermodel. `LTL/Correct.agda` connects this to the
-semantics of `LTL/Trusted.agda`: `decide` is a `DecisionProcedure`.
+semantics of `LTL/Statement.agda`: `decide` is a `DecisionProcedure`.
 When it answers true, the formula is valid, meaning true at time 0 of every
 lasso (ultimately periodic) interpretation. When it answers false, it returns a
 lasso on which the formula is false. Validity on arbitrary infinite words is
@@ -124,19 +124,20 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 
 | Folder | Modules | What it is |
 |---|---|---|
-| `LTL/` | `Trusted`, `Correct`, `Pretty` | the specification; the proof that the Boolean evaluation is its semantics (so derivable formulas are valid) and that the procedure is a `DecisionProcedure`; readable output |
-| `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes` | foundations without the standard library; inductively finite sets |
-| `LTL/Syntax/` | `Formula`, `Skel`, `Deriv` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
+| `LTL/` | `Statement`, `Correct`, `Pretty` | the specification; the proof that the Boolean evaluation is its semantics (so derivable formulas are valid) and that the procedure is a `DecisionProcedure`; readable output |
+| `LTL/Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes`, `Graph`, `FairGraph` | foundations without the standard library; inductively finite sets; graph search and the generic fair-graph certificate theorem of m5 |
+| `LTL/Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
-| `LTL/States/` | `Val`, `Reach`, `Common`, `State`, `Step`, `Taut`, `Proj`, `Complete`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
-| `LTL/Countermodel/` | `Orbit`, `OrbitEval`, `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
-| `LTL/SCC/` | `Graph`, `SccLasso`, `SccExtract`, `SccSeed` | graph certificates and their application to temporal logic, m5 |
-| `LTL/Procedures/` | `Answer`, `CompletePC`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1 |
+| `LTL/Semantics/` | `Orbit`, `OrbitEval` | positions on a lasso and Boolean evaluation of formulas there |
+| `LTL/States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `Proj`, `Complete`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
+| `LTL/Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
+| `LTL/SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
+| `LTL/Procedures/` | `Answer`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1 |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 
 The modules that work over one fixed formula P (most of `States/`,
-`Countermodel/` and `SCC/`, and `CompletePC`) take it as a module parameter,
+and all of `Countermodel/` and `SCC/`) take it as a module parameter,
 so P is not passed around inside them. `Decide` is parameterised the same way
 by the input Q, and opens them at `¬ Q`. `LTL/Procedures/Everything.agda`
 opens all of these modules without arguments for everyone else, so there

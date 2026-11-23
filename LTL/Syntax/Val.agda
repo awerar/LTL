@@ -1,13 +1,13 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.States.Val -- signed literals, and conjunction and disjunction over a
+-- LTL.Syntax.Val -- signed literals, and conjunction and disjunction over a
 -- list, the pieces of the characteristic formula chi v (LTL.States.State).
 --
 -- A valuation is a List Bool read positionally against sub P.  Since sub P may
 -- repeat formulas, LTL.States.State adds a coherence clause.  The empty
 -- disjunction is ⊥ and the empty conjunction is ⊤.
 
-module LTL.States.Val where
+module LTL.Syntax.Val where
 
 open import LTL.Syntax.Deriv public
 

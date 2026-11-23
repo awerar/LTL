@@ -19,7 +19,7 @@ open import LTL.States.Complete         public
 open import LTL.States.StepLemma        public
 open import LTL.States.Closure          public
 open import LTL.States.Extract          public
-open import LTL.Procedures.CompletePC   public
+open import LTL.States.CompletePC   public
 open import LTL.Countermodel.Walk       public
 open import LTL.Countermodel.Lasso      public
 open import LTL.Countermodel.Hintikka   public

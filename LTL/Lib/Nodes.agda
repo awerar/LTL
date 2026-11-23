@@ -3,9 +3,9 @@
 -- LTL.Lib.Nodes -- finite sets of nodes, for a node type with a sound,
 -- reflexive equality test _≡ᵛ_.
 --
--- The graph layer (LTL.SCC.Graph) uses it at any node type; LTL.States.Reach
--- instantiates it at Val, and that instance is the one the rest of the
--- development sees.  The superscript ᵛ reads "vertex".  Module parameters
+-- The graph layer (LTL.Lib.Graph, LTL.Lib.FairGraph) uses it at any node
+-- type; LTL.States.Reach instantiates it at Val, and that instance is the one
+-- the rest of the development sees.  The superscript ᵛ reads "vertex".  Module parameters
 -- cannot carry fixity, so every use of _≡ᵛ_ here is parenthesised.
 --
 -- LTL.Lib.Sets and LTL.Lib.Bar are imported but not re-exported, so that two
@@ -112,8 +112,8 @@ barOfList {E = E} (suc n) xs le sb =
 -- E.  Removing x from xs passes to  E intersect (R x) , exactly the sub-Bar
 -- that cBar hands over, so the pool of candidates is the Bar's own predicate.
 
--- Naming convention for the searches built on this (the growing closure and
--- the removing graphGo and findTerm of LTL.SCC.Graph):
+-- Naming convention for the searches built on this (the growing closure of
+-- LTL.Lib.Graph, the removing graphGo and findTerm of LTL.Lib.FairGraph):
 --   sb    a subset proof: AllSat E xs, or xs ⊆ ys;
 --   bar   the IFin E the search recurses on;
 --   av    the "available" invariant of a growing search, Avail E ws acc:

@@ -8,7 +8,7 @@
 --
 -- With R the complement of equality: one cannot choose distinct elements of E
 -- forever.  Every search in the development recurses on a Bar, including
--- closure (LTL.SCC.Graph), whose accumulator grows and so has no
+-- closure (LTL.Lib.Graph), whose accumulator grows and so has no
 -- decreasing measure.  Subsets are Boolean predicates, which keeps Bar in Set.
 --
 -- This module is generic: Bar and its closure under union, product and

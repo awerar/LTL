@@ -15,12 +15,12 @@ open import LTL.Lib.Prelude public
 ------------------------------------------------------------------------
 -- Formulas
 --
--- The datatype is LTL.Trusted's, so the procedure runs on exactly the formulas
+-- The datatype is LTL.Statement's, so the procedure runs on exactly the formulas
 -- the trusted statement talks about.  Its constructors are re-exported with
 -- this development's fixities: the prefix operators bind tightest, then ∧, ∨,
 -- ⇒ and ⇔, so  □ A ⇒ A ∧ ○ □ A  is  (□ A) ⇒ (A ∧ (○ (□ A))).
 
-open import LTL.Trusted public
+open import LTL.Statement public
   using (Formula; var)
   renaming (¬_ to infix 30 ¬_; _⇒_ to infixr 20 _⇒_;
             ○_ to infix 30 ○_; □_ to infix 30 □_)

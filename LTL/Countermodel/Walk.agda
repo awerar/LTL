@@ -3,12 +3,13 @@
 -- LTL.Countermodel.Walk -- walks of the state graph, and persistence along
 -- them.
 --
--- A walk is LTL.SCC.Graph's Trail at the edge test step P:
+-- A walk is LTL.Lib.Graph's Trail at the edge test step P:
 --
 --   Trail us v ws x   --  v -> ws_1 -> ... -> ws_n = x, every ws_i in us
 --
--- This module is the one application of LTL.SCC.Graph, and re-exports it, so
--- the lassos and the graph search share one path type.  A P-module gets
+-- This module is the one application of LTL.Lib.Graph and LTL.Lib.FairGraph,
+-- and re-exports both, so the lassos and the graph search share one path
+-- type.  A P-module gets
 -- Trail us v zs w, Cert fs ws, ... from here; an importer outside, opening it
 -- unapplied, gets Trail P us v zs w, Cert P fs ws, ...
 --
@@ -23,9 +24,11 @@ open import LTL.States.Common
 open import LTL.States.State P
 open import LTL.States.Step P
 open import LTL.States.Closure P
-import LTL.SCC.Graph as Graph
+import LTL.Lib.Graph as Graph
+import LTL.Lib.FairGraph as FairGraph
 
 open Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step public
+open FairGraph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step public
 
 ------------------------------------------------------------------------
 -- Fulfilment along a walk

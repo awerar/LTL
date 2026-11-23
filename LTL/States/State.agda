@@ -17,7 +17,7 @@ open import LTL.Syntax.Formula using (Formula)
 
 module LTL.States.State (P : Formula) where
 
-open import LTL.States.Val
+open import LTL.Syntax.Val
 open import LTL.Lib.Sets using (filter-sub)
 
 ------------------------------------------------------------------------

@@ -153,7 +153,7 @@ atomMem (□ B   ∷ As) (there m) e = insF-mono (□ B) (atoms As) _ (atomMem A
 --
 -- □Args collects the A for which □ A occurs in the list: these are the
 -- eventualities.  It lives here, below Deriv, because both the fairness
--- predicates of LTL.SCC.SccLasso and LTL.Procedures.CompletePC need it.
+-- predicates of LTL.SCC.SccLasso and LTL.States.CompletePC need it.
 
 □Args : List Formula -> List Formula
 □Args []           = []
@@ -200,7 +200,7 @@ valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
 -- The skeleton evaluation agrees with any reading f that respects ¬ and ⇒ on
 -- the subformulas of P.  Two instances are used: valOf at a state, where the
 -- hypotheses are (S1) (LTL.States.Closure), and evalAt at a position, where
--- they hold by definition (LTL.Countermodel.OrbitEval).
+-- they hold by definition (LTL.Semantics.OrbitEval).
 
 atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
         -> X ∈ᶠ Ats ≡ true

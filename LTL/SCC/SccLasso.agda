@@ -2,7 +2,7 @@
 
 -- LTL.SCC.SccLasso -- a fair loop of the state graph is a lasso.
 --
--- LTL.SCC.Graph knows nothing about formulas; this module reads its positive
+-- LTL.Lib.FairGraph knows nothing about formulas; this module reads its positive
 -- answer, a FairLoop (a stem, then a Circuit: a non-empty cycle with a witness
 -- on it for every fairness predicate), as a Lasso.  Its application at step P
 -- is made in LTL.Countermodel.Walk, whose Trail is the lasso's path type.

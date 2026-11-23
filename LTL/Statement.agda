@@ -1,6 +1,8 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
-module LTL.Trusted where
+-- This file contains the proof statement, and may only be modified by hand
+
+module LTL.Statement where
   open import Agda.Builtin.Equality
   open import Agda.Builtin.Bool
   open import Agda.Builtin.List

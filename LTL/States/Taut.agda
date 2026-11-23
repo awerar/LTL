@@ -2,7 +2,7 @@
 
 -- LTL.States.Taut -- Boolean facts about how the skeleton evaluation valFrom
 -- reads lit, ⋀, ⋁, chi and beta.  They are the side conditions of the pc
--- nodes built in LTL.Procedures.CompletePC and LTL.Procedures.Decide.  The
+-- nodes built in LTL.States.CompletePC and LTL.Procedures.Decide.  The
 -- one derivation here is mpChain, which discharges the premises of □Chain.
 --
 -- Every lemma fixes one atom list Ats and one row a.  valFrom depends on Ats,
@@ -61,7 +61,7 @@ open import LTL.States.State
 ------------------------------------------------------------------------
 -- The chi of the row the assignment itself gives is true: its literals are
 -- true one by one.  This is the witness disjunct for the tautologies of
--- LTL.Procedures.CompletePC.
+-- LTL.States.CompletePC.
 
 litTrue : (Ats : List Formula) (a : Val) (A : Formula)
        -> valFrom Ats a (lit A (valFrom Ats a A)) ≡ true
@@ -183,7 +183,7 @@ memStSkel Ats a P boxOk =
 ------------------------------------------------------------------------
 -- Hence beta P (St P) is true in any row satisfying (S2): chi P (skelVec Ats
 -- a P) is a disjunct (memStSkel) and is true (chiRowTrue).
--- LTL.Procedures.CompletePC turns this into a one-node derivation.
+-- LTL.States.CompletePC turns this into a one-node derivation.
 
 betaSkel : (Ats : List Formula) (a : Val) (P : Formula) -> □Ok Ats a P
         -> valFrom Ats a (beta P (St P)) ≡ true

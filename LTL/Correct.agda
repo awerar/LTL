@@ -1,28 +1,28 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Correct -- decide meets the specification of LTL.Trusted.
+-- LTL.Correct -- decide meets the specification of LTL.Statement.
 --
 -- A DecisionProcedure answers true only for formulas valid on every lasso, and
 -- false only with a lasso on which the formula fails.  decide answers with
--- ⊢ Q ⊎ LassoCountermodel Q , and the two branches meet Trusted through one
--- bridge: when a Trusted lasso L starts at pos0 and loops back to loop, the
--- Boolean evaluation of LTL.Countermodel.OrbitEval at stage n IS truth at time
+-- ⊢ Q ⊎ LassoCountermodel Q , and the two branches meet Statement through one
+-- bridge: when a Statement lasso L starts at pos0 and loops back to loop, the
+-- Boolean evaluation of LTL.Semantics.OrbitEval at stage n IS truth at time
 -- n of T.interpret L (evalAt-holds, holds-evalAt, by induction on the
 -- formula).  The □ case uses the finite forward orbit: every iterate of a
 -- position is in its orbit, and every member of the orbit is an iterate.
 --
--- ⊢-valid uses the bridge on an arbitrary Trusted lasso, toCountermodel on the
+-- ⊢-valid uses the bridge on an arbitrary Statement lasso, toCountermodel on the
 -- lasso a countermodel reads off; together they give cmUnderivable.  Formula
--- is LTL.Trusted's own datatype, so the statement is about the formulas the
+-- is LTL.Statement's own datatype, so the statement is about the formulas the
 -- procedure runs on.
 
 module LTL.Correct where
 
 open import LTL.Procedures.Everything public
-import LTL.Trusted as T
+import LTL.Statement as T
 open T using (_,_⊨_)
-import LTL.Countermodel.Orbit
-import LTL.Countermodel.OrbitEval
+import LTL.Semantics.Orbit
+import LTL.Semantics.OrbitEval
 
 ------------------------------------------------------------------------
 -- The bridge.  States have any type S, and read gives the instant of a state;
@@ -31,8 +31,8 @@ import LTL.Countermodel.OrbitEval
 module _ {S : Set} (read : S -> T.Instant) where
 
   private
-    module O = LTL.Countermodel.Orbit S
-    module E = LTL.Countermodel.OrbitEval S read
+    module O = LTL.Semantics.Orbit S
+    module E = LTL.Semantics.OrbitEval S read
 
   toPosition : O.Pos -> T.Position
   toPosition (s , ws) = T.at (read s) (map read ws)
@@ -118,7 +118,7 @@ module _ {S : Set} (read : S -> T.Instant) where
                          (holds-evalAt A (t + n) (h t))))
 
 ------------------------------------------------------------------------
--- Soundness: a derivable formula is valid.  A Trusted lasso l is a lasso of
+-- Soundness: a derivable formula is valid.  A Statement lasso l is a lasso of
 -- instants, read by the identity, from T.initial l back to T.Lasso.loop l;
 -- OrbitEval's soundness holds there.
 
@@ -127,7 +127,7 @@ module _ {S : Set} (read : S -> T.Instant) where
   evalAt-holds read loop l pos0
     (cong (T.at _) (sym (map-id (T.Position.rest (T.Lasso.loop l)))))
     (cong (T.at _) (sym (map-id (T.Position.rest (T.initial l)))))
-    A zero (LTL.Countermodel.OrbitEval.sound T.Instant read loop d pos0)
+    A zero (LTL.Semantics.OrbitEval.sound T.Instant read loop d pos0)
   where
     read : T.Instant -> T.Instant
     read i = i
@@ -137,8 +137,8 @@ module _ {S : Set} (read : S -> T.Instant) where
     pos0 = T.Position.now (T.initial l) , T.Position.rest (T.initial l)
 
 ------------------------------------------------------------------------
--- A countermodel is a Trusted countermodel.  Its lasso, read through readVal
--- (¬ Q), is a Trusted lasso: start followed by rest, then the cycle from loop
+-- A countermodel is a Statement countermodel.  Its lasso, read through readVal
+-- (¬ Q), is a Statement lasso: start followed by rest, then the cycle from loop
 -- for ever.  Q is false at stage 0 (falseAtStart), so it is not true at
 -- time 0.
 
@@ -169,7 +169,7 @@ cmUnderivable Q c d with toCountermodel Q c
 ... | T.counter L notQ = notQ (⊢-valid d L)
 
 ------------------------------------------------------------------------
--- decide as a Trusted DecisionProcedure.  The test is which branch it took:
+-- decide as a Statement DecisionProcedure.  The test is which branch it took:
 -- a derivation is valid by ⊢-valid, and a countermodel translates by
 -- toCountermodel.
 

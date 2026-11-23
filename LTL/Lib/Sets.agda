@@ -177,9 +177,9 @@ map-mem-inv f (x ∷ xs) here      = x , here , refl
 map-mem-inv f (x ∷ xs) (there m) = there-∃ (map-mem-inv f xs m)
 
 ------------------------------------------------------------------------
--- The kinds of step in a certificate of LTL.SCC.Graph, one per constructor of
--- Cert.  Declared here, outside that module, so that the type does not depend
--- on its edge test.
+-- The kinds of step in a certificate of LTL.Lib.FairGraph, one per constructor
+-- of Cert.  Declared here, outside that module, so that the type does not
+-- depend on its edge test.
 
 data CertStep : Set where
   removedSink removedBlock emptied : CertStep

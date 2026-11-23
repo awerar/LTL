@@ -19,7 +19,7 @@
 -- it from an assignment to the atoms, and StCand has exactly the members of
 -- St (8192 candidates become 128 for c5 of LTL.Tests.Checks).
 -- Then the successor closure of the states containing P, by the growing
--- search of LTL.SCC.Graph.  That search GROWS its accumulator, so it
+-- search of LTL.Lib.Graph.  That search GROWS its accumulator, so it
 -- recurses on a Bar (vecIFin) rather than a length.
 
 open import LTL.Syntax.Formula using (Formula)
@@ -33,7 +33,7 @@ open import LTL.States.Step P
 
 -- The growing search, at the edge test step.  LTL.Countermodel.Walk makes
 -- the application the other P-modules see; this one stays private.
-open import LTL.SCC.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step
+open import LTL.Lib.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step
   using (closure; closureIn; closureSeed; closureClosed)
 
 ------------------------------------------------------------------------
@@ -147,7 +147,7 @@ stStCand {v} m = filter-true isState cands inCands st
 
 ------------------------------------------------------------------------
 -- The successor closure of the states containing P: the growing search
--- closure of LTL.SCC.Graph, seeded by "contains P", over StCand.  Each round
+-- closure of LTL.Lib.Graph, seeded by "contains P", over StCand.  Each round
 -- adds a new vector of length |sub P|, and vecBar says that cannot go on
 -- forever.
 

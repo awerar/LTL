@@ -318,7 +318,7 @@ refuteTrue false no = refl
 ------------------------------------------------------------------------
 -- Lists
 
--- Agda.Builtin.List's, which is also the List of LTL.Trusted (a Period there
+-- Agda.Builtin.List's, which is also the List of LTL.Statement (a Period there
 -- is a List Instant); it declares _∷_ infixr 5 itself.
 
 open import Agda.Builtin.List public using (List; []; _∷_)

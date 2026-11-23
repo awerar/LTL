@@ -1,9 +1,9 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Tests.GraphExamples -- the computational checks of LTL.SCC.Graph, at
--- Node = Nat with _≡ⁿ_.
+-- LTL.Tests.GraphExamples -- the computational checks of LTL.Lib.Graph and
+-- LTL.Lib.FairGraph, at Node = Nat with _≡ⁿ_.
 --
--- LTL.SCC.Graph is parameterised by its node type, so its checks live here.
+-- Both are parameterised by their node type, so their checks live here.
 -- Nothing in the graph layer reads a node except through the equality test,
 -- so the same fairGraph that runs on valuations runs here on numbers.  The
 -- edge test is left as a parameter, so every name takes the graph first.
@@ -11,7 +11,8 @@
 module LTL.Tests.GraphExamples where
 
 open import LTL.Lib.Prelude
-open import LTL.SCC.Graph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
+open import LTL.Lib.Graph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
+open import LTL.Lib.FairGraph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
 open import LTL.Lib.Nodes _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl using (_∈ᵛ_; Edges; Pred)
 open import LTL.Lib.Sets using (CertStep; removedSink; removedBlock; emptied)
 

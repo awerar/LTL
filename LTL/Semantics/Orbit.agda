@@ -1,6 +1,6 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.Countermodel.Orbit -- positions on a lasso and their forward orbits, for
+-- LTL.Semantics.Orbit -- positions on a lasso and their forward orbits, for
 -- any type S of states.
 --
 -- A position is a pair (s , rest): the current state, and the states still to
@@ -10,7 +10,7 @@
 --    (s , w ∷ ws)  |->  (w , ws)          walk on
 --    (s , [])      |->  loop              loop back
 --
--- which is Position, step and Lasso.loop of LTL.Trusted.  This avoids index
+-- which is Position, step and Lasso.loop of LTL.Statement.  This avoids index
 -- arithmetic: the forward orbit of pos is literally  stretch pos ++ loopStretch
 -- (orbit-split), and everything about orbits follows from that equation.
 --
@@ -19,10 +19,10 @@
 -- rule, so definitions that inspect a Pos match it as a pair.
 --
 -- LTL.Countermodel.Lasso instantiates S at valuations, and LTL.Correct at
--- LTL.Trusted's Instant; LTL.Countermodel.OrbitEval evaluates formulas on
+-- LTL.Statement's Instant; LTL.Semantics.OrbitEval evaluates formulas on
 -- either.
 
-module LTL.Countermodel.Orbit (S : Set) where
+module LTL.Semantics.Orbit (S : Set) where
 
 open import LTL.Lib.Prelude
 

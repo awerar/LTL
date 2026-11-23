@@ -6,7 +6,7 @@
 -- The graph search covers all of Ust P, so a fair component can lie anywhere
 -- in it; this lemma gives the countermodel a start that contains P, with a
 -- stem from there to the component.  Ust is a growing search seeded by
--- containsP, so closureSeeded (LTL.SCC.Graph) gives a seed and a trail
+-- containsP, so closureSeeded (LTL.Lib.Graph) gives a seed and a trail
 -- inside StCand P, and seedTrail lifts the trail into Ust using ustClosed.
 
 open import LTL.Syntax.Formula using (Formula)

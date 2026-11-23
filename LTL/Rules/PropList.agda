@@ -4,14 +4,14 @@
 -- implying each member implies ⋀, (L5) ⋁ elimination, and (L6) splitting a
 -- disjunction on a formula.
 --
--- ⋀ and ⋁ are from LTL.States.Val, with ⋀ [] = ⊤ and ⋁ [] = ⊥.  ⋁Elim is the
+-- ⋀ and ⋁ are from LTL.Syntax.Val, with ⋀ [] = ⊤ and ⋁ [] = ⊥.  ⋁Elim is the
 -- workhorse of the refutations: dropping refuted disjuncts and eliminating
 -- beta over a set of states are both instances of it.
 
 module LTL.Rules.PropList where
 
 open import LTL.Rules.Prop public
-open import LTL.States.Val  public
+open import LTL.Syntax.Val  public
 
 ------------------------------------------------------------------------
 -- Negation introduction under an antecedent: from  P ⇒ (C ⇒ B)  and

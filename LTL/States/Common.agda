@@ -7,7 +7,7 @@
 -- an importer who opens them unapplied does not see a spurious P argument:
 -- the refutation lemmas, projections out of litList, and the disjunction over
 -- all valuations.  It re-exports the derived rules, valuations as a set
--- (LTL.States.Reach) and positions (LTL.Countermodel.Orbit at Val), so a
+-- (LTL.States.Reach) and positions (LTL.Semantics.Orbit at Val), so a
 -- P-module opens this module and its P-modules.
 
 module LTL.States.Common where
@@ -15,8 +15,8 @@ module LTL.States.Common where
 open import LTL.Rules.Temporal public
 open import LTL.States.Reach   public
 
--- Positions and orbits of LTL.Countermodel.Orbit, at valuations.
-open import LTL.Countermodel.Orbit Val public
+-- Positions and orbits of LTL.Semantics.Orbit, at valuations.
+open import LTL.Semantics.Orbit Val public
 
 ------------------------------------------------------------------------
 -- Refutation from a formula and its negation

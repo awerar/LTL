@@ -329,7 +329,7 @@ check-K5 = refl
 -- cmShape says where the run starts repeating: with cmShape Q c = r , n the
 -- run is  v0 , rest_0 , ... , rest_{r-1} , then the last n of those forever,
 -- so it is periodic from stage  1 + r - n  with period n.  cmTrace uses the
--- evaluation that LTL.Correct carries over to Trusted's semantics, so
+-- evaluation that LTL.Correct carries over to Statement's semantics, so
 -- "cmTrace Q c Q 1 = false ∷ []" and cmUnderivable are the same fact.
 
 ------------------------------------------------------------------------

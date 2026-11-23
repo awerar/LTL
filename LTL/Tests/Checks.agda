@@ -5,14 +5,14 @@
 -- One section per module, in dependency order, with small example formulas
 -- (benAri, ◇P, bnb, c5, ...), the states and lassos computed for them, and the
 -- answers of decide.  LTL.Tests.GraphExamples holds the checks of
--- LTL.SCC.Graph.
+-- LTL.Lib.Graph and LTL.Lib.FairGraph.
 
 module LTL.Tests.Checks where
 
 open import LTL.Pretty    public
 open import LTL.Procedures.Everything public
 open import LTL.Correct   public
-import LTL.Trusted as T
+import LTL.Statement as T
 
 ------------------------------------------------------------------------
 -- LTL.Syntax.Formula (subformulas)
@@ -33,7 +33,7 @@ subBenAri-dup : nth (sub benAri) 1 ⊥ ≡ nth (sub benAri) 4 ⊥
 subBenAri-dup = refl
 
 ------------------------------------------------------------------------
--- LTL.States.Val
+-- LTL.Syntax.Val
 
 -- sub benAri has length 6, so there are 64 valuations to filter.
 
@@ -228,7 +228,7 @@ decide-◇P-lasso = refl
 ◇P-shape = refl
 
 -- p fails at every stage, and so does ◇ p, the formula decided.  cmTrace uses
--- the evaluation that LTL.Correct carries over to Trusted's semantics, so this
+-- the evaluation that LTL.Correct carries over to Statement's semantics, so this
 -- and cmUnderivable are the same fact from two ends.
 
 ◇P-trace : cmTrace ◇P ◇P-cm (var zero) 4 ≡ false ∷ false ∷ false ∷ false ∷ []
