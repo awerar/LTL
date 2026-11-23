@@ -42,7 +42,10 @@ exports.run = async () => {
       for (const c of api.tree.getChildren(el)) walk(c);
     };
     walk(root);
-    const below = Object.values(api.data.defs).filter(d => d.belowRoot).length;
+    // The tree does not expand into Base and Prelude, which are folded.
+    const below = Object.values(api.data.defs).filter(d => d.belowRoot && !d.folded).length;
+    log(`folded (Base, Prelude) under the root: ` +
+      Object.values(api.data.defs).filter(d => d.belowRoot && d.folded).length);
     log(`expanded ${seen.size} distinct definitions (belowRoot: ${below}), ${ids.size} items`);
     assert.strictEqual(seen.size, below);
 
@@ -258,8 +261,19 @@ exports.run = async () => {
     assert(decos.every(x => x.badge.length === 1 || x.badge.length === 2), 'badge too long');
     const lib = deco(vscode.Uri.file(path.join(folder, 'LTL/1-Lib')));
     const prelude = deco(vscode.Uri.file(path.join(folder, 'LTL/1-Lib/Prelude.agda')));
-    log(`explorer: ${decos.length} decorations; LTL/1-Lib "${lib.badge}" | ${lib.tooltip}; Prelude: ${prelude}`);
-    assert.strictEqual(prelude, undefined);
+    log(`explorer: ${decos.length} decorations; LTL/1-Lib "${lib.badge}" | ${lib.tooltip}; ` +
+      `Prelude "${prelude && prelude.badge}" | ${prelude && prelude.tooltip}`);
+    assert(prelude && prelude.badge, 'Prelude has no badge');
+
+    // A Prelude definition is reviewable: lenses, a mark, and a tree when focused.
+    const preludeUri = vscode.Uri.file(path.join(folder, 'LTL/1-Lib/Prelude.agda'));
+    const pLenses = await vscode.commands.executeCommand('vscode.executeCodeLensProvider', preludeUri);
+    const sym = Object.keys(api.data.defs).find(k => k.endsWith('.Base.sym'));
+    await api.mark([sym], true);
+    assert.strictEqual(api.data.defs[sym].status, 'done');
+    await api.mark([sym], false);
+    log(`Prelude: ${pLenses.filter(l => l.command && l.command.command === 'proofMap.toggleReview').length} ` +
+      `definitions with lenses; sym marked and unmarked`);
     await api.mark(fresh, false);
     assert(inBar().every(([k, d]) => fresh.includes(k) ? d.status !== 'done' : true));
     log(`after undo: ${inBar().filter(([, d]) => d.status === 'done').length} marked; ` +

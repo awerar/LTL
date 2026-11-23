@@ -309,8 +309,8 @@ class NextProvider {
 // Explorer decorations: per Agda file (and folder), a badge with the number
 // of open definitions, ✓ when all are reviewed (green) and ~ when some
 // changed since their review (yellow). Partly reviewed files get no colour,
-// so git's colours still show. Leaf modules have no tracked definitions and
-// get nothing.
+// so git's colours still show. Untracked modules (builtins, Statement) get
+// nothing.
 
 class Decorations {
   constructor() {
@@ -743,8 +743,20 @@ function activate(context) {
     }
     const el = tree.pathTo(qn);
     if (!el) {
+      const d = def(qn);
+      const name = d ? d.name : qn;
+      // Base and Prelude are tracked but folded: the tree only enters them
+      // when focused on one of their definitions.
+      if (d && d.folded && !(def(treeRoot()) && def(treeRoot()).folded)) {
+        vscode.window.showInformationMessage(
+          `Proof Map: ${name} is in ${moduleShort(d)}, which the tree does not expand. ` +
+          'Focus on it to see its tree, or use Show Users.', 'Focus', 'Show Users')
+          .then(c => c === 'Focus' ? vscode.commands.executeCommand('proofMap.setRoot', qn)
+            : c === 'Show Users' ? showUsers(qn) : undefined);
+        return;
+      }
       vscode.window.showInformationMessage(
-        `Proof Map: ${def(qn) ? def(qn).name : qn} is not under the current root` +
+        `Proof Map: ${name} is not under the current root` +
         (openOnly() ? ' (or is hidden as reviewed)' : '') + '.');
       return;
     }

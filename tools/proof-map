@@ -31,8 +31,11 @@ The graph comes from `agda --html` on LTL/Correct.agda (written to
 _build/proof-map/), whose output links every name to its definition site.  A
 definition owns the lines of its signature, clauses and `where` block; the
 constructors of a datatype and the fields of a record belong to it, so using
-`vpos` is a dependency on `ValidPos`.  Names in the LEAF modules (Agda's
-builtins, Base, Prelude, the read-only Statement) are not expanded.
+`vpos` is a dependency on `ValidPos`.  Agda's builtins and the read-only
+Statement are not tracked.  Base and Prelude are tracked but folded: the tree
+and the next lists do not go into them from the rest of the proof, so they
+are reviewed by file (or by focusing on one of their definitions), and
+status counts them with the proof that uses them.
 
 Reviews are recorded in docs/review.tsv with a hash of the definition's
 source, comments and spacing removed.  A definition is reviewed (✓) while
@@ -60,7 +63,11 @@ LEDGER = os.path.join(REPO, "docs", "review.tsv")
 # after the review can be shown against it.  Local, like the HTML.
 SNAPSHOTS = os.path.join(REPO, "_build", "proof-map-reviewed")
 DEFAULT_ROOT = "decideCorrect"
-LEAF_MODULES = ("Agda.", "LTL.1-Lib.Base", "LTL.1-Lib.Prelude", "LTL.Statement")
+# Not tracked at all: Agda's builtins and the hand-checked specification.
+UNTRACKED = ("Agda.", "LTL.Statement")
+# Tracked, but folded: used nearly everywhere, so the tree does not expand
+# into them from the rest of the proof (only from inside them).
+FOLDED = ("LTL.1-Lib.Base", "LTL.1-Lib.Prelude")
 
 # Token classes that name a definition (Bound, Module, Symbol, ... do not).
 DEF_CLASSES = {"Function", "Datatype", "Record", "InductiveConstructor",
@@ -144,7 +151,13 @@ class Def:
 
     @property
     def leaf(self):
-        return self.module.startswith(LEAF_MODULES)
+        """Not tracked: builtins and Statement."""
+        return self.module.startswith(UNTRACKED)
+
+    @property
+    def folded(self):
+        """Tracked, but not expanded from outside: Base and Prelude."""
+        return self.module.startswith(FOLDED)
 
     def digest(self):
         return hashlib.sha1("\n".join(self.text).encode()).hexdigest()[:12]
@@ -247,7 +260,7 @@ class Graph:
             if "Keyword" in t.cls:
                 break
             given = True
-            if t.refers() and not t.refers()[0].startswith(LEAF_MODULES):
+            if t.refers() and not t.refers()[0].startswith(UNTRACKED + FOLDED):
                 args.append(t)
         if given and target != module:
             self.applied.add((module, target))
@@ -298,11 +311,33 @@ class Graph:
                 d.name += f"@{d.line}"
 
     def expand(self, key):
-        return [k for k in self.deps.get(key, []) if not self.defs[k].leaf]
+        """The tree's children of key: its tracked uses, without folded
+        ones unless key is folded itself."""
+        inside = self.defs[key].folded
+        return [k for k in self.deps.get(key, []) if not self.defs[k].leaf
+                and (inside or not self.defs[k].folded)]
+
+    def library(self, key):
+        """The uses of key the tree does not show."""
+        return [k for k in self.deps.get(key, []) if k not in self.expand(key)]
+
+    def tracked_below(self, key):
+        """reach(key) and the folded definitions it uses, directly or
+        through each other."""
+        order = self.reach(key)
+        seen = set(order)
+        todo = list(order)
+        while todo:
+            for c in self.deps.get(todo.pop(), []):
+                if c not in seen and self.defs[c].folded:
+                    seen.add(c)
+                    order.append(c)
+                    todo.append(c)
+        return order
 
     def reach(self, key):
-        """Every non-leaf definition reachable from key, key included,
-        in depth-first preorder."""
+        """Every definition the tree shows below key, key included, in
+        depth-first preorder."""
         seen, order, stack = set(), [], [key]
         while stack:
             k = stack.pop()
@@ -647,6 +682,9 @@ def cmd_show(g, marks, args):
     for title, keys in (("uses", g.deps[k]), ("used by", g.users[k])):
         inner = [g.defs[x] for x in keys if not g.defs[x].leaf]
         leaves = [g.defs[x].name for x in keys if g.defs[x].leaf]
+        if title == "uses":
+            inner = [g.defs[x] for x in g.expand(k)]
+            leaves = [g.defs[x].name for x in g.library(k)]
         print(f"{title}:")
         for e in inner:
             print(f"  {MARK[status(e, marks)]} {e.name}  {loc(e)}")
@@ -661,7 +699,7 @@ def cmd_show(g, marks, args):
 
 
 def cmd_status(g, marks, args):
-    order = g.reach(g.find(args.root))
+    order = g.tracked_below(g.find(args.root))
     per = {}
     for k in order:
         d = g.defs[k]
@@ -895,8 +933,8 @@ def targets(g, name):
             sys.exit(f"proof-map: no definitions in {name}")
         return [g.find(name)]
     if all(g.defs[k].leaf for k in keys):
-        sys.exit(f"proof-map: {module} is a leaf module; its definitions "
-                 "are not tracked")
+        sys.exit(f"proof-map: {module} is not tracked (builtins and the "
+                 "specification are not reviewed here)")
     return sorted(keys, key=lambda k: g.defs[k].line)
 
 
@@ -946,10 +984,10 @@ def orphan_json(g, marks, qname):
 
 
 def cmd_json(g, marks, args, error):
-    """Every definition outside the leaf modules, with its status, its
-    uses and users, and the number of open definitions below it."""
+    """Every tracked definition, with its status, its uses and users, and
+    the number of open definitions below it in the tree."""
     root = g.find(args.root)
-    below = set(g.reach(root))
+    below = set(g.tracked_below(root))
     counts = above(g, root)
     out = {}
     for k, d in g.defs.items():
@@ -965,7 +1003,8 @@ def cmd_json(g, marks, args, error):
             "uses": [g.defs[x].qname for x in g.expand(k)],
             "usedBy": [g.defs[x].qname for x in g.users[k]
                        if not g.defs[x].leaf],
-            "library": [g.defs[x].name for x in g.deps[k] if g.defs[x].leaf],
+            "library": [g.defs[x].name for x in g.library(k)],
+            "folded": d.folded,
             "belowRoot": k in below,
             "above": counts.get(k, 0),
         }

@@ -158,9 +158,15 @@ hash of each definition's source (comments and spacing are ignored). When the
 code of a reviewed definition changes, its mark shows as stale (`~`) until it
 is marked again. `stale` lists these, and also marks whose definition no
 longer exists (renamed or removed), with the definition it was most likely
-renamed to; `undo` with the old full name removes such a mark. Names from
-`Base`, `Prelude`, `Statement` and Agda's
-builtins are treated as leaves.
+renamed to; `undo` with the old full name removes such a mark.
+
+`Statement` (the hand-checked specification) and Agda's builtins are not
+tracked. `Base` and `Prelude` are tracked but folded: they are used almost
+everywhere, so the tree and the next lists do not go into them from the rest
+of the proof. Review them by file (`done LTL/1-Lib/Prelude.agda`, or the
+CodeLenses and badges in VS Code), or focus on one of their definitions to
+see its tree within the library. `status` counts them with the proof that
+uses them.
 
 ### In VS Code
 
