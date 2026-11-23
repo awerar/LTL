@@ -223,8 +223,8 @@ module _ (S : Pred) (ws : List Node) where
 
   roundIn : (acc : List Node) -> acc ⊆ ws -> addRound acc ⊆ ws
   roundIn acc sb z mz =
-    sumElim (λ m1 -> filter-sub (missing acc) ws m1) (λ m2 -> sb z m2)
-            (∈-++⁻ (filter (missing acc) ws) acc mz)
+    [ filter-sub (missing acc) ws , sb z ]
+      (∈-++⁻ (filter (missing acc) ws) acc mz)
 
 -- z is reached inside ws from a seed: a member of ws satisfying S.
 
@@ -243,11 +243,10 @@ roundSeeded : (S : Pred) (ws acc : List Node)
            -> (∀[ z ∈ acc ] Seeded S ws z)
            -> ∀[ z ∈ addRound S ws acc ] Seeded S ws z
 roundSeeded S ws acc sd z m =
-  sumElim fromNew (λ m2 -> sd z m2)
-          (∈-++⁻ (filter (missing S ws acc) ws) acc m)
+  [ fromNew , sd z ] (∈-++⁻ (filter (missing S ws acc) ws) acc m)
   where
     fromNew : z ∈ filter (missing S ws acc) ws -> Seeded S ws z
-    fromNew m1 = sumElim isSeed viaY (∨ᵇ-true (S z) (any (λ y -> G y z) acc) want)
+    fromNew m1 = [ isSeed , viaY ] (∨ᵇ-true (S z) (any (λ y -> G y z) acc) want)
       where
         mzw : z ∈ ws
         mzw = filter-sub (missing S ws acc) ws m1

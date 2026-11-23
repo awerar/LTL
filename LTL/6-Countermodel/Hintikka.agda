@@ -48,8 +48,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
               -> valOf (posState pos) (□ A) ≡ false
               -> ∃[ q ∈ orbit loop pos ] valOf (posState q) A ≡ false
   globalFulfil (vpos s rest ms wk) A mA pend =
-    sumElim onStem onCycle
-            (trailPersist Ust A (evSub mA) wk pend)
+    [ onStem , onCycle ] (trailPersist Ust A (evSub mA) wk pend)
     where
       place : (q : Pos) -> q ∈ orbit loop (s , rest) -> {z : Val}
            -> posState q ≡ z -> valOf z A ≡ false

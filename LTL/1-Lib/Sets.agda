@@ -74,9 +74,9 @@ filter-sub : {A : Set} (p : A -> Bool) (xs : List A)
           -> ∀ⁱ[ x ∈ filter p xs ] x ∈ xs
 filter-sub p []       ()
 filter-sub p (y ∷ ys) m =
-  sumElim (λ e  -> subst (λ z -> z ∈ y ∷ ys) (sym e) here)
-          (λ m' -> there (filter-sub p ys m'))
-          (filterCons-case (p y) (filter p ys) m)
+  [ (λ e  -> subst (λ z -> z ∈ y ∷ ys) (sym e) here)
+  , (λ m' -> there (filter-sub p ys m'))
+  ] (filterCons-case (p y) (filter p ys) m)
 
 filterCons-prop : {A : Set} {p : A -> Bool} {x y : A} (b : Bool) -> p y ≡ b
                -> (ys : List A) -> x ∈ filterCons b y ys
@@ -136,9 +136,8 @@ any-true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
         -> ∃[ x ∈ xs ] p x ≡ true
 any-true p []       ()
 any-true p (y ∷ ys) e =
-  sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> there-∃ (any-true p ys e2))
-          (∨ᵇ-true (p y) (any p ys) e)
+  [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (any-true p ys e2)) ]
+    (∨ᵇ-true (p y) (any p ys) e)
 
 any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> any p xs ≡ true

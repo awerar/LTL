@@ -54,7 +54,7 @@ barUnion {A} {R} {G} (cBar hg) bh = inner bh
       where
         pick : (x : A) -> G x ∨ᵇ H x ≡ true
             -> Bar R (λ y -> (G y ∨ᵇ H y) ∧ᵇ R x y)
-        pick x ex = sumElim fromG fromH (∨ᵇ-true (G x) (H x) ex)
+        pick x ex = [ fromG , fromH ] (∨ᵇ-true (G x) (H x) ex)
           where
             fromG : G x ≡ true
                  -> Bar R (λ y -> (G y ∨ᵇ H y) ∧ᵇ R x y)

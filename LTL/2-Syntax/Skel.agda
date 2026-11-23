@@ -59,10 +59,10 @@ allVecs-len : (n : Nat) -> ∀[ v ∈ allVecs n ] length v ≡ n
 allVecs-len zero    v here       = refl
 allVecs-len zero    v (there ())
 allVecs-len (suc n) v m =
-  sumElim (consAll-len true  (allVecs n) (allVecs-len n) v)
-          (consAll-len false (allVecs n) (allVecs-len n) v)
-          (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVecs n))
-                 (map (λ bs -> false ∷ bs) (allVecs n)) m)
+  [ consAll-len true  (allVecs n) (allVecs-len n) v
+  , consAll-len false (allVecs n) (allVecs-len n) v
+  ] (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVecs n))
+           (map (λ bs -> false ∷ bs) (allVecs n)) m)
 
 ------------------------------------------------------------------------
 -- Lookup by first occurrence.  A member's first index is in range and

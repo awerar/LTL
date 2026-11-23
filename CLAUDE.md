@@ -27,9 +27,10 @@ derivation or a certified finite lasso countermodel.
   reserves `→`. Lemma names use the same symbols (`⇒Trans`, `□Elim`, `k□`).
   **Until is not implemented** (it is the thesis goal).
 - Prelude notation follows Agda's standard library: `x ≡ y` (`sym`, `trans`,
-  `cong`, `subst`), `A ⊎ B` (`inl`/`inr`), `Σ[ x ∈ A ] B` and `A × B` (both
-  built with `_,_`; `fst`/`snd`; `Statement`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`, `xs ++ ys`, `x ∈ xs`
-  (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
+  `cong`, `subst`), `A ⊎ B` (`inl`/`inr`; case analysis `[ f , g ] x`, with
+  lambda branches parenthesised), `Σ[ x ∈ A ] B` and `A × B` (both built with
+  `_,_`; `fst`/`snd`; `Statement`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`,
+  `xs ++ ys`, `x ∈ xs` (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
   `if b then x else y`, and list helpers `filter any all null concat`.
   Quantifiers bounded by a list: `∀[ x ∈ xs ] B` for `(x : _) -> x ∈ xs -> B`,
   `∀ⁱ[ x ∈ xs ] B` for `{x : _} -> x ∈ xs -> B` (x read off the membership

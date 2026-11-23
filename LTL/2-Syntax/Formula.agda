@@ -176,9 +176,9 @@ sub-mono (¬ A)   here       k = k
 sub-mono (¬ A)   (there h)  k = there (sub-mono A h k)
 sub-mono (A ⇒ B) here       k = k
 sub-mono (A ⇒ B) (there h)  k =
-  there (sumElim (λ h1 -> ∈-++⁺ˡ (sub A) (sub B) (sub-mono A h1 k))
-                 (λ h2 -> ∈-++⁺ʳ (sub A) (sub B) (sub-mono B h2 k))
-                 (∈-++⁻ (sub A) (sub B) h))
+  there ([ (λ h1 -> ∈-++⁺ˡ (sub A) (sub B) (sub-mono A h1 k))
+         , (λ h2 -> ∈-++⁺ʳ (sub A) (sub B) (sub-mono B h2 k))
+         ] (∈-++⁻ (sub A) (sub B) h))
 sub-mono (○ A)   here       k = k
 sub-mono (○ A)   (there h)  k = there (sub-mono A h k)
 sub-mono (□ A)   here       k = k

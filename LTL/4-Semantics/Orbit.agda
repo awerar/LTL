@@ -181,14 +181,14 @@ module _ (loop : Pos) where
   stretch-next (s , [])     q (there ())
   stretch-next (s , w ∷ ws) q here      = inl (there (stretch-head (w , ws)))
   stretch-next (s , w ∷ ws) q (there m) =
-    sumElim (λ mm -> inl (there mm)) inr (stretch-next (w , ws) q m)
+    [ (λ mm -> inl (there mm)) , inr ] (stretch-next (w , ws) q m)
 
   orbitClosed : (pos : Pos) -> ∀[ q ∈ orbit pos ] nextPos q ∈ orbit pos
   orbitClosed pos q m =
     subst (λ L -> nextPos q ∈ L) (sym (orbit-split pos))
-          (sumElim onStretch onCycle
-                   (∈-++⁻ (stretch pos) (stretch loop)
-                          (subst (λ L -> q ∈ L) (orbit-split pos) m)))
+          ([ onStretch , onCycle ]
+             (∈-++⁻ (stretch pos) (stretch loop)
+                    (subst (λ L -> q ∈ L) (orbit-split pos) m)))
     where
       intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ stretch loop
       intoCycle e =
@@ -196,12 +196,12 @@ module _ (loop : Pos) where
               (∈-++⁺ʳ (stretch pos) (stretch loop) (stretch-head loop))
 
       onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ stretch loop
-      onStretch mq = sumElim (λ mm -> ∈-++⁺ˡ (stretch pos) (stretch loop) mm)
-                             intoCycle (stretch-next pos q mq)
+      onStretch mq = [ ∈-++⁺ˡ (stretch pos) (stretch loop) , intoCycle ]
+                       (stretch-next pos q mq)
 
       onCycle : q ∈ stretch loop -> nextPos q ∈ stretch pos ++ stretch loop
-      onCycle mq = sumElim (λ mm -> ∈-++⁺ʳ (stretch pos) (stretch loop) mm)
-                           intoCycle (stretch-next loop q mq)
+      onCycle mq = [ ∈-++⁺ʳ (stretch pos) (stretch loop) , intoCycle ]
+                     (stretch-next loop q mq)
 
   iter∈orbit : (pos : Pos) (t : Nat) -> posIter pos t ∈ orbit pos
   iter∈orbit pos zero    = orbitHead pos

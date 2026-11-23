@@ -66,7 +66,7 @@ provableSCC c =
 -- The shape of the certificate: removedBlock, removedSink, then emptied.
 
 sccShape : List CertStep
-sccShape = sumElim (λ fi -> []) certShape sccGraph
+sccShape = [ (λ fi -> []) , certShape ] sccGraph
 
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.

@@ -39,9 +39,9 @@ x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
 ∈ᵛ-sound : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ true -> v ∈ us
 ∈ᵛ-sound v []       ()
 ∈ᵛ-sound v (u ∷ us) e =
-  sumElim (λ e1 -> subst (λ z -> v ∈ z ∷ us) (≡ᵛ-sound v u e1) here)
-          (λ e2 -> there (∈ᵛ-sound v us e2))
-          (∨ᵇ-true (v ≡ᵛ u) (any (v ≡ᵛ_) us) e)
+  [ (λ e1 -> subst (λ z -> v ∈ z ∷ us) (≡ᵛ-sound v u e1) here)
+  , (λ e2 -> there (∈ᵛ-sound v us e2))
+  ] (∨ᵇ-true (v ≡ᵛ u) (any (v ≡ᵛ_) us) e)
 
 ∈ᵛ-complete : (v : Node) (us : List Node) -> v ∈ us -> v ∈ᵛ us ≡ true
 ∈ᵛ-complete v []       ()

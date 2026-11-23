@@ -80,9 +80,13 @@ data _⊎_ (A B : Set) : Set where
   inl : A -> A ⊎ B
   inr : B -> A ⊎ B
 
-sumElim : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
-sumElim f g (inl a) = f a
-sumElim f g (inr b) = g b
+-- Case analysis on a sum:  [ f , g ] x  applies f to a left alternative
+-- and g to a right one.  A lambda branch needs parentheses, since its body
+-- would otherwise run on past the comma.
+
+[_,_] : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
+[ f , g ] (inl a) = f a
+[ f , g ] (inr b) = g b
 
 -- Does a sum hold its left alternative?
 
@@ -481,7 +485,7 @@ map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
 ∈-++⁻ []       ys h         = inr h
 ∈-++⁻ (z ∷ xs) ys here      = inl here
 ∈-++⁻ (z ∷ xs) ys (there h) =
-  sumElim (λ k -> inl (there k)) (λ k -> inr k) (∈-++⁻ xs ys h)
+  [ (λ k -> inl (there k)) , inr ] (∈-++⁻ xs ys h)
 
 ------------------------------------------------------------------------
 -- The index / nth round-trip.  Every projection of a conjunct out of  chi v
@@ -528,7 +532,7 @@ nth-map f (x ∷ xs) (suc i) (s<s l) d e = nth-map f xs i l d e
 <-suc-case zero    (suc n) lt       = inr z<s
 <-suc-case (suc j) zero    (s<s ())
 <-suc-case (suc j) (suc n) (s<s l)  =
-  sumElim (λ e -> inl (cong suc e)) (λ l' -> inr (s<s l')) (<-suc-case j n l)
+  [ (λ e -> inl (cong suc e)) , (λ l' -> inr (s<s l')) ] (<-suc-case j n l)
 
 ------------------------------------------------------------------------
 -- Conjunction over a list.
@@ -554,9 +558,8 @@ all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
          -> ∃[ x ∈ xs ] p x ≡ false
 all-false p []       ()
 all-false p (y ∷ ys) e =
-  sumElim (λ e1 -> y , here , e1)
-          (λ e2 -> there-∃ (all-false p ys e2))
-          (∧ᵇ-false (p y) (all p ys) e)
+  [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (all-false p ys e2)) ]
+    (∧ᵇ-false (p y) (all p ys) e)
 
 all-intro : {A : Set} (p : A -> Bool) (xs : List A)
          -> (∀[ x ∈ xs ] p x ≡ true) -> all p xs ≡ true

@@ -373,23 +373,23 @@ module _ (fs : List Pred) where
   graphFind ws sb bar      (allTrue f)       =
     graphBlock ws sb bar (pickBlock ws fs f)
   graphFind ws sb (cBar h) (found x mx q) =
-    sumElim (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws fs
-                                     (λ z m -> filter-sub (x ≢ᵛ_) ws m) fi))
-            (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws x)) q) c))
-            (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws sb x (≢ᵛ-self x))
-                     (h x (sb x mx)))
+    [ (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws fs
+                               (λ z m -> filter-sub (x ≢ᵛ_) ws m) fi))
+    , (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws x)) q) c))
+    ] (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws sb x (≢ᵛ-self x))
+               (h x (sb x mx)))
 
   graphBlock ws sb bar      (bEmpty e)                 = inr (cNil ws e)
   graphBlock ws sb bar      (bFair r mr c)             = inl (fairIn r mr c)
   graphBlock ws sb (cBar h) (bUnfair r mr et g mg eg) =
-    sumElim (λ fi -> inl (fairInMono (ws ∖ C) ws fs
-                                     (λ z m -> filter-sub notInC ws m) fi))
-            (λ c  -> inr (cBlock ws C g mg (sccIn ws r)
-                                 (termClosed ws r et) miss c))
-            (graphGo (ws ∖ C)
-                     (dropAllSat notInC ws sb r
-                        (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws r mr))))
-                     (h r (sb r mr)))
+    [ (λ fi -> inl (fairInMono (ws ∖ C) ws fs
+                               (λ z m -> filter-sub notInC ws m) fi))
+    , (λ c  -> inr (cBlock ws C g mg (sccIn ws r)
+                           (termClosed ws r et) miss c))
+    ] (graphGo (ws ∖ C)
+               (dropAllSat notInC ws sb r
+                  (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws r mr))))
+               (h r (sb r mr)))
     where
       C : List Node
       C = sccOf ws r
@@ -417,9 +417,9 @@ fairGraph : (vs : List Node) (fs : List Pred)
             (v : Node) -> v ∈ vs
          -> FairLoop vs fs v ⊎ Cert fs (reachSet vs v)
 fairGraph vs fs v mv =
-  sumElim (λ fi -> inl (toLoop fi)) inr
-          (graphGo fs (reachSet vs v) (memAllSat (reachSet vs v))
-                   (listBar (reachSet vs v)))
+  [ (λ fi -> inl (toLoop fi)) , inr ]
+    (graphGo fs (reachSet vs v) (memAllSat (reachSet vs v))
+             (listBar (reachSet vs v)))
   where
     into : ∀[ z ∈ reachSet vs v ] z ∈ vs
     into z m = reachIn vs v m

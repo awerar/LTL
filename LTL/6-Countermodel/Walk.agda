@@ -61,5 +61,5 @@ trailPersist us A mb tNil e = inr e
 trailPersist us A mb (tCons {v} {w} {ws} {x} mw st wk) e with valOf v A in ea
 ... | false = inl (ful v here ea)
 ... | true  =
-  sumElim (λ f -> inl (fulfilCons f)) inr
-          (trailPersist us A mb wk (persist v w A mb st e ea))
+  [ (λ f -> inl (fulfilCons f)) , inr ]
+    (trailPersist us A mb wk (persist v w A mb st e ea))

@@ -54,9 +54,9 @@ evWitness : (A : Formula) (z : Val)
          -> evPred A z ≡ true -> valOf z (□ A) ≡ false
          -> valOf z A ≡ false
 evWitness A z ez pd =
-  sumElim (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
-          (λ e2 -> ¬ᵇ-true (valOf z A) e2)
-          (∨ᵇ-true (valOf z (□ A)) (¬ᵇ valOf z A) ez)
+  [ (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
+  , ¬ᵇ-true (valOf z A)
+  ] (∨ᵇ-true (valOf z (□ A)) (¬ᵇ valOf z A) ez)
 
 ------------------------------------------------------------------------
 -- Persistence to a state VISITED, not to the endpoint: trailPersist with the
@@ -76,8 +76,8 @@ persistTo us A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
     ... | false = inl (ful v here ea)
     onA y here      | true = inr (persist v w A mb st e ea)
     onA y (there k) | true =
-      sumElim (λ f -> inl (fulfilCons f)) inr
-              (persistTo us A mb wk (persist v w A mb st e ea) k)
+      [ (λ f -> inl (fulfilCons f)) , inr ]
+        (persistTo us A mb wk (persist v w A mb st e ea) k)
 
 ------------------------------------------------------------------------
 -- A FairLoop in Ust is a Lasso.  The cycle is non-empty, so it splits at
@@ -106,6 +106,5 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
         onW : (∃[ z ∈ cy ] evPred A z ≡ true)
            -> Fulfil A r cy
         onW (z , mz , ez) =
-          sumElim (λ f -> f)
-                  (λ pz -> ful z (there mz) (evWitness A z ez pz))
-                  (persistTo Ust A (evSub mA) tcy pr mz)
+          [ (λ f -> f) , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]
+            (persistTo Ust A (evSub mA) tcy pr mz)

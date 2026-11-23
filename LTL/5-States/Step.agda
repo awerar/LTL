@@ -73,11 +73,11 @@ data StepFails (v w : Val) : Set where
 
 stepFails : (v w : Val) -> step v w ≡ false -> StepFails v w
 stepFails v w e =
-  sumElim (λ e1 -> fromT1 (all-false (t1At v w) nexts e1))
-          (λ e23 -> sumElim (λ e2 -> fromT2 (all-false (t2At v w) eventualities e2))
-                            (λ e3 -> fromT3 (all-false (t3At v w) eventualities e3))
-                            (∧ᵇ-false (t2All v w) (t3All v w) e23))
-          (∧ᵇ-false (t1All v w) (t2All v w ∧ᵇ t3All v w) e)
+  [ (λ e1 -> fromT1 (all-false (t1At v w) nexts e1))
+  , (λ e23 -> [ (λ e2 -> fromT2 (all-false (t2At v w) eventualities e2))
+              , (λ e3 -> fromT3 (all-false (t3At v w) eventualities e3))
+              ] (∧ᵇ-false (t2All v w) (t3All v w) e23))
+  ] (∧ᵇ-false (t1All v w) (t2All v w ∧ᵇ t3All v w) e)
   where
     fromT1 : (∃[ B ∈ nexts ] t1At v w B ≡ false) -> StepFails v w
     fromT1 (B , m , q) = failsT1 B m q
