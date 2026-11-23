@@ -39,6 +39,7 @@ agda LTL/Correct.agda
 agda LTL/Pretty.agda
 agda LTL/9-Tests/Checks.agda
 agda LTL/9-Tests/GraphExamples.agda
+agda LTL/9-Tests/Figure11.agda
 agda LTL/9-Benchmarks/Examples.agda
 agda LTL/9-Benchmarks/Lecture.agda
 ```
@@ -98,9 +99,11 @@ ASCII forms are:
 The variables `p q r s t` and `x0`, `x1`, … are `var 0` to `var 4` and `var N`,
 which are also the names used in the output. Precedence is Agda's: prefix
 operators bind tightest, then `∧`, `∨`, `⇒` (right associative), `⇔`. The
-formula is evaluated with `LTL.Pretty` and `LTL.9-Benchmarks.Examples` open, so `pv`, `qv`,
+formula is evaluated with `LTL.Pretty` and `LTL.9-Tests.Figure11` open, so `pv`, `qv`,
 `axT`, … can also be used. `tools/show-proof --help` lists all of this. Set
-`AGDA` to choose the Agda binary.
+`AGDA` to choose the Agda binary. Quote the formula: unquoted, the shell reads
+the `>` in `->` as a redirection. The first run after an edit rechecks the
+modules `LTL.Pretty` depends on, which can take a minute.
 
 In an editor, load `LTL/Pretty.agda`, then:
 

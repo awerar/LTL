@@ -187,9 +187,10 @@ module name). Folder names never equal a module name.
    `decideCorrect`).
 9. **Examples and benchmarks** — in `9-Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
-   …); `GraphExamples` (`Graph`'s and `FairGraph`'s computational checks, at `Node = Nat`). In
-   `9-Benchmarks/` (slow): `Examples` (46 formulas, Schmitt & Goubault-Larrecq
-   Fig. 11); `Lecture` (`F a ∧ F b → F(a∧b)`).
+   …); `GraphExamples` (`Graph`'s and `FairGraph`'s computational checks, at `Node = Nat`);
+   `Figure11` (the 46 formulas of Schmitt & Goubault-Larrecq Fig. 11, definitions
+   only, opened by `tools/show-proof`). In
+   `9-Benchmarks/` (slow): `Examples` (`decide` on the `Figure11` formulas); `Lecture` (`F a ∧ F b → F(a∧b)`).
 10. **Readable output** (root) — `Pretty` (`prove`, `proveTree`, `proveLines`:
    decide results as numbered Hilbert proofs, trees, or lasso countermodels,
    rendered to `Agda.Builtin.String`; this is why `Base` takes `Nat` from

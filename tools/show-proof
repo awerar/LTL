@@ -19,11 +19,13 @@ and the variables p q r s t and x0, x1, ... become var 0 .. var 4 and
 var N, the names LTL.Pretty prints them with.  Precedence is Agda's: the
 prefix operators bind tightest, then ∧, ∨, ⇒ (right associative), ⇔.
 Any other name is passed to Agda unchanged.  The formula is evaluated in a
-module that opens LTL.Pretty and LTL.9-Benchmarks.Examples, so pv, qv, axT, ... can be
+module that opens LTL.Pretty and LTL.9-Tests.Figure11, so pv, qv, axT, ... can be
 used as well.
 The rendering is done by LTL.Pretty; this script only runs
 `agda --interaction-json`, asks it to normalise the expression, and prints the
 resulting string without quotes and escapes.  Set AGDA to choose the binary.
+After an edit to the development, Agda first rechecks the modules LTL.Pretty
+depends on, which can take a minute; the script says so on stderr.
 """
 
 import argparse
@@ -39,7 +41,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRATCH = """{-# OPTIONS --safe --without-K --exact-split #-}
 module ShowProofScratch where
 open import LTL.Pretty
-open import LTL.9-Benchmarks.Examples
+open import LTL.9-Tests.Figure11
 """
 
 
@@ -166,7 +168,13 @@ def main():
         else:
             expr = "prove ({})".format(formula)
 
+    if sys.stderr.isatty():
+        sys.stderr.write("Running Agda (rechecking edited modules can take a minute)...\r")
+        sys.stderr.flush()
     out, code = run(expr)
+    if sys.stderr.isatty():
+        sys.stderr.write("\033[K")
+        sys.stderr.flush()
     if code != 0 and args.expr is None:
         out = out.rstrip("\n") + "\n\n(sent to Agda: " + expr + ")"
         if "Not in scope" in out:
