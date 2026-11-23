@@ -141,7 +141,7 @@ blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
 
         into : (y : Val) -> y ∈ C -> y ∈ Ust -> y ∈ D
         into y my mu =
-          filter-true (λ t -> t ∈ᵛ Ust) C my (∈ᵛ-complete y Ust mu)
+          ∈-filter⁺ (λ t -> t ∈ᵛ Ust) C my (∈ᵛ-complete y Ust mu)
 
         -- still closed: C's closure puts the successor in C, ustClosed puts
         -- it in Ust P, and D is the intersection

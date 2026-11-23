@@ -123,7 +123,7 @@ module _ (Ats : List Formula) (a : Val) where
         -> (S2At As -> valFrom Ats a C ≡ true)
         -> valFrom Ats a (⇒List (map s2Fml As) C) ≡ true
   □Chain As C h =
-    ⇒Chain (map s2Fml As) C (λ g -> h (λ B mB -> g (memMap s2Fml mB)))
+    ⇒Chain (map s2Fml As) C (λ g -> h (λ B mB -> g (∈-map⁺ s2Fml mB)))
 
   ----------------------------------------------------------------------
   -- The valuation of P that row a gives: P's own atoms read in row a.  By
@@ -178,9 +178,9 @@ module _ (Ats : List Formula) (a : Val) where
 
   memStSkel : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
   memStSkel P s2 =
-    filter-true (isState P) (allVecs (length (stateAtoms P)))
-                (allVecs-complete (length (stateAtoms P)) (skelVec P)
-                                  (map-length (valFrom Ats a) (stateAtoms P)))
+    ∈-filter⁺ (isState P) (allVecs (length (stateAtoms P)))
+              (allVecs-complete (length (stateAtoms P)) (skelVec P)
+                                (map-length (valFrom Ats a) (stateAtoms P)))
                 (all-intro (s2At P (skelVec P)) (eventualities P)
                            (s2Skel P s2))
 
@@ -190,7 +190,7 @@ module _ (Ats : List Formula) (a : Val) where
   betaSkel : (P : Formula) -> S2At (eventualities P)
           -> valFrom Ats a (beta P (St P)) ≡ true
   betaSkel P s2 =
-    ⋁True (map (chi P) (St P)) (memMap (chi P) (memStSkel P s2)) (chiTrue P)
+    ⋁True (map (chi P) (St P)) (∈-map⁺ (chi P) (memStSkel P s2)) (chiTrue P)
 
 ------------------------------------------------------------------------
 -- The derivation half of □Chain: one modus ponens against one instance of
@@ -215,7 +215,7 @@ taut⋁Elim Cs C =
   isTaut-intro (⋁⇒Fml Cs C) λ a ->
     ⇒Chain Ats a (map (C ⇐_) Cs) (⋁ Cs ⇒ C) λ g ->
       ⇒ᵇ-intro (valFrom Ats a (⋁ Cs)) (valFrom Ats a C)
-               (⋁ElimTrue Ats a Cs C (λ mD -> g (memMap (C ⇐_) mD)))
+               (⋁ElimTrue Ats a Cs C (λ mD -> g (∈-map⁺ (C ⇐_) mD)))
   where
     Ats : List Formula
     Ats = atomsOf (⋁⇒Fml Cs C)
@@ -249,4 +249,4 @@ tautChi Q w ev =
     -- the conjunct  lit R false , i.e.  ¬ ¬ Q
     mneg : ¬ R ∈ map (litOf R w) (subformulas R)
     mneg = subst (λ b -> lit R b ∈ map (litOf R w) (subformulas R)) ev
-                 (memMap (litOf R w) (nub-mem (sub R) (sub-self R)))
+                 (∈-map⁺ (litOf R w) (nub-mem (sub R) (sub-self R)))

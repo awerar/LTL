@@ -101,7 +101,7 @@ succsMem us v m =
 
 succsIn : (us : List Val) (v : Val) {w : Val}
        -> w ∈ us -> step v w ≡ true -> w ∈ succs us v
-succsIn us v mw st = filter-true (step v) us mw st
+succsIn us v mw st = ∈-filter⁺ (step v) us mw st
 
 ------------------------------------------------------------------------
 -- Persistence: a pending eventuality stays pending unless A fails.  It is

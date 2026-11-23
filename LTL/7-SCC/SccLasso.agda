@@ -42,7 +42,7 @@ evPreds : List Pred
 evPreds = map evPred (eventualities)
 
 evPredsMem : ∀ⁱ[ A ∈ eventualities ] evPred A ∈ evPreds
-evPredsMem m = memMap evPred m
+evPredsMem m = ∈-map⁺ evPred m
 
 evPredsInv : ∀ⁱ[ g ∈ evPreds ] ∃[ A ∈ eventualities ] g ≡ evPred A
 evPredsInv m = map-mem-inv evPred (eventualities) m

@@ -176,9 +176,9 @@ sub-mono (¬ A)   here       k = k
 sub-mono (¬ A)   (there h)  k = there (sub-mono A h k)
 sub-mono (A ⇒ B) here       k = k
 sub-mono (A ⇒ B) (there h)  k =
-  there (sumElim (λ h1 -> memAppL (sub A) (sub B) (sub-mono A h1 k))
-                 (λ h2 -> memAppR (sub A) (sub B) (sub-mono B h2 k))
-                 (memAppCase (sub A) (sub B) h))
+  there (sumElim (λ h1 -> ∈-++⁺ˡ (sub A) (sub B) (sub-mono A h1 k))
+                 (λ h2 -> ∈-++⁺ʳ (sub A) (sub B) (sub-mono B h2 k))
+                 (∈-++⁻ (sub A) (sub B) h))
 sub-mono (○ A)   here       k = k
 sub-mono (○ A)   (there h)  k = there (sub-mono A h k)
 sub-mono (□ A)   here       k = k
@@ -193,10 +193,10 @@ module _ (P : Formula) where
   sub-¬ {A} h = sub-mono P h (there (sub-self A))
 
   sub-⇒L : {A B : Formula} -> A ⇒ B ∈ sub P -> A ∈ sub P
-  sub-⇒L {A} {B} h = sub-mono P h (there (memAppL (sub A) (sub B) (sub-self A)))
+  sub-⇒L {A} {B} h = sub-mono P h (there (∈-++⁺ˡ (sub A) (sub B) (sub-self A)))
 
   sub-⇒R : {A B : Formula} -> A ⇒ B ∈ sub P -> B ∈ sub P
-  sub-⇒R {A} {B} h = sub-mono P h (there (memAppR (sub A) (sub B) (sub-self B)))
+  sub-⇒R {A} {B} h = sub-mono P h (there (∈-++⁺ʳ (sub A) (sub B) (sub-self B)))
 
   sub-○ : {A : Formula} -> ○ A ∈ sub P -> A ∈ sub P
   sub-○ {A} h = sub-mono P h (there (sub-self A))

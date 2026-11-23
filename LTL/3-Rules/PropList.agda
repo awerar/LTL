@@ -170,13 +170,13 @@ splitD {A} Cs d = mp (⋁Elim Cs (allInto-map Cs each)) d
       where
         j1 : ⊢ A ∧ C ⇒ Z
         j1 = ⋁Intro (splitOn A Cs)
-               (memAppL (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
-                        (memMap (A ∧_) m))
+               (∈-++⁺ˡ (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
+                       (∈-map⁺ (A ∧_) m))
 
         j2 : ⊢ ¬ A ∧ C ⇒ Z
         j2 = ⋁Intro (splitOn A Cs)
-               (memAppR (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
-                        (memMap (¬ A ∧_) m))
+               (∈-++⁺ʳ (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
+                       (∈-map⁺ (¬ A ∧_) m))
 
         -- ¬ Z gives ¬ (¬ A ∧ C), which with C gives ¬ ¬ A,
         -- hence A.

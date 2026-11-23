@@ -25,7 +25,7 @@ open import LTL.5-States.CompletePC P
 -- literals.
 
 chiProj : (v : Val) -> ∀ⁱ[ A ∈ sub P ] ⊢ (chi v) ⇒ (litOf v A)
-chiProj v m = ⋀Proj (map (litOf v) subformulas) (memMap (litOf v) (nub-mem (sub P) m))
+chiProj v m = ⋀Proj (map (litOf v) subformulas) (∈-map⁺ (litOf v) (nub-mem (sub P) m))
 
 ------------------------------------------------------------------------
 -- Refuting a non-successor

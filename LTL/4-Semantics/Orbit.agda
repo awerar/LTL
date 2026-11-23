@@ -161,12 +161,12 @@ module _ (loop : Pos) where
   stretch⊆orbit : (pos : Pos) -> stretch pos ⊆ orbit pos
   stretch⊆orbit pos q m =
     subst (λ L -> q ∈ L) (sym (orbit-split pos))
-          (memAppL (stretch pos) (stretch loop) m)
+          (∈-++⁺ˡ (stretch pos) (stretch loop) m)
 
   cycle⊆orbit : (pos : Pos) -> stretch loop ⊆ orbit pos
   cycle⊆orbit pos q m =
     subst (λ L -> q ∈ L) (sym (orbit-split pos))
-          (memAppR (stretch pos) (stretch loop) m)
+          (∈-++⁺ʳ (stretch pos) (stretch loop) m)
 
   orbitHead : (pos : Pos) -> pos ∈ orbit pos
   orbitHead pos = stretch⊆orbit pos pos (stretch-head pos)
@@ -187,20 +187,20 @@ module _ (loop : Pos) where
   orbitClosed pos q m =
     subst (λ L -> nextPos q ∈ L) (sym (orbit-split pos))
           (sumElim onStretch onCycle
-                   (memAppCase (stretch pos) (stretch loop)
-                               (subst (λ L -> q ∈ L) (orbit-split pos) m)))
+                   (∈-++⁻ (stretch pos) (stretch loop)
+                          (subst (λ L -> q ∈ L) (orbit-split pos) m)))
     where
       intoCycle : nextPos q ≡ loop -> nextPos q ∈ stretch pos ++ stretch loop
       intoCycle e =
         subst (λ r -> r ∈ stretch pos ++ stretch loop) (sym e)
-              (memAppR (stretch pos) (stretch loop) (stretch-head loop))
+              (∈-++⁺ʳ (stretch pos) (stretch loop) (stretch-head loop))
 
       onStretch : q ∈ stretch pos -> nextPos q ∈ stretch pos ++ stretch loop
-      onStretch mq = sumElim (λ mm -> memAppL (stretch pos) (stretch loop) mm)
+      onStretch mq = sumElim (λ mm -> ∈-++⁺ˡ (stretch pos) (stretch loop) mm)
                              intoCycle (stretch-next pos q mq)
 
       onCycle : q ∈ stretch loop -> nextPos q ∈ stretch pos ++ stretch loop
-      onCycle mq = sumElim (λ mm -> memAppR (stretch pos) (stretch loop) mm)
+      onCycle mq = sumElim (λ mm -> ∈-++⁺ʳ (stretch pos) (stretch loop) mm)
                            intoCycle (stretch-next loop q mq)
 
   iter∈orbit : (pos : Pos) (t : Nat) -> posIter pos t ∈ orbit pos

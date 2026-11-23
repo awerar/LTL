@@ -32,7 +32,7 @@ betaElim ws h = ⋁Elim (map chi ws) (allIntoMap chi ws h)
 
 betaIntro : (ws : List Val)
          -> ∀ⁱ[ w ∈ ws ] ⊢ (chi w) ⇒ (beta ws)
-betaIntro ws m = ⋁Intro (map chi ws) (memMap chi m)
+betaIntro ws m = ⋁Intro (map chi ws) (∈-map⁺ chi m)
 
 ¬Beta : (ws : List Val)
      -> (∀[ w ∈ ws ] ⊢ ¬ (chi w))

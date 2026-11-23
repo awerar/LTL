@@ -29,6 +29,7 @@ module LTL.1-Lib.Graph {Node : Set}
 -- Not re-exported: an importer gets this module's own names only, and takes
 -- the set layer from wherever it already has it (LTL.5-States.Reach, at Val).
 
+open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
 open import LTL.1-Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl
 
@@ -159,15 +160,15 @@ module _ (S : Pred) (ws : List Node) where
       outAcc : z ∈ᵛ acc ≡ false
       outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
         ∈ᵛ-false z (addRound acc) e
-          (memAppR (filter (missing acc) ws) acc (∈ᵛ-sound z acc eb))
+          (∈-++⁺ʳ (filter (missing acc) ws) acc (∈ᵛ-sound z acc eb))
 
       outX : x ≡ᵛ z ≡ false
       outX = refuteTrue (x ≡ᵛ z) λ eb ->
         ∈ᵛ-false z (addRound acc) e
           (subst (λ y -> y ∈ addRound acc) (≡ᵛ-sound x z eb)
-                 (memAppL (filter (missing acc) ws) acc
-                          (filter-true (missing acc) ws m
-                                       (¬ᵇ-false (missing acc x) q))))
+                 (∈-++⁺ˡ (filter (missing acc) ws) acc
+                         (∈-filter⁺ (missing acc) ws m
+                                    (¬ᵇ-false (missing acc x) q))))
 
   growGo   : {E : Pred} (acc : List Node) -> Avail E ws acc
           -> IFin E -> List Node
@@ -223,7 +224,7 @@ module _ (S : Pred) (ws : List Node) where
   roundIn : (acc : List Node) -> acc ⊆ ws -> addRound acc ⊆ ws
   roundIn acc sb z mz =
     sumElim (λ m1 -> filter-sub (missing acc) ws m1) (λ m2 -> sb z m2)
-            (memAppCase (filter (missing acc) ws) acc mz)
+            (∈-++⁻ (filter (missing acc) ws) acc mz)
 
 -- z is reached inside ws from a seed: a member of ws satisfying S.
 
@@ -243,7 +244,7 @@ roundSeeded : (S : Pred) (ws acc : List Node)
            -> ∀[ z ∈ addRound S ws acc ] Seeded S ws z
 roundSeeded S ws acc sd z m =
   sumElim fromNew (λ m2 -> sd z m2)
-          (memAppCase (filter (missing S ws acc) ws) acc m)
+          (∈-++⁻ (filter (missing S ws acc) ws) acc m)
   where
     fromNew : z ∈ filter (missing S ws acc) ws -> Seeded S ws z
     fromNew m1 = sumElim isSeed viaY (∨ᵇ-true (S z) (any (λ y -> G y z) acc) want)

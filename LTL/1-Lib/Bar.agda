@@ -3,7 +3,7 @@
 -- LTL.1-Lib.Bar -- inductively finite sets, after Coquand and Siles, "A Decision
 -- Procedure for Regular Expression Equivalence in Type Theory" (CPP 2011).
 --
---   Bar R E   holds when, starting from E and repeatedly picking an x and
+--   Bar R E   holds when, starting from E and repeatedly picking an x in E and
 --             passing to  E intersect (R x) , one always stops.
 --
 -- With R the complement of equality: one cannot choose distinct elements of E
@@ -11,13 +11,14 @@
 -- closure (LTL.1-Lib.Graph), whose accumulator grows and so has no
 -- decreasing measure.  Subsets are Boolean predicates, which keeps Bar in Set.
 --
--- This module is generic: Bar and its closure under union, product and
--- pullback.  Bars are supplied by listBar (LTL.1-Lib.Nodes, from a list in hand)
--- and guardedVecBar (LTL.5-States.VecBar, the vectors of a given length).
+-- This module is generic: Bar, its closure under union, product and pullback,
+-- and the Bar of Bool (boolIFin).  The other Bars are supplied by listBar
+-- (LTL.1-Lib.Nodes, from a list in hand) and guardedVecBar
+-- (LTL.5-States.VecBar, the vectors of a given length, built from boolIFin).
 
 module LTL.1-Lib.Bar where
 
-open import LTL.1-Lib.Sets public
+open import LTL.1-Lib.Prelude
 
 ------------------------------------------------------------------------
 -- Bar
@@ -28,83 +29,51 @@ data Bar {A : Set} (R : A -> A -> Bool) : (A -> Bool) -> Set where
             -> Bar R (λ y -> E y ∧ᵇ R x y))
       -> Bar R E
 
--- The recursion principle.  Every "keep going until you run out" argument in
--- the development is this with a different C.
-barRec : {A : Set} {R : A -> A -> Bool} (C : (A -> Bool) -> Set)
-      -> ({E : A -> Bool}
-            -> ((x : A) -> E x ≡ true -> C (λ y -> E y ∧ᵇ R x y))
-            -> C E)
-      -> {E : A -> Bool} -> Bar R E -> C E
-barRec C f (cBar h) = f (λ x ex -> barRec C f (h x ex))
-
-barStep : {A : Set} (R : A -> A -> Bool) (E F : A -> Bool)
-       -> ((x : A) -> E x ≡ true -> F x ≡ true)
-       -> (x y : A) -> E y ∧ᵇ R x y ≡ true
-       -> F y ∧ᵇ R x y ≡ true
-barStep R E F sb x y e =
-  ∧ᵇ-intro (F y) (R x y) (sb y (∧ᵇ-trueˡ (E y) (R x y) e))
-                         (∧ᵇ-trueʳ (E y) (R x y) e)
-
 barMono : {A : Set} {R : A -> A -> Bool} {E F : A -> Bool}
        -> ((x : A) -> E x ≡ true -> F x ≡ true)
        -> Bar R F -> Bar R E
-barMono {R = R} {E = E} {F = F} sb (cBar h) =
-  cBar (λ x ex -> barMono (barStep R E F sb x) (h x (sb x ex)))
-
-------------------------------------------------------------------------
--- Boolean glue for the two closure lemmas
-
-∧∨-distrib : (g h t : Bool) -> (g ∨ᵇ h) ∧ᵇ t ≡ true
-          -> g ∧ᵇ t ∨ᵇ h ∧ᵇ t ≡ true
-∧∨-distrib true  h true  e = refl
-∧∨-distrib true  h false ()
-∧∨-distrib false h t     e = e
-
-∧∨-weaken : (g h t : Bool) -> (g ∨ᵇ h) ∧ᵇ t ≡ true
-         -> g ∨ᵇ h ∧ᵇ t ≡ true
-∧∨-weaken true  h t e = refl
-∧∨-weaken false h t e = e
-
-∧∨-split : (e f r s : Bool)
-        -> (e ∧ᵇ f) ∧ᵇ (r ∨ᵇ s) ≡ true
-        -> (e ∧ᵇ r) ∧ᵇ f ∨ᵇ e ∧ᵇ f ∧ᵇ s ≡ true
-∧∨-split true  true  true  s h = refl
-∧∨-split true  true  false s h = h
-∧∨-split true  false r     s ()
-∧∨-split false f     r     s ()
-
-------------------------------------------------------------------------
--- Union.  Double induction: on the first witness for the G-case, on the
--- second for the H-case.  barMono replaces funext, since the two sides are
--- only pointwise equal predicates.
-
-barUnion : {A : Set} {T : A -> A -> Bool} {G H : A -> Bool}
-        -> Bar T G -> Bar T H -> Bar T (λ y -> G y ∨ᵇ H y)
-barUnion {A} {T} {G} {H} (cBar hg) bh = inner H bh
+barMono {A} {R} {E} {F} sb (cBar h) =
+  cBar (λ x ex -> barMono (step x) (h x (sb x ex)))
   where
-    inner : (H' : A -> Bool) -> Bar T H' -> Bar T (λ y -> G y ∨ᵇ H' y)
-    inner H' (cBar hh) = cBar pick
+    step : (x y : A) -> E y ∧ᵇ R x y ≡ true -> F y ∧ᵇ R x y ≡ true
+    step x y e =
+      ∧ᵇ-intro (F y) (R x y) (sb y (∧ᵇ-trueˡ (E y) (R x y) e))
+                             (∧ᵇ-trueʳ (E y) (R x y) e)
+
+------------------------------------------------------------------------
+-- Union, by lexicographic induction: on the Bar for G when the picked x is
+-- in G, and on the Bar for H, with G's unchanged, when x is in H.  barMono
+-- replaces funext, since the two sides are only pointwise equal predicates.
+
+barUnion : {A : Set} {R : A -> A -> Bool} {G H : A -> Bool}
+        -> Bar R G -> Bar R H -> Bar R (λ y -> G y ∨ᵇ H y)
+barUnion {A} {R} {G} (cBar hg) bh = inner bh
+  where
+    inner : {H : A -> Bool} -> Bar R H -> Bar R (λ y -> G y ∨ᵇ H y)
+    inner {H} bh@(cBar hh) = cBar pick
       where
-        pick : (x : A) -> G x ∨ᵇ H' x ≡ true
-            -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
-        pick x ex = sumElim fromG fromH (∨ᵇ-true (G x) (H' x) ex)
+        pick : (x : A) -> G x ∨ᵇ H x ≡ true
+            -> Bar R (λ y -> (G y ∨ᵇ H y) ∧ᵇ R x y)
+        pick x ex = sumElim fromG fromH (∨ᵇ-true (G x) (H x) ex)
           where
             fromG : G x ≡ true
-                 -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
+                 -> Bar R (λ y -> (G y ∨ᵇ H y) ∧ᵇ R x y)
             fromG eg =
-              barMono (λ y ey -> ∧∨-distrib (G y) (H' y) (T x y) ey)
+              barMono (λ y ey -> ∧ᵇ∨ᵇ-distribʳ (G y) (H y) (R x y) ey)
                       (barUnion (hg x eg)
-                                (barMono (λ y ey -> ∧ᵇ-trueˡ (H' y) (T x y) ey)
-                                         (cBar hh)))
+                                (barMono (λ y ey -> ∧ᵇ-trueˡ (H y) (R x y) ey)
+                                         bh))
 
-            fromH : H' x ≡ true
-                 -> Bar T (λ y -> (G y ∨ᵇ H' y) ∧ᵇ T x y)
+            fromH : H x ≡ true
+                 -> Bar R (λ y -> (G y ∨ᵇ H y) ∧ᵇ R x y)
             fromH eh =
-              barMono (λ y ey -> ∧∨-weaken (G y) (H' y) (T x y) ey)
-                      (inner (λ y -> H' y ∧ᵇ T x y) (hh x eh))
+              barMono (λ y ey -> ∧ᵇ∨ᵇ-weaken (G y) (H y) (R x y) ey)
+                      (inner (hh x eh))
 
 ------------------------------------------------------------------------
--- Product: the load-bearing closure lemma.
+-- Product: the load-bearing closure lemma, by the same lexicographic
+-- induction as union.  Picking (x , y) leaves pairs that lie in the union of
+-- the two products shrunk at x and at y (prodSplit).
 
 prodPred : {A B : Set} -> (A -> Bool) -> (B -> Bool) -> A × B -> Bool
 prodPred E F (x , y) = E x ∧ᵇ F y
@@ -113,31 +82,35 @@ prodRel : {A B : Set} -> (A -> A -> Bool) -> (B -> B -> Bool)
        -> A × B -> A × B -> Bool
 prodRel R S (x , y) (u , v) = R x u ∨ᵇ S y v
 
-prodMono : {A B : Set} (R : A -> A -> Bool) (S : B -> B -> Bool)
-           (E : A -> Bool) (F : B -> Bool) (x : A) (y : B) (q : A × B)
-        -> prodPred E F q ∧ᵇ prodRel R S (x , y) q ≡ true
-        -> prodPred (λ a -> E a ∧ᵇ R x a) F q ∨ᵇ
-           prodPred E (λ b -> F b ∧ᵇ S y b) q ≡ true
-prodMono R S E F x y (u , v) e = ∧∨-split (E u) (F v) (R x u) (S y v) e
-
 barProd : {A B : Set} {R : A -> A -> Bool} {S : B -> B -> Bool}
        -> {E : A -> Bool} {F : B -> Bool}
        -> Bar R E -> Bar S F -> Bar (prodRel R S) (prodPred E F)
-barProd {A} {B} {R} {S} {E} {F} (cBar he) bf = inner F bf
+barProd {A} {B} {R} {S} {E} (cBar he) bf = inner bf
   where
-    inner : (F' : B -> Bool) -> Bar S F'
-         -> Bar (prodRel R S) (prodPred E F')
-    inner F' (cBar hf) = cBar pick
+    prodSplit : (F : B -> Bool) (x : A) (y : B) (q : A × B)
+             -> prodPred E F q ∧ᵇ prodRel R S (x , y) q ≡ true
+             -> prodPred (λ a -> E a ∧ᵇ R x a) F q ∨ᵇ
+                prodPred E (λ b -> F b ∧ᵇ S y b) q ≡ true
+    prodSplit F x y (u , v) e = split (E u) (F v) (R x u) (S y v) e
       where
-        pick : (p : A × B) -> prodPred E F' p ≡ true
+        split : (e f r s : Bool)
+             -> (e ∧ᵇ f) ∧ᵇ (r ∨ᵇ s) ≡ true
+             -> (e ∧ᵇ r) ∧ᵇ f ∨ᵇ e ∧ᵇ f ∧ᵇ s ≡ true
+        split true  true  true  s h = refl
+        split true  true  false s h = h
+        split true  false r     s ()
+        split false f     r     s ()
+
+    inner : {F : B -> Bool} -> Bar S F -> Bar (prodRel R S) (prodPred E F)
+    inner {F} bf@(cBar hf) = cBar pick
+      where
+        pick : (p : A × B) -> prodPred E F p ≡ true
             -> Bar (prodRel R S)
-                   (λ q -> prodPred E F' q ∧ᵇ prodRel R S p q)
+                   (λ q -> prodPred E F q ∧ᵇ prodRel R S p q)
         pick (x , y) ep =
-          barMono (prodMono R S E F' x y)
-                  (barUnion (barProd (he x (∧ᵇ-trueˡ (E x) (F' y) ep))
-                                     (cBar hf))
-                            (inner (λ b -> F' b ∧ᵇ S y b)
-                                   (hf y (∧ᵇ-trueʳ (E x) (F' y) ep))))
+          barMono (prodSplit F x y)
+                  (barUnion (barProd (he x (∧ᵇ-trueˡ (E x) (F y) ep)) bf)
+                            (inner (hf y (∧ᵇ-trueʳ (E x) (F y) ep))))
 
 ------------------------------------------------------------------------
 -- Pulling back along a map that reflects the relation on a domain D
@@ -166,11 +139,6 @@ barPull {A} {B} {R} {S} f D h {E} (cBar hE) = cBar pick
 
 ------------------------------------------------------------------------
 -- Bool is inductively finite
-
-infix 4.5 _≢ᵇ_
-
-_≢ᵇ_ : Bool -> Bool -> Bool
-a ≢ᵇ b = ¬ᵇ (a ⇔ᵇ b)
 
 noThreeDistinct : (x y z : Bool) -> x ≢ᵇ y ≡ true -> x ≢ᵇ z ≡ true
                -> y ≢ᵇ z ≡ true -> Empty

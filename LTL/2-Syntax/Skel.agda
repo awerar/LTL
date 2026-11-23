@@ -38,13 +38,13 @@ allVecs-complete zero    []           e  = here
 allVecs-complete zero    (b ∷ v)      ()
 allVecs-complete (suc n) []           ()
 allVecs-complete (suc n) (true  ∷ v)  e  =
-  memAppL (map (λ bs -> true ∷ bs) (allVecs n))
-          (map (λ bs -> false ∷ bs) (allVecs n))
-          (memMap (λ bs -> true ∷ bs) (allVecs-complete n v (sucInj e)))
+  ∈-++⁺ˡ (map (λ bs -> true ∷ bs) (allVecs n))
+         (map (λ bs -> false ∷ bs) (allVecs n))
+         (∈-map⁺ (λ bs -> true ∷ bs) (allVecs-complete n v (suc-injective e)))
 allVecs-complete (suc n) (false ∷ v)  e  =
-  memAppR (map (λ bs -> true ∷ bs) (allVecs n))
-          (map (λ bs -> false ∷ bs) (allVecs n))
-          (memMap (λ bs -> false ∷ bs) (allVecs-complete n v (sucInj e)))
+  ∈-++⁺ʳ (map (λ bs -> true ∷ bs) (allVecs n))
+         (map (λ bs -> false ∷ bs) (allVecs n))
+         (∈-map⁺ (λ bs -> false ∷ bs) (allVecs-complete n v (suc-injective e)))
 
 -- and every member of allVecs n has length n
 
@@ -61,8 +61,8 @@ allVecs-len zero    v (there ())
 allVecs-len (suc n) v m =
   sumElim (consAll-len true  (allVecs n) (allVecs-len n) v)
           (consAll-len false (allVecs n) (allVecs-len n) v)
-          (memAppCase (map (λ bs -> true  ∷ bs) (allVecs n))
-                      (map (λ bs -> false ∷ bs) (allVecs n)) m)
+          (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVecs n))
+                 (map (λ bs -> false ∷ bs) (allVecs n)) m)
 
 ------------------------------------------------------------------------
 -- Lookup by first occurrence.  A member's first index is in range and
@@ -81,13 +81,13 @@ indexOf-lt []       ()
 indexOf-lt (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
     aux : (b : Bool) -> b ≡ true -> indexOfCons b (indexOf Bs B) < suc (length Bs)
-    aux true  e  = ltZero
+    aux true  e  = z<s
     aux false ()
 indexOf-lt (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
   where
     aux : (b : Bool) -> indexOfCons b (indexOf Bs X) < suc (length Bs)
-    aux true  = ltZero
-    aux false = ltSuc (indexOf-lt Bs m)
+    aux true  = z<s
+    aux false = s<s (indexOf-lt Bs m)
 
 indexOf-nth : (xs : List Formula)
            -> ∀ⁱ[ X ∈ xs ] nth xs (indexOf xs X) ⊥ ≡ X
@@ -118,8 +118,8 @@ nub-mem []       ()
 nub-mem (A ∷ As) here = here
 nub-mem (A ∷ As) {X} (there m) with A ≡ᶠ X in e
 ... | true  = subst (λ Y -> Y ∈ nub (A ∷ As)) (≡ᶠ-sound A X e) here
-... | false = there (filter-true (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
-                                 (nub-mem As m) (cong ¬ᵇ_ e))
+... | false = there (∈-filter⁺ (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
+                               (nub-mem As m) (cong ¬ᵇ_ e))
 
 nub-sub : (As : List Formula) -> ∀ⁱ[ X ∈ nub As ] X ∈ As
 nub-sub []       ()
@@ -143,7 +143,7 @@ atoms As = filter isAtomB (nub As)
 
 atomMem : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
        -> A ∈ atoms As
-atomMem As m e = filter-true isAtomB (nub As) (nub-mem As m) e
+atomMem As m e = ∈-filter⁺ isAtomB (nub As) (nub-mem As m) e
 
 atomSub : (As : List Formula) -> ∀ⁱ[ A ∈ atoms As ] A ∈ As
 atomSub As m = nub-sub As (filter-sub isAtomB (nub As) m)

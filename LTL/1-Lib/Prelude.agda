@@ -5,7 +5,9 @@
 --
 -- The notation is that of Agda's standard library.  The Boolean connectives
 -- carry a superscript b (∧ᵇ, ∨ᵇ, ¬ᵇ, ⇒ᵇ, ⇔ᵇ) because the plain symbols are
--- the LTL connectives.
+-- the LTL connectives.  The list lemmas take the library's names too, where
+-- ⁺ introduces and ⁻ eliminates: ∈-++⁺ˡ puts a member of xs into xs ++ ys,
+-- ∈-++⁻ splits a member of xs ++ ys.
 
 module LTL.1-Lib.Prelude where
 
@@ -43,6 +45,12 @@ _⇔ᵇ_ : Bool -> Bool -> Bool
 true  ⇔ᵇ b = b
 false ⇔ᵇ b = ¬ᵇ b
 
+-- Inequality of Booleans, a test like ≡ⁿ (infix 4.5).
+infix 4.5 _≢ᵇ_
+
+_≢ᵇ_ : Bool -> Bool -> Bool
+a ≢ᵇ b = ¬ᵇ (a ⇔ᵇ b)
+
 ------------------------------------------------------------------------
 -- ≡ⁿ
 
@@ -56,8 +64,8 @@ false ⇔ᵇ b = ¬ᵇ b
 ≡ⁿ-sound (suc n) zero    ()
 ≡ⁿ-sound (suc n) (suc m) p = cong suc (≡ⁿ-sound n m p)
 
-sucInj : {n m : Nat} -> suc n ≡ suc m -> n ≡ m
-sucInj refl = refl
+suc-injective : {n m : Nat} -> suc n ≡ suc m -> n ≡ m
+suc-injective refl = refl
 
 +-identityʳ : (m : Nat) -> m + zero ≡ m
 +-identityʳ zero    = refl
@@ -88,18 +96,18 @@ isInl (inr _) = false
 infix 4 _<_
 
 data _<_ : Nat -> Nat -> Set where
-  ltZero : {n : Nat}             -> zero < suc n
-  ltSuc  : {n m : Nat} -> n < m  -> suc n < suc m
+  z<s : {n : Nat}            -> zero < suc n
+  s<s : {n m : Nat} -> n < m -> suc n < suc m
 
--- Two facts about <
+-- Two facts about <, named as in the standard library
 
-ltNSucN : (n : Nat) -> n < suc n
-ltNSucN zero    = ltZero
-ltNSucN (suc n) = ltSuc (ltNSucN n)
+n<1+n : (n : Nat) -> n < suc n
+n<1+n zero    = z<s
+n<1+n (suc n) = s<s (n<1+n n)
 
-ltWeak : {i n : Nat} -> i < n -> i < suc n
-ltWeak ltZero    = ltZero
-ltWeak (ltSuc l) = ltSuc (ltWeak l)
+<-step : {i n : Nat} -> i < n -> i < suc n
+<-step z<s     = z<s
+<-step (s<s l) = s<s (<-step l)
 
 ------------------------------------------------------------------------
 -- Σ-types and products
@@ -210,6 +218,19 @@ refuteTrue false no = refl
 
 ∨ᵇ-false-intro : (a b : Bool) -> a ≡ false -> b ≡ false -> a ∨ᵇ b ≡ false
 ∨ᵇ-false-intro a b ea eb = trans (cong (λ c -> c ∨ᵇ b) ea) eb
+
+-- Conjunction over disjunction
+
+∧ᵇ∨ᵇ-distribʳ : (a b c : Bool) -> (a ∨ᵇ b) ∧ᵇ c ≡ true
+              -> a ∧ᵇ c ∨ᵇ b ∧ᵇ c ≡ true
+∧ᵇ∨ᵇ-distribʳ true  b true  e = refl
+∧ᵇ∨ᵇ-distribʳ true  b false ()
+∧ᵇ∨ᵇ-distribʳ false b c     e = e
+
+-- Distribution, forgetting the conjunct c on the left disjunct
+∧ᵇ∨ᵇ-weaken : (a b c : Bool) -> (a ∨ᵇ b) ∧ᵇ c ≡ true -> a ∨ᵇ b ∧ᵇ c ≡ true
+∧ᵇ∨ᵇ-weaken true  b c e = refl
+∧ᵇ∨ᵇ-weaken false b c e = e
 
 -- Negation
 
@@ -410,14 +431,14 @@ infix 4 _⊆_
 _⊆_ : {A : Set} -> List A -> List A -> Set
 xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 
-memAppL : {A : Set} {x : A} (xs ys : List A) -> x ∈ xs -> x ∈ xs ++ ys
-memAppL []       ys ()
-memAppL (z ∷ xs) ys here      = here
-memAppL (z ∷ xs) ys (there h) = there (memAppL xs ys h)
+∈-++⁺ˡ : {A : Set} {x : A} (xs ys : List A) -> x ∈ xs -> x ∈ xs ++ ys
+∈-++⁺ˡ []       ys ()
+∈-++⁺ˡ (z ∷ xs) ys here      = here
+∈-++⁺ˡ (z ∷ xs) ys (there h) = there (∈-++⁺ˡ xs ys h)
 
-memAppR : {A : Set} {x : A} (xs ys : List A) -> x ∈ ys -> x ∈ xs ++ ys
-memAppR []       ys h = h
-memAppR (z ∷ xs) ys h = there (memAppR xs ys h)
+∈-++⁺ʳ : {A : Set} {x : A} (xs ys : List A) -> x ∈ ys -> x ∈ xs ++ ys
+∈-++⁺ʳ []       ys h = h
+∈-++⁺ʳ (z ∷ xs) ys h = there (∈-++⁺ʳ xs ys h)
 
 filterCons-mem : {A : Set} {x : A} (b : Bool) (y : A) (ys : List A)
               -> x ∈ ys -> x ∈ filterCons b y ys
@@ -429,22 +450,22 @@ filterCons-hd : {A : Set} (b : Bool) (y : A) (ys : List A)
 filterCons-hd true  y ys e = here
 filterCons-hd false y ys ()
 
-filter-true : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
-           -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
-filter-true p []       ()        e
-filter-true p (y ∷ ys) here      e = filterCons-hd (p y) y (filter p ys) e
-filter-true p (y ∷ ys) (there m) e =
-  filterCons-mem (p y) y (filter p ys) (filter-true p ys m e)
+∈-filter⁺ : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+         -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
+∈-filter⁺ p []       ()        e
+∈-filter⁺ p (y ∷ ys) here      e = filterCons-hd (p y) y (filter p ys) e
+∈-filter⁺ p (y ∷ ys) (there m) e =
+  filterCons-mem (p y) y (filter p ys) (∈-filter⁺ p ys m e)
 
-memMap : {A B : Set} (f : A -> B) {xs : List A}
+∈-map⁺ : {A B : Set} (f : A -> B) {xs : List A}
       -> ∀ⁱ[ x ∈ xs ] f x ∈ map f xs
-memMap f here      = here
-memMap f (there h) = there (memMap f h)
+∈-map⁺ f here      = here
+∈-map⁺ f (there h) = there (∈-map⁺ f h)
 
-map-append : {A B : Set} (f : A -> B) (xs ys : List A)
-          -> map f (xs ++ ys) ≡ map f xs ++ map f ys
-map-append f []       ys = refl
-map-append f (x ∷ xs) ys = cong (λ zs -> f x ∷ zs) (map-append f xs ys)
+map-++ : {A B : Set} (f : A -> B) (xs ys : List A)
+      -> map f (xs ++ ys) ≡ map f xs ++ map f ys
+map-++ f []       ys = refl
+map-++ f (x ∷ xs) ys = cong (λ zs -> f x ∷ zs) (map-++ f xs ys)
 
 map-map : {A B C : Set} (f : B -> C) (g : A -> B) (xs : List A)
        -> map f (map g xs) ≡ map (λ x -> f (g x)) xs
@@ -455,12 +476,12 @@ map-id : {A : Set} (xs : List A) -> map (λ x -> x) xs ≡ xs
 map-id []       = refl
 map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
 
-memAppCase : {A : Set} {x : A} (xs ys : List A)
-          -> x ∈ xs ++ ys -> x ∈ xs ⊎ x ∈ ys
-memAppCase []       ys h         = inr h
-memAppCase (z ∷ xs) ys here      = inl here
-memAppCase (z ∷ xs) ys (there h) =
-  sumElim (λ k -> inl (there k)) (λ k -> inr k) (memAppCase xs ys h)
+∈-++⁻ : {A : Set} {x : A} (xs ys : List A)
+     -> x ∈ xs ++ ys -> x ∈ xs ⊎ x ∈ ys
+∈-++⁻ []       ys h         = inr h
+∈-++⁻ (z ∷ xs) ys here      = inl here
+∈-++⁻ (z ∷ xs) ys (there h) =
+  sumElim (λ k -> inl (there k)) (λ k -> inr k) (∈-++⁻ xs ys h)
 
 ------------------------------------------------------------------------
 -- The index / nth round-trip.  Every projection of a conjunct out of  chi v
@@ -482,14 +503,14 @@ index-nth (there h) d = index-nth h d
 
 index-length : {A : Set} {x : A} {xs : List A} (h : x ∈ xs)
             -> index h < length xs
-index-length here      = ltZero
-index-length (there h) = ltSuc (index-length h)
+index-length here      = z<s
+index-length (there h) = s<s (index-length h)
 
-nth-mem : {A : Set} (xs : List A) (i : Nat) -> i < length xs -> (d : A)
-       -> nth xs i d ∈ xs
-nth-mem []       i       ()        d
-nth-mem (x ∷ xs) zero    lt        d = here
-nth-mem (x ∷ xs) (suc i) (ltSuc l) d = there (nth-mem xs i l d)
+nth-∈ : {A : Set} (xs : List A) (i : Nat) -> i < length xs -> (d : A)
+     -> nth xs i d ∈ xs
+nth-∈ []       i       ()      d
+nth-∈ (x ∷ xs) zero    lt      d = here
+nth-∈ (x ∷ xs) (suc i) (s<s l) d = there (nth-∈ xs i l d)
 
 map-length : {A B : Set} (f : A -> B) (xs : List A)
           -> length (map f xs) ≡ length xs
@@ -498,16 +519,16 @@ map-length f (x ∷ xs) = cong suc (map-length f xs)
 
 nth-map : {A B : Set} (f : A -> B) (xs : List A) (i : Nat) -> i < length xs
        -> (d : A) (e : B) -> nth (map f xs) i e ≡ f (nth xs i d)
-nth-map f []       i       ()        d e
-nth-map f (x ∷ xs) zero    lt        d e = refl
-nth-map f (x ∷ xs) (suc i) (ltSuc l) d e = nth-map f xs i l d e
+nth-map f []       i       ()      d e
+nth-map f (x ∷ xs) zero    lt      d e = refl
+nth-map f (x ∷ xs) (suc i) (s<s l) d e = nth-map f xs i l d e
 
-ltSucCase : (i n : Nat) -> i < suc n -> i ≡ n ⊎ i < n
-ltSucCase zero    zero     lt        = inl refl
-ltSucCase zero    (suc n)  lt        = inr ltZero
-ltSucCase (suc j) zero     (ltSuc ())
-ltSucCase (suc j) (suc n)  (ltSuc l) =
-  sumElim (λ e -> inl (cong suc e)) (λ l' -> inr (ltSuc l')) (ltSucCase j n l)
+<-suc-case : (i n : Nat) -> i < suc n -> i ≡ n ⊎ i < n
+<-suc-case zero    zero    lt       = inl refl
+<-suc-case zero    (suc n) lt       = inr z<s
+<-suc-case (suc j) zero    (s<s ())
+<-suc-case (suc j) (suc n) (s<s l)  =
+  sumElim (λ e -> inl (cong suc e)) (λ l' -> inr (s<s l')) (<-suc-case j n l)
 
 ------------------------------------------------------------------------
 -- Conjunction over a list.

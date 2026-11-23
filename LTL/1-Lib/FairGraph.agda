@@ -39,6 +39,7 @@ module LTL.1-Lib.FairGraph {Node : Set}
 -- Not re-exported: an importer gets this module's own names only, and opens
 -- LTL.1-Lib.Graph and the set layer itself.
 
+open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
 open import LTL.1-Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl
 open import LTL.1-Lib.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl G
@@ -73,9 +74,9 @@ sccFrom ws r w m =
 sccRep : (ws : List Node) (r : Node)
       -> r ∈ ws -> r ∈ sccOf ws r
 sccRep ws r mr =
-  filter-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
-              (reachSeed ws r mr)
-              (∈ᵛ-complete r (reachSet ws r) (reachSeed ws r mr))
+  ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
+            (reachSeed ws r mr)
+            (∈ᵛ-complete r (reachSet ws r) (reachSeed ws r mr))
 
 ------------------------------------------------------------------------
 -- r's component is terminal when everything r reaches reaches r back, i.e.
@@ -88,8 +89,8 @@ termScc : (ws : List Node) (r : Node)
        -> isTerminal ws r ≡ true
        -> ∀ⁱ[ w ∈ reachSet ws r ] w ∈ sccOf ws r
 termScc ws r et {w} m =
-  filter-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
-              (all-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) et w m)
+  ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
+            (all-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) et w m)
 
 -- A terminal component is closed under successors inside ws: the refutation
 -- needs exactly this of it.
@@ -249,15 +250,15 @@ module _ (ws : List Node) (r : Node) where
       legNN = appNotNull front bs frontNN
 
       mw : w ∈ leg
-      mw = memAppL front bs (trailLast ws frontT frontNN)
+      mw = ∈-++⁺ˡ front bs (trailLast ws frontT frontNN)
 
       each : ∀[ g ∈ f ∷ fs ] ∃[ z ∈ leg ++ cy ] g z ≡ true
-      each g here      = w , memAppL leg cy mw , fw
+      each g here      = w , ∈-++⁺ˡ leg cy mw , fw
       each g (there m) = shift (wit g m)
         where
           shift : (∃[ z ∈ cy ] g z ≡ true)
                -> ∃[ z ∈ leg ++ cy ] g z ≡ true
-          shift (z , mz , gz) = z , memAppR leg cy mz , gz
+          shift (z , mz , gz) = z , ∈-++⁺ʳ leg cy mz , gz
 
   mkCirc : Loop ws r
         -> (C : List Node)
@@ -455,7 +456,7 @@ module _ (fs : List Pred) (R : Node -> Set)
   ...   | false = removed y (∈ᵛ-sound y ws eb) ep
   ...   | true  =
     emptyElim (∈ᵛ-false y (filter p ws) eo
-                (filter-true p ws (∈ᵛ-sound y ws eb) ep))
+                (∈-filter⁺ p ws (∈ᵛ-sound y ws eb) ep))
 
   certAll : {ws : List Node} -> Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z
@@ -564,7 +565,7 @@ blockAlong ws C cl (tCons {x = y} m e t)      mu =
 
 keepIn : (ws : List Node) (p : Pred) {v : Node} {zs : List Node} {w : Node}
       -> Trail ws v zs w -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
-keepIn ws p t h z mz = filter-true p ws (trailIn ws t mz) (h z mz)
+keepIn ws p t h z mz = ∈-filter⁺ p ws (trailIn ws t mz) (h z mz)
 
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when
@@ -583,7 +584,7 @@ certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy cy t nn) wit) =
       where
         onS : HasSucc ws x -> Empty
         onS (hasSucc y my gy) =
-          null-mem (outs ws x) e (filter-true (G x) ws my gy)
+          null-mem (outs ws x) e (∈-filter⁺ (G x) ws my gy)
 
     keep : ∀[ z ∈ cy ] x ≢ᵛ z ≡ true
     keep z mz = cong ¬ᵇ_ out

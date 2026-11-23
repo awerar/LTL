@@ -19,6 +19,7 @@ module LTL.1-Lib.Nodes {Node : Set}
                  (≡ᵛ-refl  : (v : Node) -> v ≡ᵛ v ≡ true)
   where
 
+open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
 
 ------------------------------------------------------------------------
@@ -103,9 +104,9 @@ barOfList {E = E} (suc n) xs le sb =
   cBar (λ x ex -> barOfList n (filter (x ≢ᵛ_) xs)
                     (lePred (leTrans (filter-lt (x ≢ᵛ_) xs (sb x ex)
                                                 (≢ᵛ-self x)) le))
-                    (λ z ez -> filter-true (x ≢ᵛ_) xs
-                                 (sb z (∧ᵇ-trueˡ (E z) (x ≢ᵛ z) ez))
-                                 (∧ᵇ-trueʳ (E z) (x ≢ᵛ z) ez)))
+                    (λ z ez -> ∈-filter⁺ (x ≢ᵛ_) xs
+                               (sb z (∧ᵇ-trueˡ (E z) (x ≢ᵛ z) ez))
+                               (∧ᵇ-trueʳ (E z) (x ≢ᵛ z) ez)))
 
 ------------------------------------------------------------------------
 -- The invariant the removing searches carry.  AllSat E xs says xs lies inside
