@@ -366,13 +366,28 @@ class StaleProvider {
   }
   getTreeItem(el) {
     if (el.orphan) {
-      const item = new vscode.TreeItem(el.orphan.qname.replace(/^LTL\./, ''));
-      item.id = 'orphan' + SEP + el.orphan.qname;
-      item.description = `no longer exists · reviewed ${el.orphan.date}`;
-      item.tooltip = 'Renamed or removed since its review. Right-click to remove the mark.';
+      // Clicking opens the definition it was most likely renamed to, or
+      // else the file its module was in.
+      const o = el.orphan;
+      const to = o.renamedTo && def(o.renamedTo);
+      const item = new vscode.TreeItem(o.qname.replace(/^LTL\./, ''));
+      item.id = 'orphan' + SEP + o.qname;
+      item.description = (to ? `renamed to ${to.name}?` : 'no longer exists') +
+        ` · reviewed ${o.date}`;
+      item.tooltip = (to
+        ? `Not found under this name; most likely renamed to ${to.name} ` +
+          `(${to.path}:${to.line}), which is not reviewed.`
+        : 'Renamed or removed since its review.') +
+        ' Right-click to remove the mark.';
       item.iconPath = new vscode.ThemeIcon('question',
         new vscode.ThemeColor('list.warningForeground'));
       item.contextValue = 'orphan';
+      if (to) {
+        item.command = { command: 'proofMap.open', title: 'Open', arguments: [o.renamedTo] };
+      } else if (o.path) {
+        item.command = { command: 'vscode.open', title: 'Open',
+          arguments: [vscode.Uri.file(path.join(folder, o.path))] };
+      }
       return item;
     }
     const d = def(el.qn);

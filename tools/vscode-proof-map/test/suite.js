@@ -177,6 +177,24 @@ exports.run = async () => {
     const orphanCount = staleItems.filter(e => e.orphan).length;
     log(`stale view: ${staleItems.length} items (${orphanCount} no longer exist); ` +
       `${rootItem.label.label} | ${rootItem.description} | badge ${api.staleView.badge && api.staleView.badge.value}`);
+    // Every entry in the view can be clicked; one renamed away opens its
+    // likely new name.
+    for (const e of staleItems) {
+      const it = api.staleList.getTreeItem(e);
+      assert(it.command, `no click for ${it.label.label || it.label}`);
+    }
+    const orphan = staleItems.find(e => e.orphan && e.orphan.renamedTo);
+    if (orphan) {
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      const cmd = api.staleList.getTreeItem(orphan).command;
+      await vscode.commands.executeCommand(cmd.command, ...cmd.arguments);
+      const oe = vscode.window.activeTextEditor;
+      log(`click ${orphan.orphan.qname.split('.').pop()} -> ` +
+        `${path.relative(folder, oe.document.uri.fsPath)}:${oe.selection.active.line + 1} ` +
+        `"${oe.document.lineAt(oe.selection.active.line).text.trim().slice(0, 30)}"`);
+      assert(oe.document.lineAt(oe.selection.active.line).text.trim()
+        .startsWith(api.data.defs[orphan.orphan.renamedTo].name));
+    }
     const rootDoc = await vscode.workspace.openTextDocument(
       path.join(folder, api.data.defs[data.root].path));
     const ranges = api.staleRanges(rootDoc);

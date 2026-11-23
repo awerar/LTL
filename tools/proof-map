@@ -44,6 +44,7 @@ with --cached.  Set AGDA to choose the binary.
 import argparse
 import json
 import datetime
+import difflib
 import hashlib
 import html
 import os
@@ -689,6 +690,91 @@ def stale_marks(g, marks):
     return stale, sorted(q for q in marks if q not in known)
 
 
+def git(*args):
+    proc = subprocess.run(["git", *args], cwd=REPO, capture_output=True,
+                          text=True, encoding="utf-8")
+    return proc.stdout if proc.returncode == 0 else None
+
+
+def split_qname(qname):
+    """(module, name) of a qualified name, the module being the longest
+    prefix that is an Agda file now or in HEAD."""
+    parts = qname.split(".")
+    for i in range(len(parts) - 1, 0, -1):
+        module = ".".join(parts[:i])
+        path = module.replace(".", "/") + ".agda"
+        if os.path.exists(os.path.join(REPO, path)) or git("cat-file", "-e", f"HEAD:{path}") is not None:
+            return module, ".".join(parts[i:])
+    return None, qname
+
+
+def old_block(text, name):
+    """The lines of the definition `name` in an old version of a file: from
+    its first line to the next declaration at the same indentation."""
+    lines = text.split("\n")
+    starts = re.compile(re.escape(name) + r"(\s|:|$)")
+    for i, line in enumerate(lines):
+        body = line.lstrip()
+        indent = len(line) - len(body)
+        if not starts.match(body):
+            continue
+        block = [line]
+        for nxt in lines[i + 1:]:
+            b = nxt.lstrip()
+            if (b and len(nxt) - len(b) <= indent and not starts.match(b)
+                    and not b.startswith("...")):
+                break
+            block.append(nxt)
+        return "\n".join(block)
+    return None
+
+
+def normalise(text, name):
+    """Source for comparison: no comments, the definition's own name
+    replaced, spacing collapsed."""
+    text = re.sub(r"--.*", "", text).replace(name, "§")
+    return " ".join(text.split())
+
+
+def renamed_to(g, marks, qname):
+    """Where a mark whose definition no longer exists most likely belongs:
+    the definition of its module whose source is most like the one reviewed,
+    names aside.  The reviewed source is read from the earliest commit whose
+    ledger holds the mark (when it was recorded), else from the latest
+    version of the file that still has the old name.  Returns (module path
+    or None, key or None)."""
+    module, name = split_qname(qname)
+    if module is None:
+        return None, None
+    path = module.replace(".", "/") + ".agda"
+    exists = os.path.exists(os.path.join(REPO, path))
+    old = None
+    line = f"{qname}\t{marks[qname][0]}\t"
+    commits = (git("log", "--format=%H", "--", "docs/review.tsv") or "").split()
+    for commit in reversed(commits):
+        if line in (git("show", f"{commit}:docs/review.tsv") or ""):
+            old = old_block(git("show", f"{commit}:{path}") or "", name)
+            if old is not None:
+                break
+    if old is None:
+        for commit in (git("log", "-n", "50", "--format=%H", "--", path) or "").split():
+            old = old_block(git("show", f"{commit}:{path}") or "", name)
+            if old is not None:
+                break
+    if old is None:
+        return (path if exists else None), None
+    want = normalise(old, name)
+    best, score = None, 0.6
+    for k, d in g.defs.items():
+        if d.module != module or d.leaf:
+            continue
+        got = normalise("\n".join(raw for _, raw in d.src), d.name)
+        r = difflib.SequenceMatcher(None, want, got).ratio()
+        if r > score:
+            best, score = k, r
+    return (path if exists else None), best
+
+
 def cmd_stale(g, marks, args):
     stale, orphans = stale_marks(g, marks)
     if not stale and not orphans:
@@ -700,7 +786,10 @@ def cmd_stale(g, marks, args):
     if orphans:
         print("marks of definitions that no longer exist (undo removes them):")
         for q in orphans:
-            print(f"? {q}  reviewed {marks[q][1]}")
+            path, k = renamed_to(g, marks, q)
+            where = (f"  probably renamed to {g.defs[k].name}  {loc(g.defs[k])}" if k
+                     else f"  in {path}" if path else "")
+            print(f"? {q}  reviewed {marks[q][1]}{where}")
 
 
 def targets(g, name):
@@ -761,6 +850,12 @@ def grouped(g, marks, root):
             if b in down or b in up]
 
 
+def orphan_json(g, marks, qname):
+    path, k = renamed_to(g, marks, qname)
+    return {"qname": qname, "date": marks[qname][1], "path": path,
+            "renamedTo": g.defs[k].qname if k else None}
+
+
 def cmd_json(g, marks, args, error):
     """Every definition outside the leaf modules, with its status, its
     uses and users, and the number of open definitions below it."""
@@ -795,7 +890,7 @@ def cmd_json(g, marks, args, error):
                     "up": [g.defs[k].qname for k in up]}
                    for b, down, up in grouped(g, marks, root)],
                "between": [g.defs[k].qname for k in between(g, marks, root)],
-               "orphans": [{"qname": q, "date": marks[q][1]}
+               "orphans": [orphan_json(g, marks, q)
                            for q in stale_marks(g, marks)[1]],
                "defs": out}, sys.stdout, ensure_ascii=False)
 

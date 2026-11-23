@@ -154,8 +154,9 @@ Review marks are kept in `docs/review.tsv` (written by the first `done`), with a
 hash of each definition's source (comments and spacing are ignored). When the
 code of a reviewed definition changes, its mark shows as stale (`~`) until it
 is marked again. `stale` lists these, and also marks whose definition no
-longer exists (renamed or removed); `undo` with the old full name removes
-such a mark. Names from `Base`, `Prelude`, `Statement` and Agda's
+longer exists (renamed or removed), with the definition it was most likely
+renamed to; `undo` with the old full name removes such a mark. Names from
+`Base`, `Prelude`, `Statement` and Agda's
 builtins are treated as leaves.
 
 ### In VS Code
@@ -198,7 +199,9 @@ needs no npm packages or build step. It adds:
 - out-of-date reviews, shown clearly: a **Changed since review** view
   (only when there are some, with a count badge) lists definitions whose
   code changed since their review, and marks of definitions that no longer
-  exist (right-click to remove one). Their lines in the editor are
+  exist. Click an entry to open it; a mark whose definition was renamed is
+  matched, by its reviewed code, to the likely new name, which a click opens
+  (right-click to remove the old mark). Their lines in the editor are
   highlighted, with a mark in the scroll bar; in the tree their names are
   highlighted and described as changed; the status bar turns yellow with
   the count and opens the view. Ticking a checkbox, or the CodeLens above
