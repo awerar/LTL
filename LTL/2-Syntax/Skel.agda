@@ -75,18 +75,18 @@ indexOf : List Formula -> Formula -> Nat
 indexOf []       A = zero
 indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
 
-indexOf-lt : (xs : List Formula) -> ∀ⁱ[ X ∈ xs ] indexOf xs X < length xs
-indexOf-lt []       ()
-indexOf-lt (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
+indexOf-< : (xs : List Formula) -> ∀ⁱ[ X ∈ xs ] indexOf xs X < length xs
+indexOf-< []       ()
+indexOf-< (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
     aux : (b : Bool) -> b ≡ true -> indexOfCons b (indexOf Bs B) < suc (length Bs)
     aux true  e  = z<s
     aux false ()
-indexOf-lt (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
+indexOf-< (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
   where
     aux : (b : Bool) -> indexOfCons b (indexOf Bs X) < suc (length Bs)
     aux true  = z<s
-    aux false = s<s (indexOf-lt Bs m)
+    aux false = s<s (indexOf-< Bs m)
 
 indexOf-nth : (xs : List Formula)
            -> ∀ⁱ[ X ∈ xs ] nth xs (indexOf xs X) ⊥ ≡ X
@@ -112,13 +112,13 @@ nub : List Formula -> List Formula
 nub []       = []
 nub (A ∷ As) = A ∷ filter (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
 
-nub-mem : (As : List Formula) -> ∀ⁱ[ X ∈ As ] X ∈ nub As
-nub-mem []       ()
-nub-mem (A ∷ As) here = here
-nub-mem (A ∷ As) {X} (there m) with A ≡ᶠ X in e
+∈-nub⁺ : (As : List Formula) -> ∀ⁱ[ X ∈ As ] X ∈ nub As
+∈-nub⁺ []       ()
+∈-nub⁺ (A ∷ As) here = here
+∈-nub⁺ (A ∷ As) {X} (there m) with A ≡ᶠ X in e
 ... | true  = subst (λ Y -> Y ∈ nub (A ∷ As)) (≡ᶠ-sound A X e) here
 ... | false = there (∈-filter⁺ (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
-                               (nub-mem As m) (cong ¬ᵇ_ e))
+                               (∈-nub⁺ As m) (cong ¬ᵇ_ e))
 
 nub-sub : (As : List Formula) -> ∀ⁱ[ X ∈ nub As ] X ∈ As
 nub-sub []       ()
@@ -140,9 +140,9 @@ isAtomB (□ A)   = true
 atoms : List Formula -> List Formula
 atoms As = filter isAtomB (nub As)
 
-atomMem : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
-       -> A ∈ atoms As
-atomMem As m e = ∈-filter⁺ isAtomB (nub As) (nub-mem As m) e
+∈-atoms⁺ : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
+        -> A ∈ atoms As
+∈-atoms⁺ As m e = ∈-filter⁺ isAtomB (nub As) (∈-nub⁺ As m) e
 
 atomSub : (As : List Formula) -> ∀ⁱ[ A ∈ atoms As ] A ∈ As
 atomSub As m = nub-sub As (∈-filter⁻ isAtomB (nub As) m)
@@ -162,27 +162,27 @@ atomSub As m = nub-sub As (∈-filter⁻ isAtomB (nub As) m)
 □Args (○ A   ∷ As) = □Args As
 □Args (□ A   ∷ As) = A ∷ □Args As
 
-□Args-of : (As : List Formula) {A : Formula}
+∈-□Args⁺ : (As : List Formula) {A : Formula}
         -> □ A ∈ As -> A ∈ □Args As
-□Args-of []           ()
-□Args-of (var n ∷ As) (there m) = □Args-of As m
-□Args-of (¬ B   ∷ As) (there m) = □Args-of As m
-□Args-of (B ⇒ C ∷ As) (there m) = □Args-of As m
-□Args-of (○ B   ∷ As) (there m) = □Args-of As m
-□Args-of (□ B   ∷ As) here      = here
-□Args-of (□ B   ∷ As) (there m) = there (□Args-of As m)
+∈-□Args⁺ []           ()
+∈-□Args⁺ (var n ∷ As) (there m) = ∈-□Args⁺ As m
+∈-□Args⁺ (¬ B   ∷ As) (there m) = ∈-□Args⁺ As m
+∈-□Args⁺ (B ⇒ C ∷ As) (there m) = ∈-□Args⁺ As m
+∈-□Args⁺ (○ B   ∷ As) (there m) = ∈-□Args⁺ As m
+∈-□Args⁺ (□ B   ∷ As) here      = here
+∈-□Args⁺ (□ B   ∷ As) (there m) = there (∈-□Args⁺ As m)
 
 -- and back: the eventualities really are box-subformulas.
 
-□Args-mem : (As : List Formula)
-         -> ∀ⁱ[ A ∈ □Args As ] □ A ∈ As
-□Args-mem []           ()
-□Args-mem (var n ∷ As) m         = there (□Args-mem As m)
-□Args-mem (¬ B   ∷ As) m         = there (□Args-mem As m)
-□Args-mem (B ⇒ C ∷ As) m         = there (□Args-mem As m)
-□Args-mem (○ B   ∷ As) m         = there (□Args-mem As m)
-□Args-mem (□ B   ∷ As) here      = here
-□Args-mem (□ B   ∷ As) (there m) = there (□Args-mem As m)
+∈-□Args⁻ : (As : List Formula)
+        -> ∀ⁱ[ A ∈ □Args As ] □ A ∈ As
+∈-□Args⁻ []           ()
+∈-□Args⁻ (var n ∷ As) m         = there (∈-□Args⁻ As m)
+∈-□Args⁻ (¬ B   ∷ As) m         = there (∈-□Args⁻ As m)
+∈-□Args⁻ (B ⇒ C ∷ As) m         = there (∈-□Args⁻ As m)
+∈-□Args⁻ (○ B   ∷ As) m         = there (∈-□Args⁻ As m)
+∈-□Args⁻ (□ B   ∷ As) here      = here
+∈-□Args⁻ (□ B   ∷ As) (there m) = there (∈-□Args⁻ As m)
 
 -- The arguments of the next-subformulas, likewise: (T1) is imposed at each.
 
@@ -194,25 +194,25 @@ atomSub As m = nub-sub As (∈-filter⁻ isAtomB (nub As) m)
 ○Args (○ A   ∷ As) = A ∷ ○Args As
 ○Args (□ A   ∷ As) = ○Args As
 
-○Args-of : (As : List Formula) {A : Formula}
+∈-○Args⁺ : (As : List Formula) {A : Formula}
         -> ○ A ∈ As -> A ∈ ○Args As
-○Args-of []           ()
-○Args-of (var n ∷ As) (there m) = ○Args-of As m
-○Args-of (¬ B   ∷ As) (there m) = ○Args-of As m
-○Args-of (B ⇒ C ∷ As) (there m) = ○Args-of As m
-○Args-of (○ B   ∷ As) here      = here
-○Args-of (○ B   ∷ As) (there m) = there (○Args-of As m)
-○Args-of (□ B   ∷ As) (there m) = ○Args-of As m
+∈-○Args⁺ []           ()
+∈-○Args⁺ (var n ∷ As) (there m) = ∈-○Args⁺ As m
+∈-○Args⁺ (¬ B   ∷ As) (there m) = ∈-○Args⁺ As m
+∈-○Args⁺ (B ⇒ C ∷ As) (there m) = ∈-○Args⁺ As m
+∈-○Args⁺ (○ B   ∷ As) here      = here
+∈-○Args⁺ (○ B   ∷ As) (there m) = there (∈-○Args⁺ As m)
+∈-○Args⁺ (□ B   ∷ As) (there m) = ∈-○Args⁺ As m
 
-○Args-mem : (As : List Formula)
-         -> ∀ⁱ[ A ∈ ○Args As ] ○ A ∈ As
-○Args-mem []           ()
-○Args-mem (var n ∷ As) m         = there (○Args-mem As m)
-○Args-mem (¬ B   ∷ As) m         = there (○Args-mem As m)
-○Args-mem (B ⇒ C ∷ As) m         = there (○Args-mem As m)
-○Args-mem (○ B   ∷ As) here      = here
-○Args-mem (○ B   ∷ As) (there m) = there (○Args-mem As m)
-○Args-mem (□ B   ∷ As) m         = there (○Args-mem As m)
+∈-○Args⁻ : (As : List Formula)
+        -> ∀ⁱ[ A ∈ ○Args As ] ○ A ∈ As
+∈-○Args⁻ []           ()
+∈-○Args⁻ (var n ∷ As) m         = there (∈-○Args⁻ As m)
+∈-○Args⁻ (¬ B   ∷ As) m         = there (∈-○Args⁻ As m)
+∈-○Args⁻ (B ⇒ C ∷ As) m         = there (∈-○Args⁻ As m)
+∈-○Args⁻ (○ B   ∷ As) here      = here
+∈-○Args⁻ (○ B   ∷ As) (there m) = there (∈-○Args⁻ As m)
+∈-○Args⁻ (□ B   ∷ As) m         = there (∈-○Args⁻ As m)
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation.  valFrom Ats a A reads A with the bits a assigned
@@ -235,7 +235,7 @@ atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
         -> X ∈ Ats
         -> bitAt (map f Ats) (indexOf Ats X) ≡ f X
 atomLook f Ats X mX =
-  trans (nth-map f Ats (indexOf Ats X) (indexOf-lt Ats mX) ⊥ false)
+  trans (nth-map f Ats (indexOf Ats X) (indexOf-< Ats mX) ⊥ false)
         (cong f (indexOf-nth Ats mX))
 
 skelEval : (f : Formula -> Bool) (Ats : List Formula) (P : Formula)
@@ -284,7 +284,7 @@ tautSound : (f : Formula -> Bool) (A : Formula)
          -> isTaut A ≡ true -> f A ≡ true
 tautSound f A fn fi e =
   trans (sym (skelEval f (atomsOf A) A
-                       (λ X mX aX -> atomMem (sub A) mX aX) fn fi A
+                       (λ X mX aX -> ∈-atoms⁺ (sub A) mX aX) fn fi A
                        (sub-self A)))
         (all-true (λ a -> valFrom (atomsOf A) a A)
                   (allVecs (length (atomsOf A))) e (map f (atomsOf A))

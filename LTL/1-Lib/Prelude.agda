@@ -437,22 +437,22 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 ∈-++⁺ʳ []       ys h = h
 ∈-++⁺ʳ (z ∷ xs) ys h = there (∈-++⁺ʳ xs ys h)
 
-filterCons-mem : {A : Set} {x : A} (b : Bool) (y : A) (ys : List A)
-              -> x ∈ ys -> x ∈ filterCons b y ys
-filterCons-mem true  y ys h = there h
-filterCons-mem false y ys h = h
+filterCons-there : {A : Set} {x : A} (b : Bool) (y : A) (ys : List A)
+                -> x ∈ ys -> x ∈ filterCons b y ys
+filterCons-there true  y ys h = there h
+filterCons-there false y ys h = h
 
-filterCons-hd : {A : Set} (b : Bool) (y : A) (ys : List A)
-             -> b ≡ true -> y ∈ filterCons b y ys
-filterCons-hd true  y ys e = here
-filterCons-hd false y ys ()
+filterCons-here : {A : Set} (b : Bool) (y : A) (ys : List A)
+               -> b ≡ true -> y ∈ filterCons b y ys
+filterCons-here true  y ys e = here
+filterCons-here false y ys ()
 
 ∈-filter⁺ : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
 ∈-filter⁺ p []       ()        e
-∈-filter⁺ p (y ∷ ys) here      e = filterCons-hd (p y) y (filter p ys) e
+∈-filter⁺ p (y ∷ ys) here      e = filterCons-here (p y) y (filter p ys) e
 ∈-filter⁺ p (y ∷ ys) (there m) e =
-  filterCons-mem (p y) y (filter p ys) (∈-filter⁺ p ys m e)
+  filterCons-there (p y) y (filter p ys) (∈-filter⁺ p ys m e)
 
 -- A member of filter p xs is a member of xs, and passes p.
 

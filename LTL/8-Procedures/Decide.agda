@@ -37,6 +37,7 @@ open import LTL.7-SCC.SccLasso           (¬ Q)
 open import LTL.7-SCC.SccExtract         (¬ Q)
 open import LTL.7-SCC.SccSeed            (¬ Q)
 open import LTL.8-Procedures.Answer using (LassoCountermodel; countermodel)
+open import LTL.1-Lib.CertStep using (CertStep)
 
 ------------------------------------------------------------------------
 -- The derivation of Q.  A state of St outside Ust cannot contain ¬ Q (by

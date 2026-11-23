@@ -74,13 +74,13 @@ extractR1 us u mu ih e1 =
   where
     outside : ∀[ w ∈ succs St u ] w ∈ᵛ us ≡ false
     outside w m = refuteTrue (w ∈ᵛ us) λ eb ->
-      null-mem (succs us u) e1
+      null-∈ (succs us u) e1
        (succsIn us u (∈ᵛ-sound w us eb)
-                (snd (succsMem St u m)))
+                (snd (∈-succs⁻ St u m)))
 
     each : ∀[ w ∈ succs St u ] ⊢ ¬ (chi w)
-    each w m = ih w (ustClosed mu (fst (succsMem St u m))
-                               (snd (succsMem St u m)))
+    each w m = ih w (ustClosed mu (fst (∈-succs⁻ St u m))
+                               (snd (∈-succs⁻ St u m)))
                  (outside w m)
 
 ------------------------------------------------------------------------

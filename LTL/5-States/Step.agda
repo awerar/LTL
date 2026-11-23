@@ -93,9 +93,9 @@ stepFails v w e =
 succs : List Val -> Val -> List Val
 succs us v = filter (step v) us
 
-succsMem : (us : List Val) (v : Val)
+∈-succs⁻ : (us : List Val) (v : Val)
         -> ∀ⁱ[ w ∈ succs us v ] w ∈ us × step v w ≡ true
-succsMem us v m =
+∈-succs⁻ us v m =
   ∈-filter⁻ (step v) us m , filter-prop (step v) us m
 
 succsIn : (us : List Val) (v : Val) {w : Val}

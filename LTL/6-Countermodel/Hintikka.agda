@@ -59,7 +59,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
       -- fulfilled before b is reached
       onStem : Fulfil A s rest
             -> ∃[ q ∈ orbit loop (s , rest) ] valOf (posState q) A ≡ false
-      onStem (ful z mz ez) = fromStretch (stretch-mem (s , rest) mz)
+      onStem (ful z mz ez) = fromStretch (∈-stretchStates⁻ (s , rest) mz)
         where
           fromStretch : (∃[ q ∈ stretch (s , rest) ] posState q ≡ z)
                 -> ∃[ q ∈ orbit loop (s , rest) ] valOf (posState q) A ≡ false
@@ -74,7 +74,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
           fromFul : Fulfil A b (stretchStates loop)
                  -> ∃[ q ∈ orbit loop (s , rest) ] valOf (posState q) A ≡ false
           fromFul (ful z mz ez) =
-            fromStretch (stretch-mem loop (cycMem (endOnCycle cy) mz))
+            fromStretch (∈-stretchStates⁻ loop (∷-⊆ (endOnCycle cy) mz))
             where
               fromStretch : (∃[ q ∈ stretch loop ] posState q ≡ z)
                     -> ∃[ q ∈ orbit loop (s , rest) ]

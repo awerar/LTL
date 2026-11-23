@@ -6,6 +6,7 @@
 -- Q.  This module opens all of them unapplied and re-exports them, so every
 -- name takes its formula first: St P, Lasso P v0, Cert P fs ws, decide Q.
 -- LTL.Correct, LTL.Pretty, the tests and the benchmarks import this module.
+-- It also re-exports LTL.1-Lib.CertStep, the type of Decide's sccShape.
 
 module LTL.8-Procedures.Everything where
 
@@ -27,3 +28,4 @@ open import LTL.7-SCC.SccSeed             public
 open import LTL.8-Procedures.Answer       public
 open import LTL.8-Procedures.Inspect      public
 open import LTL.8-Procedures.Decide       public
+open import LTL.1-Lib.CertStep            public

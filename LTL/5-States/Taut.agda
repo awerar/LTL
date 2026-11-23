@@ -137,7 +137,7 @@ module _ (Ats : List Formula) (a : Val) where
               -> valOf P (skelVec P) A ≡ valFrom Ats a A
   valOfSkelVec P A m =
     skelEval (valFrom Ats a) (stateAtoms P) P
-             (λ X mX aX -> atomMem (sub P) mX aX)
+             (λ X mX aX -> ∈-atoms⁺ (sub P) mX aX)
              (λ X mX -> refl) (λ X Y mX -> refl) A m
 
   ----------------------------------------------------------------------
@@ -176,8 +176,8 @@ module _ (Ats : List Formula) (a : Val) where
       m□ : □ B ∈ sub P
       m□ = evSub P mB
 
-  memStSkel : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
-  memStSkel P s2 =
+  skelVec∈St : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
+  skelVec∈St P s2 =
     ∈-filter⁺ (isState P) (allVecs (length (stateAtoms P)))
               (allVecs-complete (length (stateAtoms P)) (skelVec P)
                                 (map-length (valFrom Ats a) (stateAtoms P)))
@@ -185,12 +185,12 @@ module _ (Ats : List Formula) (a : Val) where
                            (s2Skel P s2))
 
   -- Hence beta P (St P) is true in any row satisfying (S2): chi P (skelVec
-  -- P) is a disjunct (memStSkel) and is true (chiTrue).
+  -- P) is a disjunct (skelVec∈St) and is true (chiTrue).
 
   betaSkel : (P : Formula) -> S2At (eventualities P)
           -> valFrom Ats a (beta P (St P)) ≡ true
   betaSkel P s2 =
-    ⋁True (map (chi P) (St P)) (∈-map⁺ (chi P) (memStSkel P s2)) (chiTrue P)
+    ⋁True (map (chi P) (St P)) (∈-map⁺ (chi P) (skelVec∈St P s2)) (chiTrue P)
 
 ------------------------------------------------------------------------
 -- The derivation half of □Chain: one modus ponens against one instance of
@@ -249,4 +249,4 @@ tautChi Q w ev =
     -- the conjunct  lit R false , i.e.  ¬ ¬ Q
     mneg : ¬ R ∈ map (litOf R w) (subformulas R)
     mneg = subst (λ b -> lit R b ∈ map (litOf R w) (subformulas R)) ev
-                 (∈-map⁺ (litOf R w) (nub-mem (sub R) (sub-self R)))
+                 (∈-map⁺ (litOf R w) (∈-nub⁺ (sub R) (sub-self R)))

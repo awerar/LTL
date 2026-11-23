@@ -121,15 +121,17 @@ module name). Folder names never equal a module name.
    `<`, `nth`, Boolean connectives and all Boolean lemmas, `refuteTrue`, and
    membership in both directions for `++`, `map`, `filter`, `any`, `all`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
-   any node type: `Sets` (what the searches run on: `≤`, `FindResult`, a
-   shrinking filter, the `null` lemmas, `CertStep`); `Bar`
+   any node type: `Sets` (what the searches run on: `≤`, `decideAll`, a
+   shrinking filter, the `null` lemmas); `Bar`
    (inductively finite sets after Coquand–Siles, closure lemmas; all searches
    recurse on a Bar); `Nodes` (parameterised by a node type and a sound,
    reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the
    hypothesis names). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the
-   `fairGraph` certificate theorem, `certAll`, exclusivity; largest module).
+   `fairGraph` certificate theorem, `certAll`, exclusivity, `certShape`;
+   largest module), whose step kinds `CertStep` are a module of their own so
+   that they do not depend on the graph.
    The P-module `Walk` applies both at `G = step` and re-exports them, so
    inside the P-modules their names read `Trail ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.

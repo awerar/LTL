@@ -60,12 +60,12 @@ stretch-head (s , w ∷ ws) = here
 
 -- A state visited on a stretch is the state of a position on it.
 
-stretch-mem : (pos : Pos)
-           -> ∀ⁱ[ z ∈ stretchStates pos ] ∃[ q ∈ stretch pos ] posState q ≡ z
-stretch-mem (s , [])     here      = (s , []) , here , refl
-stretch-mem (s , [])     (there ())
-stretch-mem (s , w ∷ ws) here      = (s , w ∷ ws) , here , refl
-stretch-mem (s , w ∷ ws) (there m) with stretch-mem (w , ws) m
+∈-stretchStates⁻ : (pos : Pos) -> ∀ⁱ[ z ∈ stretchStates pos ]
+                   ∃[ q ∈ stretch pos ] posState q ≡ z
+∈-stretchStates⁻ (s , [])     here      = (s , []) , here , refl
+∈-stretchStates⁻ (s , [])     (there ())
+∈-stretchStates⁻ (s , w ∷ ws) here      = (s , w ∷ ws) , here , refl
+∈-stretchStates⁻ (s , w ∷ ws) (there m) with ∈-stretchStates⁻ (w , ws) m
 ... | q , mq , eq = q , there mq , eq
 
 ------------------------------------------------------------------------

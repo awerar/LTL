@@ -1,13 +1,26 @@
 # Reviewed definitions, kept by tools/proof-map.
 # name	source hash	date	note
 LTL.1-Lib.Bar.Bar	a9f26cec9c14	2026-11-23	
+LTL.1-Lib.Sets.AllDecision	53d52272e9a5	2026-11-23	
+LTL.1-Lib.Sets._≤_	ec535d34aace	2026-11-23	
+LTL.1-Lib.Sets.consAll	95f9a14787b9	2026-11-23	
+LTL.1-Lib.Sets.decideAll	ab942c20d9cd	2026-11-23	
+LTL.1-Lib.Sets.decideAllCons	22e29a1f1c14	2026-11-23	
+LTL.1-Lib.Sets.emptyAll	706af73e7fa9	2026-11-23	
+LTL.1-Lib.Sets.filter-≤	bbf82f4fb4e0	2026-11-23	
+LTL.1-Lib.Sets.null-++-false-introˡ	9e91170fae2e	2026-11-23	
+LTL.1-Lib.Sets.null-false	e6a7d16a17fb	2026-11-23	
+LTL.1-Lib.Sets.≤-pred	5712b3982055	2026-11-23	
+LTL.1-Lib.Sets.≤-refl	d0f819fd263b	2026-11-23	
+LTL.1-Lib.Sets.≤-step	8c261fc3f8db	2026-11-23	
+LTL.1-Lib.Sets.≤-trans	546c8f327604	2026-11-23	
 LTL.2-Syntax.Deriv.⊢_	464080b3f5eb	2026-11-23	
 LTL.2-Syntax.Formula._⇔_	6fee8da29de3	2026-11-23	
 LTL.2-Syntax.Formula._∧_	228b011fbc50	2026-11-23	
 LTL.2-Syntax.Formula._∨_	b079333f1cd6	2026-11-23	
 LTL.2-Syntax.Formula._≡ᶠ_	4c4ad113678b	2026-11-23	
 LTL.2-Syntax.Formula.sub	bbb95be86d76	2026-11-23	
-LTL.2-Syntax.Formula.sub-mono	05042af29d34	2026-11-23	
+LTL.2-Syntax.Formula.sub-mono	04e917872bf6	2026-11-23	
 LTL.2-Syntax.Formula.sub-self	ef8f629a19eb	2026-11-23	
 LTL.2-Syntax.Formula.sub-¬	cc5b5e39cf7d	2026-11-23	
 LTL.2-Syntax.Formula.sub-⇒L	a5ded07405be	2026-11-23	
@@ -30,7 +43,7 @@ LTL.4-Semantics.Orbit.nextPos	439195bf7575	2026-11-23
 LTL.4-Semantics.Orbit.orbit	dd14a0c7c4d2	2026-11-23	
 LTL.4-Semantics.Orbit.orbit-all	fdee9cdc1a2d	2026-11-23	
 LTL.4-Semantics.Orbit.orbit-split	c8dd968152af	2026-11-23	
-LTL.4-Semantics.Orbit.orbitClosed	1d2f3ca40c2a	2026-11-23	
+LTL.4-Semantics.Orbit.orbitClosed	1f79e88f1f9a	2026-11-23	
 LTL.4-Semantics.Orbit.orbitHead	4c7e2dd5a125	2026-11-23	
 LTL.4-Semantics.Orbit.orbitN	d3667ddb06fc	2026-11-23	
 LTL.4-Semantics.Orbit.orbitN-split	9b108bd7971e	2026-11-23	
@@ -40,10 +53,10 @@ LTL.4-Semantics.Orbit.posIter-+	633086970f16	2026-11-23
 LTL.4-Semantics.Orbit.posState	098c35d281e5	2026-11-23	
 LTL.4-Semantics.Orbit.stretch	b96e8823ceeb	2026-11-23	
 LTL.4-Semantics.Orbit.stretch-head	fb914fb9a3fb	2026-11-23	
-LTL.4-Semantics.Orbit.stretch-mem	7d3d19740c02	2026-11-23	
-LTL.4-Semantics.Orbit.stretch-next	7d8eb09b9b8b	2026-11-23	
+LTL.4-Semantics.Orbit.stretch-next	8107501b9464	2026-11-23	
 LTL.4-Semantics.Orbit.stretchStates	232e092c89cf	2026-11-23	
 LTL.4-Semantics.Orbit.stretch⊆orbit	d1caea813b2a	2026-11-23	
+LTL.4-Semantics.Orbit.∈-stretchStates⁻	8b45a6cb23ff	2026-11-23	
 LTL.4-Semantics.Orbit.∈orbit-iter	d992f627f7d8	2026-11-23	
 LTL.4-Semantics.Orbit.∈orbitN-iter	30ce9da44df3	2026-11-23	
 LTL.4-Semantics.OrbitEval.evalAt	8f9f1c8ed143	2026-11-23	

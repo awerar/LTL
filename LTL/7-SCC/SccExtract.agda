@@ -74,13 +74,13 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
     toC w m = betaElim (succs St w) eachS
       where
         eachS : ∀[ w' ∈ succs St w ] ⊢ (chi w') ⇒ (beta C)
-        eachS w' m' = byMem
+        eachS w' m' = by∈ᵛ
           where
             pr : w' ∈ St × step w w' ≡ true
-            pr = succsMem St w m'
+            pr = ∈-succs⁻ St w m'
 
-            byMem : ⊢ (chi w') ⇒ (beta C)
-            byMem with w' ∈ᵛ ws in eb
+            by∈ᵛ : ⊢ (chi w') ⇒ (beta C)
+            by∈ᵛ with w' ∈ᵛ ws in eb
             ... | false =
               mp ¬Elim (ih w' (ustClosed (cUst w m) (fst pr) (snd pr)) eb)
             ... | true  = betaIntro C (cCl w w' m (fst pr) eb (snd pr))
@@ -111,14 +111,14 @@ sinkStep : (ws : List Val) (x : Val) -> x ∈ ws
 sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 
 -- The block.  The fairness predicate is read back as an eventuality
--- (evPredsInv), its falsity on C gives the two hypotheses, and the
+-- (∈-evPreds⁻), its falsity on C gives the two hypotheses, and the
 -- component is intersected with Ust P.
 
 blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
          -> C ⊆ ws -> Closed ws step C -> NoneSat f C
          -> HoldsOutside UstRef ws
          -> ∀[ z ∈ C ] UstRef z
-blockStep ws C f mf sbC cl mis ih z mz mzU = onA (evPredsInv mf)
+blockStep ws C f mf sbC cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
   where
     onA : (∃[ A ∈ eventualities ] f ≡ evPred A)
        -> ⊢ ¬ (chi z)
@@ -187,4 +187,4 @@ ustCertRefuted c = certRefuted c ustRefuted
 sccGraph : FairIn Ust evPreds ⊎
            Cert evPreds Ust
 sccGraph =
-  graphGo evPreds Ust (memAllSat Ust) (listBar Ust)
+  graphGo evPreds Ust (AllSat-∈ᵛ Ust) (listBar Ust)

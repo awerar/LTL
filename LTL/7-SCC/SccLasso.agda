@@ -41,11 +41,11 @@ evPred A z = valOf z (□ A) ∨ᵇ ¬ᵇ valOf z A
 evPreds : List Pred
 evPreds = map evPred (eventualities)
 
-evPredsMem : ∀ⁱ[ A ∈ eventualities ] evPred A ∈ evPreds
-evPredsMem m = ∈-map⁺ evPred m
+∈-evPreds⁺ : ∀ⁱ[ A ∈ eventualities ] evPred A ∈ evPreds
+∈-evPreds⁺ m = ∈-map⁺ evPred m
 
-evPredsInv : ∀ⁱ[ g ∈ evPreds ] ∃[ A ∈ eventualities ] g ≡ evPred A
-evPredsInv m = ∈-map⁻ evPred (eventualities) m
+∈-evPreds⁻ : ∀ⁱ[ g ∈ evPreds ] ∃[ A ∈ eventualities ] g ≡ evPred A
+∈-evPreds⁻ m = ∈-map⁻ evPred (eventualities) m
 
 -- Reading a witness: the predicate holds at z and the eventuality is still
 -- pending there, so the first disjunct is out and the second says A fails.
@@ -101,7 +101,7 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
     -- Pending at the base point: go out to the witness the graph layer
     -- chose for evPred A.
     fair : Fair cyc
-    fair A mA pr = onW (wit (evPred A) (evPredsMem mA))
+    fair A mA pr = onW (wit (evPred A) (∈-evPreds⁺ mA))
       where
         onW : (∃[ z ∈ cy ] evPred A z ≡ true)
            -> Fulfil A r cy

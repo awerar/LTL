@@ -53,9 +53,9 @@ x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
 ∈ᵛ-false : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
 ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
 
-null-notMem : (ws : List Node) (z : Node) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
-null-notMem []       z e = refl
-null-notMem (w ∷ ws) z ()
+null-∈ᵛ : (ws : List Node) (z : Node) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
+null-∈ᵛ []       z e = refl
+null-∈ᵛ (w ∷ ws) z ()
 
 ------------------------------------------------------------------------
 -- Names for the hypotheses the graph searches keep repeating.  Each is an
@@ -99,11 +99,11 @@ IFin E = Bar _≢ᵛ_ E
 barOfList : {E : Pred} (n : Nat) (xs : List Node) -> length xs ≤ n
          -> ((x : Node) -> E x ≡ true -> x ∈ xs) -> IFin E
 barOfList         zero    xs le sb =
-  cBar (λ x ex -> emptyElim (length-≤0-mem xs le (sb x ex)))
+  cBar (λ x ex -> emptyElim (length-≤0-∈ xs le (sb x ex)))
 barOfList {E = E} (suc n) xs le sb =
   cBar (λ x ex -> barOfList n (filter (x ≢ᵛ_) xs)
-                    (≤-pred (≤-trans (filter-lt (x ≢ᵛ_) xs (sb x ex)
-                                                (≢ᵛ-self x)) le))
+                    (≤-pred (≤-trans (filter-< (x ≢ᵛ_) xs
+                                         (x , sb x ex , ≢ᵛ-self x)) le))
                     (λ z ez -> ∈-filter⁺ (x ≢ᵛ_) xs
                                (sb z (∧ᵇ-trueˡ (E z) (x ≢ᵛ z) ez))
                                (∧ᵇ-trueʳ (E z) (x ≢ᵛ z) ez)))
@@ -120,9 +120,9 @@ barOfList {E = E} (suc n) xs le sb =
 --   av    the "available" invariant of a growing search, Avail E ws acc:
 --         every candidate in ws not yet in the accumulator acc still
 --         satisfies the Bar's predicate E.
--- A search comes as a pair fooGo / fooFind: fooGo runs findFalse for one
--- round, and fooFind cases on its FindResult -- allTrue stops, found x
--- recurses on the smaller Bar that cBar hands over.
+-- A search comes as a pair fooGo / fooFind: fooGo runs decideAll for one
+-- round, and fooFind cases on its AllDecision -- allTrue stops,
+-- counterexample x recurses on the smaller Bar that cBar hands over.
 
 AllSat : Pred -> List Node -> Set
 AllSat E xs = ∀[ x ∈ xs ] E x ≡ true
@@ -130,8 +130,8 @@ AllSat E xs = ∀[ x ∈ xs ] E x ≡ true
 Avail : Pred -> List Node -> List Node -> Set
 Avail E ws acc = (z : Node) -> z ∈ ws -> z ∈ᵛ acc ≡ false -> E z ≡ true
 
-memAllSat : (xs : List Node) -> AllSat (λ v -> v ∈ᵛ xs) xs
-memAllSat xs x m = ∈ᵛ-complete x xs m
+AllSat-∈ᵛ : (xs : List Node) -> AllSat (λ v -> v ∈ᵛ xs) xs
+AllSat-∈ᵛ xs x m = ∈ᵛ-complete x xs m
 
 listBar : (xs : List Node) -> IFin (λ v -> v ∈ᵛ xs)
 listBar xs = barOfList (length xs) xs (≤-refl (length xs))

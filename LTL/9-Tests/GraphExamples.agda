@@ -14,7 +14,7 @@ open import LTL.1-Lib.Prelude
 open import LTL.1-Lib.Graph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
 open import LTL.1-Lib.FairGraph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
 open import LTL.1-Lib.Nodes _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl using (_∈ᵛ_; Edges; Pred)
-open import LTL.1-Lib.Sets using (CertStep; removedSink; removedBlock; emptied)
+open import LTL.1-Lib.CertStep
 
 ------------------------------------------------------------------------
 -- The first graph: a = 0 and b = 1, with a -> b and b -> b.  b's component

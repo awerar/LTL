@@ -43,6 +43,7 @@ open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
 open import LTL.1-Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl
 open import LTL.1-Lib.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl G
+open import LTL.1-Lib.CertStep
 
 ------------------------------------------------------------------------
 -- Components, without component objects: sccOf ws r is the vertices r
@@ -123,18 +124,18 @@ module _ (ws : List Node) where
           -> AllSat E (reachSet ws r) -> IFin E -> Terminal ws
   termFind : (r : Node) -> r ∈ ws -> {E : Pred}
           -> AllSat E (reachSet ws r) -> IFin E
-          -> FindResult (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+          -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
           -> Terminal ws
 
   termGo r mr av bar =
     termFind r mr av bar
-             (findFalse (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r))
+             (decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r))
 
-  termFind r mr av bar          (allTrue f)       =
+  termFind r mr av bar          (allTrue f)             =
     terminalAt r mr
                (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
                           (λ w m -> f m))
-  termFind r mr {E} av (cBar h) (found w mw q) =
+  termFind r mr {E} av (cBar h) (counterexample w mw q) =
     termGo w (reachIn ws r mw) av' (h r (av r (reachSeed ws r mr)))
     where
       av' : ∀[ z ∈ reachSet ws w ] E z ∧ᵇ (r ≢ᵛ z) ≡ true
@@ -363,16 +364,16 @@ module _ (fs : List Pred) where
   graphGo    : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
             -> FairIn ws fs ⊎ Cert fs ws
   graphFind  : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
-            -> FindResult (hasOut ws) ws
+            -> AllDecision (hasOut ws) ws
             -> FairIn ws fs ⊎ Cert fs ws
   graphBlock : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
             -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
 
-  graphGo ws sb bar = graphFind ws sb bar (findFalse (hasOut ws) ws)
+  graphGo ws sb bar = graphFind ws sb bar (decideAll (hasOut ws) ws)
 
-  graphFind ws sb bar      (allTrue f)       =
+  graphFind ws sb bar      (allTrue f)              =
     graphBlock ws sb bar (pickBlock ws fs f)
-  graphFind ws sb (cBar h) (found x mx q) =
+  graphFind ws sb (cBar h) (counterexample x mx q) =
     [ (λ fi -> inl (fairInMono (ws ∖ᵛ x) ws fs
                                (λ z m -> ∈-filter⁻ (x ≢ᵛ_) ws m) fi))
     , (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws x)) q) c))
@@ -418,7 +419,7 @@ fairGraph : (vs : List Node) (fs : List Pred)
          -> FairLoop vs fs v ⊎ Cert fs (reachSet vs v)
 fairGraph vs fs v mv =
   [ (λ fi -> inl (toLoop fi)) , inr ]
-    (graphGo fs (reachSet vs v) (memAllSat (reachSet vs v))
+    (graphGo fs (reachSet vs v) (AllSat-∈ᵛ (reachSet vs v))
              (listBar (reachSet vs v)))
   where
     into : ∀[ z ∈ reachSet vs v ] z ∈ vs
@@ -460,7 +461,7 @@ module _ (fs : List Pred) (R : Node -> Set)
 
   certAll : {ws : List Node} -> Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z
-  certAll (cNil ws e)          ih z = ih z (null-notMem ws z e)
+  certAll (cNil ws e)          ih z = ih z (null-∈ᵛ ws z e)
   certAll (cSink ws x mx e c)  ih z =
     certAll c (dropOutside (x ≢ᵛ_) ws ih isX) z
     where
@@ -574,7 +575,7 @@ keepIn ws p t h z mz = ∈-filter⁺ p ws (trailIn ws t mz) (h z mz)
 certNoCirc : (fs : List Pred) {ws : List Node}
           -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
 certNoCirc fs (cNil ws e)         r (circuit (loopBy cy t nn) wit) =
-  null-mem ws e (trailIn ws t (trailLast ws t nn))
+  null-∈ ws e (trailIn ws t (trailLast ws t nn))
 certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy cy t nn) wit) =
   certNoCirc fs c r
     (circuit (loopRestrict ws (ws ∖ᵛ x) l (keepIn ws (x ≢ᵛ_) t keep)) wit)
@@ -584,7 +585,7 @@ certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy cy t nn) wit) =
       where
         onS : HasSucc ws x -> Empty
         onS (hasSucc y my gy) =
-          null-mem (outs ws x) e (∈-filter⁺ (G x) ws my gy)
+          null-∈ (outs ws x) e (∈-filter⁺ (G x) ws my gy)
 
     keep : ∀[ z ∈ cy ] x ≢ᵛ z ≡ true
     keep z mz = cong ¬ᵇ_ out
@@ -641,7 +642,7 @@ fairComplete vs fs v mv fl = onS (fairGraph vs fs v mv) refl
     onS (inr c) es = emptyElim (fairNoLoop vs fs v mv c fl)
 
 ------------------------------------------------------------------------
--- The removal order as a list of step kinds (CertStep, LTL.1-Lib.Sets), one per
+-- The removal order as a list of step kinds (LTL.1-Lib.CertStep), one per
 -- constructor of Cert.
 
 certShape : {fs : List Pred} {ws : List Node}

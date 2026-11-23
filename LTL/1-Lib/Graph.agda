@@ -125,7 +125,7 @@ module _ (S : Pred) (ws : List Node) where
   missing acc x = wanted acc x ∧ᵇ ¬ᵇ (x ∈ᵛ acc)
 
   -- x is settled when it needs no adding: it is not wanted, or acc has it.
-  -- A round looks for an unsettled x with findFalse.
+  -- A round looks for an unsettled x with decideAll.
 
   settled : List Node -> Node -> Bool
   settled acc x = ¬ᵇ missing acc x
@@ -173,12 +173,12 @@ module _ (S : Pred) (ws : List Node) where
   growGo   : {E : Pred} (acc : List Node) -> Avail E ws acc
           -> IFin E -> List Node
   growFind : {E : Pred} (acc : List Node) -> Avail E ws acc
-          -> IFin E -> FindResult (settled acc) ws -> List Node
+          -> IFin E -> AllDecision (settled acc) ws -> List Node
 
-  growGo acc av bar = growFind acc av bar (findFalse (settled acc) ws)
+  growGo acc av bar = growFind acc av bar (decideAll (settled acc) ws)
 
-  growFind acc av bar      (allTrue f)   = acc
-  growFind acc av (cBar h) (found x m q) =
+  growFind acc av bar      (allTrue f)            = acc
+  growFind acc av (cBar h) (counterexample x m q) =
     growGo (addRound acc) (availRound acc x m q av)
            (h x (av x m (notInAcc acc x q)))
 
@@ -194,27 +194,27 @@ module _ (S : Pred) (ws : List Node) where
   growInvFind : (I : List Node -> Set)
              -> ((acc : List Node) -> I acc -> I (addRound acc))
              -> {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
-                (fr : FindResult (settled acc) ws)
+                (fr : AllDecision (settled acc) ws)
              -> I acc -> I (growFind acc av bar fr)
 
   growInv I round acc av bar =
-    growInvFind I round acc av bar (findFalse (settled acc) ws)
+    growInvFind I round acc av bar (decideAll (settled acc) ws)
 
-  growInvFind I round acc av bar      (allTrue f)   i = i
-  growInvFind I round acc av (cBar h) (found x m q) i =
+  growInvFind I round acc av bar      (allTrue f)            i = i
+  growInvFind I round acc av (cBar h) (counterexample x m q) i =
     growInv I round (addRound acc) _ (h x (av x m (notInAcc acc x q)))
             (round acc i)
 
   growDone     : {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
               -> ∀ⁱ[ x ∈ ws ] settled (growGo acc av bar) x ≡ true
   growDoneFind : {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
-                 (fr : FindResult (settled acc) ws)
+                 (fr : AllDecision (settled acc) ws)
               -> ∀ⁱ[ x ∈ ws ] settled (growFind acc av bar fr) x ≡ true
 
-  growDone acc av bar = growDoneFind acc av bar (findFalse (settled acc) ws)
+  growDone acc av bar = growDoneFind acc av bar (decideAll (settled acc) ws)
 
-  growDoneFind acc av bar      (allTrue f)   = f
-  growDoneFind acc av (cBar h) (found x m q) =
+  growDoneFind acc av bar      (allTrue f)            = f
+  growDoneFind acc av (cBar h) (counterexample x m q) =
     growDone (addRound acc) _ (h x (av x m (notInAcc acc x q)))
 
   ------------------------------------------------------------------------
@@ -312,27 +312,27 @@ module _ (S : Pred) (ws : List Node) {E : Pred} (sb : AllSat E ws)
 -- The reachable set: the closure of the single seed v, on the Bar listBar ws.
 
 reachSet : List Node -> Node -> List Node
-reachSet ws v = closure (v ≡ᵛ_) ws (memAllSat ws) (listBar ws)
+reachSet ws v = closure (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws)
 
 reachIn : (ws : List Node) (v : Node)
        -> ∀ⁱ[ z ∈ reachSet ws v ] z ∈ ws
-reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (memAllSat ws) (listBar ws) z
+reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) z
 
 reachTrail : (ws : List Node) (v : Node)
           -> ∀ⁱ[ z ∈ reachSet ws v ] Reaches ws v z
 reachTrail ws v {z} m =
   subst (λ y -> Reaches ws y z) (sym (≡ᵛ-sound v seed seedHolds)) reaches
-  where open Seeded (closureSeeded (v ≡ᵛ_) ws (memAllSat ws) (listBar ws) z m)
+  where open Seeded (closureSeeded (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) z m)
 
 reachSeed : (ws : List Node) (v : Node)
          -> v ∈ ws -> v ∈ reachSet ws v
 reachSeed ws v mv =
-  closureSeed (v ≡ᵛ_) ws (memAllSat ws) (listBar ws) mv (≡ᵛ-refl v)
+  closureSeed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) mv (≡ᵛ-refl v)
 
 reachClosed : (ws : List Node) (v : Node) {u w : Node}
            -> u ∈ reachSet ws v -> w ∈ ws -> G u w ≡ true
            -> w ∈ reachSet ws v
-reachClosed ws v = closureClosed (v ≡ᵛ_) ws (memAllSat ws) (listBar ws)
+reachClosed ws v = closureClosed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws)
 
 -- Completeness: a trail from a member of the set stays in the set, by
 -- induction along the trail against the stopping condition.
