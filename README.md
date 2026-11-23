@@ -25,8 +25,9 @@ implemented.**
   must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for the
   procedure.
 - [LTL/Procedures/Decide.agda](LTL/Procedures/Decide.agda): the public
-  decision procedure, and [LTL/Procedures/Answer.agda](LTL/Procedures/Answer.agda):
-  what it returns and how to read it.
+  decision procedure, [LTL/Procedures/Answer.agda](LTL/Procedures/Answer.agda):
+  what it returns, and [LTL/Procedures/Inspect.agda](LTL/Procedures/Inspect.agda):
+  how to look inside an answer.
 
 ## Check the development
 
@@ -226,7 +227,7 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
 | `LTL/Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
-| `LTL/Procedures/` | `Answer`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1 |
+| `LTL/Procedures/` | `Answer`, `Inspect`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1; functions that look inside an answer |
 | `LTL/Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 

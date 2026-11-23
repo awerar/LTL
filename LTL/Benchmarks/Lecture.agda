@@ -97,8 +97,8 @@ lec-edges : length (concat (map (λ v -> succs R (Ust R) v) (Ust R))) ≡ 24
 lec-edges = refl
 
 ------------------------------------------------------------------------
--- The decision, and the lasso.  cmLasso reads the countermodel as (start ,
--- rest , cycle), where rest is the stem followed by the cycle.
+-- The decision, and the lasso, read as (start , rest , cycle), where rest is
+-- the stem followed by the cycle.
 
 lec-notValid : isProof (decide fab) ≡ false
 lec-notValid = refl
@@ -107,7 +107,7 @@ lec-cm : LassoCountermodel fab
 lec-cm = countermodelFrom (decide fab) refl
 
 lo : Val × List Val × List Val
-lo = cmLasso fab lec-cm
+lo = LassoCountermodel.start lec-cm , cmRest fab lec-cm , cmCycle fab lec-cm
 
 -- Start, stem-and-cycle, cycle: s7, then s4 and the loop at s0.  One equation,
 -- because every mention of lo re-runs the countermodel branch.  The file takes

@@ -72,7 +72,7 @@ derivation or a certified finite lasso countermodel.
   module (`Common`, `Taut`, `VecBar`, `Reach`), or an importer opening the
   P-module unapplied would see a spurious P argument. `Decide` works the same
   way one level up: its parameter is the input Q, and it opens the P-modules
-  at `¬ Q`. Everywhere else (`Answer`, `Correct`, `Pretty`, the tests) these
+  at `¬ Q`. Everywhere else (`Answer`, `Inspect`, `Correct`, `Pretty`, the tests) these
   modules are opened unapplied, so every name takes its formula first
   (`St benAri`, `Lasso (¬ Q) v0`, `decide Q`). `LTL.Procedures.Everything`
   re-exports all of them unapplied, and those importers import it.
@@ -171,8 +171,10 @@ a module name.
    `SccExtract` (`ustCertRefuted`: a certificate refutes every state of
    `Ust`), `SccSeed` (`ustSeedTo`: every state of `Ust` is `Seeded`, reached from
    one containing `P`). In `Procedures/`: `Answer`
-   (`LassoCountermodel`, `isProof` with `proofFrom` and `countermodelFrom`,
-   `cmLasso`, `cmTrace`, `cmShape`, `derivCounts`);
+   (`LassoCountermodel`, `isProof` with `proofFrom` and `countermodelFrom`:
+   only what `decideCorrect` uses); `Inspect` (off the proof path, for
+   `Pretty`, tests and benchmarks: `cmRest`, `cmCycle`, `cmTrace`, `cmShape`,
+   `derivCounts`);
    `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
    `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
    all of the above unapplied, for importers). At the root:

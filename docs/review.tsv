@@ -15,6 +15,7 @@ LTL.Correct.toPosition	c1fff8c6eb61	2026-11-23
 LTL.Correct.⊢-valid	187582312aa7	2026-11-23	
 LTL.Procedures.Answer.countermodelFrom	65d46b373b78	2026-11-23	
 LTL.Procedures.Answer.isProof	ac0d4eb0558a	2026-11-23	
+LTL.Procedures.Answer.proofFrom	a8ef9cea953e	2026-11-23	
 LTL.Procedures.Decide.decide	cbba6174f4e5	2026-11-23	
 LTL.Semantics.Orbit.Pos	6b22de48c737	2026-11-23	
 LTL.Semantics.Orbit.posIter-+ʳ	20a93c6273cb	2026-11-23	

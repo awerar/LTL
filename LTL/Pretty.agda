@@ -373,7 +373,7 @@ cmLines : (Q : Formula) -> LassoCountermodel Q -> List String
 cmLines Q c =
   ("⊬ " <> showFormula Q) ∷ ""
   ∷ "Countermodel: the formula is false at time 0.  Variables true at each time:"
-  ∷ statesLines (¬ Q) zero (cmStart Q c ∷ cmRest Q c)
+  ∷ statesLines (¬ Q) zero (LassoCountermodel.start c ∷ cmRest Q c)
   ++ "then repeating forever:"
   ∷ statesLines (¬ Q) loopStart (cmCycle Q c)
   ++ ("  (back to time " <> showNat loopStart <> ")") ∷ []

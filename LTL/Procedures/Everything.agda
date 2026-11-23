@@ -25,4 +25,5 @@ open import LTL.SCC.SccLasso            public
 open import LTL.SCC.SccExtract          public
 open import LTL.SCC.SccSeed             public
 open import LTL.Procedures.Answer       public
+open import LTL.Procedures.Inspect      public
 open import LTL.Procedures.Decide       public

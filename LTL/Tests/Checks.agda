@@ -199,6 +199,10 @@ decide-◇P = refl
 ◇P-cm : LassoCountermodel ◇P
 ◇P-cm = countermodelFrom (decide ◇P) refl
 
+-- (start , rest , cycle) of a countermodel, so one refl checks the whole lasso.
+cmLasso : (Q : Formula) -> LassoCountermodel Q -> Val × List Val × List Val
+cmLasso Q c = LassoCountermodel.start c , cmRest Q c , cmCycle Q c
+
 decide-◇P-lasso : cmLasso ◇P ◇P-cm ≡
                   (◇P-cmState , ◇P-cmState ∷ ◇P-cmState ∷ [] ,
                                 ◇P-cmState ∷ ◇P-cmState ∷ [])
