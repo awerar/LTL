@@ -148,8 +148,7 @@ its top definition as the root: `next provableSCC` lists only what lies
 under `provableSCC`. `--order weight` gives a single list ranked by what each
 definition carries, `--order tree` a single list in tree order.
 
-Review marks are kept in `docs/review.tsv` (written by the first `done`; a
-local file, ignored by git), with a
+Review marks are kept in `docs/review.tsv` (written by the first `done`), with a
 hash of each definition's source (comments and spacing are ignored). When the
 code of a reviewed definition changes, its mark shows as stale (`~`) until it
 is marked again. Names from `Base`, `Prelude`, `Statement` and Agda's
