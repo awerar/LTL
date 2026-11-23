@@ -133,7 +133,7 @@ tools/proof-map show provableSCC --src   # uses, users and source
 tools/proof-map done decide -m "note"    # mark as reviewed
 tools/proof-map done LTL/1-Lib/Bar.agda    # mark a whole file (or LTL.1-Lib.Bar)
 tools/proof-map status                   # progress per module
-tools/proof-map stale                    # reviews that are out of date
+tools/proof-map stale --diff             # reviews that are out of date, and what changed
 ```
 
 Marks can be made in any order, so a review can work top down from
@@ -201,8 +201,12 @@ needs no npm packages or build step. It adds:
   code changed since their review, and marks of definitions that no longer
   exist. Click an entry to open it; a mark whose definition was renamed is
   matched, by its reviewed code, to the likely new name, which a click opens
-  (right-click to remove the old mark). Their lines in the editor are
-  highlighted, with a mark in the scroll bar; in the tree their names are
+  (right-click to remove the old mark). In the editor only what changed
+  since the review is marked: changed text on a yellow background, a dashed
+  line where lines were removed, the reviewed text on hover, and a mark in
+  the scroll bar. This compares with a copy of each reviewed definition that
+  `proof-map` keeps in `_build/proof-map-reviewed/` (or, failing that, with
+  git); without either, only the name is marked. In the tree their names are
   highlighted and described as changed; the status bar turns yellow with
   the count and opens the view. Ticking a checkbox, or the CodeLens above
   the definition, marks it reviewed again.

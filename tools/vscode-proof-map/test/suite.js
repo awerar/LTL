@@ -195,12 +195,39 @@ exports.run = async () => {
       assert(oe.document.lineAt(oe.selection.active.line).text.trim()
         .startsWith(api.data.defs[orphan.orphan.renamedTo].name));
     }
-    const rootDoc = await vscode.workspace.openTextDocument(
-      path.join(folder, api.data.defs[data.root].path));
-    const ranges = api.staleRanges(rootDoc);
-    log(`highlight: ${ranges.map(r => `${r.range.start.line + 1}-${r.range.end.line + 1}`).join(', ')}; ` +
-      `"${rootDoc.lineAt(ranges[0].range.start.line).text.trim().slice(0, 30)}"`);
-    assert(rootDoc.lineAt(ranges[0].range.start.line).text.startsWith('decideCorrect'));
+    // Without a reviewed copy (000000000000 has none), only the name.
+    const rootDef = api.data.defs[data.root];
+    const rootDoc = await vscode.workspace.openTextDocument(path.join(folder, rootDef.path));
+    const show = r => `${r.range.start.line + 1}:${r.range.start.character + 1}-` +
+      `${r.range.end.character + 1} "${rootDoc.getText(r.range)}"`;
+    let ranges = api.staleRanges(rootDoc);
+    log(`no copy: ${ranges.changed.map(show).join(', ')}`);
+    assert.strictEqual(ranges.changed.length, 1);
+    assert.strictEqual(rootDoc.getText(ranges.changed[0].range), 'decideCorrect');
+
+    // With a reviewed copy: one edited line and one removed line.
+    const start = rootDef.line - 1;
+    const now = [];
+    for (let i = start; i <= rootDef.end - 1; i++) {
+      const t = rootDoc.lineAt(i).text;
+      if (t.trim() && !t.trim().startsWith('--')) now.push(t);
+    }
+    const was = [...now];
+    was[1] = was[1].replace(/=/, '= reviewedVersion');
+    was.splice(2, 0, '  removedSinceReview');
+    const snap = path.join(folder, '_build', 'proof-map-reviewed', '000000000000.txt');
+    fs.writeFileSync(snap, was.join('\n'));
+    try {
+      await api.refresh(false);
+      ranges = api.staleRanges(rootDoc);
+      log(`changed: ${ranges.changed.map(show).join(', ')} | removed before line ` +
+        `${ranges.removed.map(r => r.range.start.line + 1).join(', ')}`);
+      assert(ranges.changed.length >= 1 && ranges.changed.every(r => r.range.start.line === start + 1));
+      assert(ranges.changed.every(r => r.range.end.character - r.range.start.character < 20));
+      assert.strictEqual(ranges.removed.length, 1);
+    } finally {
+      fs.rmSync(snap, { force: true });
+    }
     await api.mark([data.root], true);              // reviewed again
     assert.strictEqual(api.data.defs[data.root].status, 'done');
     assert(!api.staleList.getChildren().some(e => e.qn === data.root));

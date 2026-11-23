@@ -303,12 +303,12 @@
     "colors": [
       {
         "id": "proofMap.staleBackground",
-        "description": "Background of definitions whose code changed since their review.",
+        "description": "Background of text changed since its review.",
         "defaults": {
-          "dark": "#cca70026",
-          "light": "#ffcc0033",
-          "highContrast": "#cca70040",
-          "highContrastLight": "#ffcc0040"
+          "dark": "#cca70055",
+          "light": "#ffcc0066",
+          "highContrast": "#cca70066",
+          "highContrastLight": "#ffcc0066"
         }
       }
     ]

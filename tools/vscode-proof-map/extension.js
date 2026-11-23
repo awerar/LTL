@@ -400,31 +400,78 @@ class StaleProvider {
   }
 }
 
-const staleHighlight = vscode.window.createTextEditorDecorationType({
-  isWholeLine: true,
-  backgroundColor: new vscode.ThemeColor('proofMap.staleBackground'),
+// The editor shows what changed since the review, not the whole definition:
+// changed text on a yellow background, a dashed line where lines were
+// removed, each with the reviewed text on hover. Without a reviewed copy to
+// compare with, only the definition's name is marked.
+const ruler = {
   overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.warningForeground'),
   overviewRulerLane: vscode.OverviewRulerLane.Left,
+};
+const staleChanged = vscode.window.createTextEditorDecorationType({
+  backgroundColor: new vscode.ThemeColor('proofMap.staleBackground'),
+  ...ruler,
+});
+const staleRemoved = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  borderWidth: '1px 0 0 0',
+  borderStyle: 'dashed',
+  borderColor: new vscode.ThemeColor('list.warningForeground'),
+  ...ruler,
 });
 
-// The lines of each stale definition in a document, with a hover.
+function hover(d, was) {
+  const md = new vscode.MarkdownString(
+    `**Proof Map**: changed since its review on ${d.reviewed.date}`);
+  if (was && was.length) {
+    md.appendMarkdown('\n\nReviewed:');
+    md.appendCodeblock(was.join('\n'), 'agda');
+  }
+  return md;
+}
+
+// The decorations for the stale definitions in a document.
 function staleRanges(doc) {
-  if (!data) return [];
+  const changed = [], removed = [];
+  if (!data) return { changed, removed };
   const rel = path.relative(folder, doc.uri.fsPath).split(path.sep).join('/');
-  return staleDefs().map(def).filter(d => d.path === rel).map(d => {
+  const clampLine = n => Math.min(Math.max(n, 0), doc.lineCount - 1);
+  for (const d of staleDefs().map(def).filter(e => e.path === rel)) {
     const start = locate(doc, d);
-    const end = Math.min(start + (d.end - d.line), doc.lineCount - 1);
-    return {
-      range: new vscode.Range(start, 0, end, 0),
-      hoverMessage: `Proof Map: changed since its review on ${d.reviewed.date}`,
-    };
-  });
+    if (!d.changes) {
+      const name = d.name.replace(/@\d+$/, '');
+      const text = doc.lineAt(start).text;
+      const at = Math.max(text.indexOf(name), 0);
+      changed.push({ range: new vscode.Range(start, at, start, at + name.length),
+        hoverMessage: hover(d).appendMarkdown('\n\n(no reviewed copy to compare with)') });
+      continue;
+    }
+    for (const c of d.changes.lines) {
+      const line = clampLine(start + c.line);
+      const text = doc.lineAt(line).text;
+      const spans = c.spans ||
+        [[text.length - text.trimStart().length, text.length]];
+      for (const [a, b] of spans) {
+        changed.push({
+          range: new vscode.Range(line, Math.min(a, text.length), line, Math.min(b, text.length)),
+          hoverMessage: hover(d, c.old === null ? [] : [c.old]),
+        });
+      }
+    }
+    for (const r of d.changes.removed) {
+      const line = clampLine(start + r.line);
+      removed.push({ range: new vscode.Range(line, 0, line, 0), hoverMessage: hover(d, r.old) });
+    }
+  }
+  return { changed, removed };
 }
 
 function highlightStale() {
   for (const ed of vscode.window.visibleTextEditors) {
     if (ed.document.uri.fsPath.endsWith('.agda')) {
-      ed.setDecorations(staleHighlight, staleRanges(ed.document));
+      const { changed, removed } = staleRanges(ed.document);
+      ed.setDecorations(staleChanged, changed);
+      ed.setDecorations(staleRemoved, removed);
     }
   }
 }
@@ -705,7 +752,7 @@ function activate(context) {
   };
 
   const sub = (...ds) => context.subscriptions.push(...ds);
-  sub(treeView, nextView, nextUpView, staleView, staleHighlight, status, unfocusItem, output,
+  sub(treeView, nextView, nextUpView, staleView, staleChanged, staleRemoved, status, unfocusItem, output,
     staleView.onDidChangeCheckboxState(e => onCheck(e)),
     vscode.window.onDidChangeVisibleTextEditors(highlightStale),
     vscode.workspace.onDidChangeTextDocument(e => {
