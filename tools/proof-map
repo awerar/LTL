@@ -1,0 +1,658 @@
+#!/usr/bin/env python3
+r"""Map the proof top down and track which definitions have been reviewed.
+
+    tools/proof-map tree [ROOT] [--depth N] [--open]   dependency tree
+    tools/proof-map tree NAME --up [--depth N]         who uses NAME, upwards
+    tools/proof-map next [ROOT] [-n N] [--up]          what to review next
+    tools/proof-map show NAME [--src]                  one definition
+    tools/proof-map status [ROOT]                      progress per module
+    tools/proof-map done NAME... [-m NOTE]             mark as reviewed
+    tools/proof-map undo NAME...                       remove the marks
+    tools/proof-map json [ROOT]                        everything, for editors
+
+Reviews can go top down (`next`: open definitions with a reviewed user),
+bottom up (`next --up`: open definitions whose uses are all reviewed), or
+both; `status` counts the open definitions left between the two.
+
+ROOT defaults to decideCorrect.  NAME is a definition's name (`decide`), or
+qualified by the end of its module path when the name is ambiguous
+(`Lasso.Fair`, `Countermodel.Lasso.Fair`); operators may omit underscores.
+
+The graph comes from `agda --html` on LTL/Correct.agda (written to
+_build/proof-map/), whose output links every name to its definition site.  A
+definition owns the lines of its signature, clauses and `where` block; the
+constructors of a datatype and the fields of a record belong to it, so using
+`vpos` is a dependency on `ValidPos`.  Names in the LEAF modules (Agda's
+builtins, Base, Prelude, the read-only Statement) are not expanded.
+
+Reviews are recorded in docs/review.tsv with a hash of the definition's
+source, comments and spacing removed.  A definition is reviewed (✓) while
+the hash matches, stale (~) once its code changes, and otherwise open (·).
+If Agda fails (say, mid-refactor), the last generated HTML is used, as it is
+with --cached.  Set AGDA to choose the binary.
+"""
+
+import argparse
+import json
+import datetime
+import hashlib
+import html
+import os
+import re
+import subprocess
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TOP_FILE = "LTL/Correct.agda"
+HTML_DIR = os.path.join(REPO, "_build", "proof-map")
+LEDGER = os.path.join(REPO, "docs", "review.tsv")
+DEFAULT_ROOT = "decideCorrect"
+LEAF_MODULES = ("Agda.", "LTL.Lib.Base", "LTL.Lib.Prelude", "LTL.Statement")
+
+# Token classes that name a definition (Bound, Module, Symbol, ... do not).
+DEF_CLASSES = {"Function", "Datatype", "Record", "InductiveConstructor",
+               "CoinductiveConstructor", "Field", "Postulate", "Primitive"}
+# Keywords that open a declaration owned by the name that follows them.
+OWNER_KEYWORDS = {"data", "record", "pattern"}
+# Keywords that open a block whose indented lines are ordinary declarations.
+BLOCK_KEYWORDS = {"module", "private", "mutual", "abstract", "instance"}
+
+TOKEN = re.compile(r'<a ([^>]*)>(.*?)</a>|([^<]+)|(<[^>]*>)', re.S)
+ATTR = re.compile(r'(\w+)="([^"]*)"')
+
+
+# ---------------------------------------------------------------------------
+# Reading Agda's HTML
+
+class Tok:
+    __slots__ = ("id", "href", "cls", "text")
+
+    def __init__(self, id, href, cls, text):
+        self.id, self.href, self.cls, self.text = id, href, cls, text
+
+    def defines(self, module):
+        """The definition site of a name, as a key, or None."""
+        if self.cls & DEF_CLASSES and self.href == f"{module}.html#{self.id}":
+            return (module, self.id)
+        return None
+
+    def refers(self):
+        """The definition a name links to, as a key, or None."""
+        if self.cls & DEF_CLASSES and self.href and "#" in self.href:
+            mod, anchor = self.href.split("#", 1)
+            if anchor.isdigit():
+                return (mod.removesuffix(".html"), anchor)
+        return None
+
+
+def read_lines(path):
+    """The source as a list of lines, each a list of tokens (whitespace
+    becomes a token with no class)."""
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    start = text.index('<pre class="Agda">') + len('<pre class="Agda">')
+    body = text[start:text.rindex("</pre>")]
+    lines = [[]]
+    for m in TOKEN.finditer(body):
+        if m.group(1) is not None:
+            attrs = dict(ATTR.findall(m.group(1)))
+            if "class" not in attrs:
+                continue                     # a named anchor
+            tok = Tok(attrs.get("id"), attrs.get("href"),
+                      set(attrs["class"].split()), html.unescape(m.group(2)))
+        elif m.group(3) is not None:
+            tok = Tok(None, None, set(), html.unescape(m.group(3)))
+        else:
+            continue
+        parts = tok.text.split("\n")
+        lines[-1].append(Tok(tok.id, tok.href, tok.cls, parts[0]))
+        for part in parts[1:]:               # block comments and newlines
+            lines.append([Tok(None, None, tok.cls, part)])
+    return lines
+
+
+# ---------------------------------------------------------------------------
+# The definition graph
+
+class Def:
+    def __init__(self, module, name, line):
+        self.module, self.name, self.line = module, name, line
+        self.refs = []                        # keys, in order of first use
+        self.text = []                        # normalised source lines
+        self.src = []                         # (line number, raw line)
+
+    @property
+    def path(self):
+        return self.module.replace(".", "/") + ".agda"
+
+    @property
+    def qname(self):
+        return self.module + "." + self.name
+
+    @property
+    def leaf(self):
+        return self.module.startswith(LEAF_MODULES)
+
+    def digest(self):
+        return hashlib.sha1("\n".join(self.text).encode()).hexdigest()[:12]
+
+
+class Graph:
+    def __init__(self):
+        self.defs = {}                        # owner key -> Def
+        self.owner = {}                       # any definition key -> owner key
+        self.deps = {}                        # owner key -> [owner key]
+        self.users = {}                       # owner key -> [owner key]
+        self.cosig = {}                       # first of `f g : T` -> [f, g]
+        self.apps = {}                        # application -> (module, public)
+        self.applied = set()                  # (module, module it applies)
+
+    def add_module(self, module, path):
+        cur, cur_indent = None, -1            # owner of the current lines
+        group = []                            # the definitions they go to
+        for lineno, toks in enumerate(read_lines(path), 1):
+            words = [t for t in toks if t.text.strip() and "Comment" not in t.cls]
+            if not words:
+                continue
+            raw = "".join(t.text for t in toks)
+            indent = len(raw) - len(raw.lstrip(" "))
+            first = words[0]
+            if cur is None or indent <= cur_indent:
+                cur = self._start(module, words, cur, lineno)
+                cur_indent = indent
+                group = self.cosig.pop(cur, [cur])
+            if cur in (None, "skip"):
+                continue
+            for k in group:
+                d = self.defs[k]
+                d.text.append(" ".join(t.text.strip() for t in words))
+                d.src.append((lineno, raw))
+                for t in words:
+                    key = t.defines(module)
+                    if key:
+                        if key not in self.defs:
+                            self.owner.setdefault(key, cur)
+                    elif t.refers():
+                        d.refs.append(t.refers())
+
+    def _start(self, module, words, cur, lineno):
+        """Who owns a line at declaration level: a new definition, the
+        definition whose clause it is, a module application, nobody (block
+        headers), or "skip" (imports, fixity and pragmas, with their
+        continuation lines)."""
+        first = words[0]
+        if "Keyword" in first.cls:
+            if first.text in OWNER_KEYWORDS:
+                return self._new(module, words[1:])
+            if first.text in ("open", "module"):
+                app = self._application(module, words, lineno)
+                if app:
+                    return app
+            return None if first.text in BLOCK_KEYWORDS else "skip"
+        if first.text in ("{-#", "#-}"):
+            return "skip"
+        if first.text == "..." and cur not in (None, "skip"):
+            return cur                        # a with-clause continues
+        if first.defines(module):
+            return self._new(module, words)
+        # A clause: the function's own name is the one reference on the left
+        # of `=` to a definition of this module (mixfix names need not
+        # come first).
+        for t in words:
+            if t.text in ("=", "with", "|") and "Symbol" in t.cls:
+                break
+            key = t.refers()
+            if key and key in self.defs:
+                return key
+        return None
+
+    def _new(self, module, words):
+        """Definitions named on a declaration line; `f g : T` names two,
+        which share the signature's lines."""
+        keys = []
+        for t in words:
+            key = t.defines(module)
+            if key is None or (t.text == ":" and "Symbol" in t.cls):
+                break
+            self.defs[key] = Def(module, t.text, 0)
+            self.owner[key] = key
+            keys.append(key)
+        if len(keys) > 1:
+            self.cosig[keys[0]] = keys
+        return keys[0] if keys else None
+
+    def _application(self, module, words, lineno):
+        """`open M args` or `module X = M args` with arguments that are
+        definitions: a node of its own, depending on the arguments."""
+        mods = [i for i, t in enumerate(words)
+                if "Module" in t.cls and t.href and "#" not in t.href]
+        if not mods:
+            return None
+        target = words[mods[0]].href.removesuffix(".html")
+        given, args = False, []
+        for t in words[mods[0] + 1:]:
+            if "Keyword" in t.cls:
+                break
+            given = True
+            if t.refers() and not t.refers()[0].startswith(LEAF_MODULES):
+                args.append(t)
+        if given and target != module:
+            self.applied.add((module, target))
+        if target == module or not args:     # `State (¬ Q)` has none
+            return None
+        key = (module, f"L{lineno}")
+        self.defs[key] = Def(module, "open " + target.rsplit(".", 1)[-1], 0)
+        self.owner[key] = key
+        public = any(t.text == "public" and "Keyword" in t.cls for t in words)
+        self.apps[key] = (target, public)
+        return key
+
+    def finish(self):
+        for key, d in self.defs.items():
+            d.line = d.src[0][0] if d.src else 0
+            seen = []
+            for r in d.refs:
+                o = self.owner.get(r)
+                if o and o != key and o not in seen:
+                    seen.append(o)
+            if key in self.apps:              # its arguments, not its `using`
+                seen = [o for o in seen if o[0] != self.apps[key][0]]
+            self.deps[key] = seen
+        # A definition that uses names from an applied module depends on the
+        # application in its own module; a `public` application that nothing
+        # in its module uses, on the definitions elsewhere that use them.
+        uses = {k: {o[0] for o in self.deps[k]} for k in self.defs}
+        for app, (target, public) in self.apps.items():
+            mod = app[0]
+            local = [k for k in self.defs if k[0] == mod
+                     and k not in self.apps and target in uses[k]]
+            if not local and public:
+                local = [k for k in self.defs if k[0] not in (mod, target)
+                         and (k[0], target) not in self.applied
+                         and k not in self.apps and target in uses[k]]
+            for k in local:
+                self.deps[k].append(app)
+        for key in self.defs:
+            self.users.setdefault(key, [])
+            for o in self.deps[key]:
+                self.users.setdefault(o, []).append(key)
+        # Names shared by several definitions in one module get a line suffix.
+        count = {}
+        for d in self.defs.values():
+            count[d.qname] = count.get(d.qname, 0) + 1
+        for d in self.defs.values():
+            if count[d.qname] > 1:
+                d.name += f"@{d.line}"
+
+    def expand(self, key):
+        return [k for k in self.deps.get(key, []) if not self.defs[k].leaf]
+
+    def reach(self, key):
+        """Every non-leaf definition reachable from key, key included,
+        in depth-first preorder."""
+        seen, order, stack = set(), [], [key]
+        while stack:
+            k = stack.pop()
+            if k in seen:
+                continue
+            seen.add(k)
+            order.append(k)
+            stack.extend(reversed(self.expand(k)))
+        return order
+
+    def find(self, name):
+        bare = name.replace("_", "")
+        hits = [k for k, d in self.defs.items()
+                if name in (d.name, d.qname) or d.qname.endswith("." + name)
+                or (bare and d.name.replace("_", "") == bare)]
+        if not hits:
+            sys.exit(f"proof-map: no definition named {name}")
+        if len(hits) > 1:
+            names = ", ".join(sorted(self.defs[k].qname for k in hits))
+            sys.exit(f"proof-map: {name} is ambiguous: {names}")
+        return hits[0]
+
+
+def build_graph(cached=False):
+    """The graph, and Agda's error message if it failed."""
+    error = None
+    if not (cached and os.path.isdir(HTML_DIR)):
+        agda = os.environ.get("AGDA", "agda")
+        proc = subprocess.run(
+            [agda, "--html", f"--html-dir={HTML_DIR}", TOP_FILE],
+            cwd=REPO, capture_output=True, text=True)
+        if proc.returncode != 0:
+            error = (proc.stdout + proc.stderr).strip()[-1500:]
+            print("proof-map: Agda failed; using the last generated HTML\n"
+                  + error + "\n", file=sys.stderr)
+    if not os.path.isdir(HTML_DIR):
+        sys.exit("proof-map: no HTML to read")
+    g = Graph()
+    for fname in sorted(os.listdir(HTML_DIR)):
+        module = fname.removesuffix(".html")
+        source = os.path.join(REPO, module.replace(".", "/") + ".agda")
+        if fname.endswith(".html") and (module.startswith("Agda.")
+                                        or os.path.exists(source)):
+            g.add_module(module, os.path.join(HTML_DIR, fname))
+    g.finish()
+    return g, error
+
+
+# ---------------------------------------------------------------------------
+# The review ledger
+
+def read_ledger():
+    marks = {}
+    if os.path.exists(LEDGER):
+        with open(LEDGER, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("#") or not line.strip():
+                    continue
+                qname, digest, date, *note = line.rstrip("\n").split("\t")
+                marks[qname] = (digest, date, note[0] if note else "")
+    return marks
+
+
+def write_ledger(marks):
+    with open(LEDGER, "w", encoding="utf-8") as f:
+        f.write("# Reviewed definitions, kept by tools/proof-map.\n"
+                "# name\tsource hash\tdate\tnote\n")
+        for qname in sorted(marks):
+            digest, date, note = marks[qname]
+            f.write(f"{qname}\t{digest}\t{date}\t{note}\n")
+
+
+MARK = {"done": "✓", "stale": "~", "open": "·"}
+
+
+def status(d, marks):
+    if d.qname not in marks:
+        return "open"
+    return "done" if marks[d.qname][0] == d.digest() else "stale"
+
+
+def loc(d):
+    return f"{d.path}:{d.line}"
+
+
+# ---------------------------------------------------------------------------
+# Commands
+
+def cmd_tree(g, marks, args):
+    root = g.find(args.root)
+    left = {}
+
+    def remaining(k):
+        if k not in left:
+            left[k] = sum(status(g.defs[r], marks) != "done" for r in g.reach(k))
+        return left[k]
+
+    shown = set()
+
+    def users(k):
+        return [u for u in g.users[k] if not g.defs[u].leaf]
+
+    def walk(k, prefix, last, depth):
+        d = g.defs[k]
+        shown.add(k)
+        branch = "" if depth == 0 else ("└─ " if last else "├─ ")
+        head = f"{prefix}{branch}{MARK[status(d, marks)]} {d.name}"
+        if args.up:
+            n, kids, note = 0, users(k), ""
+        else:
+            n, kids = remaining(k), g.expand(k)
+            note = f"  [{n} open]" if n and kids else ""
+        if args.open and not args.up and n == 0 and kids:
+            print(f"{head}  {loc(d)}  [all reviewed]")
+            return
+        print(f"{head}  {loc(d)}{note}")
+        sub = prefix + ("" if depth == 0 else ("   " if last else "│  "))
+        if args.depth is not None and depth >= args.depth:
+            if kids:
+                print(f"{sub}…")
+            return
+        # Definitions already in the tree are listed on one line, not again.
+        seen = [c for c in kids if c in shown]
+        if seen:
+            names = ", ".join(f"{MARK[status(g.defs[c], marks)]} {g.defs[c].name}"
+                              for c in seen)
+            print(f"{sub}{'│' if len(seen) < len(kids) else ' '}  ↑ {names}")
+        new = [c for c in kids if c not in shown]
+        for i, c in enumerate(new):
+            if c not in shown:
+                walk(c, sub, i == len(new) - 1, depth + 1)
+
+    walk(root, "", True, 0)
+
+
+def frontier(g, marks, root):
+    """Definitions below root that are not reviewed but have a reviewed
+    user (or are the root), in depth-first order."""
+    order = g.reach(root)
+    done = {k for k in order if status(g.defs[k], marks) == "done"}
+    return [k for i, k in enumerate(order) if k not in done and
+            (i == 0 or any(u in done for u in g.users[k]))], done
+
+
+def components(g, keys):
+    """The strongly connected components (mutual recursion) of the graph on
+    keys, each listed after the components it uses (Tarjan)."""
+    keys = set(keys)
+    index, low, on, stack, comps = {}, {}, set(), [], []
+
+    def visit(v):
+        index[v] = low[v] = len(index)
+        stack.append(v)
+        on.add(v)
+
+    for start in sorted(keys):
+        if start in index:
+            continue
+        visit(start)
+        work = [(start, iter(g.expand(start)))]
+        while work:
+            v, it = work[-1]
+            for w in it:
+                if w not in keys:
+                    continue
+                if w not in index:
+                    visit(w)
+                    work.append((w, iter(g.expand(w))))
+                    break
+                if w in on:
+                    low[v] = min(low[v], index[w])
+            else:
+                work.pop()
+                if work:
+                    low[work[-1][0]] = min(low[work[-1][0]], low[v])
+                if low[v] == index[v]:
+                    comp = []
+                    while not comp or comp[-1] != v:
+                        comp.append(stack.pop())
+                        on.discard(comp[-1])
+                    comps.append(comp)
+    return comps
+
+
+def frontier_up(g, marks, root):
+    """Definitions below root that are not reviewed but whose uses are all
+    reviewed, lowest first.  Mutually recursive definitions count as one:
+    only their uses outside the group must be reviewed."""
+    order = g.reach(root)
+    done = {k for k in order if status(g.defs[k], marks) == "done"}
+    ready = []
+    for comp in components(g, order):
+        group = set(comp)
+        if all(c in done for m in comp for c in g.expand(m) if c not in group):
+            ready += sorted((m for m in comp if m not in done), key=order.index)
+    return ready, done
+
+
+def between(g, marks, root):
+    """Open definitions below root that lie under a reviewed definition and
+    above another one: what is left where top-down and bottom-up meet."""
+    order = g.reach(root)
+    done = [k for k in order if status(g.defs[k], marks) == "done"]
+    under = {x for d in done for x in g.reach(d)[1:]}
+    over, todo = set(), list(done)
+    while todo:
+        for u in g.users[todo.pop()]:
+            if u not in over and not g.defs[u].leaf:
+                over.add(u)
+                todo.append(u)
+    return [k for k in order if k not in done and k in under and k in over]
+
+
+def cmd_next(g, marks, args):
+    find = frontier_up if args.up else frontier
+    frontier_, done = find(g, marks, g.find(args.root))
+    if not frontier_:
+        print("everything below the root is reviewed")
+        return
+    for k in frontier_[:args.n]:
+        d = g.defs[k]
+        if args.up:
+            uses = g.expand(k)
+            why = f"  (uses {len(uses)}, all reviewed)" if uses else ""
+        else:
+            by = [g.defs[u].name for u in g.users[k] if u in done]
+            why = f"  (used by {', '.join(by)})" if by else ""
+        print(f"{MARK[status(d, marks)]} {d.name}  {loc(d)}{why}")
+    if len(frontier_) > args.n:
+        print(f"… and {len(frontier_) - args.n} more")
+
+
+def cmd_show(g, marks, args):
+    k = g.find(args.name)
+    d = g.defs[k]
+    print(f"{MARK[status(d, marks)]} {d.qname}  {loc(d)}")
+    if d.qname in marks:
+        _, date, note = marks[d.qname]
+        print(f"  reviewed {date}" + (f": {note}" if note else "")
+              + (" (changed since)" if status(d, marks) == "stale" else ""))
+    for title, keys in (("uses", g.deps[k]), ("used by", g.users[k])):
+        inner = [g.defs[x] for x in keys if not g.defs[x].leaf]
+        leaves = [g.defs[x].name for x in keys if g.defs[x].leaf]
+        print(f"{title}:")
+        for e in inner:
+            print(f"  {MARK[status(e, marks)]} {e.name}  {loc(e)}")
+        if leaves:
+            print(f"  (library: {' '.join(leaves)})")
+        if not inner and not leaves:
+            print("  —")
+    if args.src:
+        print()
+        for lineno, raw in d.src:
+            print(f"{lineno:5}  {raw}")
+
+
+def cmd_status(g, marks, args):
+    order = g.reach(g.find(args.root))
+    per = {}
+    for k in order:
+        d = g.defs[k]
+        row = per.setdefault(d.module, {"done": 0, "stale": 0, "open": 0})
+        row[status(d, marks)] += 1
+    total = {s: sum(r[s] for r in per.values()) for s in MARK}
+    print(f"{'module':32} {'✓':>4} {'~':>4} {'·':>4}")
+    for module in sorted(per, key=lambda m: order.index(
+            next(k for k in order if g.defs[k].module == m))):
+        r = per[module]
+        print(f"{module.removeprefix('LTL.'):32} {r['done']:4} {r['stale']:4} {r['open']:4}")
+    print(f"{'total (' + str(len(order)) + ')':32} "
+          f"{total['done']:4} {total['stale']:4} {total['open']:4}")
+    gap = between(g, marks, g.find(args.root))
+    print(f"open between reviewed definitions: {len(gap)}")
+
+
+def cmd_done(g, marks, args):
+    today = datetime.date.today().isoformat()
+    for name in args.names:
+        d = g.defs[g.find(name)]
+        marks[d.qname] = (d.digest(), today, args.m or "")
+        print(f"✓ {d.qname}")
+    write_ledger(marks)
+
+
+def cmd_undo(g, marks, args):
+    for name in args.names:
+        d = g.defs[g.find(name)]
+        if marks.pop(d.qname, None):
+            print(f"· {d.qname}")
+    write_ledger(marks)
+
+
+def cmd_json(g, marks, args, error):
+    """Every definition outside the leaf modules, with its status, its
+    uses and users, and the number of open definitions below it."""
+    root = g.find(args.root)
+    below = set(g.reach(root))
+    out = {}
+    for k, d in g.defs.items():
+        if d.leaf:
+            continue
+        mark = marks.get(d.qname)
+        out[d.qname] = {
+            "name": d.name, "module": d.module, "path": d.path,
+            "line": d.line, "end": d.src[-1][0] if d.src else d.line,
+            "status": status(d, marks),
+            "reviewed": {"date": mark[1], "note": mark[2]} if mark else None,
+            "open": sum(status(g.defs[r], marks) != "done" for r in g.reach(k)),
+            "uses": [g.defs[x].qname for x in g.expand(k)],
+            "usedBy": [g.defs[x].qname for x in g.users[k]
+                       if not g.defs[x].leaf],
+            "library": [g.defs[x].name for x in g.deps[k] if g.defs[x].leaf],
+            "belowRoot": k in below,
+        }
+    json.dump({"root": g.defs[root].qname, "agdaError": error,
+               "frontier": [g.defs[k].qname for k in frontier(g, marks, root)[0]],
+               "frontierUp": [g.defs[k].qname
+                              for k in frontier_up(g, marks, root)[0]],
+               "between": [g.defs[k].qname for k in between(g, marks, root)],
+               "defs": out}, sys.stdout, ensure_ascii=False)
+
+
+def main():
+    p = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    t = sub.add_parser("tree", help="the dependency tree, top down")
+    t.add_argument("root", nargs="?", default=DEFAULT_ROOT)
+    t.add_argument("--depth", type=int)
+    t.add_argument("--open", action="store_true",
+                   help="collapse subtrees that are fully reviewed")
+    t.add_argument("--up", action="store_true",
+                   help="the definitions that use ROOT, upwards")
+    n = sub.add_parser("next", help="what to review next")
+    n.add_argument("root", nargs="?", default=DEFAULT_ROOT)
+    n.add_argument("-n", type=int, default=10)
+    n.add_argument("--up", action="store_true",
+                   help="bottom up: open definitions whose uses are reviewed")
+    s = sub.add_parser("show", help="one definition, its uses and users")
+    s.add_argument("name")
+    s.add_argument("--src", action="store_true", help="print its source")
+    st = sub.add_parser("status", help="progress per module")
+    st.add_argument("root", nargs="?", default=DEFAULT_ROOT)
+    d = sub.add_parser("done", help="mark definitions as reviewed")
+    d.add_argument("names", nargs="+")
+    d.add_argument("-m", help="a note")
+    u = sub.add_parser("undo", help="remove review marks")
+    u.add_argument("names", nargs="+")
+    j = sub.add_parser("json", help="the whole map as JSON, for editors")
+    j.add_argument("root", nargs="?", default=DEFAULT_ROOT)
+    p.add_argument("--cached", action="store_true",
+                   help="read the last generated HTML instead of running Agda")
+    args = p.parse_args()
+
+    (g, error), marks = build_graph(args.cached), read_ledger()
+    if args.cmd == "json":
+        cmd_json(g, marks, args, error)
+        return
+    {"tree": cmd_tree, "next": cmd_next, "show": cmd_show,
+     "status": cmd_status, "done": cmd_done, "undo": cmd_undo}[args.cmd](
+        g, marks, args)
+
+
+if __name__ == "__main__":
+    main()

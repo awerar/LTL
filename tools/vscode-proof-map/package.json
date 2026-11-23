@@ -1,0 +1,188 @@
+{
+  "name": "proof-map",
+  "displayName": "Proof Map",
+  "description": "Browse the LTL development top down or bottom up and track which definitions have been reviewed (a front end to tools/proof-map).",
+  "publisher": "ltl-local",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "workspaceContains:tools/proof-map"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "proofMap",
+          "title": "Proof Map",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "proofMap": [
+        {
+          "id": "proofMap.tree",
+          "name": "Tree"
+        },
+        {
+          "id": "proofMap.next",
+          "name": "Next, top down"
+        },
+        {
+          "id": "proofMap.nextUp",
+          "name": "Next, bottom up"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "proofMap.refresh",
+        "title": "Refresh",
+        "category": "Proof Map",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "proofMap.showOpenOnly",
+        "title": "Hide Reviewed Subtrees",
+        "category": "Proof Map",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "proofMap.showAll",
+        "title": "Show Reviewed Subtrees",
+        "category": "Proof Map",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "proofMap.setRoot",
+        "title": "Use as Root",
+        "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.showUsers",
+        "title": "Show Users",
+        "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.resetRoot",
+        "title": "Back to the Main Tree",
+        "category": "Proof Map",
+        "icon": "$(home)"
+      },
+      {
+        "command": "proofMap.markWithNote",
+        "title": "Mark Reviewed with Note…",
+        "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.toggleReview",
+        "title": "Toggle Reviewed",
+        "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.reveal",
+        "title": "Reveal in Proof Map",
+        "category": "Proof Map"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "proofMap.refresh",
+          "when": "view == proofMap.tree",
+          "group": "navigation@3"
+        },
+        {
+          "command": "proofMap.showOpenOnly",
+          "when": "view == proofMap.tree && !proofMap.openOnly",
+          "group": "navigation@1"
+        },
+        {
+          "command": "proofMap.showAll",
+          "when": "view == proofMap.tree && proofMap.openOnly",
+          "group": "navigation@1"
+        },
+        {
+          "command": "proofMap.resetRoot",
+          "when": "view == proofMap.tree && proofMap.customRoot",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "proofMap.setRoot",
+          "when": "viewItem == def",
+          "group": "1@1"
+        },
+        {
+          "command": "proofMap.showUsers",
+          "when": "viewItem == def",
+          "group": "1@2"
+        },
+        {
+          "command": "proofMap.markWithNote",
+          "when": "viewItem == def",
+          "group": "1@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "proofMap.reveal",
+          "when": "editorLangId == agda",
+          "group": "navigation@90"
+        },
+        {
+          "command": "proofMap.showUsers",
+          "when": "editorLangId == agda",
+          "group": "navigation@91"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "proofMap.setRoot",
+          "when": "false"
+        },
+        {
+          "command": "proofMap.markWithNote",
+          "when": "false"
+        },
+        {
+          "command": "proofMap.toggleReview",
+          "when": "false"
+        },
+        {
+          "command": "proofMap.showUsers",
+          "when": "editorLangId == agda"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Proof Map",
+      "properties": {
+        "proofMap.command": {
+          "type": "string",
+          "default": "tools/proof-map",
+          "description": "The proof-map script, relative to the workspace folder."
+        },
+        "proofMap.root": {
+          "type": "string",
+          "default": "decideCorrect",
+          "description": "The definition at the top of the tree."
+        },
+        "proofMap.codeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show review status above each definition in Agda files."
+        }
+      }
+    }
+  }
+}
