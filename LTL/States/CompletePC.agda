@@ -7,10 +7,9 @@
 --
 -- proves ⊢ beta St in  1 + 46 |□Args (sub P)|  constructors: one pc
 -- node, and one modus ponens against an instance of (T) per eventuality.
--- stateComplete (LTL.States.Complete), which splits over all 2^|sub P|
--- valuations, has 296839 for □ p ⇒ p.  betaElimPC does the same for the
--- elimination of beta over its disjuncts.  Both close the derivation of
--- provableSCC (LTL.Procedures.Decide).
+-- The step lemma (LTL.States.StepLemma) and provableSCC
+-- (LTL.Procedures.Decide) use it.  betaElimPC does the same for the
+-- elimination of beta over its disjuncts, which closes provableSCC.
 --
 -- The tautology is proved by BUILDING the witness state from the truth-table
 -- row (skelVec, LTL.States.Taut), not by selecting it from the disjunction

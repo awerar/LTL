@@ -8,11 +8,10 @@
 -- Every row lemma fixes one atom list Ats and one row a (the module block
 -- below).  Each caller uses atomsOf of the one formula its pc node proves.
 --
--- The central fact: skelVec Ats a P = map (valFrom Ats a) (sub P) is a state
--- of P as soon as the (S2) instances hold in row a.  (S1) and coherence are
--- free, since valFrom is compositional on ¬ and ⇒ by definition.  So beta P
--- (St P) is true in every row satisfying (S2), which is state completeness as
--- a Boolean fact.
+-- The central fact: row a gives a valuation of P, skelVec P, that reads every
+-- subformula of P as row a does, and it is a state as soon as the (S2)
+-- instances hold in row a.  So beta P (St P) is true in every row satisfying
+-- (S2), which is state completeness as a Boolean fact.
 
 module LTL.States.Taut where
 
@@ -127,99 +126,70 @@ module _ (Ats : List Formula) (a : Val) where
     ⇒Chain (map s2Fml As) C (λ g -> h (λ B mB -> g (memMap s2Fml mB)))
 
   ----------------------------------------------------------------------
-  -- The chi of the row the assignment itself gives is true: its literals are
-  -- true one by one.
+  -- The valuation of P that row a gives: P's own atoms read in row a.  By
+  -- skelEval it reads every subformula of P as row a does, since valFrom is
+  -- ¬ᵇ at ¬ and ⇒ᵇ at ⇒ in any row.
+
+  skelVec : Formula -> Val
+  skelVec P = map (valFrom Ats a) (stateAtoms P)
+
+  valOfSkelVec : (P A : Formula) -> A ∈ sub P
+              -> valOf P (skelVec P) A ≡ valFrom Ats a A
+  valOfSkelVec P A m =
+    skelEval (valFrom Ats a) (stateAtoms P) P
+             (λ X mX aX -> atomMem (sub P) mX aX)
+             (λ X mX -> refl) (λ X Y mX -> refl) A m
+
+  ----------------------------------------------------------------------
+  -- Its chi is true in row a: every literal is.
 
   litTrue : (A : Formula) -> valFrom Ats a (lit A (valFrom Ats a A)) ≡ true
   litTrue A with valFrom Ats a A in e
   ... | true  = e
   ... | false = cong ¬ᵇ_ e
 
-  litListTrue : (As : List Formula) {C : Formula}
-             -> C ∈ litList As (map (valFrom Ats a) As)
-             -> valFrom Ats a C ≡ true
-  litListTrue []       ()
-  litListTrue (A ∷ As) here      = litTrue A
-  litListTrue (A ∷ As) (there m) = litListTrue As m
+  chiTrue : (P : Formula) -> valFrom Ats a (chi P (skelVec P)) ≡ true
+  chiTrue P = ⋀True (map (litOf P (skelVec P)) (sub P)) conj
+    where
+      conj : {C : Formula} -> C ∈ map (litOf P (skelVec P)) (sub P)
+          -> valFrom Ats a C ≡ true
+      conj {C} m = fromSig (map-mem-inv (litOf P (skelVec P)) (sub P) m)
+        where
+          fromSig : (∃[ A ∈ sub P ] C ≡ litOf P (skelVec P) A)
+                 -> valFrom Ats a C ≡ true
+          fromSig (A , mA , eq) =
+            subst (λ D -> valFrom Ats a D ≡ true) (sym eq)
+                  (subst (λ b -> valFrom Ats a (lit A b) ≡ true)
+                         (sym (valOfSkelVec P A mA)) (litTrue A))
 
   ----------------------------------------------------------------------
-  -- The vector the row gives, read by valOf: the bit at A is valFrom's
-  -- reading of A.  (mkV of LTL.States.Closure is skelVec at atoms (sub P).)
+  -- It is a state, given (S2) in row a at the eventualities.
 
-  skelVec : Formula -> Val
-  skelVec P = map (valFrom Ats a) (sub P)
-
-  valOfSkelVec : (P A : Formula) -> A ∈ sub P
-              -> valOf P (skelVec P) A ≡ valFrom Ats a A
-  valOfSkelVec P A m =
-    trans (nth-map (valFrom Ats a) (sub P) (indexOf (sub P) A)
-                   (indexOf-lt (sub P) m) ⊥ false)
-          (cong (valFrom Ats a) (indexOf-nth (sub P) m))
-
-  ----------------------------------------------------------------------
-  -- skelVec is a state, given (S2) at the box-subformulas.  (S1) holds
-  -- because valFrom is ¬ᵇ at ¬ and ⇒ᵇ at ⇒ (valOfSkelVec).
-
-  okAtSkel : (P A : Formula) -> A ∈ sub P -> S2At (□Args (sub P))
-          -> okAt P (skelVec P) A ≡ true
-  okAtSkel P (var n) m s2 = refl
-  okAtSkel P (○ B)   m s2 = refl
-  okAtSkel P (¬ B)   m s2 =
-    ⇔ᵇ-complete (valOf P (skelVec P) (¬ B)) (¬ᵇ valOf P (skelVec P) B)
-                (trans (valOfSkelVec P (¬ B) m)
-                       (cong ¬ᵇ_ (sym (valOfSkelVec P B (sub-¬ P m)))))
-  okAtSkel P (B ⇒ C) m s2 =
-    ⇔ᵇ-complete (valOf P (skelVec P) (B ⇒ C))
-                (valOf P (skelVec P) B ⇒ᵇ valOf P (skelVec P) C)
-                (trans (valOfSkelVec P (B ⇒ C) m)
-                       (cong₂ _⇒ᵇ_ (sym (valOfSkelVec P B (sub-⇒L P m)))
-                                   (sym (valOfSkelVec P C (sub-⇒R P m)))))
-  okAtSkel P (□ B)   m s2 =
-    trans (cong₂ _⇒ᵇ_ (valOfSkelVec P (□ B) m)
-                      (valOfSkelVec P B (sub-□ P m)))
-          (s2 B (□Args-of (sub P) m))
-
-  -- Coherence.  The bit at position i is the skeleton's reading of the
-  -- formula there (nth-map), and so is the bit at that formula's first
-  -- occurrence (valOfSkelVec), so the two agree.
-
-  cohAtSkel : (P : Formula) (i : Nat) -> i < length (sub P)
-           -> cohAt P (skelVec P) i ≡ true
-  cohAtSkel P i l =
-    ⇔ᵇ-complete (bitAt (skelVec P) i)
-                (valOf P (skelVec P) (nth (sub P) i ⊥))
-                (trans (nth-map (valFrom Ats a) (sub P) i l ⊥ false)
-                       (sym (valOfSkelVec P (nth (sub P) i ⊥)
-                                          (nth-mem (sub P) i l ⊥))))
-
-  allCohSkel : (P : Formula) (n : Nat)
-            -> ((i : Nat) -> i < n -> i < length (sub P))
-            -> allCoh P (skelVec P) n ≡ true
-  allCohSkel P zero    h = refl
-  allCohSkel P (suc n) h =
-    ∧ᵇ-intro (cohAt P (skelVec P) n) (allCoh P (skelVec P) n)
-             (cohAtSkel P n (h n (ltNSucN n)))
-             (allCohSkel P n (λ i l -> h i (ltWeak l)))
+  s2Skel : (P : Formula) -> S2At (□Args (sub P))
+        -> ∀[ B ∈ □Args (sub P) ] s2At P (skelVec P) B ≡ true
+  s2Skel P s2 B mB =
+    trans (cong₂ _⇒ᵇ_ (valOfSkelVec P (□ B) m□)
+                      (valOfSkelVec P B (sub-□ P m□)))
+          (s2 B mB)
+    where
+      m□ : □ B ∈ sub P
+      m□ = □Args-mem (sub P) mB
 
   memStSkel : (P : Formula) -> S2At (□Args (sub P)) -> skelVec P ∈ St P
   memStSkel P s2 =
-    filter-true (isState P) (allVecs (length (sub P)))
-                (allVecs-complete (length (sub P)) (skelVec P)
-                                  (map-length (valFrom Ats a) (sub P)))
-                (∧ᵇ-intro (allOk P (skelVec P) (sub P))
-                          (allCoh P (skelVec P) (length (sub P)))
-                          (all-intro (okAt P (skelVec P)) (sub P)
-                                     (λ {A} m -> okAtSkel P A m s2))
-                          (allCohSkel P (length (sub P)) (λ i l -> l)))
+    filter-true (isState P) (allVecs (length (stateAtoms P)))
+                (allVecs-complete (length (stateAtoms P)) (skelVec P)
+                                  (map-length (valFrom Ats a) (stateAtoms P)))
+                (all-intro (s2At P (skelVec P)) (□Args (sub P))
+                           (λ {B} mB -> s2Skel P s2 B mB))
 
   -- Hence beta P (St P) is true in any row satisfying (S2): chi P (skelVec
-  -- P) is a disjunct (memStSkel) and is true (litListTrue).
+  -- P) is a disjunct (memStSkel) and is true (chiTrue).
 
   betaSkel : (P : Formula) -> S2At (□Args (sub P))
           -> valFrom Ats a (beta P (St P)) ≡ true
   betaSkel P s2 =
-    ⋁True (map (chi P) (St P)) (memMap (chi P) (memStSkel P s2))
-          (⋀True (litList (sub P) (skelVec P)) (litListTrue (sub P)))
+    ⋁True (map (chi P) (St P)) (memMap (chi P) (memStSkel P s2)) (chiTrue P)
 
 ------------------------------------------------------------------------
 -- The derivation half of □Chain: one modus ponens against one instance of
@@ -257,23 +227,14 @@ taut⋁Elim Cs C =
 -- ¬ᵇ at ¬.  So (PC) proves it in one node where projecting and cancelling the
 -- double negation takes 67 constructors.
 
--- The literal of P itself inside chi P w, at the first occurrence of P.
-litSelf : (P : Formula) (w : Val) -> length w ≡ length (sub P)
-       -> lit P (valOf P w P) ∈ litList (sub P) w
-litSelf P w len =
-  subst (λ X -> lit X (valOf P w P) ∈ litList (sub P) w)
-        (indexOf-nth (sub P) (sub-self P))
-        (litList-nth (sub P) w (indexOf (sub P) P)
-                     (indexOf-lt (sub P) (sub-self P)) len)
-
-tautChi : (Q : Formula) (w : Val) -> length w ≡ length (sub (¬ Q))
+tautChi : (Q : Formula) (w : Val)
        -> valOf (¬ Q) w (¬ Q) ≡ false
        -> isTaut ((chi (¬ Q) w) ⇒ Q) ≡ true
-tautChi Q w len ev =
+tautChi Q w ev =
   isTaut-intro F λ a ->
     ⇒ᵇ-intro (valFrom Ats a (chi R w)) (valFrom Ats a Q)
              (λ ec -> ¬ᵇ¬ᵇ-true (valFrom Ats a Q)
-                                (⋀ProjTrue Ats a (litList (sub R) w) mneg ec))
+                                (⋀ProjTrue Ats a (map (litOf R w) (sub R)) mneg ec))
   where
     R : Formula
     R = ¬ Q
@@ -285,5 +246,6 @@ tautChi Q w len ev =
     Ats = atomsOf F
 
     -- the conjunct  lit R false , i.e.  ¬ ¬ Q
-    mneg : ¬ R ∈ litList (sub R) w
-    mneg = subst (λ b -> lit R b ∈ litList (sub R) w) ev (litSelf R w len)
+    mneg : ¬ R ∈ map (litOf R w) (sub R)
+    mneg = subst (λ b -> lit R b ∈ map (litOf R w) (sub R)) ev
+                 (memMap (litOf R w) (sub-self R))

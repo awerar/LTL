@@ -3,12 +3,14 @@
 -- LTL.States.State -- which valuations are states, St, the list of all
 -- states, and the characteristic formulas chi and beta.
 --
--- A state respects the connectives (S1) and satisfies  □ A in v  implies
--- A in v  (S2).  A third clause, coherence, requires duplicate entries of
--- sub P to carry the same bit, so that a state is a function on the SET of
--- subformulas (sub P repeats; see subBenAri-dup in LTL.Tests.Checks).
+-- A valuation is a row of bits over the ATOMS of sub P (its var, ○ and □
+-- subformulas, without repetition), and valOf reads any subformula from it
+-- by the skeleton evaluation valFrom of LTL.Syntax.Skel.  So (S1), that a
+-- state respects ¬ and ⇒, holds by definition, and the one remaining
+-- condition is (S2): □ A in v implies A in v.  chi v has one literal per
+-- entry of sub P; where sub P repeats a formula, chi repeats the literal.
 --
--- This module and the ones built on it (Step, Proj, ..., SccSeed) are
+-- This module and the ones built on it (Step, StepLemma, ..., SccSeed) are
 -- parameterised by P, the formula whose subformulas index the valuations.  They
 -- open each other at P privately and re-export nothing: an importer outside
 -- opens them unapplied, which gives every name P as its first argument.
@@ -21,86 +23,44 @@ open import LTL.Syntax.Val
 open import LTL.Lib.Sets using (filter-sub)
 
 ------------------------------------------------------------------------
+-- Reading a valuation
+
+-- The positions of a valuation.
+stateAtoms : List Formula
+stateAtoms = atoms (sub P)
+
+valOf : Val -> Formula -> Bool
+valOf v A = valFrom stateAtoms v A
+
+------------------------------------------------------------------------
 -- The characteristic formula chi v of a valuation, and beta vs, the
 -- disjunction of chi over a list of valuations.
 
+-- The literal of A that v makes true.
+litOf : Val -> Formula -> Formula
+litOf v A = lit A (valOf v A)
+
 chi : Val -> Formula
-chi v = ⋀ (litList (sub P) v)
+chi v = ⋀ (map (litOf v) (sub P))
 
 beta : List Val -> Formula
 beta vs = ⋁ (map chi vs)
 
 ------------------------------------------------------------------------
--- Lookup by first occurrence.  valOf v A is the bit v assigns to A at the
--- FIRST position of sub P carrying A.  Under coherence it agrees with every
--- position carrying A, so chi (built positionally) and the conditions below
--- (built by lookup) talk about the same bits.
+-- (S2), imposed at each eventuality.  var and ○ carry no local condition:
+-- ○ is handled by the transition relation (LTL.States.Step).
 
-valOf : Val -> Formula -> Bool
-valOf v A = bitAt v (indexOf (sub P) A)
-
-------------------------------------------------------------------------
--- (S1) and (S2), imposed at each member of sub P.  var and ○ carry no local
--- condition: ○ is handled by the transition relation (LTL.States.Step).
-
-okAt : Val -> Formula -> Bool
-okAt v (var n) = true
-okAt v (¬ A)   = valOf v (¬ A) ⇔ᵇ ¬ᵇ valOf v A
-okAt v (A ⇒ B) = valOf v (A ⇒ B) ⇔ᵇ valOf v A ⇒ᵇ valOf v B
-okAt v (○ A)   = true
-okAt v (□ A)   = valOf v (□ A) ⇒ᵇ valOf v A
-
-allOk : Val -> List Formula -> Bool
-allOk v = all (okAt v)
-
-------------------------------------------------------------------------
--- Coherence on duplicates: every position agrees with the first occurrence
--- of its formula.  This is linear, and equivalent to pairwise agreement.
-
-cohAt : Val -> Nat -> Bool
-cohAt v i = bitAt v i ⇔ᵇ valOf v (nth (sub P) i ⊥)
-
-allCoh : Val -> Nat -> Bool
-allCoh v zero    = true
-allCoh v (suc n) = cohAt v n ∧ᵇ allCoh v n
-
-------------------------------------------------------------------------
--- States
+s2At : Val -> Formula -> Bool
+s2At v A = valOf v (□ A) ⇒ᵇ valOf v A
 
 isState : Val -> Bool
-isState v = allOk v (sub P) ∧ᵇ
-            allCoh v (length (sub P))
+isState v = all (s2At v) (□Args (sub P))
 
 St : List Val
-St = filter isState (allVecs (length (sub P)))
+St = filter isState (allVecs (length stateAtoms))
 
--- Every state has the length chi expects.
+-- Every state has the length the search's Bar expects.
 
-stLen : {v : Val} -> v ∈ St -> length v ≡ length (sub P)
+stLen : {v : Val} -> v ∈ St -> length v ≡ length stateAtoms
 stLen {v} m =
-  allVecs-len (length (sub P)) v (filter-sub isState (allVecs (length (sub P))) m)
-
-------------------------------------------------------------------------
--- Searching allCoh
-
-allCoh-at : (v : Val) (n i : Nat) -> i < n
-         -> allCoh v n ≡ true -> cohAt v i ≡ true
-allCoh-at v zero    i ()  e
-allCoh-at v (suc n) i lt  e =
-  sumElim (λ eq -> subst (λ k -> cohAt v k ≡ true) (sym eq)
-                         (∧ᵇ-trueˡ (cohAt v n) (allCoh v n) e))
-          (λ l  -> allCoh-at v n i l (∧ᵇ-trueʳ (cohAt v n) (allCoh v n) e))
-          (ltSucCase i n lt)
-
-allCoh-false : (v : Val) (n : Nat)
-            -> allCoh v n ≡ false
-            -> Σ[ i ∈ Nat ] i < n × cohAt v i ≡ false
-allCoh-false v zero    ()
-allCoh-false v (suc n) e =
-  sumElim (λ e1 -> n , ltNSucN n , e1)
-          (λ e2 -> shift (allCoh-false v n e2))
-          (∧ᵇ-false (cohAt v n) (allCoh v n) e)
-  where
-    shift : (Σ[ i ∈ Nat ] i < n × cohAt v i ≡ false)
-         -> Σ[ i ∈ Nat ] i < suc n × cohAt v i ≡ false
-    shift (i , l , q) = i , ltWeak l , q
+  allVecs-len (length stateAtoms) v (filter-sub isState (allVecs (length stateAtoms)) m)

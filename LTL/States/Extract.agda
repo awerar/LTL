@@ -69,7 +69,7 @@ extractR1 : (us : List Val) (u : Val)
          -> u ∈ Ust -> Refuted us -> r1 us u ≡ true
          -> ⊢ ¬ (chi u)
 extractR1 us u mu ih e1 =
-  refute (stepLemma u (stLen (ustSt mu)))
+  refute (stepLemma u)
          (liftP (mp linFwd (○Gen (¬Beta (succs St u) each))))
   where
     outside : ∀[ w ∈ succs St u ] w ∈ᵛ us ≡ false

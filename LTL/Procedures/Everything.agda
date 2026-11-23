@@ -14,8 +14,6 @@ open import LTL.States.VecBar           public
 open import LTL.States.Taut             public
 open import LTL.States.State            public
 open import LTL.States.Step             public
-open import LTL.States.Proj             public
-open import LTL.States.Complete         public
 open import LTL.States.StepLemma        public
 open import LTL.States.Closure          public
 open import LTL.States.Extract          public

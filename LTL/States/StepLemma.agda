@@ -17,27 +17,32 @@ module LTL.States.StepLemma (P : Formula) where
 open import LTL.States.Common
 open import LTL.States.State P
 open import LTL.States.Step P
-open import LTL.States.Proj P
-open import LTL.States.Complete P
+open import LTL.States.CompletePC P
+
+------------------------------------------------------------------------
+-- Projection of a conjunct out of chi.  Every refutation of a state goes
+-- through it: a Boolean condition fails, so chi carries two contradictory
+-- literals.
+
+chiProj : (v : Val) {A : Formula} -> A ∈ sub P -> ⊢ (chi v) ⇒ (litOf v A)
+chiProj v m = ⋀Proj (map (litOf v) (sub P)) (memMap (litOf v) m)
 
 ------------------------------------------------------------------------
 -- Refuting a non-successor
 
 notSucc : (v w : Val)
-       -> length v ≡ length (sub P)
-       -> length w ≡ length (sub P)
        -> step v w ≡ false
        -> ⊢ ¬ ((chi v) ∧ ○ (chi w))
-notSucc v w lenv lenw e = sigElim (all-false (stepAt v w) (sub P) e)
+notSucc v w e = sigElim (all-false (stepAt v w) (sub P) e)
   where
     R : Formula
     R = (chi v) ∧ ○ (chi w)
 
     pv : {A : Formula} -> A ∈ sub P -> ⊢ R ⇒ (lit A (valOf v A))
-    pv m = ⇒Trans ∧Fst (chiProjVal v lenv m)
+    pv m = ⇒Trans ∧Fst (chiProj v m)
 
     pw : {A : Formula} -> A ∈ sub P -> ⊢ R ⇒ ○ (lit A (valOf w A))
-    pw m = ⇒Trans ∧Snd (○Mono (chiProjVal w lenw m))
+    pw m = ⇒Trans ∧Snd (○Mono (chiProj w m))
 
     pvAt : {A : Formula} -> A ∈ sub P -> (c : Bool) -> valOf v A ≡ c
         -> ⊢ R ⇒ (lit A c)
@@ -116,46 +121,37 @@ notSucc v w lenv lenw e = sigElim (all-false (stepAt v w) (sub P) e)
     sigElim (A , m , q) = byShape m q
 
 badSucc : (v w : Val)
-       -> length v ≡ length (sub P)
-       -> length w ≡ length (sub P)
        -> step v w ≡ false
        -> ⊢ (chi v) ⇒ ¬ ○ (chi w)
-badSucc v w lenv lenw e = mp dne (notSucc v w lenv lenw e)
+badSucc v w e = mp dne (notSucc v w e)
 
 ------------------------------------------------------------------------
 -- Dropping the non-successors under the antecedent chi v
 
 filter⇒ : (v : Val) (Q : Formula) (ws : List Val)
-       -> (∀[ w ∈ ws ] length w ≡ length (sub P))
-       -> ((w : Val) -> length w ≡ length (sub P) -> step v w ≡ false
-             -> ⊢ Q ⇒ ¬ ○ (chi w))
+       -> ((w : Val) -> step v w ≡ false -> ⊢ Q ⇒ ¬ ○ (chi w))
        -> ⊢ Q ⇒ ⋁ (map ○_ (map chi ws))
                 ⇒ ⋁ (map ○_ (map chi
                          (filter (step v) ws)))
-filter⇒ v Q []       len bad = liftP ⇒Refl
-filter⇒ v Q (w ∷ ws) len bad with step v w in e
+filter⇒ v Q []       bad = liftP ⇒Refl
+filter⇒ v Q (w ∷ ws) bad with step v w in e
 -- kept: compose under the same antecedent ¬ ○ (chi w)
 ... | true  =
-  mpU (liftP p2) (⇒Trans (filter⇒ v Q ws (λ u m -> len u (there m)) bad) p1)
+  mpU (liftP p2) (⇒Trans (filter⇒ v Q ws bad) p1)
 -- dropped: ¬ ○ (chi w) is available, so that antecedent can be discharged
 ... | false =
-  ⇒TransU (⇒Trans (bad w (len w here) e) (⇒Swap ⇒Refl))
-          (filter⇒ v Q ws (λ u m -> len u (there m)) bad)
+  ⇒TransU (⇒Trans (bad w e) (⇒Swap ⇒Refl))
+          (filter⇒ v Q ws bad)
 
 ------------------------------------------------------------------------
 -- The step lemma
 
-stepLemma : (v : Val)
-         -> length v ≡ length (sub P)
-         -> ⊢ (chi v) ⇒ ○ (beta (succs St v))
-stepLemma v lenv =
-  ⇒Trans (mpU (filter⇒ v (chi v) St (λ w m -> stLen m) bad) start)
+stepLemma : (v : Val) -> ⊢ (chi v) ⇒ ○ (beta (succs St v))
+stepLemma v =
+  ⇒Trans (mpU (filter⇒ v (chi v) St (badSucc v)) start)
            (○⋁L2 (map chi (succs St v)))
   where
-    bad : (w : Val) -> length w ≡ length (sub P) -> step v w ≡ false
-       -> ⊢ (chi v) ⇒ ¬ ○ (chi w)
-    bad w lenw e = badSucc v w lenv lenw e
 
     start : ⊢ (chi v) ⇒ ⋁ (map ○_ (map chi St))
     start = liftP (mp (○⋁L1 (map chi St))
-                      (○Gen stateComplete))
+                      (○Gen stateCompletePC))

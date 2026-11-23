@@ -129,7 +129,7 @@ formalise. A module's name follows its path, so `LTL/Syntax/Formula.agda` is
 | `LTL/Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
 | `LTL/Semantics/` | `Orbit`, `OrbitEval` | positions on a lasso and Boolean evaluation of formulas there |
-| `LTL/States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `Proj`, `Complete`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
+| `LTL/States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
 | `LTL/Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
 | `LTL/Procedures/` | `Answer`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1 |

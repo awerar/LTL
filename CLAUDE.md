@@ -57,7 +57,7 @@ derivation or a certified finite lasso countermodel.
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
-  `Proj`, `Complete`, `StepLemma`, `Closure`, `Extract`, `CompletePC`,
+  `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,
   `module LTL.States.Step (P : Formula) where` (with `Formula` imported above
   the header), so P is never written at a call site inside them. A P-module
@@ -130,7 +130,7 @@ a module name.
 2. **Syntax and proof system** (`Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations, decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton,
    `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`);
-   `Val` (literals, `⋀`/`⋁`, `litList`).
+   `Val` (literals, `⋀`/`⋁`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).
@@ -141,12 +141,13 @@ a module name.
 5. **States and transitions (m4 §2)** (`States/`, with layer 6) — `Common`
    (the formula-independent base of the
    P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
-   lemmas, `allComplete`); P-modules `State` (`isState`, `St`, `stLen`,
-   `chi`, `beta`); `Step` (`step`, `succs`, T1–T3); `Proj`;
-   `Complete` (`nonState`, `stateComplete`, Lemmas 2.5–2.6); `StepLemma` (Lemmas
-   2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: Lemma 2.6 and
-   (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated for
-   any P, and `tautChi`) is unparameterised.
+   lemmas); P-modules `State` (a valuation is a row of bits over
+   `stateAtoms = atoms (sub P)`, read by the skeleton evaluation, so (S1) holds
+   by definition and `isState` is (S2) alone; `valOf`, `St`, `stLen`, `chi`,
+   `beta`); `Step` (`step`, `succs`, T1–T3); `StepLemma` (`chiProj`, Lemmas
+   2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness
+   and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated
+   for any P, and `tautChi`) is unparameterised.
 6. **Finite search infrastructure** (`States/`) — `Reach` (`≡ᵛ` on valuations, the
    `Val` instance of `Nodes`); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
@@ -198,6 +199,7 @@ a module name.
 
 `Statement` (the constructor and its `⊨` clause; the user must make that change)
 → `Formula` (with `sub`) → `Deriv` → `State`/`Step` → the eventualities
-(currently `□Args` in `Skel`, read by `Fair` in `Lasso` and by `CompletePC`)
+(currently `□Args` in `Skel`, read by `isState` in `State`, `Fair` in `Lasso`
+and `CompletePC`)
 → `OrbitEval`/`Correct`/`Hintikka` → the SCC fairness predicates in
 `SccLasso`.

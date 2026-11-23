@@ -26,7 +26,6 @@ module LTL.SCC.SccExtract (P : Formula) where
 open import LTL.States.Common
 open import LTL.States.State P
 open import LTL.States.Step P
-open import LTL.States.Proj P
 open import LTL.States.StepLemma P
 open import LTL.States.Closure P
 open import LTL.States.Extract P
@@ -62,16 +61,13 @@ extractBlock : (ws C : List Val) (u : Val)
             -> ⊢ ¬ (chi u)
 extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
   where
-    lenC : ∀[ w ∈ C ] length w ≡ length (sub P)
-    lenC w m = stLen (ustSt (cUst w m))
-
     -- (i)
     bA : ⊢ (beta C) ⇒ A
     bA = betaElim C eachA
       where
         eachA : ∀[ w ∈ C ] ⊢ (chi w) ⇒ A
         eachA w m = subst (λ b -> ⊢ (chi w) ⇒ (lit A b)) (cHold w m)
-                          (chiProjVal w (lenC w m) (sub-□ P mbox))
+                          (chiProj w (sub-□ P mbox))
 
     -- (ii)
     toC : ∀[ w ∈ C ] ⊢ (beta (succs St w)) ⇒ (beta C)
@@ -93,7 +89,7 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
     bNext = betaElim C eachN
       where
         eachN : ∀[ w ∈ C ] ⊢ (chi w) ⇒ ○ (beta C)
-        eachN w m = ⇒Trans (stepLemma w (lenC w m)) (○Mono (toC w m))
+        eachN w m = ⇒Trans (stepLemma w) (○Mono (toC w m))
 
     -- (iii)
     chi□ : ⊢ (chi u) ⇒ □ A
@@ -101,7 +97,7 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
 
     chi¬□ : ⊢ (chi u) ⇒ ¬ □ A
     chi¬□ = subst (λ b -> ⊢ (chi u) ⇒ (lit (□ A) b)) pend
-                        (chiProjVal u (stLen (ustSt mu)) mbox)
+                        (chiProj u mbox)
 
 ------------------------------------------------------------------------
 -- certAll's two hypotheses.

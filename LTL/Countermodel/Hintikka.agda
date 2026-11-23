@@ -10,7 +10,7 @@
 -- By induction on A:
 --
 --   var       evalAt reads the state through valOf.
---   ¬, ⇒      (S1), at a state of Ust.
+--   ¬, ⇒      valOf and evalAt are both ¬ᵇ at ¬ and ⇒ᵇ at ⇒.
 --   ○         (T1), at the transition posStep supplies.
 --   □         If □ A is in the state, (T2) carries it along the run (carry)
 --             and (S2) gives A at every stage of the orbit.  If not,
@@ -112,20 +112,13 @@ module _ (cy : Cycle) (fair : Fair cy) where
                       eq
 
 ------------------------------------------------------------------------
--- Reading (S1) and (S2) off a state of Ust
+-- Reading (S2) off a state of Ust
 
-stateOk : (s : Val) -> s ∈ Ust -> {A : Formula}
-       -> A ∈ sub P -> okAt s A ≡ true
-stateOk s m mA =
-  all-at (okAt s) (sub P) mA
-           (∧ᵇ-trueˡ (allOk s (sub P)) (allCoh s (length (sub P)))
-                     (ustState m))
-
--- (S2)
 □S2 : (s : Val) -> s ∈ Ust -> (B : Formula)
    -> □ B ∈ sub P -> valOf s (□ B) ≡ true -> valOf s B ≡ true
 □S2 s m B mb e =
-  ⇒ᵇ-mp (valOf s (□ B)) (valOf s B) (stateOk s m mb) e
+  ⇒ᵇ-mp (valOf s (□ B)) (valOf s B)
+        (all-at (s2At s) (□Args (sub P)) (□Args-of (sub P) mb) (ustState m)) e
 
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
@@ -168,18 +161,11 @@ module _ (cy : Cycle) where
   hintikka fair (var n) mA pos vp = refl
 
   hintikka fair (¬ B) mA pos vp =
-    trans (⇔ᵇ-sound (valOf (posState pos) (¬ B))
-                    (¬ᵇ valOf (posState pos) B)
-                        (stateOk (posState pos) (posIn b vp) mA))
-          (cong ¬ᵇ_
-                (hintikka fair B (sub-¬ P mA) pos vp))
+    cong ¬ᵇ_ (hintikka fair B (sub-¬ P mA) pos vp)
 
   hintikka fair (B ⇒ C) mA pos vp =
-    trans (⇔ᵇ-sound (valOf (posState pos) (B ⇒ C))
-                    (valOf (posState pos) B ⇒ᵇ valOf (posState pos) C)
-                    (stateOk (posState pos) (posIn b vp) mA))
-          (cong₂ _⇒ᵇ_ (hintikka fair B (sub-⇒L P mA) pos vp)
-                   (hintikka fair C (sub-⇒R P mA) pos vp))
+    cong₂ _⇒ᵇ_ (hintikka fair B (sub-⇒L P mA) pos vp)
+               (hintikka fair C (sub-⇒R P mA) pos vp)
 
   hintikka fair (○ B) mA pos vp =
     trans (⇔ᵇ-sound (valOf (posState pos) (○ B))

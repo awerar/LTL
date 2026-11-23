@@ -403,7 +403,7 @@ axM2-input = refl
 --
 --    □ ¬ (p ∨ q) , □ ◇ (p ∨ q) , □ ¬ p , □ ◇ p , □ ¬ q , □ ◇ q
 --
--- so 256 candidates are built, 59 of them are states, and the closure of those
+-- so there are 256 rows, 59 of them states, and the closure of those
 -- containing the negation has 9 members.  The certificate removes them in four
 -- blocks and no sinks, so every step of the refutation is extractBlock.
 
@@ -413,13 +413,13 @@ axK5fwd = □ ◇ (pv ∨ qv) ⇒ □ ◇ pv ∨ □ ◇ qv
 K5fwd-sub : length (sub (¬ axK5fwd)) ≡ 22
 K5fwd-sub = refl
 
-K5fwd-atoms : length (atoms (sub (¬ axK5fwd))) ≡ 8
+K5fwd-atoms : length (stateAtoms (¬ axK5fwd)) ≡ 8
 K5fwd-atoms = refl
 
-K5fwd-cands : length (cands (¬ axK5fwd)) ≡ 256
-K5fwd-cands = refl
+K5fwd-rows : length (allVecs (length (stateAtoms (¬ axK5fwd)))) ≡ 256
+K5fwd-rows = refl
 
-K5fwd-states : length (StCand (¬ axK5fwd)) ≡ 59
+K5fwd-states : length (St (¬ axK5fwd)) ≡ 59
 K5fwd-states = refl
 
 K5fwd-closure : length (Ust (¬ axK5fwd)) ≡ 9

@@ -50,7 +50,7 @@ provableEachSCC c w m = byPosition
   where
     -- w does not contain ¬ Q, so chi_w ⇒ Q is a tautology: one pc node
     fromR : valOf w (¬ Q) ≡ false -> ⊢ (chi w) ⇒ Q
-    fromR ev = pc (tautChi Q w (stLen m) ev)
+    fromR ev = pc (tautChi Q w ev)
 
     byPosition : ⊢ (chi w) ⇒ Q
     byPosition with w ∈ᵛ Ust in ec
@@ -71,22 +71,16 @@ sccShape = sumElim (λ fi -> []) certShape sccGraph
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.
 --
--- v0 contains ¬ Q and is a state, so by (S1) it does not contain Q;
--- Hintikka's lemma at stage 0 transfers that to the evaluation.
+-- v0 contains ¬ Q, so it does not contain Q (valOf reads ¬ as ¬ᵇ); Hintikka's
+-- lemma at stage 0 transfers that to the evaluation.
 
 buildCM : (v0 : Val) -> Lasso v0 -> valOf v0 (¬ Q) ≡ true
        -> LassoCountermodel Q
 buildCM v0 l ev = countermodel v0 l evalFalse
   where
-    valQ : valOf v0 Q ≡ false
-    valQ =
-      ¬ᵇ-true (valOf v0 Q)
-        (trans (sym (⇔ᵇ-sound (valOf v0 (¬ Q)) (¬ᵇ valOf v0 Q)
-                              (stateOk v0 (Lasso.startIn l) (sub-self (¬ Q)))))
-               ev)
-
     evalFalse : eval v0 l Q 0 ≡ false
-    evalFalse = trans (sym (hintStart v0 l Q (there (sub-self Q)))) valQ
+    evalFalse = trans (sym (hintStart v0 l Q (there (sub-self Q))))
+                      (¬ᵇ-true (valOf v0 Q) ev)
 
 -- A fair circuit through r, reached from a state s containing ¬ Q, is a fair
 -- loop from s, and so a countermodel.

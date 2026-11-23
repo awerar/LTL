@@ -21,7 +21,8 @@ import LTL.Statement as T
 --
 --   [ □ p ⇒ ○ □ p , □ p , p , ○ □ p , □ p , p ]
 --
--- with □ p and p each twice, which is why isState has a coherence clause.
+-- with □ p and p each twice.  A state is a row over the atoms, which have no
+-- repetition, so the duplicates only repeat literals of chi.
 
 benAri : Formula
 benAri = □ (var zero) ⇒ ○ □ (var zero)
@@ -33,31 +34,22 @@ subBenAri-dup : nth (sub benAri) 1 ⊥ ≡ nth (sub benAri) 4 ⊥
 subBenAri-dup = refl
 
 ------------------------------------------------------------------------
--- LTL.Syntax.Val
+-- LTL.Syntax.Skel (atoms)
 
--- sub benAri has length 6, so there are 64 valuations to filter.
+-- The atoms of sub benAri, the positions of its states: 8 rows, not the 64
+-- vectors over sub benAri.
+
+atomsBenAri : stateAtoms benAri ≡ ○ □ var zero ∷ □ var zero ∷ var zero ∷ []
+atomsBenAri = refl
 
 allVecs-three : length (allVecs 3) ≡ 8
 allVecs-three = refl
 
-allVecs-benAri : length (allVecs (length (sub benAri))) ≡ 64
-allVecs-benAri = refl
-
--- Positions 1 and 4 of sub benAri are both □ p, so a valuation disagreeing
--- there gives a chi containing both □ p and ¬ □ p.  Coherence excludes it.
-
-badVal : Val
-badVal = true ∷ true ∷ true ∷ true ∷ false ∷ true ∷ []
-
-badVal-length : length badVal ≡ length (sub benAri)
-badVal-length = refl
-
 ------------------------------------------------------------------------
 -- LTL.States.State
 
--- ◇ p is  ¬ □ ¬ p , so sub is  [ ¬ □ ¬ p , □ ¬ p , ¬ p , p ]  with no
--- duplicates.  The constraints v0 = not v1, v1 implies v2, v2 = not v3 leave
--- three states.
+-- ◇ p is  ¬ □ ¬ p , whose atoms are  [ □ ¬ p , p ] .  (S2) excludes the row
+-- with □ ¬ p and p both true, leaving three states.
 
 ◇P : Formula
 ◇P = ◇ (var zero)
@@ -65,55 +57,49 @@ badVal-length = refl
 St-◇P : length (St ◇P) ≡ 3
 St-◇P = refl
 
--- The negation of Ben-Ari's formula, the input the procedure runs on: sub has
--- length 7, and 128 valuations are filtered to 6 states.
+-- The negation of Ben-Ari's formula, the input the procedure runs on: its 3
+-- atoms give 8 rows, and (S2) filters them to 6 states.
 
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St-¬BenAri : length (allVecs (length (sub ¬BenAri))) ≡ 128
+St-¬BenAri : length (allVecs (length (stateAtoms ¬BenAri))) ≡ 8
 St-¬BenAri = refl
 
 St-¬BenAri-count : length (St ¬BenAri) ≡ 6
 St-¬BenAri-count = refl
 
--- The incoherent valuation is rejected.
-
-badVal-rejected : isState benAri badVal ≡ false
-badVal-rejected = refl
-
 ------------------------------------------------------------------------
 -- LTL.States.Step
 
--- For ◇ p the three states, writing the bits of  [ ¬ □ ¬ p , □ ¬ p , ¬ p , p ] ,
--- are, in the order of St ◇P:
+-- For ◇ p the three states, writing the bits of  [ □ ¬ p , p ] , are, in the
+-- order of St ◇P:
 --
---   1 0 1 0   p fails now, ◇ p still pending
---   1 0 0 1   p holds now
---   0 1 1 0   ◇ p false, so p fails forever
+--   1 0   ◇ p false, so p fails forever
+--   0 1   p holds now
+--   0 0   p fails now, ◇ p still pending
 --
 -- Every state has a successor.
 
 ◇P-succ-counts : map (λ v -> length (succs ◇P (St ◇P) v)) (St ◇P) ≡
-                      2 ∷ 3 ∷ 1 ∷ []
+                      1 ∷ 3 ∷ 2 ∷ []
 ◇P-succ-counts = refl
 
 -- For ¬ benAri the six states are, in the order allVecs produces them, writing
--- the bits of  [ ¬ I , I , □ p , p , ○ □ p , □ p , p ]  with I = □ p ⇒ ○ □ p:
+-- the bits of the atoms  [ ○ □ p , □ p , p ] :
 --
---   E = 1 0 1 1 0 1 1     □ p true, ○ □ p false: the only state containing
---                         ¬ benAri
---   F = 0 1 1 1 1 1 1
---   D = 0 1 0 1 1 0 1
---   C = 0 1 0 1 0 0 1
---   B = 0 1 0 0 1 0 0
---   A = 0 1 0 0 0 0 0
+--   F = 1 1 1
+--   D = 1 0 1
+--   B = 1 0 0
+--   E = 0 1 1     □ p true, ○ □ p false: the only state containing ¬ benAri
+--   C = 0 0 1
+--   A = 0 0 0
 --
 -- E and D have no successor.
 
 ¬BenAri-succ-counts
   : map (λ v -> length (succs ¬BenAri (St ¬BenAri) v)) (St ¬BenAri) ≡
-    0 ∷ 2 ∷ 0 ∷ 4 ∷ 2 ∷ 4 ∷ []
+    2 ∷ 0 ∷ 2 ∷ 0 ∷ 4 ∷ 4 ∷ []
 ¬BenAri-succ-counts = refl
 
 ------------------------------------------------------------------------
@@ -187,7 +173,6 @@ bnbProof = proofFrom (decide bnb) refl
 -- constructors, 5 of them pc nodes: state completeness is one pc node and one
 -- modus ponens per eventuality (stateCompletePC), (L5) over the states one
 -- more (betaElimPC), and each state is one pc node or a refutation.
--- stateComplete alone, by case split, has 296839.
 
 axT-size : derivSize (proofFrom (decide (□ var zero ⇒ var zero)) refl)
            ∷ derivPC (proofFrom (decide (□ var zero ⇒ var zero)) refl)
@@ -195,13 +180,12 @@ axT-size : derivSize (proofFrom (decide (□ var zero ⇒ var zero)) refl)
 axT-size = refl
 
 -- ◇ p is not valid, and the answer is a lasso.  The procedure runs on
--- ¬ ◇ p = ¬ ¬ □ ¬ p , with subformulas  ¬ ◇ p , ◇ p , □ ¬ p , ¬ p , p .
--- The countermodel is the state  1 0 1 1 0  (◇ p fails, □ ¬ p holds) looping
--- to itself: p false forever.  The cycle holds two copies of the loop, since
+-- ¬ ◇ p = ¬ ¬ □ ¬ p , whose atoms are  □ ¬ p , p .  The countermodel is the
+-- state  1 0  (□ ¬ p holds, p fails) looping to itself: p false forever.  The cycle holds two copies of the loop, since
 -- the SCC construction prepends one leg per eventuality to the bare loop.
 
 ◇P-cmState : Val
-◇P-cmState = true ∷ false ∷ true ∷ true ∷ false ∷ []
+◇P-cmState = true ∷ false ∷ []
 
 decide-◇P : isProof (decide ◇P) ≡ false
 decide-◇P = refl
@@ -235,8 +219,9 @@ decide-◇P-lasso = refl
 
 ------------------------------------------------------------------------
 -- c5 = □ (p ∨ q) ⇒ □ p ∨ □ q  is not valid.  sub of its negation has length
--- 13 (8192 vectors); its five atoms give 32 candidates, 17 of them states, and
--- the closure of those containing the negation has 8 members.
+-- 13, but only five atoms,  [ □ (p ∨ q) , □ p , p , □ q , q ] : 32 rows, 17
+-- of them states, and the closure of those containing the negation has 8
+-- members.
 --
 -- Writing a state as the pair (p , q) (the other bits are determined), the
 -- run is
@@ -260,18 +245,15 @@ c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
 
 -- q, not p
 c5q : Val
-c5q = true  ∷ false ∷ true ∷ true ∷ true  ∷ false ∷ true
-   ∷ false ∷ true  ∷ false ∷ false ∷ false ∷ true ∷ []
+c5q = true ∷ false ∷ false ∷ false ∷ true ∷ []
 
--- p, not q
+-- p, not q, and p forever
 c5p : Val
-c5p = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ false
-   ∷ true  ∷ false ∷ true  ∷ true  ∷ false ∷ false ∷ []
+c5p = true ∷ true ∷ true ∷ false ∷ false ∷ []
 
 -- p and q, both forever
 c5pq : Val
-c5pq = false ∷ true ∷ true ∷ true ∷ false ∷ true ∷ true
-    ∷ true  ∷ false ∷ true ∷ true ∷ true  ∷ true ∷ []
+c5pq = true ∷ true ∷ true ∷ true ∷ true ∷ []
 
 decide-c5 : isProof (decide c5) ≡ false
 decide-c5 = refl
