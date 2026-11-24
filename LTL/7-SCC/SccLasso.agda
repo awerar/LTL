@@ -62,12 +62,12 @@ evWitness A z ez pd =
 -- Persistence to a state VISITED, not to the endpoint: trailPersist with the
 -- target carried along and the walk cut short when it is reached.
 
-persistTo : (us : List Val) (A : Formula) -> □ A ∈ sub P
+persistTo : {us : List Val} (A : Formula) -> □ A ∈ sub P
          -> {v : Val} {ws : List Val} {x : Val} -> Trail us v ws x
          -> valOf v (□ A) ≡ false
          -> ∀ⁱ[ z ∈ ws ] (Fulfil A v ws ⊎ valOf z (□ A) ≡ false)
-persistTo us A mb tNil e ()
-persistTo us A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
+persistTo A mb tNil e ()
+persistTo A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
   onA z mz
   where
     onA : (y : Val) -> y ∈ w ∷ ws
@@ -77,21 +77,22 @@ persistTo us A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
     onA y here      | true = inr (persist v w A mb st e ea)
     onA y (there k) | true =
       [ (λ f -> inl (fulfilCons f)) , inr ]
-        (persistTo us A mb wk (persist v w A mb st e ea) k)
+        (persistTo A mb wk (persist v w A mb st e ea) k)
 
 ------------------------------------------------------------------------
--- A FairLoop in Ust is a Lasso.  The cycle is non-empty, so it splits at
--- its head q, and the first edge of its trail is the lasso's closing step
--- from the base point r to q.
+-- A FairLoop in Ust is a Lasso.  The loop's cycle is q ∷ qs, and the first
+-- edge of its trail is the lasso's closing step from the base point r to q.
 
 sccLasso : (v0 : Val) -> v0 ∈ Ust
         -> FairLoop Ust evPreds v0 -> Lasso v0
-sccLasso v0 mv0 (fairLoop r stem (circuit (loopBy [] tc ()) wit))
 sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
-                          (circuit (loopBy cy@(q ∷ qs) (tCons mq e tqs) nn) wit)) =
+                          (circuit (loopBy q qs (tCons mq e tqs)) wit)) =
   mkLasso cyc fair (st ++ cy)
-          (vpos v0 (st ++ cy) mv0 (trailApp Ust ts tcy))
+          (vpos v0 (st ++ cy) mv0 (trailApp ts tcy))
   where
+    cy : List Val
+    cy = q ∷ qs
+
     tcy : Trail Ust r cy r
     tcy = tCons mq e tqs
 
@@ -107,4 +108,4 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
            -> Fulfil A r cy
         onW (z , mz , ez) =
           [ (λ f -> f) , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]
-            (persistTo Ust A (evSub mA) tcy pr mz)
+            (persistTo A (evSub mA) tcy pr mz)

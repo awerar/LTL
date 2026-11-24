@@ -110,9 +110,3 @@ null-false : {A : Set} (xs : List A) -> null xs ≡ false
           -> Σ[ x ∈ A ] x ∈ xs
 null-false []       ()
 null-false (y ∷ ys) e = y , here
-
--- null (xs ++ ys) is false when null xs is
-null-++-false-introˡ : {A : Set} (xs ys : List A) -> null xs ≡ false
-                    -> null (xs ++ ys) ≡ false
-null-++-false-introˡ []       ys ()
-null-++-false-introˡ (x ∷ xs) ys e = refl

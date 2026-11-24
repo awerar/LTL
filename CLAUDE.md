@@ -69,6 +69,11 @@ derivation or a certified finite lasso countermodel.
   callers outside see the same arguments. `Graph` and `FairGraph` leave
   their repeated implicits (trail endpoints, visited lists, the Bar's
   predicate `E`) to a `private variable` block at the top of the module.
+  The vertex list `ws` is implicit (`module _ {ws : List Node} where`)
+  wherever another argument's type fixes it (a `Trail`, `Reaches`, `Loop`,
+  `Circuit`, `FairIn`, `HasSucc` or closed-under hypothesis), so a call reads
+  `trailApp t1 t2`; it stays explicit where it only occurs under a function
+  (`reachSet ws v`, `sccOf ws r`, `outs ws x`), since Agda cannot infer it there.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
   `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,

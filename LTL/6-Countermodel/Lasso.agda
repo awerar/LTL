@@ -64,7 +64,7 @@ Fair cy =
 endOnCycle : (cy : Cycle)
           -> Cycle.b cy ∈ stretchStates (Cycle.loop cy)
 endOnCycle (mkCycle b (s , rest) (vpos s rest ms wk) stb) =
-  trailEnd Ust wk
+  trailEnd wk
 
 ------------------------------------------------------------------------
 -- Validity is preserved along the lasso, hence throughout an orbit

@@ -53,13 +53,13 @@ fulfilCons (ful z m q) = ful z (there m) q
 -- either A fails somewhere on the way (the eventuality is fulfilled) or □ A
 -- is still pending at x.  Each step is `persist`, i.e. (T3).
 
-trailPersist : (us : List Val) (A : Formula) -> □ A ∈ sub P
+trailPersist : {us : List Val} (A : Formula) -> □ A ∈ sub P
             -> {v : Val} {ws : List Val} {x : Val} -> Trail us v ws x
             -> valOf v (□ A) ≡ false
             -> Fulfil A v ws ⊎ valOf x (□ A) ≡ false
-trailPersist us A mb tNil e = inr e
-trailPersist us A mb (tCons {v} {w} {ws} {x} mw st wk) e with valOf v A in ea
+trailPersist A mb tNil e = inr e
+trailPersist A mb (tCons {v} {w} {ws} {x} mw st wk) e with valOf v A in ea
 ... | false = inl (ful v here ea)
 ... | true  =
   [ (λ f -> inl (fulfilCons f)) , inr ]
-    (trailPersist us A mb wk (persist v w A mb st e ea))
+    (trailPersist A mb wk (persist v w A mb st e ea))

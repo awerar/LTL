@@ -26,6 +26,11 @@ LTL.1-Lib.DecEq.∈ᵛ-complete	568a3a307e83	2026-11-24
 LTL.1-Lib.DecEq.∈ᵛ-false	b2a7d3386b4e	2026-11-24	
 LTL.1-Lib.DecEq.∈ᵛ-sound	cccec7356262	2026-11-24	
 LTL.1-Lib.DecEq.≢ᵛ-self	f6de408b2294	2026-11-24	
+LTL.1-Lib.Graph.Trail	ab7bdae83e23	2026-11-24	
+LTL.1-Lib.Graph.hasOut	2cebb58e26cd	2026-11-24	
+LTL.1-Lib.Graph.outs	fa8f3260dc70	2026-11-24	
+LTL.1-Lib.Graph.trailApp	241632eba15a	2026-11-24	
+LTL.1-Lib.Graph.trailEnd	03acb8fc31dc	2026-11-24	
 LTL.1-Lib.Nodes.AllSat	b91bb67d799c	2026-11-24	
 LTL.1-Lib.Nodes.AllSat-∈ᵛ	21f5a29b4d5d	2026-11-24	
 LTL.1-Lib.Nodes.Avail	af6ca98926ce	2026-11-24	
@@ -45,7 +50,7 @@ LTL.1-Lib.Prelude._++_	aa8f31a03dff	2026-11-23
 LTL.1-Lib.Prelude._<_	49d62c83473b	2026-11-23	
 LTL.1-Lib.Prelude._×_	6cf825ec00bf	2026-11-23	
 LTL.1-Lib.Prelude._⇔ᵇ_	3dcee026395e	2026-11-23	
-LTL.1-Lib.Prelude._∈_	78718c862b2f	2026-11-23	
+LTL.1-Lib.Prelude._∈_	25c14f16e876	2026-11-24	
 LTL.1-Lib.Prelude._∧ᵇ_	1ec5c6f593a3	2026-11-23	
 LTL.1-Lib.Prelude._∨ᵇ_	556fc65f31eb	2026-11-23	
 LTL.1-Lib.Prelude._≡ⁿ_	f30cb0270832	2026-11-23	
@@ -62,6 +67,7 @@ LTL.1-Lib.Prelude.any-false	ec13b9c73986	2026-11-23
 LTL.1-Lib.Prelude.any-intro	5e5def1c2135	2026-11-23	
 LTL.1-Lib.Prelude.any-true	97158cf676b5	2026-11-23	
 LTL.1-Lib.Prelude.concat	9d32ec42cf32	2026-11-23	
+LTL.1-Lib.Prelude.concatMap	0d6709490c3a	2026-11-24	
 LTL.1-Lib.Prelude.filter	0a6ea72f352c	2026-11-24	
 LTL.1-Lib.Prelude.filter-prop	ec1976fd2ff6	2026-11-24	
 LTL.1-Lib.Prelude.fst	3f5e6771197d	2026-11-23	
@@ -105,6 +111,8 @@ LTL.1-Lib.Prelude.∃∈-syntax	0480273b16f3	2026-11-23
 LTL.1-Lib.Prelude.∈-++⁺ʳ	110b4ffb8ca5	2026-11-23	
 LTL.1-Lib.Prelude.∈-++⁺ˡ	91489b4d5726	2026-11-23	
 LTL.1-Lib.Prelude.∈-++⁻	0979f90f742f	2026-11-23	
+LTL.1-Lib.Prelude.∈-concatMap⁺	a2ff4802bd6b	2026-11-24	
+LTL.1-Lib.Prelude.∈-concatMap⁻	11242481c564	2026-11-24	
 LTL.1-Lib.Prelude.∈-filter⁺	aa6f580901be	2026-11-24	
 LTL.1-Lib.Prelude.∈-filter⁻	28e14ac5d805	2026-11-24	
 LTL.1-Lib.Prelude.∈-map⁺	e3c7c4913af9	2026-11-23	
@@ -119,7 +127,7 @@ LTL.1-Lib.Prelude.∧ᵇ∨ᵇ-distribʳ	9caf1ca98f19	2026-11-23
 LTL.1-Lib.Prelude.∧ᵇ∨ᵇ-weaken	8287162fe46b	2026-11-23	
 LTL.1-Lib.Prelude.∨ᵇ-falseʳ	1b25e25c1f2b	2026-11-23	
 LTL.1-Lib.Prelude.∨ᵇ-falseˡ	ff67cb3d4891	2026-11-23	
-LTL.1-Lib.Prelude.∨ᵇ-introʳ	e45f7ae15e9c	2026-11-23	
+LTL.1-Lib.Prelude.∨ᵇ-introʳ	e45f7ae15e9c	2026-11-24	
 LTL.1-Lib.Prelude.∨ᵇ-introˡ	c14121d2008d	2026-11-23	
 LTL.1-Lib.Prelude.∨ᵇ-true	4e0662a22eff	2026-11-23	
 LTL.1-Lib.Prelude.≡ⁿ-refl	303593a7fdf1	2026-11-23	
@@ -133,13 +141,13 @@ LTL.1-Lib.Sets.emptyAll	706af73e7fa9	2026-11-23
 LTL.1-Lib.Sets.filter-<	0ecb80c6747d	2026-11-24	
 LTL.1-Lib.Sets.filter-≤	ec33d1447f95	2026-11-24	
 LTL.1-Lib.Sets.length-≤0-∈	42346924eac0	2026-11-23	
-LTL.1-Lib.Sets.null-++-false-introˡ	9e91170fae2e	2026-11-23	
 LTL.1-Lib.Sets.null-false	e6a7d16a17fb	2026-11-23	
 LTL.1-Lib.Sets.null-∈	1177c8ec50b0	2026-11-23	
 LTL.1-Lib.Sets.≤-pred	5712b3982055	2026-11-23	
 LTL.1-Lib.Sets.≤-refl	d0f819fd263b	2026-11-23	
 LTL.1-Lib.Sets.≤-step	8c261fc3f8db	2026-11-23	
 LTL.1-Lib.Sets.≤-trans	546c8f327604	2026-11-23	
+LTL.2-Syntax.Deriv.isTaut-sound	cddba800d11c	2026-11-24	
 LTL.2-Syntax.Formula._∨_	b079333f1cd6	2026-11-23	
 LTL.2-Syntax.Formula._≡ᶠ_	4c4ad113678b	2026-11-23	
 LTL.2-Syntax.Formula.sub	bbb95be86d76	2026-11-23	
