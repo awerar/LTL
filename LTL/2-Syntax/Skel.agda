@@ -24,9 +24,6 @@ open import LTL.2-Syntax.Formula public
 Val : Set
 Val = List Bool
 
-bitAt : Val -> Nat -> Bool
-bitAt v i = nth v i false
-
 allVals : Nat -> List Val
 allVals zero    = [] ∷ []
 allVals (suc n) = map (λ bs -> true ∷  bs) (allVals n) ++
@@ -144,82 +141,58 @@ atomSub : (As : List Formula) -> ∀ⁱ[ A ∈ atoms As ] A ∈ As
 atomSub As m = nub-sub As (∈-filter⁻ isAtomB (nub As) m)
 
 ------------------------------------------------------------------------
--- The arguments of the box-subformulas.
+-- The arguments of the box- and next-subformulas.
 --
--- □Args collects the A for which □ A occurs in the list: these are the
--- eventualities.  LTL.5-States.State reads it at the atoms of sub P, so each
--- eventuality is listed once.
+-- argsOf c As collects the A for which c A occurs in As.  At c = □_ these
+-- are the eventualities, at c = ○_ the arguments (T1) is imposed at;
+-- LTL.5-States.State reads both at the atoms of sub P, so each is listed
+-- once.  argsAt c X keeps the immediate subformulas A of X with c A = X, so
+-- the one equality test ≡ᶠ serves every connective.
 
-□Args : List Formula -> List Formula
-□Args []           = []
-□Args (var n ∷ As) = □Args As
-□Args (¬ A   ∷ As) = □Args As
-□Args (A ⇒ B ∷ As) = □Args As
-□Args (○ A   ∷ As) = □Args As
-□Args (□ A   ∷ As) = A ∷ □Args As
+children : Formula -> List Formula
+children (var n) = []
+children (¬ A)   = A ∷ []
+children (A ⇒ B) = A ∷ B ∷ []
+children (○ A)   = A ∷ []
+children (□ A)   = A ∷ []
 
-∈-□Args⁺ : (As : List Formula) {A : Formula}
-        -> □ A ∈ As -> A ∈ □Args As
-∈-□Args⁺ []           ()
-∈-□Args⁺ (var n ∷ As) (there m) = ∈-□Args⁺ As m
-∈-□Args⁺ (¬ B   ∷ As) (there m) = ∈-□Args⁺ As m
-∈-□Args⁺ (B ⇒ C ∷ As) (there m) = ∈-□Args⁺ As m
-∈-□Args⁺ (○ B   ∷ As) (there m) = ∈-□Args⁺ As m
-∈-□Args⁺ (□ B   ∷ As) here      = here
-∈-□Args⁺ (□ B   ∷ As) (there m) = there (∈-□Args⁺ As m)
+argsAt : (Formula -> Formula) -> Formula -> List Formula
+argsAt c X = filter (λ A -> c A ≡ᶠ X) (children X)
 
--- and back: the eventualities really are box-subformulas.
+argsOf : (Formula -> Formula) -> List Formula -> List Formula
+argsOf c = concatMap (argsAt c)
 
-∈-□Args⁻ : (As : List Formula)
-        -> ∀ⁱ[ A ∈ □Args As ] □ A ∈ As
-∈-□Args⁻ []           ()
-∈-□Args⁻ (var n ∷ As) m         = there (∈-□Args⁻ As m)
-∈-□Args⁻ (¬ B   ∷ As) m         = there (∈-□Args⁻ As m)
-∈-□Args⁻ (B ⇒ C ∷ As) m         = there (∈-□Args⁻ As m)
-∈-□Args⁻ (○ B   ∷ As) m         = there (∈-□Args⁻ As m)
-∈-□Args⁻ (□ B   ∷ As) here      = here
-∈-□Args⁻ (□ B   ∷ As) (there m) = there (∈-□Args⁻ As m)
+∈-argsOf⁺ : (c : Formula -> Formula) (As : List Formula) {A : Formula}
+         -> A ∈ children (c A) -> c A ∈ As -> A ∈ argsOf c As
+∈-argsOf⁺ c As {A} ch m =
+  ∈-concatMap⁺ (argsAt c) m
+    (∈-filter⁺ (λ B -> c B ≡ᶠ c A) (children (c A)) ch (≡ᶠ-refl (c A)))
 
--- The arguments of the next-subformulas, likewise: (T1) is imposed at each.
-
-○Args : List Formula -> List Formula
-○Args []           = []
-○Args (var n ∷ As) = ○Args As
-○Args (¬ A   ∷ As) = ○Args As
-○Args (A ⇒ B ∷ As) = ○Args As
-○Args (○ A   ∷ As) = A ∷ ○Args As
-○Args (□ A   ∷ As) = ○Args As
-
-∈-○Args⁺ : (As : List Formula) {A : Formula}
-        -> ○ A ∈ As -> A ∈ ○Args As
-∈-○Args⁺ []           ()
-∈-○Args⁺ (var n ∷ As) (there m) = ∈-○Args⁺ As m
-∈-○Args⁺ (¬ B   ∷ As) (there m) = ∈-○Args⁺ As m
-∈-○Args⁺ (B ⇒ C ∷ As) (there m) = ∈-○Args⁺ As m
-∈-○Args⁺ (○ B   ∷ As) here      = here
-∈-○Args⁺ (○ B   ∷ As) (there m) = there (∈-○Args⁺ As m)
-∈-○Args⁺ (□ B   ∷ As) (there m) = ∈-○Args⁺ As m
-
-∈-○Args⁻ : (As : List Formula)
-        -> ∀ⁱ[ A ∈ ○Args As ] ○ A ∈ As
-∈-○Args⁻ []           ()
-∈-○Args⁻ (var n ∷ As) m         = there (∈-○Args⁻ As m)
-∈-○Args⁻ (¬ B   ∷ As) m         = there (∈-○Args⁻ As m)
-∈-○Args⁻ (B ⇒ C ∷ As) m         = there (∈-○Args⁻ As m)
-∈-○Args⁻ (○ B   ∷ As) here      = here
-∈-○Args⁻ (○ B   ∷ As) (there m) = there (∈-○Args⁻ As m)
-∈-○Args⁻ (□ B   ∷ As) m         = there (∈-○Args⁻ As m)
+∈-argsOf⁻ : (c : Formula -> Formula) (As : List Formula)
+         -> ∀ⁱ[ A ∈ argsOf c As ] c A ∈ As
+∈-argsOf⁻ c As {A} m with ∈-concatMap⁻ (argsAt c) As m
+... | X , mX , k =
+  subst (λ Y -> Y ∈ As)
+        (sym (≡ᶠ-sound (c A) X (filter-prop (λ B -> c B ≡ᶠ X) (children X) k)))
+        mX
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation.  valFrom Ats a A reads A with the bits a assigned
 -- to the atoms Ats: ¬ and ⇒ are interpreted, everything else is looked up.
 
-valFrom : List Formula -> Val -> Formula -> Bool
-valFrom Ats a (var n) = bitAt a (indexOf Ats (var n))
-valFrom Ats a (¬ A)   = ¬ᵇ valFrom Ats a A
-valFrom Ats a (A ⇒ B) = valFrom Ats a A ⇒ᵇ valFrom Ats a B
-valFrom Ats a (○ A)   = bitAt a (indexOf Ats (○ A))
-valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
+module _ (Ats : List Formula) (a : Val) where
+
+  -- The bit of the atom X: the entry of a at X's index in Ats.
+
+  atomBit : Formula -> Bool
+  atomBit X = nth a (indexOf Ats X) false
+
+  valFrom : Formula -> Bool
+  valFrom (var n) = atomBit (var n)
+  valFrom (¬ A)   = ¬ᵇ valFrom A
+  valFrom (A ⇒ B) = valFrom A ⇒ᵇ valFrom B
+  valFrom (○ A)   = atomBit (○ A)
+  valFrom (□ A)   = atomBit (□ A)
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation agrees with any reading f that respects ¬ and ⇒ on
@@ -227,30 +200,28 @@ valFrom Ats a (□ A)   = bitAt a (indexOf Ats (□ A))
 -- tautSound) and valFrom at another row (LTL.5-States.Taut), respect them by
 -- definition.
 
-atomLook : (f : Formula -> Bool) (Ats : List Formula) (X : Formula)
-        -> X ∈ Ats
-        -> bitAt (map f Ats) (indexOf Ats X) ≡ f X
-atomLook f Ats X mX =
-  trans (nth-map f Ats (indexOf Ats X) (indexOf-< Ats mX) ⊥ false)
-        (cong f (indexOf-nth Ats mX))
+module _ (f : Formula -> Bool) (Ats : List Formula) where
 
-skelEval : (f : Formula -> Bool) (Ats : List Formula) (P : Formula)
-        -> ((X : Formula) -> X ∈ sub P -> isAtomB X ≡ true -> X ∈ Ats)
-        -> ((X : Formula) -> ¬ X ∈ sub P
-              -> f (¬ X) ≡ ¬ᵇ f X)
-        -> ((X Y : Formula) -> X ⇒ Y ∈ sub P
-              -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
-        -> ∀[ A ∈ sub P ] valFrom Ats (map f Ats) A ≡ f A
-skelEval f Ats P at fn fi (var n) m = atomLook f Ats (var n) (at (var n) m refl)
-skelEval f Ats P at fn fi (○ A)   m = atomLook f Ats (○ A) (at (○ A) m refl)
-skelEval f Ats P at fn fi (□ A)   m = atomLook f Ats (□ A) (at (□ A) m refl)
-skelEval f Ats P at fn fi (¬ A)   m =
-  trans (cong ¬ᵇ_ (skelEval f Ats P at fn fi A (sub-¬ P m)))
-        (sym (fn A m))
-skelEval f Ats P at fn fi (A ⇒ B) m =
-  trans (cong₂ _⇒ᵇ_ (skelEval f Ats P at fn fi A (sub-⇒L P m))
-                    (skelEval f Ats P at fn fi B (sub-⇒R P m)))
-        (sym (fi A B m))
+  atomLook : (X : Formula) -> X ∈ Ats -> atomBit Ats (map f Ats) X ≡ f X
+  atomLook X mX =
+    trans (nth-map f Ats (indexOf Ats X) (indexOf-< Ats mX) ⊥ false)
+          (cong f (indexOf-nth Ats mX))
+
+  module _ (P : Formula)
+           (at : (X : Formula) -> X ∈ sub P -> isAtomB X ≡ true -> X ∈ Ats)
+           (fn : (X : Formula) -> ¬ X ∈ sub P -> f (¬ X) ≡ ¬ᵇ f X)
+           (fi : (X Y : Formula) -> X ⇒ Y ∈ sub P -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
+           where
+
+    skelEval : ∀[ A ∈ sub P ] valFrom Ats (map f Ats) A ≡ f A
+    skelEval (var n) m = atomLook (var n) (at (var n) m refl)
+    skelEval (○ A)   m = atomLook (○ A) (at (○ A) m refl)
+    skelEval (□ A)   m = atomLook (□ A) (at (□ A) m refl)
+    skelEval (¬ A)   m =
+      trans (cong ¬ᵇ_ (skelEval A (sub-¬ P m))) (sym (fn A m))
+    skelEval (A ⇒ B) m =
+      trans (cong₂ _⇒ᵇ_ (skelEval A (sub-⇒L P m)) (skelEval B (sub-⇒R P m)))
+            (sym (fi A B m))
 
 ------------------------------------------------------------------------
 -- (PC), as a decidable condition on A alone

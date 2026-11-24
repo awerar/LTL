@@ -41,22 +41,22 @@ subformulas = nub (sub P)
 -- once, with their round trips to sub P.
 
 eventualities : List Formula
-eventualities = □Args stateAtoms
+eventualities = argsOf □_ stateAtoms
 
 nexts : List Formula
-nexts = ○Args stateAtoms
+nexts = argsOf ○_ stateAtoms
 
 evIn : {A : Formula} -> □ A ∈ sub P -> A ∈ eventualities
-evIn m = ∈-□Args⁺ stateAtoms (∈-atoms⁺ (sub P) m refl)
+evIn m = ∈-argsOf⁺ □_ stateAtoms here (∈-atoms⁺ (sub P) m refl)
 
 evSub : ∀ⁱ[ A ∈ eventualities ] □ A ∈ sub P
-evSub m = atomSub (sub P) (∈-□Args⁻ stateAtoms m)
+evSub m = atomSub (sub P) (∈-argsOf⁻ □_ stateAtoms m)
 
 nextIn : {A : Formula} -> ○ A ∈ sub P -> A ∈ nexts
-nextIn m = ∈-○Args⁺ stateAtoms (∈-atoms⁺ (sub P) m refl)
+nextIn m = ∈-argsOf⁺ ○_ stateAtoms here (∈-atoms⁺ (sub P) m refl)
 
 nextSub : ∀ⁱ[ A ∈ nexts ] ○ A ∈ sub P
-nextSub m = atomSub (sub P) (∈-○Args⁻ stateAtoms m)
+nextSub m = atomSub (sub P) (∈-argsOf⁻ ○_ stateAtoms m)
 
 ------------------------------------------------------------------------
 -- The characteristic formula chi v of a valuation, and beta vs, the

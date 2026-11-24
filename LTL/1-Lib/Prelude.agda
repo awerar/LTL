@@ -2,7 +2,8 @@
 
 -- LTL.1-Lib.Prelude -- Boolean connectives and their lemmas, sums, Σ-types and
 -- products, and lists with membership, inclusion and indexing: for each list
--- operation (++, map, filter, any, all), membership in both directions.
+-- operation (++, map, filter, any, all, concatMap), membership in both
+-- directions.
 --
 -- The notation is that of Agda's standard library.  The Boolean connectives
 -- carry a superscript b (∧ᵇ, ∨ᵇ, ¬ᵇ, ⇒ᵇ, ⇔ᵇ) because the plain symbols are
@@ -367,6 +368,10 @@ concat : {A : Set} -> List (List A) -> List A
 concat []         = []
 concat (xs ∷ xss) = xs ++ concat xss
 
+concatMap : {A B : Set} -> (A -> List B) -> List A -> List B
+concatMap f []       = []
+concatMap f (x ∷ xs) = f x ++ concatMap f xs
+
 ++-identityʳ : {A : Set} (xs : List A) -> xs ++ [] ≡ xs
 ++-identityʳ []       = refl
 ++-identityʳ (x ∷ xs) = cong (λ zs -> x ∷ zs) (++-identityʳ xs)
@@ -488,6 +493,19 @@ map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
 ∈-++⁻ (z ∷ xs) ys here      = inl here
 ∈-++⁻ (z ∷ xs) ys (there h) =
   [ (λ k -> inl (there k)) , inr ] (∈-++⁻ xs ys h)
+
+∈-concatMap⁺ : {A B : Set} (f : A -> List B) {xs : List A} {x : A} {y : B}
+            -> x ∈ xs -> y ∈ f x -> y ∈ concatMap f xs
+∈-concatMap⁺ f {x ∷ xs} here      k = ∈-++⁺ˡ (f x) (concatMap f xs) k
+∈-concatMap⁺ f {z ∷ xs} (there m) k =
+  ∈-++⁺ʳ (f z) (concatMap f xs) (∈-concatMap⁺ f m k)
+
+∈-concatMap⁻ : {A B : Set} (f : A -> List B) (xs : List A)
+            -> ∀ⁱ[ y ∈ concatMap f xs ] ∃[ x ∈ xs ] y ∈ f x
+∈-concatMap⁻ f []       ()
+∈-concatMap⁻ f (x ∷ xs) m =
+  [ (λ k -> x , here , k) , (λ k -> there-∃ (∈-concatMap⁻ f xs k)) ]
+    (∈-++⁻ (f x) (concatMap f xs) m)
 
 ------------------------------------------------------------------------
 -- Indexing.  nth xs i d is the i-th member of xs, or d out of range;

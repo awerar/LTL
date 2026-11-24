@@ -38,7 +38,7 @@ derivation or a certified finite lasso countermodel.
   `_,_`; `fst`/`snd`; `Statement`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`,
   `xs ++ ys`, `x ∈ xs` (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
   `if b then x else y` (a branch with an infix operator parenthesised,
-  `if p x then (x ∷ xs) else xs`), and list helpers `filter any all null concat`.
+  `if p x then (x ∷ xs) else xs`), and list helpers `filter any all null concat concatMap`.
   Quantifiers bounded by a list: `∀[ x ∈ xs ] B` for `(x : _) -> x ∈ xs -> B`,
   `∀ⁱ[ x ∈ xs ] B` for `{x : _} -> x ∈ xs -> B` (x read off the membership
   proof; callers pass only `m`), and `∃[ x ∈ xs ] B` for
@@ -149,7 +149,7 @@ module name). Folder names never equal a module name.
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations, decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton,
-   `indexOf`, `nub`, `atoms`, `□Args`/`○Args`, `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back);
+   `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back);
    `Val` (literals, `⋀`/`⋁`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
