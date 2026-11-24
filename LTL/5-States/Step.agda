@@ -16,7 +16,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 
 module LTL.5-States.Step (P : Formula) where
 
-open import LTL.2-Syntax.Val
+open import LTL.2-Syntax.Deriv
 open import LTL.5-States.State P
 
 ------------------------------------------------------------------------

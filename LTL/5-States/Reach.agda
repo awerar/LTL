@@ -11,7 +11,7 @@
 
 module LTL.5-States.Reach where
 
-open import LTL.2-Syntax.Val public
+open import LTL.2-Syntax.Deriv public
 open import LTL.1-Lib.Sets public
 open import LTL.1-Lib.Bar  public
 open import LTL.1-Lib.DecEq using (DecEq)

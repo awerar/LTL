@@ -1,8 +1,9 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.2-Syntax.Formula -- formulas: variables (var n), negation ¬, implication
--- ⇒, next ○ and always □, with ∧, ∨, ⇔, ◇, ⊤ and ⊥ as abbreviations.
--- Implication is ⇒ because Agda reserves →.
+-- ⇒, next ○ and always □, with ∧, ∨, ⇔, ◇, ⊤ and ⊥ as abbreviations, and
+-- ⋀ and ⋁ their versions over a list.  Implication is ⇒ because Agda reserves
+-- →.
 --
 -- Also decidable equality ≡ᶠ, proved sound and complete once here; isState
 -- and lookup by formula rely on it.  And the subformula list sub P, with its
@@ -40,6 +41,23 @@ A ∨ B = ¬ A ⇒ B
 
 ◇_ : Formula -> Formula
 ◇ A = ¬ □ ¬ A
+
+-- Signed occurrences, and conjunction and disjunction over a list: the
+-- pieces of the characteristic formula chi v (LTL.5-States.State).  The empty
+-- conjunction is ⊤ and the empty disjunction is ⊥.
+
+lit : Formula -> Bool -> Formula
+lit A b = if b then A else ¬ A
+
+infix 30 ⋀_ ⋁_
+
+⋀_ : List Formula -> Formula
+⋀ []       = ⊤
+⋀ (A ∷ As) = A ∧ ⋀ As
+
+⋁_ : List Formula -> Formula
+⋁ []       = ⊥
+⋁ (A ∷ As) = A ∨ ⋁ As
 
 ------------------------------------------------------------------------
 -- Decidable equality.  All twenty-five cases are written out: --exact-split

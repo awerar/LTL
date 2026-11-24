@@ -28,8 +28,8 @@ derivation or a certified finite lasso countermodel.
   (`Examples`, `Lecture`) are slow; the core proof
   modules should stay fast.
 - Language: `var n`, `¬ A`, `A ⇒ B`, `○ A` (next), `□ A` (always). `A ∧ B`,
-  `A ∨ B`, `A ⇔ B`, `◇ A`, `⊥`, `⊤` are abbreviations (`LTL/2-Syntax/Formula.agda`;
-  `⋀`/`⋁` over lists in `LTL/2-Syntax/Val.agda`). Implication is `⇒` because Agda
+  `A ∨ B`, `A ⇔ B`, `◇ A`, `⊥`, `⊤` are abbreviations (`LTL/2-Syntax/Formula.agda`,
+  with `⋀`/`⋁` over lists). Implication is `⇒` because Agda
   reserves `→`. Lemma names use the same symbols (`⇒Trans`, `□Elim`, `k□`).
   **Until is not implemented** (it is the thesis goal).
 - Prelude notation follows Agda's standard library: `x ≡ y` (`sym`, `trans`,
@@ -148,9 +148,8 @@ module name). Folder names never equal a module name.
    inside the P-modules their names read `Trail ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
-   abbreviations, decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton,
-   `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back);
-   `Val` (literals, `⋀`/`⋁`).
+   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
+   `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).
