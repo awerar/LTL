@@ -60,11 +60,14 @@ derivation or a certified finite lasso countermodel.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
-  `Closed ws G C`, `NoneSat f C`, `HoldsOutside R ws`, `AllSat`/`Avail`
+  `C closed-under G within ws`, `NoneSat f C`, `HoldsOutside R ws`, `AllSat E xs`,
+  `E holds-on ws except acc`
   (all `LTL/1-Lib/Nodes.agda`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
   A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
-  callers outside see the same arguments.
+  callers outside see the same arguments. `Graph` and `FairGraph` leave
+  their repeated implicits (trail endpoints, visited lists, the Bar's
+  predicate `E`) to a `private variable` block at the top of the module.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
   `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,

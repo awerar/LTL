@@ -115,10 +115,10 @@ sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 -- component is intersected with Ust P.
 
 blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
-         -> C ⊆ ws -> Closed ws step C -> NoneSat f C
+         -> C closed-under step within ws -> NoneSat f C
          -> HoldsOutside UstRef ws
          -> ∀[ z ∈ C ] UstRef z
-blockStep ws C f mf sbC cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
+blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
   where
     onA : (∃[ A ∈ eventualities ] f ≡ evPred A)
        -> ⊢ ¬ (chi z)
@@ -148,7 +148,7 @@ blockStep ws C f mf sbC cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
         dCl : (y y' : Val) -> y ∈ D -> y' ∈ St -> y' ∈ᵛ ws ≡ true
            -> step y y' ≡ true -> y' ∈ D
         dCl y y' my my' ew st =
-          into y' (cl y y' (dC y my) (∈ᵛ-sound y' ws ew) st)
+          into y' (cl (dC y my) (∈ᵛ-sound y' ws ew) st)
                   (ustClosed (dUst y my) my' st)
 
         dHold : ∀[ y ∈ D ] valOf y A ≡ true

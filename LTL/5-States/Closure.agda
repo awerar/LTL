@@ -72,7 +72,6 @@ ustSeed : {v : Val}
        -> v ∈ St -> valOf v P ≡ true -> v ∈ Ust
 ustSeed m e = closureSeed containsP St stAllSat vecBar m e
 
-ustClosed : {v w : Val}
-         -> v ∈ Ust -> w ∈ St -> step v w ≡ true -> w ∈ Ust
+ustClosed : Ust closed-under step within St
 ustClosed mv mw st =
   closureClosed containsP St stAllSat vecBar mv mw st

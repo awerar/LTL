@@ -42,6 +42,14 @@ open import LTL.1-Lib.Nodes eq
 open import LTL.1-Lib.Graph eq G
 open import LTL.1-Lib.CertStep
 
+-- The implicit arguments the signatures below leave out: the endpoints and
+-- visited list of a trail, and the predicate of the Bar a search recurses on.
+
+private variable
+  u v w x s z : Node
+  zs          : List Node
+  E           : Pred
+
 ------------------------------------------------------------------------
 -- Components, without component objects: sccOf ws r is the vertices r
 -- reaches that reach r back.  A filter of a list, nothing more.
@@ -53,10 +61,6 @@ sccReach : (ws : List Node) (r : Node) (w : Node)
         -> w ∈ sccOf ws r -> w ∈ reachSet ws r
 sccReach ws r w m =
   ∈-filter⁻ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
-
-sccIn : (ws : List Node) (r : Node) (w : Node)
-     -> w ∈ sccOf ws r -> w ∈ ws
-sccIn ws r w m = reachIn ws r (sccReach ws r w m)
 
 sccTo : (ws : List Node) (r : Node) (w : Node)
      -> w ∈ sccOf ws r -> Reaches ws r w
@@ -94,8 +98,8 @@ termScc ws r et {w} m =
 -- needs exactly this of it.
 
 termClosed : (ws : List Node) (r : Node)
-          -> isTerminal ws r ≡ true -> Closed ws G (sccOf ws r)
-termClosed ws r et z y mz my e =
+          -> isTerminal ws r ≡ true -> sccOf ws r closed-under G within ws
+termClosed ws r et {z} mz my e =
   termScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
 
 ------------------------------------------------------------------------
@@ -117,9 +121,9 @@ record Terminal (ws : List Node) : Set where
 
 module _ (ws : List Node) where
 
-  termGo   : (r : Node) -> r ∈ ws -> {E : Pred}
+  termGo   : (r : Node) -> r ∈ ws
           -> AllSat E (reachSet ws r) -> IFin E -> Terminal ws
-  termFind : (r : Node) -> r ∈ ws -> {E : Pred}
+  termFind : (r : Node) -> r ∈ ws
           -> AllSat E (reachSet ws r) -> IFin E
           -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
           -> Terminal ws
@@ -132,7 +136,7 @@ module _ (ws : List Node) where
     terminalAt r mr
                (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
                           (λ w m -> f m))
-  termFind r mr {E} av (cBar h) (counterexample w mw q) =
+  termFind {E} r mr av (cBar h) (counterexample w mw q) =
     termGo w (reachIn ws r mw) av' (h r (av r (reachSeed ws r mr)))
     where
       av' : ∀[ z ∈ reachSet ws w ] E z ∧ᵇ (r ≢ᵛ z) ≡ true
@@ -331,7 +335,7 @@ data Cert (fs : List Pred) : List Node -> Set where
         -> null (outs ws x) ≡ true
         -> Cert fs (ws ∖ᵛ x) -> Cert fs ws
   cBlock : (ws C : List Node) (f : Pred) -> f ∈ fs
-        -> C ⊆ ws -> Closed ws G C -> NoneSat f C
+        -> C closed-under G within ws -> NoneSat f C
         -> Cert fs (ws ∖ C) -> Cert fs ws
 
 ------------------------------------------------------------------------
@@ -358,12 +362,12 @@ fairInMono ws vs fs sb (fairIn r mr c) =
 
 module _ (fs : List Pred) where
 
-  graphGo    : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
+  graphGo    : (ws : List Node) -> AllSat E ws -> IFin E
             -> FairIn ws fs ⊎ Cert fs ws
-  graphFind  : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
+  graphFind  : (ws : List Node) -> AllSat E ws -> IFin E
             -> AllDecision (hasOut ws) ws
             -> FairIn ws fs ⊎ Cert fs ws
-  graphBlock : {E : Pred} (ws : List Node) -> AllSat E ws -> IFin E
+  graphBlock : (ws : List Node) -> AllSat E ws -> IFin E
             -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
 
   graphGo ws sb bar = graphFind ws sb bar (decideAll (hasOut ws) ws)
@@ -382,8 +386,7 @@ module _ (fs : List Pred) where
   graphBlock ws sb (cBar h) (bUnfair r mr et g mg eg) =
     [ (λ fi -> inl (fairInMono (ws ∖ C) ws fs
                                (λ z m -> ∈-filter⁻ notInC ws m) fi))
-    , (λ c  -> inr (cBlock ws C g mg (sccIn ws r)
-                           (termClosed ws r et) miss c))
+    , (λ c  -> inr (cBlock ws C g mg (termClosed ws r et) miss c))
     ] (graphGo (ws ∖ C)
                (dropAllSat notInC ws sb r
                   (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws r mr))))
@@ -438,7 +441,7 @@ module _ (fs : List Pred) (R : Node -> Set)
                    -> null (outs ws x) ≡ true
                    -> HoldsOutside R ws -> R x)
          (blockCase : (ws C : List Node) (f : Pred) -> f ∈ fs
-                   -> C ⊆ ws -> Closed ws G C -> NoneSat f C
+                   -> C closed-under G within ws -> NoneSat f C
                    -> HoldsOutside R ws -> ∀[ z ∈ C ] R z)
          where
 
@@ -465,11 +468,11 @@ module _ (fs : List Pred) (R : Node -> Set)
       isX : (y : Node) -> y ∈ ws -> x ≢ᵛ y ≡ false -> R y
       isX y my ey = subst R (≡ᵛ-sound x y (¬ᵇ-false (x ≡ᵛ y) ey))
                           (sinkCase ws x mx e ih)
-  certAll (cBlock ws C f mf sb cl mis c) ih z =
+  certAll (cBlock ws C f mf cl mis c) ih z =
     certAll c (dropOutside (λ u -> ¬ᵇ (u ∈ᵛ C)) ws ih inC) z
     where
       inC : (y : Node) -> y ∈ ws -> ¬ᵇ (y ∈ᵛ C) ≡ false -> R y
-      inC y my ey = blockCase ws C f mf sb cl mis ih y
+      inC y my ey = blockCase ws C f mf cl mis ih y
                               (∈ᵛ-sound y C (¬ᵇ-false (y ∈ᵛ C) ey))
 
 ------------------------------------------------------------------------
@@ -484,24 +487,20 @@ module _ (fs : List Pred) (R : Node -> Set)
 
 module _ (ws : List Node) where
 
-  reachesCons : {v x s : Node}
-             -> x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
+  reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
   reachesCons m e (reachesBy zs t) = reachesBy (_ ∷ zs) (tCons m e t)
 
-  reachesApp : {u v w : Node}
-            -> Reaches ws u v -> Reaches ws v w -> Reaches ws u w
+  reachesApp : Reaches ws u v -> Reaches ws v w -> Reaches ws u w
   reachesApp (reachesBy as ta) (reachesBy bs tb) =
     reachesBy (as ++ bs) (trailApp ws ta tb)
 
-  trailFrom : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws v zs w -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
+  trailFrom : Trail ws v zs w -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
   trailFrom tNil          here      = reachesBy [] tNil
   trailFrom tNil          (there ())
   trailFrom (tCons m e t) here      = reachesBy _ (tCons m e t)
   trailFrom (tCons m e t) (there k) = trailFrom t k
 
-  trailTo : {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws v zs w -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
+  trailTo : Trail ws v zs w -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
   trailTo tNil          ()
   trailTo (tCons m e t) here      = reachesBy (_ ∷ []) (tCons m e tNil)
   trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
@@ -519,18 +518,15 @@ record HasSucc (ws : List Node) (x : Node) : Set where
 
 module _ (ws : List Node) where
 
-  firstStep : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws v zs w -> null zs ≡ false -> HasSucc ws v
+  firstStep : Trail ws v zs w -> null zs ≡ false -> HasSucc ws v
   firstStep tNil                  ()
   firstStep (tCons {x = y} m e t) nn = hasSucc y m e
 
-  headSucc : {v : Node} {zs : List Node} {w : Node}
-          -> Trail ws v zs w -> HasSucc ws w -> HasSucc ws v
+  headSucc : Trail ws v zs w -> HasSucc ws w -> HasSucc ws v
   headSucc tNil                  hw = hw
   headSucc (tCons {x = y} m e t) hw = hasSucc y m e
 
-  trailSucc : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws v zs w -> HasSucc ws w
+  trailSucc : Trail ws v zs w -> HasSucc ws w
            -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
   trailSucc tNil          hw ()
   trailSucc (tCons m e t) hw here      = headSucc t hw
@@ -551,17 +547,16 @@ module _ (ws : List Node) where
   cycConn r cy t u z mu mz =
     reachesApp ws (trailFrom ws t (there mu)) (trailTo ws t mz)
 
-blockAlong : (ws C : List Node) -> Closed ws G C
-          -> {u : Node} {zs : List Node} {z : Node}
+blockAlong : (ws C : List Node) -> C closed-under G within ws
           -> Trail ws u zs z -> u ∈ C -> z ∈ C
 blockAlong ws C cl tNil                       mu = mu
-blockAlong ws C cl (tCons {x = y} m e t)      mu =
-  blockAlong ws C cl t (cl _ y mu m e)
+blockAlong ws C cl (tCons m e t)              mu =
+  blockAlong ws C cl t (cl mu m e)
 
 -- A trail whose visited vertices all pass p stays inside filter p ws: this is
 -- how a cycle survives a removal step.
 
-keepIn : (ws : List Node) (p : Pred) {v : Node} {zs : List Node} {w : Node}
+keepIn : (ws : List Node) (p : Pred)
       -> Trail ws v zs w -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
 keepIn ws p t h z mz = ∈-filter⁺ p ws (trailIn ws t mz) (h z mz)
 
@@ -590,7 +585,7 @@ certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy cy t nn) wit) =
         out : x ≡ᵛ z ≡ false
         out = refuteTrue (x ≡ᵛ z) λ eb ->
           offCycle (subst (λ y -> y ∈ cy) (sym (≡ᵛ-sound x z eb)) mz)
-certNoCirc fs (cBlock ws C f mf sb cl mis c) r
+certNoCirc fs (cBlock ws C f mf cl mis c) r
            (circuit l@(loopBy cy t nn) wit) =
   certNoCirc fs c r
     (circuit (loopRestrict ws (ws ∖ C) l
@@ -646,4 +641,4 @@ certShape : {fs : List Pred} {ws : List Node}
          -> Cert fs ws -> List CertStep
 certShape (cNil ws e)                    = emptied ∷ []
 certShape (cSink ws x mx e c)            = removedSink ∷ certShape c
-certShape (cBlock ws C f mf sb cl mis c) = removedBlock ∷ certShape c
+certShape (cBlock ws C f mf cl mis c) = removedBlock ∷ certShape c

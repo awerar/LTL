@@ -28,7 +28,8 @@ open Membership eq public
 --
 --   Pred                a predicate on nodes
 --   Edges               a graph, given as its edge test
---   Closed ws G C       C is closed under G-successors that lie inside ws
+--   C closed-under G within ws
+--                       C is closed under G-successors that lie inside ws
 --   NoneSat f C         f is false at every member of C
 --   HoldsOutside R ws   R holds at every node outside ws -- the induction
 --                       hypothesis of a removing search
@@ -39,8 +40,12 @@ Pred = Node -> Bool
 Edges : Set
 Edges = Node -> Node -> Bool
 
-Closed : List Node -> Edges -> List Node -> Set
-Closed ws G C = (z y : Node) -> z ∈ C -> y ∈ ws -> G z y ≡ true -> y ∈ C
+infix 4 Closed
+
+Closed : (ws : List Node) (G : Edges) (C : List Node) -> Set
+Closed ws G C = ∀ⁱ[ z ∈ C ] ∀ⁱ[ y ∈ ws ] (G z y ≡ true -> y ∈ C)
+
+syntax Closed ws G C = C closed-under G within ws
 
 NoneSat : Pred -> List Node -> Set
 NoneSat f C = ∀[ z ∈ C ] f z ≡ false
@@ -82,7 +87,8 @@ barOfList {E = E} (suc n) xs le sb =
 -- LTL.1-Lib.Graph, the removing graphGo and findTerm of LTL.1-Lib.FairGraph):
 --   sb    a subset proof: AllSat E xs, or xs ⊆ ys;
 --   bar   the IFin E the search recurses on;
---   av    the "available" invariant of a growing search, Avail E ws acc:
+--   av    the "available" invariant of a growing search,
+--         E holds-on ws except acc:
 --         every candidate in ws not yet in the accumulator acc still
 --         satisfies the Bar's predicate E.
 -- A search comes as a pair fooGo / fooFind: fooGo runs decideAll for one
@@ -92,8 +98,14 @@ barOfList {E = E} (suc n) xs le sb =
 AllSat : Pred -> List Node -> Set
 AllSat E xs = ∀[ x ∈ xs ] E x ≡ true
 
-Avail : Pred -> List Node -> List Node -> Set
-Avail E ws acc = (z : Node) -> z ∈ ws -> z ∈ᵛ acc ≡ false -> E z ≡ true
+-- E holds-on ws except acc: every candidate in ws not yet in acc satisfies E.
+
+infix 4 Avail
+
+Avail : (E : Pred) (ws acc : List Node) -> Set
+Avail E ws acc = ∀ⁱ[ z ∈ ws ] (z ∈ᵛ acc ≡ false -> E z ≡ true)
+
+syntax Avail E ws acc = E holds-on ws except acc
 
 AllSat-∈ᵛ : (xs : List Node) -> AllSat (λ v -> v ∈ᵛ xs) xs
 AllSat-∈ᵛ xs x m = ∈ᵛ-complete x xs m

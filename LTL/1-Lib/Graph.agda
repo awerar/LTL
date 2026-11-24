@@ -30,6 +30,14 @@ open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
 open import LTL.1-Lib.Nodes eq
 
+-- The implicit arguments the signatures below leave out: the endpoints and
+-- visited list of a trail, and the predicate of the Bar a search recurses on.
+
+private variable
+  u v w : Node
+  xs zs : List Node
+  E     : Pred
+
 ------------------------------------------------------------------------
 -- Out-neighbours
 
@@ -55,32 +63,27 @@ data Trail (ws : List Node) : Node -> List Node -> Node -> Set where
 
 module _ (ws : List Node) where
 
-  trailApp : {u v w : Node} {xs zs : List Node}
-          -> Trail ws u xs v -> Trail ws v zs w -> Trail ws u (xs ++ zs) w
+  trailApp : Trail ws u xs v -> Trail ws v zs w -> Trail ws u (xs ++ zs) w
   trailApp tNil           t2 = t2
   trailApp (tCons m e t1) t2 = tCons m e (trailApp t1 t2)
 
-  trailEnd : {v : Node} {zs : List Node} {w : Node}
-          -> Trail ws v zs w -> w ∈ v ∷ zs
+  trailEnd : Trail ws v zs w -> w ∈ v ∷ zs
   trailEnd tNil          = here
   trailEnd (tCons m e t) = there (trailEnd t)
 
   -- A trail that takes at least one step ends at a vertex it visits.
 
-  trailLast : {v : Node} {zs : List Node} {w : Node}
-           -> Trail ws v zs w -> null zs ≡ false -> w ∈ zs
+  trailLast : Trail ws v zs w -> null zs ≡ false -> w ∈ zs
   trailLast tNil          ()
   trailLast (tCons m e t) nn = trailEnd t
 
-  trailIn : {v : Node} {zs : List Node} {w : Node}
-         -> Trail ws v zs w -> ∀ⁱ[ z ∈ zs ] z ∈ ws
+  trailIn : Trail ws v zs w -> ∀ⁱ[ z ∈ zs ] z ∈ ws
   trailIn tNil          ()
   trailIn (tCons m e t) here      = m
   trailIn (tCons m e t) (there k) = trailIn t k
 
 trailMono : (ws vs : List Node)
          -> ws ⊆ vs
-         -> {v : Node} {zs : List Node} {w : Node}
          -> Trail ws v zs w -> Trail vs v zs w
 trailMono ws vs sb tNil                  = tNil
 trailMono ws vs sb (tCons {x = x} m e t) =
@@ -89,7 +92,6 @@ trailMono ws vs sb (tCons {x = x} m e t) =
 -- A trail whose visited vertices all lie in vs is a trail in vs.
 
 trailRestrict : (ws vs : List Node)
-                {v : Node} {zs : List Node} {w : Node}
              -> Trail ws v zs w -> zs ⊆ vs
              -> Trail vs v zs w
 trailRestrict ws vs tNil                 h = tNil
@@ -148,11 +150,11 @@ module _ (S : Pred) (ws : List Node) where
   -- A round adds the unsettled x, so x leaves the candidates still available
   -- and the Bar's predicate with it.
 
-  availRound : {E : Pred} (acc : List Node) (x : Node)
-            -> x ∈ ws -> settled acc x ≡ false -> Avail E ws acc
-            -> Avail (λ z -> E z ∧ᵇ (x ≢ᵛ z)) ws (addRound acc)
-  availRound {E} acc x m q av z mz e =
-    ∧ᵇ-intro (E z) (x ≢ᵛ z) (av z mz outAcc) (cong ¬ᵇ_ outX)
+  availRound : (acc : List Node) (x : Node)
+            -> x ∈ ws -> settled acc x ≡ false -> E holds-on ws except acc
+            -> (λ z -> E z ∧ᵇ (x ≢ᵛ z)) holds-on ws except addRound acc
+  availRound {E} acc x m q av {z} mz e =
+    ∧ᵇ-intro (E z) (x ≢ᵛ z) (av mz outAcc) (cong ¬ᵇ_ outX)
     where
       outAcc : z ∈ᵛ acc ≡ false
       outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
@@ -167,9 +169,9 @@ module _ (S : Pred) (ws : List Node) where
                          (∈-filter⁺ (missing acc) ws m
                                     (¬ᵇ-false (missing acc x) q))))
 
-  growGo   : {E : Pred} (acc : List Node) -> Avail E ws acc
+  growGo   : (acc : List Node) -> E holds-on ws except acc
           -> IFin E -> List Node
-  growFind : {E : Pred} (acc : List Node) -> Avail E ws acc
+  growFind : (acc : List Node) -> E holds-on ws except acc
           -> IFin E -> AllDecision (settled acc) ws -> List Node
 
   growGo acc av bar = growFind acc av bar (decideAll (settled acc) ws)
@@ -177,7 +179,7 @@ module _ (S : Pred) (ws : List Node) where
   growFind acc av bar      (allTrue f)            = acc
   growFind acc av (cBar h) (counterexample x m q) =
     growGo (addRound acc) (availRound acc x m q av)
-           (h x (av x m (notInAcc acc x q)))
+           (h x (av m (notInAcc acc x q)))
 
   ------------------------------------------------------------------------
   -- Two facts about the search, each by its recursion: an invariant of the
@@ -186,11 +188,11 @@ module _ (S : Pred) (ws : List Node) where
 
   growInv   : (I : List Node -> Set)
            -> ((acc : List Node) -> I acc -> I (addRound acc))
-           -> {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
+           -> (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
            -> I acc -> I (growGo acc av bar)
   growInvFind : (I : List Node -> Set)
              -> ((acc : List Node) -> I acc -> I (addRound acc))
-             -> {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
+             -> (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
                 (fr : AllDecision (settled acc) ws)
              -> I acc -> I (growFind acc av bar fr)
 
@@ -199,12 +201,12 @@ module _ (S : Pred) (ws : List Node) where
 
   growInvFind I round acc av bar      (allTrue f)            i = i
   growInvFind I round acc av (cBar h) (counterexample x m q) i =
-    growInv I round (addRound acc) _ (h x (av x m (notInAcc acc x q)))
+    growInv I round (addRound acc) _ (h x (av m (notInAcc acc x q)))
             (round acc i)
 
-  growDone     : {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
+  growDone     : (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
               -> ∀ⁱ[ x ∈ ws ] settled (growGo acc av bar) x ≡ true
-  growDoneFind : {E : Pred} (acc : List Node) (av : Avail E ws acc) (bar : IFin E)
+  growDoneFind : (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
                  (fr : AllDecision (settled acc) ws)
               -> ∀ⁱ[ x ∈ ws ] settled (growFind acc av bar fr) x ≡ true
 
@@ -212,7 +214,7 @@ module _ (S : Pred) (ws : List Node) where
 
   growDoneFind acc av bar      (allTrue f)            = f
   growDoneFind acc av (cBar h) (counterexample x m q) =
-    growDone (addRound acc) _ (h x (av x m (notInAcc acc x q)))
+    growDone (addRound acc) _ (h x (av m (notInAcc acc x q)))
 
   ------------------------------------------------------------------------
   -- The invariants: the accumulator lies in ws, and each member is reached
@@ -271,16 +273,16 @@ roundSeeded S ws acc sd z m =
 -- The closure itself, and its four properties.  sb and bar say which Bar the
 -- search recurses on: every vertex of ws satisfies the Bar's predicate E.
 
-closure : (S : Pred) (ws : List Node) {E : Pred} -> AllSat E ws -> IFin E
+closure : (S : Pred) (ws : List Node) -> AllSat E ws -> IFin E
        -> List Node
-closure S ws sb bar = growGo S ws [] (λ z mz e -> sb z mz) bar
+closure S ws sb bar = growGo S ws [] (λ mz _ -> sb _ mz) bar
 
 module _ (S : Pred) (ws : List Node) {E : Pred} (sb : AllSat E ws)
          (bar : IFin E) where
 
   private
-    av0 : Avail E ws []
-    av0 z mz e = sb z mz
+    av0 : E holds-on ws except []
+    av0 mz _ = sb _ mz
 
     done : ∀ⁱ[ x ∈ ws ] settled S ws (closure S ws sb bar) x ≡ true
     done = growDone S ws [] av0 bar
@@ -298,9 +300,8 @@ module _ (S : Pred) (ws : List Node) {E : Pred} (sb : AllSat E ws)
     settledIn S ws (closure S ws sb bar) z (done mz)
       (∨ᵇ-introˡ (S z) (any (λ y -> G y z) (closure S ws sb bar)) e)
 
-  closureClosed : {u w : Node} -> u ∈ closure S ws sb bar -> w ∈ ws
-               -> G u w ≡ true -> w ∈ closure S ws sb bar
-  closureClosed {u} {w} mu mw e =
+  closureClosed : closure S ws sb bar closed-under G within ws
+  closureClosed mu {w} mw e =
     settledIn S ws (closure S ws sb bar) w (done mw)
       (∨ᵇ-introʳ (S w) (any (λ y -> G y w) (closure S ws sb bar))
                  (any-intro (λ y -> G y w) (closure S ws sb bar) mu e))
@@ -326,23 +327,21 @@ reachSeed : (ws : List Node) (v : Node)
 reachSeed ws v mv =
   closureSeed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) mv (≡ᵛ-refl v)
 
-reachClosed : (ws : List Node) (v : Node) {u w : Node}
-           -> u ∈ reachSet ws v -> w ∈ ws -> G u w ≡ true
-           -> w ∈ reachSet ws v
+reachClosed : (ws : List Node) (v : Node)
+           -> reachSet ws v closed-under G within ws
 reachClosed ws v = closureClosed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws)
 
 -- Completeness: a trail from a member of the set stays in the set, by
 -- induction along the trail against the stopping condition.
 
 reachTrailIn : (ws : List Node) (v : Node)
-               {u : Node} {zs : List Node} {w : Node}
             -> u ∈ reachSet ws v -> Trail ws u zs w -> w ∈ reachSet ws v
 reachTrailIn ws v mu tNil                   = mu
 reachTrailIn ws v mu (tCons {x = x} mx e t) =
   reachTrailIn ws v (reachClosed ws v mu mx e) t
 
 reachComplete : (ws : List Node) (v : Node) -> v ∈ ws
-             -> {zs : List Node} {w : Node} -> Trail ws v zs w
+             -> Trail ws v zs w
              -> w ∈ reachSet ws v
 reachComplete ws v mv t = reachTrailIn ws v (reachSeed ws v mv) t
 
