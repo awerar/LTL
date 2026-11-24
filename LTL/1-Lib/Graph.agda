@@ -32,13 +32,12 @@ open import LTL.1-Lib.Nodes eq
 
 -- The implicit arguments the signatures below leave out: the endpoints and
 -- visited list of a trail, and the predicate of the Bar a search recurses on.
--- The vertex list ws is implicit too wherever a trail (or a closed-under
--- hypothesis) fixes it, as an implicit module parameter; it stays explicit
+-- So is the vertex list ws wherever a trail fixes it; it stays explicit
 -- where it only occurs under a function, as in reachSet ws v.
 
 private variable
   u v w x : Node
-  xs zs : List Node
+  ws vs xs zs : List Node
   E     : Pred
 
 ------------------------------------------------------------------------
@@ -64,37 +63,33 @@ data Trail (ws : List Node) : Node -> List Node -> Node -> Set where
        -> x ∈ ws -> G v x ≡ true -> Trail ws x zs w
        -> Trail ws v (x ∷ zs) w
 
-module _ {ws : List Node} where
+trailApp : Trail ws u xs v -> Trail ws v zs w -> Trail ws u (xs ++ zs) w
+trailApp tNil           t2 = t2
+trailApp (tCons m e t1) t2 = tCons m e (trailApp t1 t2)
 
-  trailApp : Trail ws u xs v -> Trail ws v zs w -> Trail ws u (xs ++ zs) w
-  trailApp tNil           t2 = t2
-  trailApp (tCons m e t1) t2 = tCons m e (trailApp t1 t2)
+trailEnd : Trail ws v zs w -> w ∈ v ∷ zs
+trailEnd tNil          = here
+trailEnd (tCons m e t) = there (trailEnd t)
 
-  trailEnd : Trail ws v zs w -> w ∈ v ∷ zs
-  trailEnd tNil          = here
-  trailEnd (tCons m e t) = there (trailEnd t)
+-- A trail that takes at least one step ends at a vertex it visits.
 
-  -- A trail that takes at least one step ends at a vertex it visits.
+trailLast : Trail ws v (x ∷ zs) w -> w ∈ x ∷ zs
+trailLast (tCons m e t) = trailEnd t
 
-  trailLast : Trail ws v (x ∷ zs) w -> w ∈ x ∷ zs
-  trailLast (tCons m e t) = trailEnd t
-
-  trailIn : Trail ws v zs w -> ∀ⁱ[ z ∈ zs ] z ∈ ws
-  trailIn tNil          ()
-  trailIn (tCons m e t) here      = m
-  trailIn (tCons m e t) (there k) = trailIn t k
+trailIn : Trail ws v zs w -> ∀ⁱ[ z ∈ zs ] z ∈ ws
+trailIn tNil          ()
+trailIn (tCons m e t) here      = m
+trailIn (tCons m e t) (there k) = trailIn t k
 
 -- A trail whose visited vertices all lie in vs is a trail in vs.
 
-module _ {ws vs : List Node} where
+trailRestrict : Trail ws v zs w -> zs ⊆ vs -> Trail vs v zs w
+trailRestrict tNil                  h = tNil
+trailRestrict (tCons {x = y} m e t) h =
+  tCons (h y here) e (trailRestrict t (λ z mz -> h z (there mz)))
 
-  trailRestrict : Trail ws v zs w -> zs ⊆ vs -> Trail vs v zs w
-  trailRestrict tNil                  h = tNil
-  trailRestrict (tCons {x = y} m e t) h =
-    tCons (h y here) e (trailRestrict t (λ z mz -> h z (there mz)))
-
-  trailMono : ws ⊆ vs -> Trail ws v zs w -> Trail vs v zs w
-  trailMono sb t = trailRestrict t (λ z mz -> sb z (trailIn t mz))
+trailMono : ws ⊆ vs -> Trail ws v zs w -> Trail vs v zs w
+trailMono sb t = trailRestrict t (λ z mz -> sb z (trailIn t mz))
 
 -- A set C closed under G inside ws keeps every trail that starts in it: the
 -- trail lies in C, and so does its endpoint.

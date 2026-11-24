@@ -11,6 +11,15 @@ module LTL.1-Lib.Sets where
 
 open import LTL.1-Lib.Prelude public
 
+-- The implicit arguments the signatures below leave out.
+
+private variable
+  n m a b c : Nat
+  A         : Set
+  p         : A -> Bool
+  y         : A
+  ys        : List A
+
 ------------------------------------------------------------------------
 -- Order on Nat, named as in the standard library.  Only barOfList
 -- (LTL.1-Lib.Nodes) uses it, to bound the length of a list.
@@ -25,15 +34,15 @@ data _≤_ : Nat -> Nat -> Set where
 ≤-refl zero    = z≤n
 ≤-refl (suc n) = s≤s (≤-refl n)
 
-≤-step : {n m : Nat} -> n ≤ m -> n ≤ suc m
+≤-step : n ≤ m -> n ≤ suc m
 ≤-step z≤n     = z≤n
 ≤-step (s≤s l) = s≤s (≤-step l)
 
-≤-trans : {a b c : Nat} -> a ≤ b -> b ≤ c -> a ≤ c
+≤-trans : a ≤ b -> b ≤ c -> a ≤ c
 ≤-trans z≤n     l       = z≤n
 ≤-trans (s≤s k) (s≤s l) = s≤s (≤-trans k l)
 
-≤-pred : {a b : Nat} -> suc a ≤ suc b -> a ≤ b
+≤-pred : suc a ≤ suc b -> a ≤ b
 ≤-pred (s≤s l) = l
 
 ------------------------------------------------------------------------
@@ -46,29 +55,28 @@ data AllDecision {A : Set} (p : A -> Bool) (xs : List A) : Set where
   counterexample : (x : A) -> x ∈ xs -> p x ≡ false -> AllDecision p xs
   allTrue        : (∀ⁱ[ x ∈ xs ] p x ≡ true)         -> AllDecision p xs
 
-emptyAll : {A : Set} (p : A -> Bool) -> ∀ⁱ[ x ∈ [] ] p x ≡ true
+emptyAll : (p : A -> Bool) -> ∀ⁱ[ x ∈ [] ] p x ≡ true
 emptyAll p ()
 
-consAll : {A : Set} {p : A -> Bool} {y : A} {ys : List A}
-       -> p y ≡ true -> (∀ⁱ[ x ∈ ys ] p x ≡ true)
+consAll : p y ≡ true -> (∀ⁱ[ x ∈ ys ] p x ≡ true)
        -> ∀ⁱ[ x ∈ y ∷ ys ] p x ≡ true
 consAll e f here      = e
 consAll e f (there m) = f m
 
-decideAllCons : {A : Set} {p : A -> Bool} {y : A} {ys : List A} (b : Bool)
+decideAllCons : (b : Bool)
              -> p y ≡ b -> AllDecision p ys -> AllDecision p (y ∷ ys)
 decideAllCons true  e (counterexample x m q) = counterexample x (there m) q
 decideAllCons true  e (allTrue f)            = allTrue (consAll e f)
 decideAllCons false e r                      = counterexample _ here e
 
-decideAll : {A : Set} (p : A -> Bool) (xs : List A) -> AllDecision p xs
+decideAll : (p : A -> Bool) (xs : List A) -> AllDecision p xs
 decideAll p []       = allTrue (emptyAll p)
 decideAll p (y ∷ ys) = decideAllCons (p y) refl (decideAll p ys)
 
 ------------------------------------------------------------------------
 -- filter against length: a filter that removes a member shrinks the list
 
-filter-≤ : {A : Set} (p : A -> Bool) (xs : List A)
+filter-≤ : (p : A -> Bool) (xs : List A)
         -> length (filter p xs) ≤ length xs
 filter-≤ p []       = z≤n
 filter-≤ p (y ∷ ys) = aux (p y)
@@ -78,7 +86,7 @@ filter-≤ p (y ∷ ys) = aux (p y)
     aux true  = s≤s    (filter-≤ p ys)
     aux false = ≤-step (filter-≤ p ys)
 
-filter-< : {A : Set} (p : A -> Bool) (xs : List A)
+filter-< : (p : A -> Bool) (xs : List A)
         -> ∃[ x ∈ xs ] p x ≡ false
         -> suc (length (filter p xs)) ≤ length xs
 filter-< p []       (x , ()      , e)
@@ -93,7 +101,7 @@ filter-< p (y ∷ ys) (x , there m , e) = aux (p y)
     aux true  = s≤s    (filter-< p ys (x , m , e))
     aux false = ≤-step (filter-< p ys (x , m , e))
 
-length-≤0-∈ : {A : Set} (xs : List A) {x : A}
+length-≤0-∈ : (xs : List A) {x : A}
            -> length xs ≤ zero -> x ∈ xs -> Empty
 length-≤0-∈ []       l  ()
 length-≤0-∈ (y ∷ ys) () m
@@ -101,12 +109,12 @@ length-≤0-∈ (y ∷ ys) () m
 ------------------------------------------------------------------------
 -- null
 
-null-∈ : {A : Set} (xs : List A) {x : A}
+null-∈ : (xs : List A) {x : A}
       -> null xs ≡ true -> x ∈ xs -> Empty
 null-∈ []       e  ()
 null-∈ (y ∷ ys) () m
 
-null-false : {A : Set} (xs : List A) -> null xs ≡ false
+null-false : (xs : List A) -> null xs ≡ false
           -> Σ[ x ∈ A ] x ∈ xs
 null-false []       ()
 null-false (y ∷ ys) e = y , here

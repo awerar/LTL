@@ -20,6 +20,11 @@ module LTL.1-Lib.Bar where
 
 open import LTL.1-Lib.Prelude
 
+-- The implicit arguments the signatures below leave out.
+
+private variable
+  A B : Set
+
 ------------------------------------------------------------------------
 -- Bar
 
@@ -75,10 +80,10 @@ barUnion {A} {R} {G} (cBar hg) bh = inner bh
 -- induction as union.  Picking (x , y) leaves pairs that lie in the union of
 -- the two products shrunk at x and at y (prodSplit).
 
-prodPred : {A B : Set} -> (A -> Bool) -> (B -> Bool) -> A × B -> Bool
+prodPred : (A -> Bool) -> (B -> Bool) -> A × B -> Bool
 prodPred E F (x , y) = E x ∧ᵇ F y
 
-prodRel : {A B : Set} -> (A -> A -> Bool) -> (B -> B -> Bool)
+prodRel : (A -> A -> Bool) -> (B -> B -> Bool)
        -> A × B -> A × B -> Bool
 prodRel R S (x , y) (u , v) = R x u ∨ᵇ S y v
 

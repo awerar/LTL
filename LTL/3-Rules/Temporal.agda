@@ -11,35 +11,40 @@ module LTL.3-Rules.Temporal where
 
 open import LTL.3-Rules.PropList public
 
+-- The formulas the signatures below leave implicit.
+
+private variable
+  A B C : Formula
+
 ------------------------------------------------------------------------
 -- Projecting the two biconditional axioms: linFwd and linBwd are the forward
 -- and backward halves of (Lin).
 
-linFwd : {A : Formula} -> ⊢ ○ ¬ A ⇒ ¬ ○ A
+linFwd : ⊢ ○ ¬ A ⇒ ¬ ○ A
 linFwd = mp ∧Fst lin
 
-linBwd : {A : Formula} -> ⊢ ¬ ○ A ⇒ ○ ¬ A
+linBwd : ⊢ ¬ ○ A ⇒ ○ ¬ A
 linBwd = mp ∧Snd lin
 
-□Elim : {A : Formula} -> ⊢ □ A ⇒ A
+□Elim : ⊢ □ A ⇒ A
 □Elim = ⇒Trans exp ∧Fst
 
-□○ : {A : Formula} -> ⊢ □ A ⇒ ○ A
+□○ : ⊢ □ A ⇒ ○ A
 □○ = ⇒Trans exp (⇒Trans ∧Snd ∧Fst)
 
-□○□ : {A : Formula} -> ⊢ □ A ⇒ ○ □ A
+□○□ : ⊢ □ A ⇒ ○ □ A
 □○□ = ⇒Trans exp (⇒Trans ∧Snd ∧Snd)
 
 ------------------------------------------------------------------------
 -- (D1), (D2), (D3)
 
-○Gen : {A : Formula} -> ⊢ A -> ⊢ ○ A
+○Gen : ⊢ A -> ⊢ ○ A
 ○Gen d = mp □○ (gen d)
 
-○Mono : {A B : Formula} -> ⊢ A ⇒ B -> ⊢ ○ A ⇒ ○ B
+○Mono : ⊢ A ⇒ B -> ⊢ ○ A ⇒ ○ B
 ○Mono d = mp k○ (○Gen d)
 
-□Mono : {A B : Formula} -> ⊢ A ⇒ B -> ⊢ □ A ⇒ □ B
+□Mono : ⊢ A ⇒ B -> ⊢ □ A ⇒ □ B
 □Mono d = mp k□ (gen d)
 
 ------------------------------------------------------------------------
@@ -57,19 +62,16 @@ linBwd = mp ∧Snd lin
 -- A ∨ B is ¬ A ⇒ B, so the first direction is (K ○) composed with
 -- the backward half of (Lin); the second is a case analysis on ○ A.
 
-○∨1 : {A B : Formula}
-   -> ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
+○∨1 : ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
 ○∨1 = ⇒TransU (liftP linBwd) k○
 
-○∨2 : {A B : Formula}
-   -> ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
+○∨2 : ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
 ○∨2 = caseU (liftP (○Mono explode)) (⇒TransU ⇒Refl (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
 -- Monotonicity of ∨ in its second argument
 
-∨MonoR : {X Y Z : Formula}
-      -> ⊢ X ⇒ Y -> ⊢ Z ∨ X ⇒ Z ∨ Y
+∨MonoR : ⊢ A ⇒ B -> ⊢ C ∨ A ⇒ C ∨ B
 ∨MonoR d = mp p2 (liftP d)
 
 ------------------------------------------------------------------------
@@ -110,8 +112,7 @@ linBwd = mp ∧Snd lin
 ------------------------------------------------------------------------
 -- (D5) and (D6)
 
-indRule : {A : Formula}
-       -> ⊢ A ⇒ ○ A -> ⊢ A ⇒ □ A
+indRule : ⊢ A ⇒ ○ A -> ⊢ A ⇒ □ A
 indRule d = mp ind (gen d)
 
 expConv : {A : Formula}

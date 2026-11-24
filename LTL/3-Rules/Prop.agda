@@ -18,6 +18,11 @@ module LTL.3-Rules.Prop where
 
 open import LTL.2-Syntax.Deriv public
 
+-- The formulas the signatures below leave implicit.
+
+private variable
+  P A B C : Formula
+
 ------------------------------------------------------------------------
 -- (L1)
 
@@ -26,23 +31,20 @@ open import LTL.2-Syntax.Deriv public
 ⇒Refl {A} = mp (mp p2 (p1 {A} {A ⇒ A})) (p1 {A} {A})
 
 -- liftP puts a theorem under an antecedent: it is (P1) and modus ponens.
-liftP : {P A : Formula} -> ⊢ A -> ⊢ P ⇒ A
+liftP : ⊢ A -> ⊢ P ⇒ A
 liftP d = mp p1 d
 
-⇒Trans : {A B C : Formula}
-      -> ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C
+⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C
 ⇒Trans f g = mp (mp p2 (liftP g)) f
 
 ------------------------------------------------------------------------
 -- The imp-lifting combinators.  With ⇒Refl and liftP, mpU (modus ponens
 -- under the antecedent P) replaces the deduction theorem.
 
-mpU : {P A B : Formula}
-   -> ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ A -> ⊢ P ⇒ B
+mpU : ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ A -> ⊢ P ⇒ B
 mpU f g = mp (mp p2 f) g
 
-⇒TransU : {P A B C : Formula}
-       -> ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ B ⇒ C
+⇒TransU : ⊢ P ⇒ A ⇒ B -> ⊢ P ⇒ B ⇒ C
        -> ⊢ P ⇒ A ⇒ C
 ⇒TransU f g = mpU (mpU (liftP p2) (⇒Trans g p1)) f
 
@@ -54,11 +56,11 @@ mpU f g = mp (mp p2 f) g
 -- (L7), then (L3), (L0), (L4)
 
 -- (L7) first half; p1 is the second.  Non-states are refuted with it.
-¬Elim : {A B : Formula} -> ⊢ ¬ A ⇒ A ⇒ B
+¬Elim : ⊢ ¬ A ⇒ A ⇒ B
 ¬Elim = ⇒Trans p1 p3
 
 -- (L3): from A and ¬ A, anything (compare exFalso, from ⊥).
-explode : {A B : Formula} -> ⊢ A ⇒ ¬ A ⇒ B
+explode : ⊢ A ⇒ ¬ A ⇒ B
 explode = ⇒Swap ¬Elim
 
 ------------------------------------------------------------------------
@@ -81,18 +83,17 @@ dni {A} = mp (p3 {A} {¬ ¬ A}) (dne {¬ A})
 not⊥ : ⊢ ¬ ⊥
 not⊥ = mp dni deriv⊤
 
-exFalso : {C : Formula} -> ⊢ ⊥ ⇒ C
+exFalso : ⊢ ⊥ ⇒ C
 exFalso = mpU (¬Elim {⊤}) (liftP deriv⊤)
 
 -- (L4).  Since  A ∨ B  is  ¬ A ⇒ B , excluded middle is reflexivity.
-lem : {A : Formula} -> ⊢ A ∨ ¬ A
+lem : ⊢ A ∨ ¬ A
 lem = ⇒Refl
 
 ------------------------------------------------------------------------
 -- Contraposition, used by the disjunction lemmas of LTL.3-Rules.PropList
 
-dnMono : {A B : Formula}
-      -> ⊢ (A ⇒ B) ⇒ ¬ ¬ A ⇒ ¬ ¬ B
+dnMono : ⊢ (A ⇒ B) ⇒ ¬ ¬ A ⇒ ¬ ¬ B
 dnMono = ⇒TransU (⇒TransU (liftP dne) ⇒Refl) (liftP dni)
 
 contra : {A B : Formula} -> ⊢ (A ⇒ B) ⇒ ¬ B ⇒ ¬ A

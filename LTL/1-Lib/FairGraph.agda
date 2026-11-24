@@ -44,12 +44,12 @@ open import LTL.1-Lib.CertStep
 
 -- The implicit arguments the signatures below leave out: the endpoints and
 -- visited list of a trail, and the predicate of the Bar a search recurses on.
--- As in LTL.1-Lib.Graph, ws is implicit wherever a trail, loop or circuit
--- fixes it, and explicit where it only occurs under a function (sccOf ws r).
+-- As in LTL.1-Lib.Graph, so is ws wherever a trail, loop or circuit fixes
+-- it; it stays explicit where it only occurs under a function (sccOf ws r).
 
 private variable
   u v w x s z : Node
-  zs          : List Node
+  ws vs zs    : List Node
   E           : Pred
 
 ------------------------------------------------------------------------
@@ -355,7 +355,7 @@ record FairIn (ws : List Node) (fs : List Pred) : Set where
     rIn         : r ∈ ws
     fairCircuit : Circuit ws fs r
 
-fairInMono : {ws vs : List Node} {fs : List Pred}
+fairInMono : {fs : List Pred}
           -> ws ⊆ vs -> FairIn ws fs -> FairIn vs fs
 fairInMono sb (fairIn r mr c) = fairIn r (sb r mr) (circMono sb c)
 
@@ -460,7 +460,7 @@ module _ (fs : List Pred) (R : Node -> Set)
     emptyElim (∈ᵛ-false y (filter p ws) eo
                 (∈-filter⁺ p ws (∈ᵛ-sound y ws eb) ep))
 
-  certAll : {ws : List Node} -> Cert fs ws -> HoldsOutside R ws
+  certAll : Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z
   certAll (cNil ws e)          ih z = ih z (null-∈ᵛ ws z e)
   certAll (cSink ws x mx e c)  ih z =
@@ -486,25 +486,23 @@ module _ (fs : List Pred) (R : Node -> Set)
 -- The suffix of a trail from any vertex it visits, and the prefix to one: all
 -- the "rotation" of a cycle the argument needs.
 
-module _ {ws : List Node} where
+reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
+reachesCons m e (reachesBy zs t) = reachesBy (_ ∷ zs) (tCons m e t)
 
-  reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
-  reachesCons m e (reachesBy zs t) = reachesBy (_ ∷ zs) (tCons m e t)
+reachesApp : Reaches ws u v -> Reaches ws v w -> Reaches ws u w
+reachesApp (reachesBy as ta) (reachesBy bs tb) =
+  reachesBy (as ++ bs) (trailApp ta tb)
 
-  reachesApp : Reaches ws u v -> Reaches ws v w -> Reaches ws u w
-  reachesApp (reachesBy as ta) (reachesBy bs tb) =
-    reachesBy (as ++ bs) (trailApp ta tb)
+trailFrom : Trail ws v zs w -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
+trailFrom tNil          here      = reachesBy [] tNil
+trailFrom tNil          (there ())
+trailFrom (tCons m e t) here      = reachesBy _ (tCons m e t)
+trailFrom (tCons m e t) (there k) = trailFrom t k
 
-  trailFrom : Trail ws v zs w -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
-  trailFrom tNil          here      = reachesBy [] tNil
-  trailFrom tNil          (there ())
-  trailFrom (tCons m e t) here      = reachesBy _ (tCons m e t)
-  trailFrom (tCons m e t) (there k) = trailFrom t k
-
-  trailTo : Trail ws v zs w -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
-  trailTo tNil          ()
-  trailTo (tCons m e t) here      = reachesBy (_ ∷ []) (tCons m e tNil)
-  trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
+trailTo : Trail ws v zs w -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
+trailTo tNil          ()
+trailTo (tCons m e t) here      = reachesBy (_ ∷ []) (tCons m e tNil)
+trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
 
 -- Observation one: a vertex on a cycle has a successor inside ws.  Along a
 -- trail every vertex visited has one provided the endpoint has, and for a
@@ -517,41 +515,39 @@ record HasSucc (ws : List Node) (x : Node) : Set where
     nextIn : next ∈ ws
     edge   : G x next ≡ true
 
-module _ {ws : List Node} where
+headSucc : Trail ws v zs w -> HasSucc ws w -> HasSucc ws v
+headSucc tNil                  hw = hw
+headSucc (tCons {x = y} m e t) hw = hasSucc y m e
 
-  headSucc : Trail ws v zs w -> HasSucc ws w -> HasSucc ws v
-  headSucc tNil                  hw = hw
-  headSucc (tCons {x = y} m e t) hw = hasSucc y m e
+trailSucc : Trail ws v zs w -> HasSucc ws w
+         -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
+trailSucc tNil          hw ()
+trailSucc (tCons m e t) hw here      = headSucc t hw
+trailSucc (tCons m e t) hw (there k) = trailSucc t hw k
 
-  trailSucc : Trail ws v zs w -> HasSucc ws w
-           -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
-  trailSucc tNil          hw ()
-  trailSucc (tCons m e t) hw here      = headSucc t hw
-  trailSucc (tCons m e t) hw (there k) = trailSucc t hw k
+loopSucc : {r : Node} (l : Loop ws r) -> ∀ⁱ[ x ∈ Loop.cycle l ] HasSucc ws x
+loopSucc (loopBy q qs t@(tCons m e _)) = trailSucc t (hasSucc q m e)
 
-  loopSucc : {r : Node} (l : Loop ws r) -> ∀ⁱ[ x ∈ Loop.cycle l ] HasSucc ws x
-  loopSucc (loopBy q qs t@(tCons m e _)) = trailSucc t (hasSucc q m e)
+-- Observation two: any vertex of a cycle reaches any other (suffix to the
+-- base point, then prefix out), and a successor-closed block that a trail
+-- starts in contains everything the trail reaches (trailEndIn, in
+-- LTL.1-Lib.Graph).
 
-  -- Observation two: any vertex of a cycle reaches any other (suffix to the
-  -- base point, then prefix out), and a successor-closed block that a trail
-  -- starts in contains everything the trail reaches (trailEndIn, in
-  -- LTL.1-Lib.Graph).
+cycConn : {r : Node} -> Trail ws r zs r -> u ∈ zs -> z ∈ zs -> Reaches ws u z
+cycConn t mu mz = reachesApp (trailFrom t (there mu)) (trailTo t mz)
 
-  cycConn : {r : Node} -> Trail ws r zs r -> u ∈ zs -> z ∈ zs -> Reaches ws u z
-  cycConn t mu mz = reachesApp (trailFrom t (there mu)) (trailTo t mz)
+-- A trail whose visited vertices all pass p stays inside filter p ws: this
+-- is how a cycle survives a removal step.
 
-  -- A trail whose visited vertices all pass p stays inside filter p ws: this
-  -- is how a cycle survives a removal step.
-
-  keepIn : (p : Pred)
-        -> Trail ws v zs w -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
-  keepIn p t h z mz = ∈-filter⁺ p ws (trailIn t mz) (h z mz)
+keepIn : (p : Pred)
+      -> Trail ws v zs w -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
+keepIn {ws = ws} p t h z mz = ∈-filter⁺ p ws (trailIn t mz) (h z mz)
 
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when
 -- nothing is left, which cNil forbids.
 
-certNoCirc : (fs : List Pred) {ws : List Node}
+certNoCirc : (fs : List Pred)
           -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
 certNoCirc fs (cNil ws e)         r (circuit (loopBy q qs t) wit) =
   null-∈ ws e (trailIn t here)
@@ -622,7 +618,7 @@ fairComplete vs fs v mv fl = onS (fairGraph vs fs v mv) refl
 -- The removal order as a list of step kinds (LTL.1-Lib.CertStep), one per
 -- constructor of Cert.
 
-certShape : {fs : List Pred} {ws : List Node}
+certShape : {fs : List Pred}
          -> Cert fs ws -> List CertStep
 certShape (cNil ws e)                    = emptied ∷ []
 certShape (cSink ws x mx e c)            = removedSink ∷ certShape c

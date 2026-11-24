@@ -25,6 +25,14 @@ open import LTL.1-Lib.Base public
 open import LTL.Statement public
   using () renaming (not to infix 10 ¬ᵇ_; imp to infixr 7 _⇒ᵇ_)
 
+-- The implicit arguments the signatures below leave out.
+
+private variable
+  n m   : Nat
+  A B C : Set
+  x y   : A
+  P     : A -> Set
+
 infixr 9 _∧ᵇ_
 infixr 8 _∨ᵇ_
 infix  6 _⇔ᵇ_
@@ -72,7 +80,7 @@ suc n ≡ⁿ suc m = n ≡ⁿ m
 ≡ⁿ-sound (suc n) zero    ()
 ≡ⁿ-sound (suc n) (suc m) p = cong suc (≡ⁿ-sound n m p)
 
-suc-injective : {n m : Nat} -> suc n ≡ suc m -> n ≡ m
+suc-injective : suc n ≡ suc m -> n ≡ m
 suc-injective refl = refl
 
 +-identityʳ : (m : Nat) -> m + zero ≡ m
@@ -92,13 +100,13 @@ data _⊎_ (A B : Set) : Set where
 -- and g to a right one.  A lambda branch needs parentheses, since its body
 -- would otherwise run on past the comma.
 
-[_,_] : {A B C : Set} -> (A -> C) -> (B -> C) -> A ⊎ B -> C
+[_,_] : (A -> C) -> (B -> C) -> A ⊎ B -> C
 [ f , g ] (inl a) = f a
 [ f , g ] (inr b) = g b
 
 -- Does a sum hold its left alternative?
 
-isInl : {A B : Set} -> A ⊎ B -> Bool
+isInl : A ⊎ B -> Bool
 isInl (inl _) = true
 isInl (inr _) = false
 
@@ -134,10 +142,10 @@ syntax Σ-syntax A (λ x -> B) = Σ[ x ∈ A ] B
 _×_ : Set -> Set -> Set
 A × B = Σ A (λ _ -> B)
 
-fst : {A : Set} {B : A -> Set} -> Σ A B -> A
+fst : {B : A -> Set} -> Σ A B -> A
 fst (a , b) = a
 
-snd : {A : Set} {B : A -> Set} -> (p : Σ A B) -> B (fst p)
+snd : {B : A -> Set} -> (p : Σ A B) -> B (fst p)
 snd (a , b) = b
 
 ------------------------------------------------------------------------
@@ -331,48 +339,51 @@ refuteTrue false no = refl
 
 open import Agda.Builtin.List public using (List; []; _∷_)
 
+private variable
+  ys : List A
+
 infixr 5 _++_
 
-_++_ : {A : Set} -> List A -> List A -> List A
+_++_ : List A -> List A -> List A
 []       ++ ys = ys
 (x ∷ xs) ++ ys = x ∷ (xs ++ ys)
 
-length : {A : Set} -> List A -> Nat
+length : List A -> Nat
 length []       = zero
 length (x ∷ xs) = suc (length xs)
 
-map : {A B : Set} -> (A -> B) -> List A -> List B
+map : (A -> B) -> List A -> List B
 map f []       = []
 map f (x ∷ xs) = f x ∷ map f xs
 
 -- filter branches with if rather than "with", so that proofs about it can
 -- case on the test p x directly instead of reproducing a with-abstraction.
 
-filter : {A : Set} -> (A -> Bool) -> List A -> List A
+filter : (A -> Bool) -> List A -> List A
 filter p []       = []
 filter p (x ∷ xs) = if p x then (x ∷ filter p xs) else filter p xs
 
-any : {A : Set} -> (A -> Bool) -> List A -> Bool
+any : (A -> Bool) -> List A -> Bool
 any p []       = false
 any p (x ∷ xs) = p x ∨ᵇ any p xs
 
-all : {A : Set} -> (A -> Bool) -> List A -> Bool
+all : (A -> Bool) -> List A -> Bool
 all p []       = true
 all p (x ∷ xs) = p x ∧ᵇ all p xs
 
-null : {A : Set} -> List A -> Bool
+null : List A -> Bool
 null []       = true
 null (x ∷ xs) = false
 
-concat : {A : Set} -> List (List A) -> List A
+concat : List (List A) -> List A
 concat []         = []
 concat (xs ∷ xss) = xs ++ concat xss
 
-concatMap : {A B : Set} -> (A -> List B) -> List A -> List B
+concatMap : (A -> List B) -> List A -> List B
 concatMap f []       = []
 concatMap f (x ∷ xs) = f x ++ concatMap f xs
 
-++-identityʳ : {A : Set} (xs : List A) -> xs ++ [] ≡ xs
+++-identityʳ : (xs : List A) -> xs ++ [] ≡ xs
 ++-identityʳ []       = refl
 ++-identityʳ (x ∷ xs) = cong (λ zs -> x ∷ zs) (++-identityʳ xs)
 
@@ -394,44 +405,43 @@ data _∈_ {A : Set} (x : A) : List A -> Set where
 
 infix 2 ∀∈-syntax ∀ⁱ∈-syntax ∃∈-syntax
 
-∀∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
+∀∈-syntax : List A -> (A -> Set) -> Set
 ∀∈-syntax xs B = (x : _) -> x ∈ xs -> B x
 
 syntax ∀∈-syntax xs (λ x -> B) = ∀[ x ∈ xs ] B
 
-∀ⁱ∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
+∀ⁱ∈-syntax : List A -> (A -> Set) -> Set
 ∀ⁱ∈-syntax xs B = {x : _} -> x ∈ xs -> B x
 
 syntax ∀ⁱ∈-syntax xs (λ x -> B) = ∀ⁱ[ x ∈ xs ] B
 
-∃∈-syntax : {A : Set} -> List A -> (A -> Set) -> Set
+∃∈-syntax : List A -> (A -> Set) -> Set
 ∃∈-syntax xs B = Σ[ x ∈ _ ] x ∈ xs × B x
 
 syntax ∃∈-syntax xs (λ x -> B) = ∃[ x ∈ xs ] B
 
 -- A witness found in ys is a witness in y ∷ ys.
 
-there-∃ : {A : Set} {P : A -> Set} {y : A} {ys : List A}
-       -> ∃[ x ∈ ys ] P x -> ∃[ x ∈ y ∷ ys ] P x
+there-∃ : ∃[ x ∈ ys ] P x -> ∃[ x ∈ y ∷ ys ] P x
 there-∃ (x , m , p) = x , there m , p
 
 -- Inclusion of lists as sets, with the element explicit.
 
 infix 4 _⊆_
 
-_⊆_ : {A : Set} -> List A -> List A -> Set
+_⊆_ : List A -> List A -> Set
 xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 
-∈-++⁺ˡ : {A : Set} {x : A} (xs ys : List A) -> x ∈ xs -> x ∈ xs ++ ys
+∈-++⁺ˡ : (xs ys : List A) -> x ∈ xs -> x ∈ xs ++ ys
 ∈-++⁺ˡ []       ys ()
 ∈-++⁺ˡ (z ∷ xs) ys here      = here
 ∈-++⁺ˡ (z ∷ xs) ys (there h) = there (∈-++⁺ˡ xs ys h)
 
-∈-++⁺ʳ : {A : Set} {x : A} (xs ys : List A) -> x ∈ ys -> x ∈ xs ++ ys
+∈-++⁺ʳ : (xs ys : List A) -> x ∈ ys -> x ∈ xs ++ ys
 ∈-++⁺ʳ []       ys h = h
 ∈-++⁺ʳ (z ∷ xs) ys h = there (∈-++⁺ʳ xs ys h)
 
-∈-filter⁺ : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+∈-filter⁺ : (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
 ∈-filter⁺ p []       ()        e
 ∈-filter⁺ p (y ∷ ys) here      e = aux (p y) e
@@ -447,7 +457,7 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 
 -- A member of filter p xs is a member of xs, and passes p.
 
-∈-filter⁻ : {A : Set} (p : A -> Bool) (xs : List A)
+∈-filter⁻ : (p : A -> Bool) (xs : List A)
          -> ∀ⁱ[ x ∈ filter p xs ] x ∈ xs
 ∈-filter⁻ p []       ()
 ∈-filter⁻ p (y ∷ ys) m =
@@ -461,7 +471,7 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
     aux true  (there m) = inr m
     aux false m         = inr m
 
-filter-prop : {A : Set} (p : A -> Bool) (xs : List A)
+filter-prop : (p : A -> Bool) (xs : List A)
            -> ∀ⁱ[ x ∈ filter p xs ] p x ≡ true
 filter-prop p []       ()
 filter-prop p (y ∷ ys) m = aux (p y) refl m
@@ -472,35 +482,35 @@ filter-prop p (y ∷ ys) m = aux (p y) refl m
     aux true  e (there m) = filter-prop p ys m
     aux false e m         = filter-prop p ys m
 
-∈-map⁺ : {A B : Set} (f : A -> B) {xs : List A}
+∈-map⁺ : (f : A -> B) {xs : List A}
       -> ∀ⁱ[ x ∈ xs ] f x ∈ map f xs
 ∈-map⁺ f here      = here
 ∈-map⁺ f (there h) = there (∈-map⁺ f h)
 
-∈-map⁻ : {A B : Set} (f : A -> B) (xs : List A)
+∈-map⁻ : (f : A -> B) (xs : List A)
       -> ∀ⁱ[ y ∈ map f xs ] ∃[ x ∈ xs ] y ≡ f x
 ∈-map⁻ f []       ()
 ∈-map⁻ f (x ∷ xs) here      = x , here , refl
 ∈-map⁻ f (x ∷ xs) (there m) = there-∃ (∈-map⁻ f xs m)
 
-map-id : {A : Set} (xs : List A) -> map (λ x -> x) xs ≡ xs
+map-id : (xs : List A) -> map (λ x -> x) xs ≡ xs
 map-id []       = refl
 map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
 
-∈-++⁻ : {A : Set} {x : A} (xs ys : List A)
+∈-++⁻ : (xs ys : List A)
      -> x ∈ xs ++ ys -> x ∈ xs ⊎ x ∈ ys
 ∈-++⁻ []       ys h         = inr h
 ∈-++⁻ (z ∷ xs) ys here      = inl here
 ∈-++⁻ (z ∷ xs) ys (there h) =
   [ (λ k -> inl (there k)) , inr ] (∈-++⁻ xs ys h)
 
-∈-concatMap⁺ : {A B : Set} (f : A -> List B) {xs : List A} {x : A} {y : B}
+∈-concatMap⁺ : (f : A -> List B) {xs : List A} {x : A} {y : B}
             -> x ∈ xs -> y ∈ f x -> y ∈ concatMap f xs
 ∈-concatMap⁺ f {x ∷ xs} here      k = ∈-++⁺ˡ (f x) (concatMap f xs) k
 ∈-concatMap⁺ f {z ∷ xs} (there m) k =
   ∈-++⁺ʳ (f z) (concatMap f xs) (∈-concatMap⁺ f m k)
 
-∈-concatMap⁻ : {A B : Set} (f : A -> List B) (xs : List A)
+∈-concatMap⁻ : (f : A -> List B) (xs : List A)
             -> ∀ⁱ[ y ∈ concatMap f xs ] ∃[ x ∈ xs ] y ∈ f x
 ∈-concatMap⁻ f []       ()
 ∈-concatMap⁻ f (x ∷ xs) m =
@@ -511,17 +521,17 @@ map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
 -- Indexing.  nth xs i d is the i-th member of xs, or d out of range;
 -- LTL.2-Syntax.Skel's indexOf is its inverse on formulas.
 
-nth : {A : Set} -> List A -> Nat -> A -> A
+nth : List A -> Nat -> A -> A
 nth []       n       d = d
 nth (x ∷ xs) zero    d = x
 nth (x ∷ xs) (suc n) d = nth xs n d
 
-map-length : {A B : Set} (f : A -> B) (xs : List A)
+map-length : (f : A -> B) (xs : List A)
           -> length (map f xs) ≡ length xs
 map-length f []       = refl
 map-length f (x ∷ xs) = cong suc (map-length f xs)
 
-nth-map : {A B : Set} (f : A -> B) (xs : List A) (i : Nat) -> i < length xs
+nth-map : (f : A -> B) (xs : List A) (i : Nat) -> i < length xs
        -> (d : A) (e : B) -> nth (map f xs) i e ≡ f (nth xs i d)
 nth-map f []       i       ()      d e
 nth-map f (x ∷ xs) zero    lt      d e = refl
@@ -530,48 +540,48 @@ nth-map f (x ∷ xs) (suc i) (s<s l) d e = nth-map f xs i l d e
 ------------------------------------------------------------------------
 -- any and all against membership
 
-any-true : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ true
+any-true : (p : A -> Bool) (xs : List A) -> any p xs ≡ true
         -> ∃[ x ∈ xs ] p x ≡ true
 any-true p []       ()
 any-true p (y ∷ ys) e =
   [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (any-true p ys e2)) ]
     (∨ᵇ-true (p y) (any p ys) e)
 
-any-intro : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
+any-intro : (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> any p xs ≡ true
 any-intro p []       ()        e
 any-intro p (y ∷ ys) here      e = ∨ᵇ-introˡ (p y) (any p ys) e
 any-intro p (y ∷ ys) (there m) e =
   ∨ᵇ-introʳ (p y) (any p ys) (any-intro p ys m e)
 
-any-false : {A : Set} (p : A -> Bool) (xs : List A) -> any p xs ≡ false
+any-false : (p : A -> Bool) (xs : List A) -> any p xs ≡ false
          -> ∀ⁱ[ x ∈ xs ] p x ≡ false
 any-false p []       e  ()
 any-false p (y ∷ ys) e here      = ∨ᵇ-falseˡ (p y) (any p ys) e
 any-false p (y ∷ ys) e (there m) =
   any-false p ys (∨ᵇ-falseʳ (p y) (any p ys) e) m
 
-all-true : {A : Set} (p : A -> Bool) (xs : List A)
+all-true : (p : A -> Bool) (xs : List A)
         -> all p xs ≡ true -> ∀[ x ∈ xs ] p x ≡ true
 all-true p []       e x ()
 all-true p (y ∷ ys) e x here      = ∧ᵇ-trueˡ (p y) (all p ys) e
 all-true p (y ∷ ys) e x (there m) = all-true p ys (∧ᵇ-trueʳ (p y) (all p ys) e) x m
 
-all-false-intro : {A : Set} (p : A -> Bool) (xs : List A)
+all-false-intro : (p : A -> Bool) (xs : List A)
                -> ∃[ x ∈ xs ] p x ≡ false -> all p xs ≡ false
 all-false-intro p []       (x , ()      , e)
 all-false-intro p (y ∷ ys) (x , here    , e) = cong (λ c -> c ∧ᵇ all p ys) e
 all-false-intro p (y ∷ ys) (x , there m , e) =
   ∧ᵇ-false-introʳ (p y) (all p ys) (all-false-intro p ys (x , m , e))
 
-all-false : {A : Set} (p : A -> Bool) (xs : List A) -> all p xs ≡ false
+all-false : (p : A -> Bool) (xs : List A) -> all p xs ≡ false
          -> ∃[ x ∈ xs ] p x ≡ false
 all-false p []       ()
 all-false p (y ∷ ys) e =
   [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (all-false p ys e2)) ]
     (∧ᵇ-false (p y) (all p ys) e)
 
-all-intro : {A : Set} (p : A -> Bool) (xs : List A)
+all-intro : (p : A -> Bool) (xs : List A)
          -> (∀[ x ∈ xs ] p x ≡ true) -> all p xs ≡ true
 all-intro p []       f = refl
 all-intro p (y ∷ ys) f =

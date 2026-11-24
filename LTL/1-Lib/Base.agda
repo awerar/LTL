@@ -21,9 +21,15 @@ open import Agda.Builtin.Nat public using (Nat; zero; suc; _+_)
 
 open import Agda.Builtin.Bool public using (Bool; true; false)
 
+-- The implicit arguments the signatures below leave out.
+
+private variable
+  A B C : Set
+  x y z : A
+
 infix 0 if_then_else_
 
-if_then_else_ : {A : Set} -> Bool -> A -> A -> A
+if_then_else_ : Bool -> A -> A -> A
 if true  then x else _ = x
 if false then _ else y = y
 
@@ -32,7 +38,7 @@ if false then _ else y = y
 
 open import LTL.Statement public using (Empty)
 
-emptyElim : {A : Set} -> Empty -> A
+emptyElim : Empty -> A
 emptyElim ()
 
 record Unit : Set where
@@ -43,18 +49,18 @@ record Unit : Set where
 
 open import Agda.Builtin.Equality public using (_≡_; refl)
 
-sym : {A : Set} {x y : A} -> x ≡ y -> y ≡ x
+sym : x ≡ y -> y ≡ x
 sym refl = refl
 
-trans : {A : Set} {x y z : A} -> x ≡ y -> y ≡ z -> x ≡ z
+trans : x ≡ y -> y ≡ z -> x ≡ z
 trans refl q = q
 
-cong : {A B : Set} (f : A -> B) {x y : A} -> x ≡ y -> f x ≡ f y
+cong : (f : A -> B) {x y : A} -> x ≡ y -> f x ≡ f y
 cong f refl = refl
 
-cong₂ : {A B C : Set} (f : A -> B -> C) {x x' : A} {y y' : B}
+cong₂ : (f : A -> B -> C) {x x' : A} {y y' : B}
       -> x ≡ x' -> y ≡ y' -> f x y ≡ f x' y'
 cong₂ f refl refl = refl
 
-subst : {A : Set} (P : A -> Set) {x y : A} -> x ≡ y -> P x -> P y
+subst : (P : A -> Set) {x y : A} -> x ≡ y -> P x -> P y
 subst P refl px = px

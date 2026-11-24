@@ -12,14 +12,18 @@ module LTL.3-Rules.PropList where
 
 open import LTL.3-Rules.Prop public
 
+-- The formulas the signatures below leave implicit.
+
+private variable
+  P Q A B C : Formula
+
 ------------------------------------------------------------------------
 -- Negation introduction under an antecedent: from  P ⇒ (C ⇒ B)  and
 -- P ⇒ (C ⇒ ¬ B)  conclude  P ⇒ ¬ C.  Every refutation below uses it.
 
 -- mpU2 is mpU under two antecedents P and Q.
 
-mpU2 : {P Q A B : Formula}
-    -> ⊢ P ⇒ Q ⇒ A ⇒ B -> ⊢ P ⇒ Q ⇒ A
+mpU2 : ⊢ P ⇒ Q ⇒ A ⇒ B -> ⊢ P ⇒ Q ⇒ A
     -> ⊢ P ⇒ Q ⇒ B
 mpU2 f g = mpU (mpU (liftP p2) f) g
 
@@ -42,8 +46,7 @@ mpU2 f g = mpU (mpU (liftP p2) f) g
 ∧Snd : {A B : Formula} -> ⊢ A ∧ B ⇒ B
 ∧Snd {A} {B} = mp p3 (⇒Trans (p1 {¬ B} {A}) dni)
 
-∧Pair : {C A B : Formula}
-     -> ⊢ C ⇒ A -> ⊢ C ⇒ B -> ⊢ C ⇒ A ∧ B
+∧Pair : ⊢ C ⇒ A -> ⊢ C ⇒ B -> ⊢ C ⇒ A ∧ B
 ∧Pair f g = mp p3 (¬IntroU (liftP g) (⇒TransU (liftP f) dne))
 
 -- Case analysis under an antecedent: from P ⇒ (X ⇒ Z) and P ⇒ (¬ X ⇒ Z)
@@ -70,18 +73,18 @@ data AllFrom (C : Formula) : List Formula -> Set where
   fromCons : {A : Formula} {As : List Formula}
           -> ⊢ C ⇒ A -> AllFrom C As -> AllFrom C (A ∷ As)
 
-allFrom-map : {C : Formula} (As : List Formula)
+allFrom-map : (As : List Formula)
            -> (∀ⁱ[ A ∈ As ] ⊢ C ⇒ A) -> AllFrom C As
 allFrom-map []       f = fromNil
 allFrom-map (A ∷ As) f = fromCons (f here) (allFrom-map As (λ m -> f (there m)))
 
-⋀Proj : {A : Formula} (As : List Formula)
+⋀Proj : (As : List Formula)
      -> A ∈ As -> ⊢ ⋀ As ⇒ A
 ⋀Proj []       ()
 ⋀Proj (B ∷ Bs) here      = ∧Fst
 ⋀Proj (B ∷ Bs) (there h) = ⇒Trans ∧Snd (⋀Proj Bs h)
 
-⋀Intro : {C : Formula} (As : List Formula)
+⋀Intro : (As : List Formula)
       -> AllFrom C As -> ⊢ C ⇒ ⋀ As
 ⋀Intro []       fromNil         = liftP deriv⊤
 ⋀Intro (A ∷ As) (fromCons d ds) = ∧Pair d (⋀Intro As ds)
@@ -96,19 +99,19 @@ data AllInto (C : Formula) : List Formula -> Set where
   intoCons : {A : Formula} {As : List Formula}
           -> ⊢ A ⇒ C -> AllInto C As -> AllInto C (A ∷ As)
 
-allInto-map : {C : Formula} (As : List Formula)
+allInto-map : (As : List Formula)
            -> (∀ⁱ[ A ∈ As ] ⊢ A ⇒ C) -> AllInto C As
 allInto-map []       f = intoNil
 allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m)))
 
-⋁Intro : {A : Formula} (As : List Formula)
+⋁Intro : (As : List Formula)
       -> A ∈ As -> ⊢ A ⇒ ⋁ As
 ⋁Intro []       ()
 ⋁Intro (B ∷ Bs) here      = explode
 ⋁Intro (B ∷ Bs) (there h) = ⇒Trans (⋁Intro Bs h) p1
 
 -- The cons case is the classical one: under the antecedent
--- P = ¬ A ⇒ ⋁ As, contraposing the two hypotheses gives
+-- H = ¬ A ⇒ ⋁ As, contraposing the two hypotheses gives
 -- ¬ C ⇒ A and ¬ C ⇒ ¬ A, hence ¬ ¬ C, hence C.
 
 ⋁Elim : {C : Formula} (As : List Formula)
@@ -116,19 +119,19 @@ allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m
 ⋁Elim []       intoNil         = exFalso
 ⋁Elim {C} (A ∷ As) (intoCons d ds) = ⇒Trans (¬IntroU h1 h2) dne
   where
-    P : Formula
-    P = ¬ A ⇒ ⋁ As
+    H : Formula
+    H = ¬ A ⇒ ⋁ As
 
     hIH : ⊢ ⋁ As ⇒ C
     hIH = ⋁Elim As ds
 
-    hNA : ⊢ P ⇒ ¬ A ⇒ C
+    hNA : ⊢ H ⇒ ¬ A ⇒ C
     hNA = ⇒TransU ⇒Refl (liftP hIH)
 
-    h1 : ⊢ P ⇒ ¬ C ⇒ A
+    h1 : ⊢ H ⇒ ¬ C ⇒ A
     h1 = ⇒TransU (mpU (liftP (contra {¬ A} {C})) hNA) (liftP dne)
 
-    h2 : ⊢ P ⇒ ¬ C ⇒ ¬ A
+    h2 : ⊢ H ⇒ ¬ C ⇒ ¬ A
     h2 = mpU (liftP (contra {A} {C})) (liftP d)
 
 ------------------------------------------------------------------------

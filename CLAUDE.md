@@ -66,14 +66,26 @@ derivation or a certified finite lasso countermodel.
   (all `LTL/1-Lib/Nodes.agda`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
   A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
-  callers outside see the same arguments. `Graph` and `FairGraph` leave
-  their repeated implicits (trail endpoints, visited lists, the Bar's
-  predicate `E`) to a `private variable` block at the top of the module.
-  The vertex list `ws` is implicit (`module _ {ws : List Node} where`)
-  wherever another argument's type fixes it (a `Trail`, `Reaches`, `Loop`,
-  `Circuit`, `FairIn`, `HasSucc` or closed-under hypothesis), so a call reads
-  `trailApp t1 t2`; it stays explicit where it only occurs under a function
-  (`reachSet ws v`, `sccOf ws r`, `outs ws x`), since Agda cannot infer it there.
+  callers outside see the same arguments.
+- Implicit arguments: a leading implicit that no clause or `where` block
+  names is a `private variable`, declared at the top of the module
+  (`A B C : Set` and `x y : A` in `Base`/`Prelude`/`Sets`/`Bar`, the formulas
+  `A B C P Q : Formula` in `Prop`/`PropList`/`Temporal`, trail endpoints,
+  visited lists, `ws` and the Bar's predicate `E` in `Graph`/`FairGraph`), so
+  `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
+  body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
+  keeps its binders, and one whose body needs a single name binds it by name
+  (`keepIn {ws = ws} p t h`) or sits in a `module _ {ws : List Node}` block,
+  which also carries shared explicit arguments (`trailInto`'s `cl`).
+  Generalised arguments come in order of first appearance in the signature.
+  A variable clashes with any definition of the same name in the module,
+  `where`-local ones and record fields included; hence `r` is not a variable in
+  `FairGraph` (the `r` fields of `Terminal`, `FairIn`, `FairLoop`). In the
+  graph layer `ws` is a variable wherever another argument's type fixes it (a
+  `Trail`, `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc` or closed-under
+  hypothesis), so a call reads `trailApp t1 t2`; it stays explicit where it
+  only occurs under a function (`reachSet ws v`, `sccOf ws r`, `outs ws x`),
+  since Agda cannot infer it there.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
   `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,
