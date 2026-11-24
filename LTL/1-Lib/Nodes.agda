@@ -1,54 +1,26 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.1-Lib.Nodes -- finite sets of nodes, for a node type with a sound,
--- reflexive equality test _≡ᵛ_.
+-- LTL.1-Lib.Nodes -- finite sets of nodes, for a node type with an equality
+-- test eq (LTL.1-Lib.DecEq): the names of the hypotheses the graph searches
+-- repeat, inductive finiteness (IFin, listBar), and the invariant of the
+-- removing searches.
 --
 -- The graph layer (LTL.1-Lib.Graph, LTL.1-Lib.FairGraph) uses it at any node
 -- type; LTL.5-States.Reach instantiates it at Val, and that instance is the one
--- the rest of the development sees.  The superscript ᵛ reads "vertex".  Module parameters
--- cannot carry fixity, so every use of _≡ᵛ_ here is parenthesised.
+-- the rest of the development sees.  It re-exports Membership eq, so an
+-- importer gets ≡ᵛ, ∈ᵛ, ≢ᵛ and their lemmas from the same application.
 --
 -- LTL.1-Lib.Sets and LTL.1-Lib.Bar are imported but not re-exported, so that two
 -- instances never bring two copies of their names into scope.
 
 open import LTL.1-Lib.Prelude
+open import LTL.1-Lib.DecEq using (DecEq; module Membership)
 
-module LTL.1-Lib.Nodes {Node : Set}
-                 (_≡ᵛ_     : Node -> Node -> Bool)
-                 (≡ᵛ-sound : (v w : Node) -> v ≡ᵛ w ≡ true -> v ≡ w)
-                 (≡ᵛ-refl  : (v : Node) -> v ≡ᵛ v ≡ true)
-  where
+module LTL.1-Lib.Nodes {Node : Set} (eq : DecEq Node) where
 
 open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
-
-------------------------------------------------------------------------
--- Nodes as a set
-
-infix 4.5 _∈ᵛ_ _≢ᵛ_
-
-_∈ᵛ_ : Node -> List Node -> Bool
-v ∈ᵛ us = any (v ≡ᵛ_) us
-
-_≢ᵛ_ : Node -> Node -> Bool
-x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
-
-≢ᵛ-self : (x : Node) -> x ≢ᵛ x ≡ false
-≢ᵛ-self x = cong ¬ᵇ_ (≡ᵛ-refl x)
-
-∈ᵛ-sound : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ true -> v ∈ us
-∈ᵛ-sound v us e with any-true (v ≡ᵛ_) us e
-... | u , m , e1 = subst (λ z -> z ∈ us) (sym (≡ᵛ-sound v u e1)) m
-
-∈ᵛ-complete : (v : Node) (us : List Node) -> v ∈ us -> v ∈ᵛ us ≡ true
-∈ᵛ-complete v us m = any-intro (v ≡ᵛ_) us m (≡ᵛ-refl v)
-
-∈ᵛ-false : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
-∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
-
-null-∈ᵛ : (ws : List Node) (z : Node) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
-null-∈ᵛ []       z e = refl
-null-∈ᵛ (w ∷ ws) z ()
+open Membership eq public
 
 ------------------------------------------------------------------------
 -- Names for the hypotheses the graph searches keep repeating.  Each is an

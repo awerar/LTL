@@ -48,8 +48,8 @@ derivation or a certified finite lasso countermodel.
   Boolean-valued operators carry a superscript naming their domain:
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,
-  `v ∈ᵛ us` on nodes (`LTL/1-Lib/Nodes.agda`; valuations at the `Val` instance made in
-  `LTL/5-States/Reach.agda`), `A ≡ᶠ B` on formulas (all `infix 4.5`,
+  `v ∈ᵛ us` on nodes (`LTL/1-Lib/DecEq.agda`, re-exported by `Nodes`; valuations
+  at the instance `valEq` made in `LTL/5-States/Reach.agda`), `A ≡ᶠ B` on formulas (all `infix 4.5`,
   so `v ∈ᵛ us ≡ true` needs no parentheses). Lemmas about a symbol use the
   stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`); never `foo_bar`, which Agda
   reads as a mixfix operator. The Boolean lemmas, all in the "Boolean lemmas"
@@ -130,9 +130,11 @@ module name). Folder names never equal a module name.
    any node type: `Sets` (what the searches run on: `≤`, `decideAll`, a
    shrinking filter, the `null` lemmas); `Bar`
    (inductively finite sets after Coquand–Siles, closure lemmas; all searches
-   recurse on a Bar); `Nodes` (parameterised by a node type and a sound,
-   reflexive equality test `_≡ᵛ_`: `∈ᵛ`, `≢ᵛ`, `IFin`, `listBar`, the
-   hypothesis names). m5's graph layer, parameterised like `Nodes` and by the
+   recurse on a Bar); `DecEq` (the record `DecEq A` bundling a Boolean
+   equality test `_≡ᵛ_` with its soundness and reflexivity, and module
+   `Membership`: `∈ᵛ`, `≢ᵛ` and their lemmas); `Nodes` (parameterised by a
+   node type and `eq : DecEq Node`, re-exporting `Membership eq`: `IFin`,
+   `listBar`, the hypothesis names). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the
    `fairGraph` certificate theorem, `certAll`, exclusivity, `certShape`;
@@ -163,8 +165,8 @@ module name). Folder names never equal a module name.
    2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness
    and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated
    for any P, and `tautChi`) is unparameterised.
-   The finite search infrastructure, in the same folder: `Reach` (`≡ᵛ` on valuations, the
-   `Val` instance of `Nodes`); `VecBar` (valuations of a given
+   The finite search infrastructure, in the same folder: `Reach` (`valEq`, the `DecEq` of
+   valuations, and the `Val` instance of `Nodes`); `VecBar` (valuations of a given
    length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
    explored state set: `Graph`'s growing `closure` at `step`, seeded by the
    states containing `P`; its members are states, `ustState`); `Extract`

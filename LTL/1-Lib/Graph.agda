@@ -3,8 +3,8 @@
 -- LTL.1-Lib.Graph -- finite graphs given by an edge test: trails, the growing
 -- search closure, and the reachable set.
 --
--- There is no logic here: the module is parameterised by a node type with a
--- sound, reflexive equality test, and by the edge test G, which no definition
+-- There is no logic here: the module is parameterised by a node type with an
+-- equality test eq (LTL.1-Lib.DecEq), and by the edge test G, which no definition
 -- changes; it imports only the generic set layer.  A graph is a vertex list
 -- ws with the edges of G.  LTL.1-Lib.FairGraph proves the fair-graph
 -- certificate theorem on top of it.  LTL.6-Countermodel.Walk instantiates both
@@ -18,20 +18,17 @@
 -- a variable, so it needs no guard against normalisation blow-up.
 
 open import LTL.1-Lib.Prelude
+open import LTL.1-Lib.DecEq using (DecEq)
 
-module LTL.1-Lib.Graph {Node : Set}
-                 (_≡ᵛ_     : Node -> Node -> Bool)
-                 (≡ᵛ-sound : (v w : Node) -> v ≡ᵛ w ≡ true -> v ≡ w)
-                 (≡ᵛ-refl  : (v : Node) -> v ≡ᵛ v ≡ true)
-                 (G        : Node -> Node -> Bool)
-  where
+module LTL.1-Lib.Graph {Node : Set} (eq : DecEq Node)
+                       (G : Node -> Node -> Bool) where
 
 -- Not re-exported: an importer gets this module's own names only, and takes
 -- the set layer from wherever it already has it (LTL.5-States.Reach, at Val).
 
 open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
-open import LTL.1-Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl
+open import LTL.1-Lib.Nodes eq
 
 ------------------------------------------------------------------------
 -- Out-neighbours

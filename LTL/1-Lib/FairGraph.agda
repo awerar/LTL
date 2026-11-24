@@ -28,21 +28,18 @@
 -- inductions on a finite trail.
 
 open import LTL.1-Lib.Prelude
+open import LTL.1-Lib.DecEq using (DecEq)
 
-module LTL.1-Lib.FairGraph {Node : Set}
-                 (_≡ᵛ_     : Node -> Node -> Bool)
-                 (≡ᵛ-sound : (v w : Node) -> v ≡ᵛ w ≡ true -> v ≡ w)
-                 (≡ᵛ-refl  : (v : Node) -> v ≡ᵛ v ≡ true)
-                 (G        : Node -> Node -> Bool)
-  where
+module LTL.1-Lib.FairGraph {Node : Set} (eq : DecEq Node)
+                           (G : Node -> Node -> Bool) where
 
 -- Not re-exported: an importer gets this module's own names only, and opens
 -- LTL.1-Lib.Graph and the set layer itself.
 
 open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Bar
-open import LTL.1-Lib.Nodes _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl
-open import LTL.1-Lib.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl G
+open import LTL.1-Lib.Nodes eq
+open import LTL.1-Lib.Graph eq G
 open import LTL.1-Lib.CertStep
 
 ------------------------------------------------------------------------

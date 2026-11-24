@@ -27,8 +27,8 @@ open import LTL.5-States.Closure P
 import LTL.1-Lib.Graph as Graph
 import LTL.1-Lib.FairGraph as FairGraph
 
-open Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step public
-open FairGraph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step public
+open Graph valEq step public
+open FairGraph valEq step public
 
 ------------------------------------------------------------------------
 -- Fulfilment along a walk

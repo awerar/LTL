@@ -50,7 +50,7 @@ a ≢ᵇ b = ¬ᵇ (a ⇔ᵇ b)
 -- Natural numbers
 --
 -- Boolean-valued tests carry a superscript naming the type they compare (≡ⁿ on
--- Nat here, ≡ᵛ on nodes, ≡ᶠ on formulas).  They are infix 4.5: tighter than
+-- Nat here, ≡ᵛ on nodes (LTL.1-Lib.DecEq), ≡ᶠ on formulas).  They are infix 4.5: tighter than
 -- ≡, looser than ∷ and ++.
 
 infix 4.5 _≡ⁿ_

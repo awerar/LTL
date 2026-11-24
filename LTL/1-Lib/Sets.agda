@@ -5,7 +5,7 @@
 -- test (decideAll, with a counterexample if not), and the facts that a filter
 -- removing something shrinks its list and that a list is empty or has a
 -- member.  Plain membership lemmas are in LTL.1-Lib.Prelude; the part that
--- needs an equality test on the elements is LTL.1-Lib.Nodes.
+-- needs an equality test on the elements is LTL.1-Lib.DecEq.
 
 module LTL.1-Lib.Sets where
 

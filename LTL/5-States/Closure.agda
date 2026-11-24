@@ -29,7 +29,7 @@ open import LTL.5-States.Step P
 
 -- The growing search, at the edge test step.  LTL.6-Countermodel.Walk makes
 -- the application the other P-modules see; this one stays private.
-open import LTL.1-Lib.Graph _≡ᵛ_ ≡ᵛ-sound ≡ᵛ-refl step
+open import LTL.1-Lib.Graph valEq step
   using (closure; closureIn; closureSeed; closureClosed)
 
 ------------------------------------------------------------------------

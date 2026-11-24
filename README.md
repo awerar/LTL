@@ -241,7 +241,7 @@ formalise. A module's name follows its path, so `LTL/2-Syntax/Formula.agda` is
 | Folder | Modules | What it is |
 |---|---|---|
 | `LTL/` | `Statement`, `Main`, `Pretty` | the specification (semantics, the proof system `⊢`, the obligations) and the few lines stating they are met, the two files to trust; readable output |
-| `LTL/1-Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes`, `Graph`, `FairGraph`, `CertStep` | foundations without the standard library; inductively finite sets; graph search and the generic fair-graph certificate theorem of m5 |
+| `LTL/1-Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `DecEq`, `Nodes`, `Graph`, `FairGraph`, `CertStep` | foundations without the standard library; inductively finite sets; decidable equality and membership; graph search and the generic fair-graph certificate theorem of m5 |
 | `LTL/2-Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/3-Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
 | `LTL/4-Semantics/` | `Orbit`, `OrbitEval` | positions on a lasso and Boolean evaluation of formulas there |

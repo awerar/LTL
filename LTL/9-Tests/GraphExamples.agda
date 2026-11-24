@@ -11,9 +11,14 @@
 module LTL.9-Tests.GraphExamples where
 
 open import LTL.1-Lib.Prelude
-open import LTL.1-Lib.Graph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
-open import LTL.1-Lib.FairGraph _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl
-open import LTL.1-Lib.Nodes _≡ⁿ_ ≡ⁿ-sound ≡ⁿ-refl using (_∈ᵛ_; Edges; Pred)
+open import LTL.1-Lib.DecEq using (DecEq)
+
+natEq : DecEq Nat
+natEq = record { _≡ᵛ_ = _≡ⁿ_ ; ≡ᵛ-sound = ≡ⁿ-sound ; ≡ᵛ-refl = ≡ⁿ-refl }
+
+open import LTL.1-Lib.Graph natEq
+open import LTL.1-Lib.FairGraph natEq
+open import LTL.1-Lib.Nodes natEq using (_∈ᵛ_; Edges; Pred)
 open import LTL.1-Lib.CertStep
 
 ------------------------------------------------------------------------
