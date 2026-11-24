@@ -7,7 +7,7 @@ choose another Agda binary.
 | Tool | What it does | More |
 |---|---|---|
 | [`show-proof`](show-proof) | Decides a formula and prints the result readably: a numbered Hilbert proof, a proof tree, or a lasso countermodel. Formulas may be written in ASCII (`'G p -> p'`) or in Agda syntax. | [Viewing proofs](../README.md#viewing-proofs) |
-| [`proof-map`](proof-map) | Shows the proof as a tree of definitions, top down from `decideCorrect` or upwards from any definition. Records which definitions are reviewed in `docs/review.tsv` and marks one as stale when its code changes. | [Reviewing the proof](../README.md#reviewing-the-proof) |
+| [`proof-map`](proof-map) | Shows the proof as a tree of definitions, top down from `statement` in `LTL/Main.agda` or upwards from any definition. Records which definitions are reviewed in `docs/review.tsv` and marks one as stale when its code changes. | [Reviewing the proof](../README.md#reviewing-the-proof) |
 | [`vscode-proof-map/`](vscode-proof-map) | A VS Code extension that runs `proof-map`: the tree with checkboxes, lists of what to review next, and review status above each definition. | [In VS Code](../README.md#in-vs-code) |
 
 ```sh

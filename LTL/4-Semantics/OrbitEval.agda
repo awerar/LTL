@@ -4,8 +4,8 @@
 -- and its soundness: every derivable formula is true at every position.
 --
 -- The states have any type S, and read s n is the truth value of variable n
--- in s.  LTL.6-Countermodel.Lasso takes S to be valuations; LTL.Correct takes
--- it to be LTL.Statement's Instant.
+-- in s.  LTL.6-Countermodel.Lasso takes S to be valuations;
+-- LTL.8-Procedures.Correct takes it to be LTL.Statement's Instant.
 --
 -- evalAt has one clause per constructor: ○ is one step of nextPos and □ A is
 -- the conjunction of A over the forward orbit (LTL.4-Semantics.Orbit), so the
@@ -167,11 +167,10 @@ module _ (loop : Pos) where
           (⇒ᵇ-refl (¬ᵇ evalAt A (nextPos loop pos)))
           (⇒ᵇ-refl (¬ᵇ evalAt A (nextPos loop pos)))
 
-  -- (PC): evalAt is DEFINED by ¬ᵇ at ¬ and ⇒ᵇ at ⇒, so the two hypotheses
-  -- of tautSound are refl.
-  sound (pc {C} e) pos =
-    tautSound (λ X -> evalAt X pos) C
-              (λ X m -> refl) (λ X Y m -> refl) e
+  -- (PC): evalAt is DEFINED by ¬ᵇ at ¬ and ⇒ᵇ at ⇒, so it is one of the
+  -- readings a Tautology is true under.
+  sound (pc {C} t) pos =
+    tautologyHolds (λ X -> evalAt X pos) (λ X -> refl) (λ X Y -> refl) C t
 
   sound (mp {A} {B} d e) pos =
     ⇒ᵇ-mp (evalAt A pos) (evalAt B pos)

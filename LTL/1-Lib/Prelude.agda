@@ -18,25 +18,19 @@ open import LTL.1-Lib.Base public
 -- Boolean connectives
 --
 -- They bind looser than application and tighter than ≡, so
--- a ∧ᵇ ¬ᵇ b ≡ true  is  (a ∧ᵇ (¬ᵇ b)) ≡ true.
+-- a ∧ᵇ ¬ᵇ b ≡ true  is  (a ∧ᵇ (¬ᵇ b)) ≡ true.  ¬ᵇ and ⇒ᵇ are LTL.Statement's
+-- not and imp, the connectives of its (PC) side condition Tautology.
 
-infix  10 ¬ᵇ_
+open import LTL.Statement public
+  using () renaming (not to infix 10 ¬ᵇ_; imp to infixr 7 _⇒ᵇ_)
+
 infixr 9 _∧ᵇ_
 infixr 8 _∨ᵇ_
-infixr 7 _⇒ᵇ_
 infix  6 _⇔ᵇ_
 
 _∧ᵇ_ : Bool -> Bool -> Bool
 true  ∧ᵇ b = b
 false ∧ᵇ b = false
-
-¬ᵇ_ : Bool -> Bool
-¬ᵇ true  = false
-¬ᵇ false = true
-
-_⇒ᵇ_ : Bool -> Bool -> Bool
-true  ⇒ᵇ b = b
-false ⇒ᵇ b = true
 
 _∨ᵇ_ : Bool -> Bool -> Bool
 true  ∨ᵇ b = true

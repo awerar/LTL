@@ -194,7 +194,7 @@ module _ (Ats : List Formula) (a : Val) where
 
 ------------------------------------------------------------------------
 -- The derivation half of □Chain: one modus ponens against one instance of
--- (T) per premise, left to right.  A chain rather than a conjunction of the
+-- (S) per premise, left to right.  A chain rather than a conjunction of the
 -- (S2) instances: a conjunction is built by (L2) through ∧Pair, about 239
 -- constructors per instance, while each premise of a chain costs one modus
 -- ponens.

@@ -51,7 +51,7 @@ provableEachSCC c w m = byPosition
   where
     -- w does not contain ¬ Q, so chi_w ⇒ Q is a tautology: one pc node
     fromR : valOf w (¬ Q) ≡ false -> ⊢ (chi w) ⇒ Q
-    fromR ev = pc (tautChi Q w ev)
+    fromR ev = pcTaut (tautChi Q w ev)
 
     byPosition : ⊢ (chi w) ⇒ Q
     byPosition with w ∈ᵛ Ust in ec

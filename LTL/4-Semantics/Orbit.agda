@@ -21,9 +21,9 @@
 -- a block parameterised by loop, which callers pass first.  Σ has no eta
 -- rule, so definitions that inspect a Pos match it as a pair.
 --
--- LTL.6-Countermodel.Lasso instantiates S at valuations, and LTL.Correct at
--- LTL.Statement's Instant; LTL.4-Semantics.OrbitEval evaluates formulas on
--- either.
+-- LTL.6-Countermodel.Lasso instantiates S at valuations, and
+-- LTL.8-Procedures.Correct at LTL.Statement's Instant;
+-- LTL.4-Semantics.OrbitEval evaluates formulas on either.
 
 module LTL.4-Semantics.Orbit (S : Set) where
 

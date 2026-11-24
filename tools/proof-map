@@ -21,18 +21,18 @@ ROOT (`next provableSCC`).  --order weight ranks one flat list by what each
 definition carries (open definitions below; bottom up, definitions above
 that depend on it), --order tree lists it in tree order.
 
-ROOT defaults to decideCorrect.  NAME is a definition's name (`decide`), or
+ROOT defaults to statement (LTL.Main).  NAME is a definition's name (`decide`), or
 qualified by the end of its module path when the name is ambiguous
 (`Lasso.Fair`, `Countermodel.Lasso.Fair`); operators may omit underscores.
 For done and undo, NAME may also be an Agda file (`LTL/1-Lib/Bar.agda`) or a
 module (`LTL.1-Lib.Bar`), standing for every definition in it.
 
-The graph comes from `agda --html` on LTL/Correct.agda (written to
+The graph comes from `agda --html` on LTL/Main.agda (written to
 _build/proof-map/), whose output links every name to its definition site.  A
 definition owns the lines of its signature, clauses and `where` block; the
 constructors of a datatype and the fields of a record belong to it, so using
-`vpos` is a dependency on `ValidPos`.  Agda's builtins and the read-only
-Statement are not tracked.  Base and Prelude are tracked but folded: the tree
+`vpos` is a dependency on `ValidPos`.  Agda's builtins and the hand-checked
+Statement and Main are not tracked.  Base and Prelude are tracked but folded: the tree
 and the next lists do not go into them from the rest of the proof, so they
 are reviewed by file (or by focusing on one of their definitions), and
 status counts them with the proof that uses them.
@@ -56,15 +56,15 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TOP_FILE = "LTL/Correct.agda"
+TOP_FILE = "LTL/Main.agda"
 HTML_DIR = os.path.join(REPO, "_build", "proof-map")
 LEDGER = os.path.join(REPO, "docs", "review.tsv")
 # A copy of each reviewed definition's source, by its hash, so a change made
 # after the review can be shown against it.  Local, like the HTML.
 SNAPSHOTS = os.path.join(REPO, "_build", "proof-map-reviewed")
-DEFAULT_ROOT = "decideCorrect"
-# Not tracked at all: Agda's builtins and the hand-checked specification.
-UNTRACKED = ("Agda.", "LTL.Statement")
+DEFAULT_ROOT = "statement"
+# Not tracked at all: Agda's builtins and the hand-checked Statement and Main.
+UNTRACKED = ("Agda.", "LTL.Statement", "LTL.Main")
 # Tracked, but folded: used nearly everywhere, so the tree does not expand
 # into them from the rest of the proof (only from inside them).
 FOLDED = ("LTL.1-Lib.Base", "LTL.1-Lib.Prelude")
@@ -151,7 +151,7 @@ class Def:
 
     @property
     def leaf(self):
-        """Not tracked: builtins and Statement."""
+        """Not tracked: builtins and the hand-checked Statement and Main."""
         return self.module.startswith(UNTRACKED)
 
     @property
@@ -169,7 +169,7 @@ class Graph:
         self.owner = {}                       # any definition key -> owner key
         self.deps = {}                        # owner key -> [owner key]
         self.users = {}                       # owner key -> [owner key]
-        self.cosig = {}                       # first of `f g : T` -> [f, g]
+        self.cosig = {}                       # first of `f g : S` -> [f, g]
         self.apps = {}                        # application -> (module, public)
         self.applied = set()                  # (module, module it applies)
 
@@ -233,7 +233,7 @@ class Graph:
         return None
 
     def _new(self, module, words):
-        """Definitions named on a declaration line; `f g : T` names two,
+        """Definitions named on a declaration line; `f g : S` names two,
         which share the signature's lines."""
         keys = []
         for t in words:
@@ -323,8 +323,9 @@ class Graph:
 
     def tracked_below(self, key):
         """reach(key) and the folded definitions it uses, directly or
-        through each other."""
-        order = self.reach(key)
+        through each other; key itself only if tracked (the default root,
+        Main's statement, is not)."""
+        order = [k for k in self.reach(key) if not self.defs[k].leaf]
         seen = set(order)
         todo = list(order)
         while todo:
@@ -991,7 +992,7 @@ def cmd_json(g, marks, args, error):
     counts = above(g, root)
     out = {}
     for k, d in g.defs.items():
-        if d.leaf:
+        if d.leaf and k != root:    # an untracked root still heads the tree
             continue
         mark = marks.get(d.qname)
         out[d.qname] = {

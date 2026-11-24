@@ -309,7 +309,7 @@ class NextProvider {
 // Explorer decorations: per Agda file (and folder), a badge with the number
 // of open definitions, ✓ when all are reviewed (green) and ~ when some
 // changed since their review (yellow). Partly reviewed files get no colour,
-// so git's colours still show. Untracked modules (builtins, Statement) get
+// so git's colours still show. Untracked modules (builtins, Statement, Main) get
 // nothing.
 
 class Decorations {

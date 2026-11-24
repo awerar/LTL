@@ -5,13 +5,13 @@
 --   ⊢ Q ⊎ LassoCountermodel Q
 --
 -- a derivation of Q, or a lasso countermodel: a lasso through states of Ust
--- (¬ Q) on which Q evaluates to false at stage 0.  LTL.Correct shows that
--- this rules out a derivation of Q (cmUnderivable).  Neither branch is
--- obtained by refuting the other, so no classical step is involved.
+-- (¬ Q) on which Q evaluates to false at stage 0.  LTL.8-Procedures.Correct
+-- shows that this rules out a derivation of Q (cmUnderivable).  Neither
+-- branch is obtained by refuting the other, so no classical step is involved.
 --
--- Also which branch an answer is, as the Boolean LTL.Correct needs.  This
--- module holds only what decideCorrect depends on; the functions for looking
--- inside an answer are in LTL.8-Procedures.Inspect.
+-- Also which branch an answer is, as the Boolean LTL.8-Procedures.Correct
+-- needs.  This module holds only what decideCorrect depends on; the functions
+-- for looking inside an answer are in LTL.8-Procedures.Inspect.
 
 module LTL.8-Procedures.Answer where
 
@@ -32,7 +32,7 @@ record LassoCountermodel (Q : Formula) : Set where
 -- Reading the answer
 
 -- Did the procedure answer with a derivation?  This is the Boolean that
--- LTL.Correct hands to Statement as decideValid.
+-- LTL.8-Procedures.Correct hands to Statement as decideValid.
 isProof : {Q : Formula} -> ⊢ Q ⊎ LassoCountermodel Q -> Bool
 isProof = isInl
 

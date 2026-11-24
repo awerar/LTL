@@ -16,22 +16,18 @@ open import LTL.1-Lib.Prelude public
 -- Formulas
 --
 -- The datatype is LTL.Statement's, so the procedure runs on exactly the formulas
--- the trusted statement talks about.  Its constructors are re-exported with
--- this development's fixities: the prefix operators bind tightest, then ∧, ∨,
--- ⇒ and ⇔, so  □ A ⇒ A ∧ ○ □ A  is  (□ A) ⇒ (A ∧ (○ (□ A))).
+-- the trusted statement talks about; so are ∧ and ⇔, which its axioms use.
+-- The prefix operators bind tightest, then ∧, ∨, ⇒ and ⇔, so
+-- □ A ⇒ A ∧ ○ □ A  is  (□ A) ⇒ (A ∧ (○ (□ A))).
 
 open import LTL.Statement public
-  using (Formula; var)
-  renaming (¬_ to infix 30 ¬_; _⇒_ to infixr 20 _⇒_;
-            ○_ to infix 30 ○_; □_ to infix 30 □_)
+  using (Formula; var; ¬_; _⇒_; ○_; □_; _∧_; _⇔_)
 
 infix  30 ◇_
-infixr 22 _∧_
 infixr 21 _∨_
-infix  19 _⇔_
 
 ------------------------------------------------------------------------
--- Abbreviations
+-- Further abbreviations
 
 ⊤ : Formula
 ⊤ = var zero ⇒ var zero
@@ -41,12 +37,6 @@ infix  19 _⇔_
 
 _∨_ : Formula -> Formula -> Formula
 A ∨ B = ¬ A ⇒ B
-
-_∧_ : Formula -> Formula -> Formula
-A ∧ B = ¬ (A ⇒ ¬ B)
-
-_⇔_ : Formula -> Formula -> Formula
-A ⇔ B = (A ⇒ B) ∧ (B ⇒ A)
 
 ◇_ : Formula -> Formula
 ◇ A = ¬ □ ¬ A

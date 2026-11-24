@@ -7,7 +7,7 @@
 -- Each check states the branch decide takes: isProof = true means it
 -- returned a derivation, false a lasso countermodel with  ⊢ X -> Empty.  So
 -- every line is a theorem, certified by the type of decide.  The
--- twenty-two marked valid in the figure (T, G, pb5, lin1, Dum, Dum1-4, D, 4,
+-- twenty-two marked valid in the figure (S, G, pb5, lin1, Dum, Dum1-4, D, 4,
 -- 4M, G0, H, H+, L, L+, L++, X, K3, K4, K5) are exactly the twenty-two that
 -- come out true here.
 --
@@ -24,8 +24,8 @@ open import LTL.9-Tests.Figure11 public
 ------------------------------------------------------------------------
 -- The results
 
-check-T : isProof (decide axT) ≡ true
-check-T = refl
+check-S : isProof (decide axT) ≡ true
+check-S = refl
 
 check-pb2 : isProof (decide pb2) ≡ false
 check-pb2 = refl
@@ -170,8 +170,9 @@ check-K5 = refl
 -- cmShape says where the run starts repeating: with cmShape Q c = r , n the
 -- run is  v0 , rest_0 , ... , rest_{r-1} , then the last n of those forever,
 -- so it is periodic from stage  1 + r - n  with period n.  cmTrace uses the
--- evaluation that LTL.Correct carries over to Statement's semantics, so
--- "cmTrace Q c Q 1 = false ∷ []" and cmUnderivable are the same fact.
+-- evaluation that LTL.8-Procedures.Correct carries over to Statement's
+-- semantics, so "cmTrace Q c Q 1 = false ∷ []" and cmUnderivable are the same
+-- fact.
 
 ------------------------------------------------------------------------
 -- pb2 = p ⇒ □ p.  Its lasso has shape 4 , 2, so the run is periodic from stage 3

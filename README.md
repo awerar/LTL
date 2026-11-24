@@ -22,8 +22,9 @@ implemented.**
   ([LaTeX](docs/m5.tex)): the graph certificate argument and comparison.
 - [LTL/Statement.agda](LTL/Statement.agda): the specification, a small
   hand-checked module stating the LTL semantics and what a decision procedure
-  must prove. [LTL/Correct.agda](LTL/Correct.agda) proves it for the
-  procedure.
+  must prove. [LTL/8-Procedures/Correct.agda](LTL/8-Procedures/Correct.agda) proves it for the
+  procedure, and [LTL/Main.agda](LTL/Main.agda) states the result: a few lines
+  whose type is the specification's record of obligations.
 - [LTL/8-Procedures/Decide.agda](LTL/8-Procedures/Decide.agda): the public
   decision procedure, [LTL/8-Procedures/Answer.agda](LTL/8-Procedures/Answer.agda):
   what it returns, and [LTL/8-Procedures/Inspect.agda](LTL/8-Procedures/Inspect.agda):
@@ -35,7 +36,7 @@ Tested with **Agda 2.8.0**. No Agda standard library is needed. From the reposit
 root (`LTL.agda-lib` supplies the include path; interfaces go to `_build/`):
 
 ```sh
-agda LTL/Correct.agda
+agda LTL/Main.agda
 agda LTL/Pretty.agda
 agda LTL/9-Tests/Checks.agda
 agda LTL/9-Tests/GraphExamples.agda
@@ -53,8 +54,12 @@ method.
 
 The files use `--safe --without-K --exact-split`. There are no postulates,
 unfinished goals, or termination overrides. The procedures return a derivation
-or a finite lasso countermodel. `LTL/Correct.agda` connects this to the
-semantics of `LTL/Statement.agda`: `decide` is a `DecisionProcedure`.
+or a finite lasso countermodel. `LTL/8-Procedures/Correct.agda` connects this to the
+semantics of `LTL/Statement.agda`: `decide` is a `DecisionProcedure`, a formula
+is derivable exactly when it is valid, and it has a lasso countermodel exactly
+when it is not. `LTL/Main.agda` collects the three as the specification's
+record `Statement`; since `--safe` is coinfective, checking it also checks that
+nothing below it is unsafe.
 When it answers true, the formula is valid, meaning true at time 0 of every
 lasso (ultimately periodic) interpretation. When it answers false, it returns a
 lasso on which the formula is false. Validity on arbitrary infinite words is
@@ -122,7 +127,7 @@ practical for small certificates.
 ## Reviewing the proof
 
 `tools/proof-map` shows the development as a tree of definitions under
-`decideCorrect`, read from Agda's own cross-references (`agda --html`). It
+`statement` in [LTL/Main.agda](LTL/Main.agda), read from Agda's own cross-references (`agda --html`). It
 also records which definitions have been reviewed:
 
 ```sh
@@ -140,7 +145,7 @@ tools/proof-map stale --diff             # reviews that are out of date, and wha
 ```
 
 Marks can be made in any order, so a review can work top down from
-`decideCorrect` (`next`), bottom up from the foundations (`next --up`; a group
+`statement` (`next`), bottom up from the foundations (`next --up`; a group
 of mutually recursive definitions becomes ready together), or from both ends.
 `status` then also counts the open definitions left between a reviewed
 definition above and one below, where the two meet.
@@ -181,7 +186,7 @@ needs no npm packages or build step. It adds:
   Branch*, also in the editor's context menu for the definition at the
   cursor) or to add a note. While focused, the tree, both next lists and the
   status bar count cover only that branch, and the view shows where it sits
-  (`decideCorrect › decide › provableSCC`). The go-to-file button in each
+  (`statement › decideCorrect › decide › provableSCC`). The go-to-file button in each
   view's title, or a click on the status bar count, opens the focused
   definition. To unfocus, use the × button in any view's title or beside the
   status bar count, *Unfocus* in the editor's context menu, or *Proof Map:
@@ -235,7 +240,7 @@ formalise. A module's name follows its path, so `LTL/2-Syntax/Formula.agda` is
 
 | Folder | Modules | What it is |
 |---|---|---|
-| `LTL/` | `Statement`, `Correct`, `Pretty` | the specification; the proof that the Boolean evaluation is its semantics (so derivable formulas are valid) and that the procedure is a `DecisionProcedure`; readable output |
+| `LTL/` | `Statement`, `Main`, `Pretty` | the specification (semantics, the proof system `⊢`, the obligations) and the few lines stating they are met, the two files to trust; readable output |
 | `LTL/1-Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `Nodes`, `Graph`, `FairGraph`, `CertStep` | foundations without the standard library; inductively finite sets; graph search and the generic fair-graph certificate theorem of m5 |
 | `LTL/2-Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/3-Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
@@ -243,7 +248,7 @@ formalise. A module's name follows its path, so `LTL/2-Syntax/Formula.agda` is
 | `LTL/5-States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
 | `LTL/6-Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/7-SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
-| `LTL/8-Procedures/` | `Answer`, `Inspect`, `Decide`, `Everything` | the decision procedure and its answer type, m4 Thm 6.1; functions that look inside an answer |
+| `LTL/8-Procedures/` | `Answer`, `Inspect`, `Decide`, `Everything`, `Correct` | the decision procedure and its answer type, m4 Thm 6.1; functions that look inside an answer; the proof that the Boolean evaluation is the specification's semantics, so the procedure is a `DecisionProcedure` and derivability and countermodels match validity |
 | `LTL/9-Tests/` | `Checks`, `GraphExamples` | computational checks of the core modules |
 | `LTL/9-Benchmarks/` | `Examples`, `Lecture` | slow benchmarks |
 

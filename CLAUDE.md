@@ -7,16 +7,22 @@ derivation or a certified finite lasso countermodel.
 ## Ground rules
 
 - `LTL/Statement.agda` is the user's hand-checked specification (LTL
-  semantics, `valid`, `LassoCountermodel`, `DecisionProcedure`). **Never edit
-  it**; if it needs a change, tell the user. `Formula` is its datatype
-  (re-exported by `LTL/2-Syntax/Formula.agda` with this development's fixities), and
+  semantics, `Valid`, the proof system `⊢`, `LassoCountermodel`,
+  `DecisionProcedure`, and the record `Statement` of obligations). **Never edit
+  it**; if it needs a change, tell the user. `Formula`, `∧`, `⇔` (re-exported by
+  `LTL/2-Syntax/Formula.agda`), `⊢` (by `Deriv`) and `not`/`imp` (as `¬ᵇ`/`⇒ᵇ`,
+  by `Prelude`) are its own, with the same fixities, and
   `Bool`/`List` are Agda's builtins, so its `Instant`/`Period` use our types.
-  Import it qualified (`import LTL.Statement as T`) because its other names clash.
+  Import it qualified (`import LTL.Statement as S`) because its other names clash.
+- `LTL/Main.agda` is hand-checked the same way: the few lines stating that
+  `Statement`'s obligations hold (`statement : S.Statement`). **Never edit it**
+  either; if a rename elsewhere breaks it, tell the user. Both files are
+  untracked by `tools/proof-map`, and a local hook blocks edits to them.
 - Agda 2.8.0, **no standard library**. Every file starts with
   `{-# OPTIONS --safe --without-K --exact-split #-}`. Keep it that way: no
   postulates, holes, or termination pragmas. Agda's own `Agda.Builtin.*`
   modules are fine (`Base` re-exports `Agda.Builtin.Nat`).
-- Typecheck with e.g. `agda LTL/Correct.agda`; `LTL.agda-lib` at the root
+- Typecheck with e.g. `agda LTL/Main.agda`; `LTL.agda-lib` at the root
   supplies the include path, and interfaces go to `_build/` (see README for
   the full list). The modules in `LTL/9-Benchmarks/`
   (`Examples`, `Lecture`) are slow; the core proof
@@ -48,8 +54,8 @@ derivation or a certified finite lasso countermodel.
   stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`); never `foo_bar`, which Agda
   reads as a mixfix operator. The Boolean lemmas, all in the "Boolean lemmas"
   section of `LTL/1-Lib/Prelude.agda`, follow one scheme: `∧ᵇ-trueˡ`, `∧ᵇ-split`,
-  `∨ᵇ-introʳ`, `¬ᵇ-true`, `⇒ᵇ-mp`, `⇔ᵇ-sound`; add new ones there. `⊢ A` (`data ⊢_` in
-  `LTL/2-Syntax/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
+  `∨ᵇ-introʳ`, `¬ᵇ-true`, `⇒ᵇ-mp`, `⇔ᵇ-sound`; add new ones there. `⊢ A` (`Statement`'s `data ⊢_`,
+  re-exported by `LTL/2-Syntax/Deriv.agda`) is derivability. `Empty`/`Unit` keep their names, because
   `⊥`/`⊤` are formulas; `Empty` is `Statement`'s, re-exported by `Base`.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
@@ -111,7 +117,7 @@ derivation or a certified finite lasso countermodel.
 
 Each layer lives in its own folder, and a module's name follows its path
 (`LTL/2-Syntax/Formula.agda` is `LTL.2-Syntax.Formula`). The `LTL/` root holds
-only `Statement`, `Correct` and `Pretty`. A folder's numeric prefix is its
+only `Statement` and `Main`, what a reviewer must trust, and `Pretty`. A folder's numeric prefix is its
 layer below, so folders sort in dependency order (the prefix is part of the
 module name). Folder names never equal a module name.
 
@@ -137,7 +143,7 @@ module name). Folder names never equal a module name.
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations, decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton,
-   `indexOf`, `nub`, `atoms`, `□Args`/`○Args`, `valFrom`, `isTaut` for (PC)); `Deriv` (`data ⊢_`: 10 constructors + optional `pc`);
+   `indexOf`, `nub`, `atoms`, `□Args`/`○Args`, `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back);
    `Val` (literals, `⋀`/`⋁`).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
@@ -184,11 +190,14 @@ module name). Folder names never equal a module name.
    `derivCounts`);
    `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
    `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
-   all of the above unapplied, for importers). At the root:
-   `Correct` (the bridge: on a `Statement` lasso that starts at `pos0` and loops
-   back to `loop`, `evalAt` is `Statement`'s `⊨` (`evalAt-holds`,
-   `holds-evalAt`); `⊢-valid`, `toCountermodel`, `cmUnderivable`, and
-   `decideCorrect`).
+   all of the above unapplied, for importers); `Correct` (imports
+   `Everything`; the bridge: on a `Statement` lasso that starts at `pos0` and
+   loops back to `loop`, `evalAt` is `Statement`'s `⊨` (`evalAt-holds`,
+   `holds-evalAt`); `⊢-valid`, `toCountermodel`, `cmUnderivable`,
+   `decideCorrect`, and the corollaries `deriveComplete` and
+   `countermodelComplete`). At the root: `Main` (`statement :
+   Statement.Statement`, the obligations met; `--safe` is coinfective, so
+   checking it checks everything).
 9. **Examples and benchmarks** — in `9-Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (`Graph`'s and `FairGraph`'s computational checks, at `Node = Nat`);
@@ -203,7 +212,7 @@ module name). Folder names never equal a module name.
 
 ## Reviewing
 
-The user reviews the proof top down from `decideCorrect` and bottom up from
+The user reviews the proof top down from `statement` (`LTL/Main.agda`) and bottom up from
 the foundations, refactoring along the way. `tools/proof-map` (see README)
 prints the dependency tree in either direction and keeps
 the review marks in `docs/review.tsv`. Mark a definition (`tools/proof-map
@@ -216,8 +225,9 @@ which writes the same ledger.
 
 - `decide` (`LTL/8-Procedures/Decide.agda`) — of type
   `(Q : Formula) -> ⊢ Q ⊎ LassoCountermodel Q` (`LTL/8-Procedures/Answer.agda`).
-- `decideCorrect` (`LTL/Correct.agda`) — the same procedure as a
+- `decideCorrect` (`LTL/8-Procedures/Correct.agda`) — the same procedure as a
   `Statement.DecisionProcedure`.
+- `statement` (`LTL/Main.agda`) — all of `Statement`'s obligations.
 
 ## Adding Until (expected touch points)
 

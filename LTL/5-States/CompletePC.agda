@@ -3,10 +3,10 @@
 -- LTL.5-States.CompletePC -- state completeness and (L5) with the
 -- propositional bookkeeping discharged by (PC).
 --
---   stateCompletePC = mpChain eventualities (pc tautState)
+--   stateCompletePC = mpChain eventualities (pcTaut tautState)
 --
 -- proves ⊢ beta St in  1 + 46 |eventualities|  constructors: one pc
--- node, and one modus ponens against an instance of (T) per eventuality.
+-- node, and one modus ponens against an instance of (S) per eventuality.
 -- The step lemma (LTL.5-States.StepLemma) and provableSCC
 -- (LTL.8-Procedures.Decide) use it.  betaElimPC does the same for the
 -- elimination of beta over its disjuncts, which closes provableSCC.
@@ -27,7 +27,7 @@ open import LTL.5-States.State P
 ------------------------------------------------------------------------
 -- The (S2) premise: □ A ⇒ A for every box-subformula of P, as the premises of
 -- an implication chain (cheaper than a conjunction; see LTL.5-States.Taut).
--- mpChain (LTL.5-States.Taut) discharges each premise by an instance of (T).
+-- mpChain (LTL.5-States.Taut) discharges each premise by an instance of (S).
 -- (S2) is the one state condition a truth-table row does not satisfy for
 -- free, since the skeleton reads □ A and A as unrelated atoms.
 
@@ -52,7 +52,7 @@ tautState =
            (betaSkel (atomsOf stateFml) a P)
 
 stateCompletePC : ⊢ beta St
-stateCompletePC = mpChain eventualities (pc tautState)
+stateCompletePC = mpChain eventualities (pcTaut tautState)
 
 ------------------------------------------------------------------------
 -- (L5) the same way.  ⋁Elim costs 426 constructors per disjunct.  The
@@ -74,4 +74,4 @@ mpVals (w ∷ ws) h d =
 betaElimPC : {C : Formula} (ws : List Val)
           -> (∀[ w ∈ ws ] ⊢ (chi w) ⇒ C)
           -> ⊢ (beta ws) ⇒ C
-betaElimPC {C} ws h = mpVals ws h (pc (taut⋁Elim (map chi ws) C))
+betaElimPC {C} ws h = mpVals ws h (pcTaut (taut⋁Elim (map chi ws) C))

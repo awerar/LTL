@@ -11,8 +11,8 @@ module LTL.9-Tests.Checks where
 
 open import LTL.Pretty    public
 open import LTL.8-Procedures.Everything public
-open import LTL.Correct   public
-import LTL.Statement as T
+open import LTL.8-Procedures.Correct public
+import LTL.Statement as S
 
 ------------------------------------------------------------------------
 -- LTL.2-Syntax.Formula (subformulas)
@@ -173,7 +173,7 @@ decide-bnb = refl
 bnbProof : ⊢ bnb
 bnbProof = proofFrom (decide bnb) refl
 
--- The certificates are short.  For (T),  □ p ⇒ p , the derivation has 55
+-- The certificates are short.  For (S),  □ p ⇒ p , the derivation has 55
 -- constructors, 5 of them pc nodes: state completeness is one pc node and one
 -- modus ponens per eventuality (stateCompletePC), (L5) over the states one
 -- more (betaElimPC), and each state is one pc node or a refutation.
@@ -212,8 +212,8 @@ decide-◇P-lasso = refl
 ◇P-shape = refl
 
 -- p fails at every stage, and so does ◇ p, the formula decided.  cmTrace uses
--- the evaluation that LTL.Correct carries over to Statement's semantics, so this
--- and cmUnderivable are the same fact from two ends.
+-- the evaluation that LTL.8-Procedures.Correct carries over to Statement's
+-- semantics, so this and cmUnderivable are the same fact from two ends.
 
 ◇P-trace : cmTrace ◇P ◇P-cm (var zero) 4 ≡ false ∷ false ∷ false ∷ false ∷ []
 ◇P-trace = refl
@@ -312,12 +312,12 @@ pretty-countermodel : prove (var 0 ⇒ □ var 0) ≡
 pretty-countermodel = refl
 
 ------------------------------------------------------------------------
--- LTL.Correct
+-- LTL.8-Procedures.Correct
 
--- The Boolean answer of the DecisionProcedure: (T) is valid, ◇ p is not.
+-- The Boolean answer of the DecisionProcedure: (S) is valid, ◇ p is not.
 
 correct-answers :
-  T.DecisionProcedure.decideValid decideCorrect (□ var 0 ⇒ var 0)
-  ∷ T.DecisionProcedure.decideValid decideCorrect (◇ var 0)
+  S.DecisionProcedure.decideValid decideCorrect (□ var 0 ⇒ var 0)
+  ∷ S.DecisionProcedure.decideValid decideCorrect (◇ var 0)
   ∷ [] ≡ true ∷ false ∷ []
 correct-answers = refl

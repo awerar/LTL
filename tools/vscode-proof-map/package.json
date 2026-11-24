@@ -285,7 +285,7 @@
         },
         "proofMap.root": {
           "type": "string",
-          "default": "decideCorrect",
+          "default": "statement",
           "description": "The definition at the top of the tree."
         },
         "proofMap.codeLens": {

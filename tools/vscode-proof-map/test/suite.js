@@ -30,7 +30,10 @@ exports.run = async () => {
     const [root] = api.tree.getChildren();
     const it = api.tree.getTreeItem(root);
     log(`root item: ${it.label} | ${it.description} | checkbox ${it.checkboxState} | collapsible ${it.collapsibleState}`);
-    log('children: ' + api.tree.getChildren(root).map(k => api.tree.getTreeItem(k).label).join(', '));
+    log('children: ' + api.tree.getChildren(root).map(k => {
+      const l = api.tree.getTreeItem(k).label;
+      return l.label || l;   // a stale name is a highlighted label
+    }).join(', '));
     const seen = new Set();
     const ids = new Set();
     const walk = el => {
@@ -143,7 +146,7 @@ exports.run = async () => {
     assert(api.data.frontier.every(k => api.data.defs[k].belowRoot));
     log(`focus: ${api.treeView.message} | next: ${api.nextView.message} | ` +
       `${api.data.frontier.length} next, ${api.data.frontierUp.length} bottom up`);
-    assert(/decideCorrect › decide › provableSCC/.test(api.treeView.message));
+    assert(/statement › decideCorrect › decide › provableSCC/.test(api.treeView.message));
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await vscode.commands.executeCommand('proofMap.goToFocus');
     const ed0 = vscode.window.activeTextEditor;
@@ -206,7 +209,7 @@ exports.run = async () => {
     let ranges = api.staleRanges(rootDoc);
     log(`no copy: ${ranges.changed.map(show).join(', ')}`);
     assert.strictEqual(ranges.changed.length, 1);
-    assert.strictEqual(rootDoc.getText(ranges.changed[0].range), 'decideCorrect');
+    assert.strictEqual(rootDoc.getText(ranges.changed[0].range), rootDef.name);
 
     // With a reviewed copy: one edited line and one removed line.
     const start = rootDef.line - 1;

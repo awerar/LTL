@@ -37,18 +37,11 @@ x ≢ᵛ y = ¬ᵇ (x ≡ᵛ y)
 ≢ᵛ-self x = cong ¬ᵇ_ (≡ᵛ-refl x)
 
 ∈ᵛ-sound : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ true -> v ∈ us
-∈ᵛ-sound v []       ()
-∈ᵛ-sound v (u ∷ us) e =
-  [ (λ e1 -> subst (λ z -> v ∈ z ∷ us) (≡ᵛ-sound v u e1) here)
-  , (λ e2 -> there (∈ᵛ-sound v us e2))
-  ] (∨ᵇ-true (v ≡ᵛ u) (any (v ≡ᵛ_) us) e)
+∈ᵛ-sound v us e with any-true (v ≡ᵛ_) us e
+... | u , m , e1 = subst (λ z -> z ∈ us) (sym (≡ᵛ-sound v u e1)) m
 
 ∈ᵛ-complete : (v : Node) (us : List Node) -> v ∈ us -> v ∈ᵛ us ≡ true
-∈ᵛ-complete v []       ()
-∈ᵛ-complete v (u ∷ us) here     =
-  ∨ᵇ-introˡ (v ≡ᵛ v) (any (v ≡ᵛ_) us) (≡ᵛ-refl v)
-∈ᵛ-complete v (u ∷ us) (there m) =
-  ∨ᵇ-introʳ (v ≡ᵛ u) (any (v ≡ᵛ_) us) (∈ᵛ-complete v us m)
+∈ᵛ-complete v us m = any-intro (v ≡ᵛ_) us m (≡ᵛ-refl v)
 
 ∈ᵛ-false : (v : Node) (us : List Node) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
 ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
