@@ -27,25 +27,25 @@ Val = List Bool
 bitAt : Val -> Nat -> Bool
 bitAt v i = nth v i false
 
-allVecs : Nat -> List Val
-allVecs zero    = [] ∷ []
-allVecs (suc n) = map (λ bs -> true ∷  bs) (allVecs n) ++
-                  map (λ bs -> false ∷ bs) (allVecs n)
+allVals : Nat -> List Val
+allVals zero    = [] ∷ []
+allVals (suc n) = map (λ bs -> true ∷  bs) (allVals n) ++
+                  map (λ bs -> false ∷ bs) (allVals n)
 
-allVecs-complete : (n : Nat) (v : Val) -> length v ≡ n -> v ∈ allVecs n
-allVecs-complete zero    []           e  = here
-allVecs-complete zero    (b ∷ v)      ()
-allVecs-complete (suc n) []           ()
-allVecs-complete (suc n) (true  ∷ v)  e  =
-  ∈-++⁺ˡ (map (λ bs -> true ∷ bs) (allVecs n))
-         (map (λ bs -> false ∷ bs) (allVecs n))
-         (∈-map⁺ (λ bs -> true ∷ bs) (allVecs-complete n v (suc-injective e)))
-allVecs-complete (suc n) (false ∷ v)  e  =
-  ∈-++⁺ʳ (map (λ bs -> true ∷ bs) (allVecs n))
-         (map (λ bs -> false ∷ bs) (allVecs n))
-         (∈-map⁺ (λ bs -> false ∷ bs) (allVecs-complete n v (suc-injective e)))
+allVals-complete : (n : Nat) (v : Val) -> length v ≡ n -> v ∈ allVals n
+allVals-complete zero    []           e  = here
+allVals-complete zero    (b ∷ v)      ()
+allVals-complete (suc n) []           ()
+allVals-complete (suc n) (true  ∷ v)  e  =
+  ∈-++⁺ˡ (map (λ bs -> true ∷ bs) (allVals n))
+         (map (λ bs -> false ∷ bs) (allVals n))
+         (∈-map⁺ (λ bs -> true ∷ bs) (allVals-complete n v (suc-injective e)))
+allVals-complete (suc n) (false ∷ v)  e  =
+  ∈-++⁺ʳ (map (λ bs -> true ∷ bs) (allVals n))
+         (map (λ bs -> false ∷ bs) (allVals n))
+         (∈-map⁺ (λ bs -> false ∷ bs) (allVals-complete n v (suc-injective e)))
 
--- and every member of allVecs n has length n
+-- and every member of allVals n has length n
 
 consAll-len : {n : Nat} (b : Bool) (vs : List Val)
            -> (∀[ w ∈ vs ] length w ≡ n)
@@ -54,37 +54,33 @@ consAll-len b (w ∷ ws) h v here      = cong suc (h w here)
 consAll-len b (w ∷ ws) h v (there m) =
   consAll-len b ws (λ u mu -> h u (there mu)) v m
 
-allVecs-len : (n : Nat) -> ∀[ v ∈ allVecs n ] length v ≡ n
-allVecs-len zero    v here       = refl
-allVecs-len zero    v (there ())
-allVecs-len (suc n) v m =
-  [ consAll-len true  (allVecs n) (allVecs-len n) v
-  , consAll-len false (allVecs n) (allVecs-len n) v
-  ] (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVecs n))
-           (map (λ bs -> false ∷ bs) (allVecs n)) m)
+allVals-len : (n : Nat) -> ∀[ v ∈ allVals n ] length v ≡ n
+allVals-len zero    v here       = refl
+allVals-len zero    v (there ())
+allVals-len (suc n) v m =
+  [ consAll-len true  (allVals n) (allVals-len n) v
+  , consAll-len false (allVals n) (allVals-len n) v
+  ] (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVals n))
+           (map (λ bs -> false ∷ bs) (allVals n)) m)
 
 ------------------------------------------------------------------------
 -- Lookup by first occurrence.  A member's first index is in range and
 -- carries it.
 
-indexOfCons : Bool -> Nat -> Nat
-indexOfCons true  n = zero
-indexOfCons false n = suc n
-
 indexOf : List Formula -> Formula -> Nat
 indexOf []       A = zero
-indexOf (B ∷ Bs) A = indexOfCons (B ≡ᶠ A) (indexOf Bs A)
+indexOf (B ∷ Bs) A = if B ≡ᶠ A then zero else suc (indexOf Bs A)
 
 indexOf-< : (xs : List Formula) -> ∀ⁱ[ X ∈ xs ] indexOf xs X < length xs
 indexOf-< []       ()
 indexOf-< (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
-    aux : (b : Bool) -> b ≡ true -> indexOfCons b (indexOf Bs B) < suc (length Bs)
+    aux : (b : Bool) -> b ≡ true -> (if b then zero else suc (indexOf Bs B)) < suc (length Bs)
     aux true  e  = z<s
     aux false ()
 indexOf-< (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
   where
-    aux : (b : Bool) -> indexOfCons b (indexOf Bs X) < suc (length Bs)
+    aux : (b : Bool) -> (if b then zero else suc (indexOf Bs X)) < suc (length Bs)
     aux true  = z<s
     aux false = s<s (indexOf-< Bs m)
 
@@ -94,13 +90,13 @@ indexOf-nth []       ()
 indexOf-nth (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
     aux : (b : Bool) -> b ≡ true
-       -> nth (B ∷ Bs) (indexOfCons b (indexOf Bs B)) ⊥ ≡ B
+       -> nth (B ∷ Bs) (if b then zero else suc (indexOf Bs B)) ⊥ ≡ B
     aux true  e  = refl
     aux false ()
 indexOf-nth (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X) (≡ᶠ-sound B X)
   where
     aux : (b : Bool) -> (b ≡ true -> B ≡ X)
-       -> nth (B ∷ Bs) (indexOfCons b (indexOf Bs X)) ⊥ ≡ X
+       -> nth (B ∷ Bs) (if b then zero else suc (indexOf Bs X)) ⊥ ≡ X
     aux true  f = f refl
     aux false f = indexOf-nth Bs m
 
@@ -264,14 +260,14 @@ atomsOf A = atoms (sub A)
 
 isTaut : Formula -> Bool
 isTaut A = all (λ a -> valFrom (atomsOf A) a A)
-               (allVecs (length (atomsOf A)))
+               (allVals (length (atomsOf A)))
 
 -- A formula true in every row passes the test.
 
 isTaut-intro : (A : Formula) -> ((a : Val) -> valFrom (atomsOf A) a A ≡ true)
             -> isTaut A ≡ true
 isTaut-intro A h =
-  all-intro (λ a -> valFrom (atomsOf A) a A) (allVecs (length (atomsOf A)))
+  all-intro (λ a -> valFrom (atomsOf A) a A) (allVals (length (atomsOf A)))
             (λ a m -> h a)
 
 -- and its soundness: any compositional reading of a skeleton tautology is true
@@ -287,6 +283,6 @@ tautSound f A fn fi e =
                        (λ X mX aX -> ∈-atoms⁺ (sub A) mX aX) fn fi A
                        (sub-self A)))
         (all-true (λ a -> valFrom (atomsOf A) a A)
-                  (allVecs (length (atomsOf A))) e (map f (atomsOf A))
-                  (allVecs-complete (length (atomsOf A)) (map f (atomsOf A))
+                  (allVals (length (atomsOf A))) e (map f (atomsOf A))
+                  (allVals-complete (length (atomsOf A)) (map f (atomsOf A))
                                     (map-length f (atomsOf A))))

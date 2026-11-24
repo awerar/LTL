@@ -10,7 +10,7 @@ open import LTL.5-States.Reach public
 ------------------------------------------------------------------------
 -- Vectors of a given length are inductively finite -- in O(n), not 2^n.  A
 -- valuation of length n+1 is a Bool paired with one of length n, so barProd
--- applies, and barPull transports the result back along uncons.  allVecs never
+-- applies, and barPull transports the result back along uncons.  allVals never
 -- appears.
 
 -- v has length n, as a boolean predicate (so that it can be a Bar's E).
@@ -68,7 +68,7 @@ vecIFin (suc m) =
 
 ------------------------------------------------------------------------
 -- A valuation of length n satisfies the Bar predicate hasLength n; with
--- allVecs-len (LTL.2-Syntax.Skel) this makes it a correct Bar predicate for
+-- allVals-len (LTL.2-Syntax.Skel) this makes it a correct Bar predicate for
 -- St P, and the search never touches the enumeration.
 
 hasLength-intro : (n : Nat) (v : Val) -> length v ≡ n -> hasLength n v ≡ true

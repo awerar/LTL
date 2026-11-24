@@ -14,8 +14,7 @@ open import LTL.2-Syntax.Deriv public
 -- Signed occurrences, conjunction and disjunction over a list
 
 lit : Formula -> Bool -> Formula
-lit A true  = A
-lit A false = ¬ A
+lit A b = if b then A else ¬ A
 
 infix 30 ⋀_ ⋁_
 

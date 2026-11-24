@@ -74,7 +74,7 @@ filter-≤ p []       = z≤n
 filter-≤ p (y ∷ ys) = aux (p y)
   where
     aux : (b : Bool)
-       -> length (filterCons b y (filter p ys)) ≤ suc (length ys)
+       -> length (if b then (y ∷ filter p ys) else filter p ys) ≤ suc (length ys)
     aux true  = s≤s    (filter-≤ p ys)
     aux false = ≤-step (filter-≤ p ys)
 
@@ -83,13 +83,13 @@ filter-< : {A : Set} (p : A -> Bool) (xs : List A)
         -> suc (length (filter p xs)) ≤ length xs
 filter-< p []       (x , ()      , e)
 filter-< p (y ∷ ys) (x , here    , e) =
-  subst (λ b -> suc (length (filterCons b y (filter p ys))) ≤
-                suc (length ys))
+  subst (λ b -> suc (length (if b then (y ∷ filter p ys) else filter p ys))
+                ≤ suc (length ys))
         (sym e) (s≤s (filter-≤ p ys))
 filter-< p (y ∷ ys) (x , there m , e) = aux (p y)
   where
     aux : (b : Bool)
-       -> suc (length (filterCons b y (filter p ys))) ≤ suc (length ys)
+       -> suc (length (if b then (y ∷ filter p ys) else filter p ys)) ≤ suc (length ys)
     aux true  = s≤s    (filter-< p ys (x , m , e))
     aux false = ≤-step (filter-< p ys (x , m , e))
 

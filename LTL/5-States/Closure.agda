@@ -61,7 +61,7 @@ ustSt {v} m = closureIn containsP St stAllSat vecBar v m
 -- against the folded  St  keeps the elaborator from unfolding Ust.
 
 stIsState : ∀ⁱ[ v ∈ St ] isState v ≡ true
-stIsState m = filter-prop isState (allVecs (length stateAtoms)) m
+stIsState m = filter-prop isState (allVals (length stateAtoms)) m
 
 -- Every member is a state, so (S2) can be read off it.
 

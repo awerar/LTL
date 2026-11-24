@@ -100,7 +100,7 @@ showVar (suc (suc (suc (suc (suc n))))) =
   "x" <> showNat (suc (suc (suc (suc (suc n)))))
 
 paren : Nat -> Nat -> String -> String
-paren c prec s = if c ≤ⁿ prec then s else "(" <> s <> ")"
+paren c prec s = if c ≤ⁿ prec then s else ("(" <> s <> ")")
 
 notS : Nat -> String -> String
 notS c s = paren c 30 ("¬ " <> s)

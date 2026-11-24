@@ -51,7 +51,7 @@ R = ¬ fab
 -- behind the three F's), so 32 rows and 17 states.  The closure is 8.
 
 lec-sizes : length (sub R) ∷ length (stateAtoms R)
-             ∷ length (allVecs (length (stateAtoms R)))
+             ∷ length (allVals (length (stateAtoms R)))
              ∷ length (St R) ∷ length (Ust R)
              ∷ length (eventualities R) ∷ [] ≡
                21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 3 ∷ []

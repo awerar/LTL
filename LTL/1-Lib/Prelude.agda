@@ -344,17 +344,12 @@ map : {A B : Set} -> (A -> B) -> List A -> List B
 map f []       = []
 map f (x ∷ xs) = f x ∷ map f xs
 
--- filterCons takes the boolean as an explicit argument rather than using
--- "with", so that later proofs can case on it directly instead of having to
--- reproduce a with-abstraction.
-
-filterCons : {A : Set} -> Bool -> A -> List A -> List A
-filterCons true  x ys = x ∷ ys
-filterCons false x ys = ys
+-- filter branches with if rather than "with", so that proofs about it can
+-- case on the test p x directly instead of reproducing a with-abstraction.
 
 filter : {A : Set} -> (A -> Bool) -> List A -> List A
 filter p []       = []
-filter p (x ∷ xs) = filterCons (p x) x (filter p xs)
+filter p (x ∷ xs) = if p x then (x ∷ filter p xs) else filter p xs
 
 any : {A : Set} -> (A -> Bool) -> List A -> Bool
 any p []       = false
@@ -431,30 +426,21 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 ∈-++⁺ʳ []       ys h = h
 ∈-++⁺ʳ (z ∷ xs) ys h = there (∈-++⁺ʳ xs ys h)
 
-filterCons-there : {A : Set} {x : A} (b : Bool) (y : A) (ys : List A)
-                -> x ∈ ys -> x ∈ filterCons b y ys
-filterCons-there true  y ys h = there h
-filterCons-there false y ys h = h
-
-filterCons-here : {A : Set} (b : Bool) (y : A) (ys : List A)
-               -> b ≡ true -> y ∈ filterCons b y ys
-filterCons-here true  y ys e = here
-filterCons-here false y ys ()
-
 ∈-filter⁺ : {A : Set} (p : A -> Bool) (xs : List A) {x : A}
          -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
 ∈-filter⁺ p []       ()        e
-∈-filter⁺ p (y ∷ ys) here      e = filterCons-here (p y) y (filter p ys) e
-∈-filter⁺ p (y ∷ ys) (there m) e =
-  filterCons-there (p y) y (filter p ys) (∈-filter⁺ p ys m e)
+∈-filter⁺ p (y ∷ ys) here      e = aux (p y) e
+  where
+    aux : (b : Bool) -> b ≡ true -> y ∈ (if b then (y ∷ filter p ys) else filter p ys)
+    aux true  e = here
+    aux false ()
+∈-filter⁺ p (y ∷ ys) {x} (there m) e = aux (p y)
+  where
+    aux : (b : Bool) -> x ∈ (if b then (y ∷ filter p ys) else filter p ys)
+    aux true  = there (∈-filter⁺ p ys m e)
+    aux false = ∈-filter⁺ p ys m e
 
 -- A member of filter p xs is a member of xs, and passes p.
-
-filterCons-case : {A : Set} {x y : A} (b : Bool) (ys : List A)
-               -> x ∈ filterCons b y ys -> x ≡ y ⊎ x ∈ ys
-filterCons-case true  ys here      = inl refl
-filterCons-case true  ys (there m) = inr m
-filterCons-case false ys m         = inr m
 
 ∈-filter⁻ : {A : Set} (p : A -> Bool) (xs : List A)
          -> ∀ⁱ[ x ∈ filter p xs ] x ∈ xs
@@ -462,20 +448,24 @@ filterCons-case false ys m         = inr m
 ∈-filter⁻ p (y ∷ ys) m =
   [ (λ e  -> subst (λ z -> z ∈ y ∷ ys) (sym e) here)
   , (λ m' -> there (∈-filter⁻ p ys m'))
-  ] (filterCons-case (p y) (filter p ys) m)
-
-filterCons-prop : {A : Set} {p : A -> Bool} {x y : A} (b : Bool) -> p y ≡ b
-               -> (ys : List A) -> x ∈ filterCons b y ys
-               -> (x ∈ ys -> p x ≡ true) -> p x ≡ true
-filterCons-prop true  e ys here      k = e
-filterCons-prop true  e ys (there m) k = k m
-filterCons-prop false e ys m         k = k m
+  ] (aux (p y) m)
+  where
+    aux : (b : Bool) -> ∀ {x} -> x ∈ (if b then (y ∷ filter p ys) else filter p ys)
+       -> x ≡ y ⊎ x ∈ filter p ys
+    aux true  here      = inl refl
+    aux true  (there m) = inr m
+    aux false m         = inr m
 
 filter-prop : {A : Set} (p : A -> Bool) (xs : List A)
            -> ∀ⁱ[ x ∈ filter p xs ] p x ≡ true
 filter-prop p []       ()
-filter-prop p (y ∷ ys) m =
-  filterCons-prop (p y) refl (filter p ys) m (filter-prop p ys)
+filter-prop p (y ∷ ys) m = aux (p y) refl m
+  where
+    aux : (b : Bool) -> p y ≡ b
+       -> ∀ {x} -> x ∈ (if b then (y ∷ filter p ys) else filter p ys) -> p x ≡ true
+    aux true  e here      = e
+    aux true  e (there m) = filter-prop p ys m
+    aux false e m         = filter-prop p ys m
 
 ∈-map⁺ : {A B : Set} (f : A -> B) {xs : List A}
       -> ∀ⁱ[ x ∈ xs ] f x ∈ map f xs

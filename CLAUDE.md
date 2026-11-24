@@ -37,7 +37,8 @@ derivation or a certified finite lasso countermodel.
   lambda branches parenthesised), `Σ[ x ∈ A ] B` and `A × B` (both built with
   `_,_`; `fst`/`snd`; `Statement`'s `σ , n ⊨ A` parses beside it), `x ∷ xs`,
   `xs ++ ys`, `x ∈ xs` (`here`/`there`), `xs ⊆ ys`, `m < n`, `m ≤ n`, `m + n`, `m ∸ n`,
-  `if b then x else y`, and list helpers `filter any all null concat`.
+  `if b then x else y` (a branch with an infix operator parenthesised,
+  `if p x then (x ∷ xs) else xs`), and list helpers `filter any all null concat`.
   Quantifiers bounded by a list: `∀[ x ∈ xs ] B` for `(x : _) -> x ∈ xs -> B`,
   `∀ⁱ[ x ∈ xs ] B` for `{x : _} -> x ∈ xs -> B` (x read off the membership
   proof; callers pass only `m`), and `∃[ x ∈ xs ] B` for

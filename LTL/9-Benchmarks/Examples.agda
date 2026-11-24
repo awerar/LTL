@@ -258,7 +258,7 @@ K5fwd-sub = refl
 K5fwd-atoms : length (stateAtoms (¬ axK5fwd)) ≡ 8
 K5fwd-atoms = refl
 
-K5fwd-rows : length (allVecs (length (stateAtoms (¬ axK5fwd)))) ≡ 256
+K5fwd-rows : length (allVals (length (stateAtoms (¬ axK5fwd)))) ≡ 256
 K5fwd-rows = refl
 
 K5fwd-states : length (St (¬ axK5fwd)) ≡ 59

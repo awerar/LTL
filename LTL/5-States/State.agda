@@ -83,10 +83,10 @@ isState : Val -> Bool
 isState v = all (s2At v) eventualities
 
 St : List Val
-St = filter isState (allVecs (length stateAtoms))
+St = filter isState (allVals (length stateAtoms))
 
 -- Every state has the length the search's Bar expects.
 
 stLen : ∀ⁱ[ v ∈ St ] length v ≡ length stateAtoms
 stLen {v} m =
-  allVecs-len (length stateAtoms) v (∈-filter⁻ isState (allVecs (length stateAtoms)) m)
+  allVals-len (length stateAtoms) v (∈-filter⁻ isState (allVals (length stateAtoms)) m)

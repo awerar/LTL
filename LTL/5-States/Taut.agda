@@ -178,8 +178,8 @@ module _ (Ats : List Formula) (a : Val) where
 
   skelVec∈St : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
   skelVec∈St P s2 =
-    ∈-filter⁺ (isState P) (allVecs (length (stateAtoms P)))
-              (allVecs-complete (length (stateAtoms P)) (skelVec P)
+    ∈-filter⁺ (isState P) (allVals (length (stateAtoms P)))
+              (allVals-complete (length (stateAtoms P)) (skelVec P)
                                 (map-length (valFrom Ats a) (stateAtoms P)))
                 (all-intro (s2At P (skelVec P)) (eventualities P)
                            (s2Skel P s2))

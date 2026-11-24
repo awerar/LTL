@@ -43,8 +43,8 @@ subBenAri-dup = refl
 atomsBenAri : stateAtoms benAri ≡ □ var zero ∷ var zero ∷ ○ □ var zero ∷ []
 atomsBenAri = refl
 
-allVecs-three : length (allVecs 3) ≡ 8
-allVecs-three = refl
+allVals-three : length (allVals 3) ≡ 8
+allVals-three = refl
 
 evBenAri : eventualities benAri ≡ var zero ∷ []
 evBenAri = refl
@@ -67,7 +67,7 @@ St-◇P = refl
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St-¬BenAri : length (allVecs (length (stateAtoms ¬BenAri))) ≡ 8
+St-¬BenAri : length (allVals (length (stateAtoms ¬BenAri))) ≡ 8
 St-¬BenAri = refl
 
 St-¬BenAri-count : length (St ¬BenAri) ≡ 6
@@ -89,7 +89,7 @@ St-¬BenAri-count = refl
                       1 ∷ 3 ∷ 2 ∷ []
 ◇P-succ-counts = refl
 
--- For ¬ benAri the six states are, in the order allVecs produces them, writing
+-- For ¬ benAri the six states are, in the order allVals produces them, writing
 -- the bits of the atoms  [ □ p , p , ○ □ p ] :
 --
 --   F = 1 1 1
