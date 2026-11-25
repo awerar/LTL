@@ -462,7 +462,7 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
 ∈-++⁺ʳ (z ∷ xs) ys h = there (∈-++⁺ʳ xs ys h)
 
 ∈-filter⁺ : (p : A -> Bool) (xs : List A) {x : A}
-         -> x ∈ xs -> p x ≡ true -> x ∈ filter p xs
+         -> x ∈ xs -> x ∈ᵖ p -> x ∈ filter p xs
 ∈-filter⁺ p []       ()        e
 ∈-filter⁺ p (y ∷ ys) here      e = aux (p y) e
   where
@@ -497,7 +497,7 @@ filter-prop p []       ()
 filter-prop p (y ∷ ys) m = aux (p y) refl m
   where
     aux : (b : Bool) -> p y ≡ b
-       -> ∀ {x} -> x ∈ (if b then (y ∷ filter p ys) else filter p ys) -> p x ≡ true
+       -> ∀ {x} -> x ∈ (if b then (y ∷ filter p ys) else filter p ys) -> x ∈ᵖ p
     aux true  e here      = e
     aux true  e (there m) = filter-prop p ys m
     aux false e m         = filter-prop p ys m
@@ -585,7 +585,7 @@ any-true p (y ∷ ys) e =
     (∨ᵇ-true (p y) (any p ys) e)
 
 any-intro : (p : A -> Bool) (xs : List A) {x : A}
-         -> x ∈ xs -> p x ≡ true -> any p xs ≡ true
+         -> x ∈ xs -> x ∈ᵖ p -> any p xs ≡ true
 any-intro p []       ()        e
 any-intro p (y ∷ ys) here      e = ∨ᵇ-introˡ (p y) (any p ys) e
 any-intro p (y ∷ ys) (there m) e =

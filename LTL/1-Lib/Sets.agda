@@ -53,8 +53,8 @@ data _≤_ : Nat -> Nat -> Set where
 -- the search stops with that fact, the one its callers go on to use.
 
 data AllDecision {A : Set} (p : A -> Bool) (xs : List A) : Set where
-  counterexample : (x : A) -> x ∈ xs -> p x ≡ false -> AllDecision p xs
-  allTrue        : (∀ⁱ[ x ∈ xs ] x ∈ᵖ p)            -> AllDecision p xs
+  counterexample : (x : A) -> x ∈ xs -> x ∉ᵖ p -> AllDecision p xs
+  allTrue        : (∀ⁱ[ x ∈ xs ] x ∈ᵖ p)      -> AllDecision p xs
 
 emptyAll : (p : A -> Bool) -> ∀ⁱ[ x ∈ [] ] x ∈ᵖ p
 emptyAll p ()
@@ -79,8 +79,8 @@ decideAll p (y ∷ ys) = decideAllCons (p y) refl (decideAll p ys)
 -- negated test.
 
 data AnyDecision {A : Set} (p : A -> Bool) (xs : List A) : Set where
-  witness  : (x : A) -> x ∈ xs -> p x ≡ true -> AnyDecision p xs
-  noneTrue : (∀ⁱ[ x ∈ xs ] x ∉ᵖ p)        -> AnyDecision p xs
+  witness  : (x : A) -> x ∈ xs -> x ∈ᵖ p -> AnyDecision p xs
+  noneTrue : (∀ⁱ[ x ∈ xs ] x ∉ᵖ p)      -> AnyDecision p xs
 
 decideAny : (p : A -> Bool) (xs : List A) -> AnyDecision p xs
 decideAny p xs = fromAll (decideAll (λ x -> ¬ᵇ p x) xs)
