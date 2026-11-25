@@ -93,12 +93,12 @@ module _ {ws C : List Node} (cl : C closed-under G within ws) where
     trailInto mu tNil        subset z ()
     trailInto mu (tCons e t) subset _ here      = cl mu (subset _ here) e
     trailInto mu (tCons e t) subset z (there k) =
-      trailInto (cl mu (subset _ here) e) t (λ y m -> subset y (there m)) z k
+      trailInto (cl mu (subset _ here) e) t (⊆-tail subset) z k
 
     trailEndIn : u ∈ C -> Trail u zs w -> zs ⊆ ws -> w ∈ C
     trailEndIn mu tNil        subset = mu
     trailEndIn mu (tCons e t) subset =
-      trailEndIn (cl mu (subset _ here) e) t (λ y m -> subset y (there m))
+      trailEndIn (cl mu (subset _ here) e) t (⊆-tail subset)
 
   reachesInto : u ∈ C -> Reaches ws u w -> Reaches C u w
   reachesInto mu (reachesBy zs t subset) = reachesBy zs t (trailInto mu t subset)

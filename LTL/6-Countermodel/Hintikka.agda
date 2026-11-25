@@ -74,7 +74,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
           fromFul : Fulfil A b (stretchStates loop)
                  -> ∃[ q ∈ orbit loop (s , rest) ] valOf (posState q) A ≡ false
           fromFul (ful z mz ez) =
-            fromStretch (∈-stretchStates⁻ loop (∷-⊆ (endOnCycle cy) (λ _ m -> m) z mz))
+            fromStretch (∈-stretchStates⁻ loop (∷-⊆ (endOnCycle cy) ⊆-refl z mz))
             where
               fromStretch : (∃[ q ∈ stretch loop ] posState q ≡ z)
                     -> ∃[ q ∈ orbit loop (s , rest) ]

@@ -477,14 +477,14 @@ trailFrom : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
 trailFrom tNil        subset here      = reachesBy [] tNil (λ _ ())
 trailFrom tNil        subset (there ())
 trailFrom (tCons e t) subset here      = reachesBy _ (tCons e t) subset
-trailFrom (tCons e t) subset (there k) = trailFrom t (λ y m -> subset y (there m)) k
+trailFrom (tCons e t) subset (there k) = trailFrom t (⊆-tail subset) k
 
 trailTo : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
 trailTo tNil        subset ()
 trailTo (tCons e t) subset here      =
   reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (subset _ here) (λ _ ()))
 trailTo (tCons e t) subset (there k) =
-  reachesCons (subset _ here) e (trailTo t (λ y m -> subset y (there m)) k)
+  reachesCons (subset _ here) e (trailTo t (⊆-tail subset) k)
 
 -- Observation one: a vertex on a cycle has a successor inside ws.  Along a
 -- trail every vertex visited has one provided the endpoint has, and for a
@@ -505,9 +505,9 @@ trailSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w
          -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
 trailSucc tNil        subset hw ()
 trailSucc (tCons e t) subset hw here      =
-  headSucc t (λ y m -> subset y (there m)) hw
+  headSucc t (⊆-tail subset) hw
 trailSucc (tCons e t) subset hw (there k) =
-  trailSucc t (λ y m -> subset y (there m)) hw k
+  trailSucc t (⊆-tail subset) hw k
 
 loopSucc : {r : Node} (l : Loop ws r) -> ∀ⁱ[ x ∈ Loop.cycle l ] HasSucc ws x
 loopSucc (loopBy q qs t@(tCons e _) h) = trailSucc t h (hasSucc q (h q here) e)

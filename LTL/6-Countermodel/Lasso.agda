@@ -78,7 +78,7 @@ module _ (cy : Cycle) where
             step (posState pos) (posState (nextPos loop pos)) ≡ true
   posStep (vpos s []       tNil           subset) = loopValid , closingStep
   posStep (vpos s (w ∷ ws) (tCons st wk) subset) =
-    vpos w ws wk (λ z m -> subset z (there m)) , st
+    vpos w ws wk (⊆-tail subset) , st
 
   posIterValid : (pos : Pos) (t : Nat) -> ValidPos b pos
               -> ValidPos b (posIter loop pos t)
