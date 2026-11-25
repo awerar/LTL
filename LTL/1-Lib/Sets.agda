@@ -54,13 +54,13 @@ data _≤_ : Nat -> Nat -> Set where
 
 data AllDecision {A : Set} (p : A -> Bool) (xs : List A) : Set where
   counterexample : (x : A) -> x ∈ xs -> p x ≡ false -> AllDecision p xs
-  allTrue        : (∀ⁱ[ x ∈ xs ] p x ≡ true)         -> AllDecision p xs
+  allTrue        : (∀ⁱ[ x ∈ xs ] x ∈ᵖ p)            -> AllDecision p xs
 
-emptyAll : (p : A -> Bool) -> ∀ⁱ[ x ∈ [] ] p x ≡ true
+emptyAll : (p : A -> Bool) -> ∀ⁱ[ x ∈ [] ] x ∈ᵖ p
 emptyAll p ()
 
-consAll : p y ≡ true -> (∀ⁱ[ x ∈ ys ] p x ≡ true)
-       -> ∀ⁱ[ x ∈ y ∷ ys ] p x ≡ true
+consAll : y ∈ᵖ p -> (∀ⁱ[ x ∈ ys ] x ∈ᵖ p)
+       -> ∀ⁱ[ x ∈ y ∷ ys ] x ∈ᵖ p
 consAll e f here      = e
 consAll e f (there m) = f m
 
@@ -80,7 +80,7 @@ decideAll p (y ∷ ys) = decideAllCons (p y) refl (decideAll p ys)
 
 data AnyDecision {A : Set} (p : A -> Bool) (xs : List A) : Set where
   witness  : (x : A) -> x ∈ xs -> p x ≡ true -> AnyDecision p xs
-  noneTrue : (∀ⁱ[ x ∈ xs ] p x ≡ false)     -> AnyDecision p xs
+  noneTrue : (∀ⁱ[ x ∈ xs ] x ∉ᵖ p)        -> AnyDecision p xs
 
 decideAny : (p : A -> Bool) (xs : List A) -> AnyDecision p xs
 decideAny p xs = fromAll (decideAll (λ x -> ¬ᵇ p x) xs)
@@ -103,7 +103,7 @@ filter-≤ p (y ∷ ys) = aux (p y)
     aux false = ≤-step (filter-≤ p ys)
 
 filter-< : (p : A -> Bool) (xs : List A)
-        -> ∃[ x ∈ xs ] p x ≡ false
+        -> ∃[ x ∈ xs ] x ∉ᵖ p
         -> suc (length (filter p xs)) ≤ length xs
 filter-< p []       (x , ()      , e)
 filter-< p (y ∷ ys) (x , here    , e) =

@@ -104,7 +104,7 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts sst)
     fair : Fair cyc
     fair A mA pr = onW (wit (evPred A) (∈-evPreds⁺ mA))
       where
-        onW : (∃[ z ∈ cy ] evPred A z ≡ true)
+        onW : (∃[ z ∈ cy ] z ∈ᵖ evPred A)
            -> Fulfil A r cy
         onW (z , mz , ez) =
           [ (λ f -> f) , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]

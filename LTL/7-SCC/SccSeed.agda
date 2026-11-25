@@ -23,7 +23,7 @@ ustSeedTo : ∀[ w ∈ Ust ] Seeded containsP Ust w
 ustSeedTo w m =
   seededBy seed mu seedHolds (reachesInto ustClosed mu reaches)
   where
-    open Seeded (closureSeeded containsP St stAllSat stateFinite w m)
+    open Seeded (closureSeeded containsP St stInside stateFinite w m)
 
     mu : seed ∈ Ust
     mu = ustSeed seedIn seedHolds

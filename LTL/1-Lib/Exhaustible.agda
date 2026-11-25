@@ -69,7 +69,7 @@ _⁻¹_ : (B -> A) -> Subset A -> Subset B
 (f ⁻¹ E) y = E (f y)
 
 _⊆ᵖ_ : Subset A -> Subset A -> Set
-E ⊆ᵖ F = (x : _) -> E x ≡ true -> F x ≡ true
+E ⊆ᵖ F = (x : _) -> x ∈ᵖ E -> x ∈ᵖ F
 
 ⊆ᵖ-refl : E ⊆ᵖ E
 ⊆ᵖ-refl x e = e
@@ -107,7 +107,7 @@ record Exhaustible {A : Set} (Apart : Apartness A) (Pool : Subset A)
   pattern
   constructor everyPick
   field
-    next : (x : A) -> Pool x ≡ true -> Exhaustible Apart (Pool ∩ Apart x)
+    next : (x : A) -> x ∈ᵖ Pool -> Exhaustible Apart (Pool ∩ Apart x)
 
 exhaustibleSubset : Pool ⊆ᵖ Pool'
                  -> Exhaustible Apart Pool' -> Exhaustible Apart Pool

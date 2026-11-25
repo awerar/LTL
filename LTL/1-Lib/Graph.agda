@@ -79,9 +79,9 @@ trailEnd (tCons e t) = there (trailEnd t)
 record Reaches (ws : List Node) (v w : Node) : Set where
   constructor reachesBy
   field
-    via    : List Node
-    trail  : Trail v via w
-    inside : via ⊆ ws
+    via     : List Node
+    trail   : Trail v via w
+    staysIn : via ⊆ ws
 
 -- A set C closed under G inside ws keeps every trail inside ws that starts in
 -- it: the trail lies in C, and so does its endpoint.
@@ -147,30 +147,18 @@ module _ (Seed : Pred) (ws : List Node) where
   -- and the pool with it.
 
   availRound : (acc : List Node) (x : Node)
-            -> x ∈ ws -> missing acc x ≡ true -> AllSat Pool (ws ∖ acc)
-            -> AllSat (Pool ∩ (x ≢ᵛ_)) (ws ∖ addRound acc)
-  availRound {Pool} acc x m xMissing avail z mz =
-    ∧ᵇ-intro (Pool z) (x ≢ᵛ z) (avail z (∈-∖⁺ acc (∖-⊆ ws (addRound acc) z mz) outAcc))
-             (cong ¬ᵇ_ outX)
-    where
-      e : z ∈ᵛ addRound acc ≡ false
-      e = ∈-∖⁻ ws (addRound acc) mz
+            -> x ∈ ws -> x ∈ᵖ missing acc -> (ws ∖ acc) inside Pool
+            -> (ws ∖ addRound acc) inside Pool ∩ (x ≢ᵛ_)
+  availRound acc x m xMissing avail =
+    inside-∩ (inside-⊆ (∖-antitone ws (λ z -> ∈-++⁺ʳ (filter (missing acc) ws) acc))
+                       avail)
+             (∖-apart ws (addRound acc)
+                      (∈-++⁺ˡ (filter (missing acc) ws) acc
+                              (∈-filter⁺ (missing acc) ws m xMissing)))
 
-      outAcc : z ∈ᵛ acc ≡ false
-      outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
-        ∈ᵛ-false z (addRound acc) e
-          (∈-++⁺ʳ (filter (missing acc) ws) acc (∈ᵛ-sound z acc eb))
-
-      outX : x ≡ᵛ z ≡ false
-      outX = refuteTrue (x ≡ᵛ z) λ eb ->
-        ∈ᵛ-false z (addRound acc) e
-          (subst (λ y -> y ∈ addRound acc) (≡ᵛ-sound x z eb)
-                 (∈-++⁺ˡ (filter (missing acc) ws) acc
-                         (∈-filter⁺ (missing acc) ws m xMissing)))
-
-  growGo   : (acc : List Node) -> AllSat Pool (ws ∖ acc)
+  growGo   : (acc : List Node) -> (ws ∖ acc) inside Pool
           -> Finiteᵛ Pool -> List Node
-  growFind : (acc : List Node) -> AllSat Pool (ws ∖ acc)
+  growFind : (acc : List Node) -> (ws ∖ acc) inside Pool
           -> Finiteᵛ Pool -> AnyDecision (missing acc) ws -> List Node
 
   growGo acc avail fin = growFind acc avail fin (decideAny (missing acc) ws)
@@ -187,16 +175,16 @@ module _ (Seed : Pred) (ws : List Node) where
   -- condition and the invariants of the closure are its instances.
 
   growElim : (P : List Node -> List Node -> Set)
-          -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
+          -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] x ∉ᵖ missing acc)
                 -> P acc acc)
           -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
-          -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
+          -> (acc : List Node) (avail : (ws ∖ acc) inside Pool) (fin : Finiteᵛ Pool)
           -> P acc (growGo acc avail fin)
   growElimFind : (P : List Node -> List Node -> Set)
-              -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
+              -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] x ∉ᵖ missing acc)
                     -> P acc acc)
               -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
-              -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
+              -> (acc : List Node) (avail : (ws ∖ acc) inside Pool) (fin : Finiteᵛ Pool)
                  (fr : AnyDecision (missing acc) ws)
               -> P acc (growFind acc avail fin fr)
 
@@ -216,7 +204,7 @@ module _ (Seed : Pred) (ws : List Node) where
 
   growInv : (I : List Node -> Set)
          -> ((acc : List Node) -> I acc -> I (addRound acc))
-         -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
+         -> (acc : List Node) (avail : (ws ∖ acc) inside Pool) (fin : Finiteᵛ Pool)
          -> I acc -> I (growGo acc avail fin)
   growInv I round =
     growElim (λ acc r -> I acc -> I r) (λ acc f i -> i)
@@ -271,7 +259,7 @@ roundSeeded Seed ws acc sd z m =
               seededBy seed seedIn seedHolds
                        (reachesBy (via ++ z ∷ [])
                                   (trailApp trail (tCons gy tNil))
-                                  (++-⊆ via inside (∷-⊆ z∈ws (λ _ ()))))
+                                  (++-⊆ via staysIn (∷-⊆ z∈ws (λ _ ()))))
               where
                 open Seeded (sd y my)
                 open Reaches reaches
@@ -280,20 +268,20 @@ roundSeeded Seed ws acc sd z m =
 -- The closure itself, and its four properties.  subset and fin say which pool
 -- the search recurses on: every vertex of ws is in it, and it is finite.
 
-closure : (Seed : Pred) (ws : List Node) -> AllSat Pool ws -> Finiteᵛ Pool
+closure : (Seed : Pred) (ws : List Node) -> ws inside Pool -> Finiteᵛ Pool
        -> List Node
 closure Seed ws subset fin =
   growGo Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz)) fin
 
-module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : AllSat Pool ws)
+module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : ws inside Pool)
          (fin : Finiteᵛ Pool) where
 
   private
-    avail0 : AllSat Pool (ws ∖ [])
+    avail0 : (ws ∖ []) inside Pool
     avail0 z mz = subset z (∖-⊆ ws [] z mz)
 
-    done : ∀ⁱ[ x ∈ ws ] missing Seed ws (closure Seed ws subset fin) x ≡ false
-    done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] missing Seed ws r x ≡ false)
+    done : ∀ⁱ[ x ∈ ws ] x ∉ᵖ missing Seed ws (closure Seed ws subset fin)
+    done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] x ∉ᵖ missing Seed ws r)
                     (λ acc f -> f) (λ acc r d -> d) [] avail0 fin
 
   closureIn : ∀[ z ∈ closure Seed ws subset fin ] z ∈ ws
@@ -319,26 +307,26 @@ module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : AllSat Pool ws)
 -- The reachable set: the closure of the single seed v, on listFinite ws.
 
 reachSet : List Node -> Node -> List Node
-reachSet ws v = closure (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws)
+reachSet ws v = closure (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws)
 
 reachIn : (ws : List Node) (v : Node)
        -> ∀ⁱ[ z ∈ reachSet ws v ] z ∈ ws
-reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws) z
+reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws) z
 
 reachTrail : (ws : List Node) (v : Node)
           -> ∀ⁱ[ z ∈ reachSet ws v ] Reaches ws v z
 reachTrail ws v {z} m =
   subst (λ y -> Reaches ws y z) (sym (≡ᵛ-sound v seed seedHolds)) reaches
-  where open Seeded (closureSeeded (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws) z m)
+  where open Seeded (closureSeeded (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws) z m)
 
 reachSeed : (ws : List Node) (v : Node)
          -> v ∈ ws -> v ∈ reachSet ws v
 reachSeed ws v mv =
-  closureSeed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws) mv (≡ᵛ-refl v)
+  closureSeed (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws) mv (≡ᵛ-refl v)
 
 reachClosed : (ws : List Node) (v : Node)
            -> reachSet ws v closed-under G within ws
-reachClosed ws v = closureClosed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws)
+reachClosed ws v = closureClosed (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws)
 
 -- Completeness: the set is closed under G inside ws, so a trail inside ws
 -- from a member ends in it.

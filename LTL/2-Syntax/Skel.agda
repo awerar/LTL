@@ -98,26 +98,11 @@ indexOf-nth (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X) (≡ᶠ-sound B X)
     aux false f = indexOf-nth Bs m
 
 ------------------------------------------------------------------------
--- A list of formulas without repetition, keeping first occurrences.  sub P
--- repeats formulas; nub gives the set it stands for.
+-- A list of formulas without repetition (LTL.1-Lib.DecEq's nub, at
+-- formulaEq).  sub P repeats formulas; nub gives the set it stands for.
 
-nub : List Formula -> List Formula
-nub []       = []
-nub (A ∷ As) = A ∷ filter (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
-
-∈-nub⁺ : (As : List Formula) -> ∀ⁱ[ X ∈ As ] X ∈ nub As
-∈-nub⁺ []       ()
-∈-nub⁺ (A ∷ As) here = here
-∈-nub⁺ (A ∷ As) {X} (there m) with A ≡ᶠ X in e
-... | true  = subst (λ Y -> Y ∈ nub (A ∷ As)) (≡ᶠ-sound A X e) here
-... | false = there (∈-filter⁺ (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As)
-                               (∈-nub⁺ As m) (cong ¬ᵇ_ e))
-
-nub-sub : (As : List Formula) -> ∀ⁱ[ X ∈ nub As ] X ∈ As
-nub-sub []       ()
-nub-sub (A ∷ As) here      = here
-nub-sub (A ∷ As) (there m) =
-  there (nub-sub As (∈-filter⁻ (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As) m))
+open import LTL.1-Lib.DecEq using (module Nub)
+open Nub formulaEq public
 
 ------------------------------------------------------------------------
 -- The atoms of a list of formulas: its var, ○ and □ entries, each once (a

@@ -157,7 +157,7 @@ module _ (cy : Cycle) where
       □Holds e =
         all-intro (evalAt loop B) (orbit loop pos) atQ
         where
-          atQ : ∀[ q ∈ orbit loop pos ] evalAt loop B q ≡ true
+          atQ : ∀[ q ∈ orbit loop pos ] q ∈ᵖ evalAt loop B
           atQ q m =
             trans (sym (ih q (orbitValid cy pos q vp m)))
                   (□True B mA pos q vp m e)

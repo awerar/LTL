@@ -54,8 +54,7 @@ extractBlock : (ws C : List Val) (u : Val)
             -> u ∈ Ust -> Refuted ws
             -> (A : Formula) -> □ A ∈ sub P
             -> C ⊆ Ust
-            -> ((z y : Val) -> z ∈ C -> y ∈ St -> y ∈ᵛ ws ≡ true
-                  -> step z y ≡ true -> y ∈ C)
+            -> C closed-under step within (St ∩ˡ ws)
             -> (∀[ z ∈ C ] valOf z A ≡ true)
             -> valOf u (□ A) ≡ false -> u ∈ C
             -> ⊢ ¬ (chi u)
@@ -83,7 +82,8 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
             by∈ᵛ with w' ∈ᵛ ws in eb
             ... | false =
               mp ¬Elim (ih w' (ustClosed (cUst w m) (fst pr) (snd pr)) eb)
-            ... | true  = betaIntro C (cCl w w' m (fst pr) eb (snd pr))
+            ... | true  =
+              betaIntro C (cCl m (∈-∩ˡ⁺ ws (fst pr) (∈ᵛ-sound w' ws eb)) (snd pr))
 
     bNext : ⊢ (beta C) ⇒ ○ (beta C)
     bNext = betaElim C eachN
@@ -115,7 +115,7 @@ sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 -- component is intersected with Ust P.
 
 blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
-         -> C closed-under step within ws -> NoneSat f C
+         -> C closed-under step within ws -> C avoids f
          -> HoldsOutside UstRef ws
          -> ∀[ z ∈ C ] UstRef z
 blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
@@ -124,44 +124,30 @@ blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
        -> ⊢ ¬ (chi z)
     onA (A , mA , ef) =
       extractBlock ws D z mzU (refutedOf ws ih) A (evSub mA)
-                   dUst dCl dHold pend mzD
+                   (∩ˡ-snd C Ust) dCl dHold pend (∈-∩ˡ⁺ Ust mz mzU)
       where
-        missA : ∀[ y ∈ C ] evPred A y ≡ false
+        missA : ∀[ y ∈ C ] y ∉ᵖ evPred A
         missA y my = subst (λ h -> h y ≡ false) ef (mis y my)
 
         -- the component, cut down to the states chi is stated for
         D : List Val
-        D = filter (λ y -> y ∈ᵛ Ust) C
-
-        dC : ∀[ y ∈ D ] y ∈ C
-        dC y m = ∈-filter⁻ (λ t -> t ∈ᵛ Ust) C m
-
-        dUst : ∀[ y ∈ D ] y ∈ Ust
-        dUst y m = ∈ᵛ-sound y Ust (filter-prop (λ t -> t ∈ᵛ Ust) C m)
-
-        into : (y : Val) -> y ∈ C -> y ∈ Ust -> y ∈ D
-        into y my mu =
-          ∈-filter⁺ (λ t -> t ∈ᵛ Ust) C my (∈ᵛ-complete y Ust mu)
+        D = C ∩ˡ Ust
 
         -- still closed: C's closure puts the successor in C, ustClosed puts
         -- it in Ust P, and D is the intersection
-        dCl : (y y' : Val) -> y ∈ D -> y' ∈ St -> y' ∈ᵛ ws ≡ true
-           -> step y y' ≡ true -> y' ∈ D
-        dCl y y' my my' ew st =
-          into y' (cl (dC y my) (∈ᵛ-sound y' ws ew) st)
-                  (ustClosed (dUst y my) my' st)
+        dCl : D closed-under step within (St ∩ˡ ws)
+        dCl my my' st =
+          ∈-∩ˡ⁺ Ust (cl (∩ˡ-fst C Ust _ my) (∩ˡ-snd St ws _ my') st)
+                    (ustClosed (∩ˡ-snd C Ust _ my) (∩ˡ-fst St ws _ my') st)
 
         dHold : ∀[ y ∈ D ] valOf y A ≡ true
         dHold y my =
           ¬ᵇ-false (valOf y A)
                    (∨ᵇ-falseʳ (valOf y (□ A)) (¬ᵇ valOf y A)
-                              (missA y (dC y my)))
+                              (missA y (∩ˡ-fst C Ust y my)))
 
         pend : valOf z (□ A) ≡ false
         pend = ∨ᵇ-falseˡ (valOf z (□ A)) (¬ᵇ valOf z A) (missA z mz)
-
-        mzD : z ∈ D
-        mzD = into z mz mzU
 
 ------------------------------------------------------------------------
 -- A certificate refutes everything it covers.
@@ -187,4 +173,4 @@ ustCertRefuted c = certRefuted c ustRefuted
 sccGraph : FairIn Ust evPreds ⊎
            Cert evPreds Ust
 sccGraph =
-  graphGo evPreds Ust (AllSat-∈ᵛ Ust) (listFinite Ust)
+  graphGo evPreds Ust (inside-∈ᵛ Ust) (listFinite Ust)

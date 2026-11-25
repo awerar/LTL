@@ -61,11 +61,13 @@ derivation or a certified finite lasso countermodel.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
-  `C closed-under G within ws`, `NoneSat f C`, `HoldsOutside R ws`,
-  `AllSat Pool xs`, `Finiteᵛ Pool` (all `LTL/1-Lib/Nodes.agda`, as is list
-  difference `ws ∖ C`, so a growing search's invariant is
-  `AllSat Pool (ws ∖ acc)`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
-  Boolean predicates as sets use `Exhaustible`'s algebra: `E ∩ F`, `E ∪ F`,
+  `C closed-under G within ws`, `C avoids f`, `HoldsOutside R ws`,
+  `xs inside Pool`, `Finiteᵛ Pool` (all `LTL/1-Lib/Nodes.agda`; list
+  difference `ws ∖ C` is `Membership`'s, in `LTL/1-Lib/DecEq.agda`, and a
+  growing search's invariant is `(ws ∖ acc) inside Pool`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
+  Boolean predicates as sets: membership is `x ∈ᵖ E` / `x ∉ᵖ E` (`Prelude`;
+  `E x ≡ true` / `≡ false`), so "every member of xs passes p" is
+  `∀[ x ∈ xs ] x ∈ᵖ p`; the algebra is `Exhaustible`'s: `E ∩ F`, `E ∪ F`,
   `f ⁻¹ E`, `E ⊆ᵖ F`, so a pool shrunk by a pick is `Pool ∩ (x ≢ᵛ_)`, not
   `λ y -> Pool y ∧ᵇ (x ≢ᵛ y)`. The searches recurse on
   `Exhaustible Apart Pool` (`Finiteᵛ Pool` at nodes): `Pool` is the set
@@ -118,7 +120,7 @@ derivation or a certified finite lasso countermodel.
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
   `subset`/`fin`/`avail`/`next` binders, `x∈` for "x is in the pool") are
-  explained above `AllSat` in `LTL/1-Lib/Nodes.agda`.
+  explained above `Inside` in `LTL/1-Lib/Nodes.agda`.
 - Comments explain the code as it is today. A module header is about 5–15
   lines: what the module provides and its one or two non-obvious design
   choices. A comment above a definition is 1–4 lines, longer only for a subtle
@@ -152,6 +154,7 @@ module name). Folder names never equal a module name.
 0. **Specification** (root) — `Statement` (read-only, see above).
 1. **Foundations** (`1-Lib/`) — `Base` (Nat and Bool from `Agda.Builtin`, `Statement`'s Empty, Unit,
    `≡`); `Prelude` (`≡ⁿ`, `⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
+   `∈ᵖ`/`∉ᵖ` (membership in a Boolean predicate),
    `<`, `nth`, Boolean connectives and all Boolean lemmas, `refuteTrue`, and
    membership in both directions for `++`, `map`, `filter`, `any`, `all`).
    Generic set layer, used by the graph layer at
@@ -163,12 +166,17 @@ module name). Folder names never equal a module name.
    `everyPick`, and their closure lemmas `exhaustibleSubset`, `exhaustibleUnion`,
    `exhaustibleProd`, `exhaustiblePreimage`; all searches recurse on one); `DecEq` (the record `DecEq A` bundling a Boolean
    equality test `_≡ᵛ_` with its soundness and reflexivity; module
-   `Membership`: `∈ᵛ`, `≢ᵛ` and their lemmas; `Finite eq Pool`, `Exhaustible`
+   `Membership`: lists as sets, `∈ᵛ`, `≢ᵛ`, list difference `∖`/`∖ᵛ`
+   (`ws ∖ᵛ x` is `ws ∖ (x ∷ [])`), intersection `∩ˡ`, and their lemmas;
+   module `Nub`: `nub`, kept out of `Membership` so that `Nodes` at `Val`
+   brings no second copy beside `Skel`'s; `Finite eq Pool`, `Exhaustible`
    with `≢ᵛ` as apartness; the instance `boolEq` at Bool and `boolFinite`);
    `Nodes` (parameterised by a
    node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finiteᵛ`
    (`Finite eq`),
-   `listFinite`, the hypothesis names, list difference `∖ᵛ`/`∖`). m5's graph layer, parameterised like `Nodes` and by the
+   `listFinite`, the hypothesis names, and the algebra of `xs inside Pool`,
+   the bridge from lists to pools: `inside-⊆`, `inside-∩`, `inside-apart`,
+   `dropInside`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the
    `fairGraph` certificate theorem, `certAll`, exclusivity, `certShape`;
@@ -178,8 +186,8 @@ module name). Folder names never equal a module name.
    inside the P-modules their names read `Reaches ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
-   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
-   `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
+   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ` and `formulaEq`, its `DecEq`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
+   `indexOf`, `nub` (`Nub formulaEq`), `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).

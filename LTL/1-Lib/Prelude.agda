@@ -394,11 +394,20 @@ concatMap f (x ∷ xs) = f x ++ concatMap f xs
 ------------------------------------------------------------------------
 -- Membership
 
-infix 4 _∈_
+infix 4 _∈_ _∈ᵖ_ _∉ᵖ_
 
 data _∈_ {A : Set} (x : A) : List A -> Set where
   here  : {xs : List A}              -> x ∈ x ∷ xs
   there : {y : A} {xs : List A} -> x ∈ xs -> x ∈ y ∷ xs
+
+-- Membership in a set given as a Boolean predicate (Subset in
+-- LTL.1-Lib.Exhaustible): x ∈ᵖ E holds when E x is true.
+
+_∈ᵖ_ : A -> (A -> Bool) -> Set
+x ∈ᵖ E = E x ≡ true
+
+_∉ᵖ_ : A -> (A -> Bool) -> Set
+x ∉ᵖ E = E x ≡ false
 
 -- Quantifiers bounded by a list.  ∀[ x ∈ xs ] B  is  (x : _) -> x ∈ xs -> B,
 -- ∀ⁱ[ x ∈ xs ] B  is  {x : _} -> x ∈ xs -> B, for when x is read off the
@@ -476,7 +485,7 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
     aux false m         = inr m
 
 filter-prop : (p : A -> Bool) (xs : List A)
-           -> ∀ⁱ[ x ∈ filter p xs ] p x ≡ true
+           -> ∀ⁱ[ x ∈ filter p xs ] x ∈ᵖ p
 filter-prop p []       ()
 filter-prop p (y ∷ ys) m = aux (p y) refl m
   where
@@ -554,7 +563,7 @@ nth-map f (x ∷ xs) (suc i) (s<s l) d e = nth-map f xs i l d e
 -- any and all against membership
 
 any-true : (p : A -> Bool) (xs : List A) -> any p xs ≡ true
-        -> ∃[ x ∈ xs ] p x ≡ true
+        -> ∃[ x ∈ xs ] x ∈ᵖ p
 any-true p []       ()
 any-true p (y ∷ ys) e =
   [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (any-true p ys e2)) ]
@@ -568,34 +577,34 @@ any-intro p (y ∷ ys) (there m) e =
   ∨ᵇ-introʳ (p y) (any p ys) (any-intro p ys m e)
 
 any-false : (p : A -> Bool) (xs : List A) -> any p xs ≡ false
-         -> ∀ⁱ[ x ∈ xs ] p x ≡ false
+         -> ∀ⁱ[ x ∈ xs ] x ∉ᵖ p
 any-false p []       e  ()
 any-false p (y ∷ ys) e here      = ∨ᵇ-falseˡ (p y) (any p ys) e
 any-false p (y ∷ ys) e (there m) =
   any-false p ys (∨ᵇ-falseʳ (p y) (any p ys) e) m
 
 all-true : (p : A -> Bool) (xs : List A)
-        -> all p xs ≡ true -> ∀[ x ∈ xs ] p x ≡ true
+        -> all p xs ≡ true -> ∀[ x ∈ xs ] x ∈ᵖ p
 all-true p []       e x ()
 all-true p (y ∷ ys) e x here      = ∧ᵇ-trueˡ (p y) (all p ys) e
 all-true p (y ∷ ys) e x (there m) = all-true p ys (∧ᵇ-trueʳ (p y) (all p ys) e) x m
 
 all-false-intro : (p : A -> Bool) (xs : List A)
-               -> ∃[ x ∈ xs ] p x ≡ false -> all p xs ≡ false
+               -> ∃[ x ∈ xs ] x ∉ᵖ p -> all p xs ≡ false
 all-false-intro p []       (x , ()      , e)
 all-false-intro p (y ∷ ys) (x , here    , e) = cong (λ c -> c ∧ᵇ all p ys) e
 all-false-intro p (y ∷ ys) (x , there m , e) =
   ∧ᵇ-false-introʳ (p y) (all p ys) (all-false-intro p ys (x , m , e))
 
 all-false : (p : A -> Bool) (xs : List A) -> all p xs ≡ false
-         -> ∃[ x ∈ xs ] p x ≡ false
+         -> ∃[ x ∈ xs ] x ∉ᵖ p
 all-false p []       ()
 all-false p (y ∷ ys) e =
   [ (λ e1 -> y , here , e1) , (λ e2 -> there-∃ (all-false p ys e2)) ]
     (∧ᵇ-false (p y) (all p ys) e)
 
 all-intro : (p : A -> Bool) (xs : List A)
-         -> (∀[ x ∈ xs ] p x ≡ true) -> all p xs ≡ true
+         -> (∀[ x ∈ xs ] x ∈ᵖ p) -> all p xs ≡ true
 all-intro p []       f = refl
 all-intro p (y ∷ ys) f =
   ∧ᵇ-intro (p y) (all p ys) (f y here) (all-intro p ys (λ x m -> f x (there m)))

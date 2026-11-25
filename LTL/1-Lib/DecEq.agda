@@ -1,12 +1,13 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.1-Lib.DecEq -- a type with a sound, reflexive Boolean equality test, and
--- list membership and finiteness decided by it.
+-- LTL.1-Lib.DecEq -- a type with a sound, reflexive Boolean equality test,
+-- lists as sets decided by it, and finiteness.
 --
 -- DecEq A bundles the test with its two lemmas, so the graph layer takes one
 -- argument for it; boolEq is the instance at Bool, LTL.5-States.Reach builds
 -- the one at Val, and LTL.9-Tests.GraphExamples one at Nat.  Membership eq
--- opens the record and adds ∈ᵛ and ≢ᵛ.  It is a module rather than
+-- opens the record and adds membership ∈ᵛ, inequality ≢ᵛ, list difference
+-- ∖ and ∖ᵛ, and list intersection ∩ˡ; Nub eq adds nub.  It is a module rather than
 -- definitions inside the record, so each lemma stays a definition of its own.
 -- Finite eq Pool is exhaustibility (LTL.1-Lib.Exhaustible) with ≢ᵛ as the
 -- apartness; LTL.1-Lib.Nodes fixes eq.  The superscript ᵛ reads "vertex", the
@@ -52,9 +53,101 @@ module Membership {A : Set} (eq : DecEq A) where
   ∈ᵛ-false : (v : A) (us : List A) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
   ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
 
+  ∉ᵛ-intro : (v : A) (us : List A) -> (v ∈ us -> Empty) -> v ∈ᵛ us ≡ false
+  ∉ᵛ-intro v us no = refuteTrue (v ∈ᵛ us) λ e -> no (∈ᵛ-sound v us e)
+
   null-∈ᵛ : (ws : List A) (z : A) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
   null-∈ᵛ []       z e = refl
   null-∈ᵛ (w ∷ ws) z ()
+
+  -- A test that holds at z and fails at x separates them.
+  separate : (p : A -> Bool) {x z : A} -> x ∉ᵖ p -> z ∈ᵖ p -> x ≢ᵛ z ≡ true
+  separate p {x} {z} q e = cong ¬ᵇ_ (refuteTrue (x ≡ᵛ z) λ eb ->
+    true≢false (trans (sym (subst (λ u -> p u ≡ true) (sym (≡ᵛ-sound x z eb)) e)) q))
+
+  -- List difference.  ws ∖ C is what is left of ws once C is taken out, and
+  -- ws ∖ᵛ x is the case C = x ∷ [], so that removing a vertex and removing a
+  -- block are one operation with one set of lemmas.  The lemmas take both lists
+  -- explicitly, as filter's do, since Agda cannot read them back off the filter.
+
+  infixl 6 _∖ᵛ_ _∖_
+
+  _∖_ : List A -> List A -> List A
+  ws ∖ C = filter (λ z -> ¬ᵇ (z ∈ᵛ C)) ws
+
+  _∖ᵛ_ : List A -> A -> List A
+  ws ∖ᵛ x = ws ∖ (x ∷ [])
+
+  ∖-⊆ : (ws C : List A) -> ws ∖ C ⊆ ws
+  ∖-⊆ ws C z m = ∈-filter⁻ (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m
+
+  ∈-∖⁺ : {ws : List A} {z : A} (C : List A)
+      -> z ∈ ws -> z ∈ᵛ C ≡ false -> z ∈ ws ∖ C
+  ∈-∖⁺ {ws} C m e = ∈-filter⁺ (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m (cong ¬ᵇ_ e)
+
+  ∈-∖⁻ : (ws C : List A) {z : A} -> z ∈ ws ∖ C -> z ∈ᵛ C ≡ false
+  ∈-∖⁻ ws C {z} m = ¬ᵇ-true (z ∈ᵛ C) (filter-prop (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m)
+
+  -- A part of ws that misses C stays in ws ∖ C: how a cycle survives a
+  -- removal step.
+
+  ⊆-∖ : {zs ws : List A} (C : List A)
+      -> zs ⊆ ws -> (∀[ z ∈ zs ] (z ∈ C -> Empty)) -> zs ⊆ ws ∖ C
+  ⊆-∖ C subset out z mz = ∈-∖⁺ C (subset z mz) (∉ᵛ-intro z C (out z mz))
+
+  ∖-antitone : (ws : List A) {C D : List A} -> C ⊆ D -> ws ∖ D ⊆ ws ∖ C
+  ∖-antitone ws {C} {D} s z m =
+    ∈-∖⁺ C (∖-⊆ ws D z m)
+         (∉ᵛ-intro z C (λ mc -> ∈ᵛ-false z D (∈-∖⁻ ws D m) (s z mc)))
+
+  -- List intersection.  C ∩ˡ D keeps the members of C that are in D; the
+  -- superscript tells it from ∩, the intersection of predicates.
+
+  infixl 7 _∩ˡ_
+
+  _∩ˡ_ : List A -> List A -> List A
+  C ∩ˡ D = filter (_∈ᵛ D) C
+
+  ∩ˡ-fst : (C D : List A) -> C ∩ˡ D ⊆ C
+  ∩ˡ-fst C D z m = ∈-filter⁻ (_∈ᵛ D) C m
+
+  ∩ˡ-snd : (C D : List A) -> C ∩ˡ D ⊆ D
+  ∩ˡ-snd C D z m = ∈ᵛ-sound z D (filter-prop (_∈ᵛ D) C m)
+
+  ∈-∩ˡ⁺ : {C : List A} {z : A} (D : List A)
+       -> z ∈ C -> z ∈ D -> z ∈ C ∩ˡ D
+  ∈-∩ˡ⁺ {C} {z} D mc md = ∈-filter⁺ (_∈ᵛ D) C mc (∈ᵛ-complete z D md)
+
+------------------------------------------------------------------------
+-- A list without repetition, keeping first occurrences: each element is
+-- followed by the rest with it taken out.  A module of its own, not part of
+-- Membership, so that LTL.1-Lib.Nodes, which re-exports Membership at Val,
+-- does not bring a second nub into scope beside LTL.2-Syntax.Skel's, at
+-- formulas.
+
+module Nub {A : Set} (eq : DecEq A) where
+
+  open Membership eq
+
+  nub : List A -> List A
+  nub []       = []
+  nub (x ∷ xs) = x ∷ (nub xs ∖ᵛ x)
+
+  ∈-nub⁺ : (xs : List A) -> ∀ⁱ[ z ∈ xs ] z ∈ nub xs
+  ∈-nub⁺ []       ()
+  ∈-nub⁺ (x ∷ xs) here = here
+  ∈-nub⁺ (x ∷ xs) {z} (there m) with z ∈ᵛ (x ∷ []) in e
+  ... | false = there (∈-∖⁺ (x ∷ []) (∈-nub⁺ xs m) e)
+  ... | true  = isX (∈ᵛ-sound z (x ∷ []) e)
+    where
+      isX : {y : A} -> y ∈ x ∷ [] -> y ∈ nub (x ∷ xs)
+      isX here       = here
+      isX (there ())
+
+  nub-sub : (xs : List A) -> ∀ⁱ[ z ∈ nub xs ] z ∈ xs
+  nub-sub []       ()
+  nub-sub (x ∷ xs) here      = here
+  nub-sub (x ∷ xs) (there m) = there (nub-sub xs (∖-⊆ (nub xs) (x ∷ []) _ m))
 
 ------------------------------------------------------------------------
 -- Inductive finiteness
