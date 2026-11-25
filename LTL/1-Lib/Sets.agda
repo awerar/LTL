@@ -2,7 +2,8 @@
 
 -- LTL.1-Lib.Sets -- what the searches over lists run on, at any element type:
 -- an order on Nat to measure lists by, deciding whether every member passes a
--- test (decideAll, with a counterexample if not), and the facts that a filter
+-- test (decideAll, with a counterexample if not) and its dual (decideAny, a
+-- member that passes or the fact that none does), and the facts that a filter
 -- removing something shrinks its list and that a list is empty or has a
 -- member.  Plain membership lemmas are in LTL.1-Lib.Prelude; the part that
 -- needs an equality test on the elements is LTL.1-Lib.DecEq.
@@ -72,6 +73,21 @@ decideAllCons false e r                      = counterexample _ here e
 decideAll : (p : A -> Bool) (xs : List A) -> AllDecision p xs
 decideAll p []       = allTrue (emptyAll p)
 decideAll p (y ∷ ys) = decideAllCons (p y) refl (decideAll p ys)
+
+-- The dual split, for a search that stops when no member passes: a witness
+-- that passes, or the fact that every member fails.  It is decideAll at the
+-- negated test.
+
+data AnyDecision {A : Set} (p : A -> Bool) (xs : List A) : Set where
+  witness  : (x : A) -> x ∈ xs -> p x ≡ true -> AnyDecision p xs
+  noneTrue : (∀ⁱ[ x ∈ xs ] p x ≡ false)     -> AnyDecision p xs
+
+decideAny : (p : A -> Bool) (xs : List A) -> AnyDecision p xs
+decideAny p xs = fromAll (decideAll (λ x -> ¬ᵇ p x) xs)
+  where
+    fromAll : AllDecision (λ x -> ¬ᵇ p x) xs -> AnyDecision p xs
+    fromAll (counterexample x m q) = witness x m (¬ᵇ-false (p x) q)
+    fromAll (allTrue f)            = noneTrue (λ {x} m -> ¬ᵇ-true (p x) (f m))
 
 ------------------------------------------------------------------------
 -- filter against length: a filter that removes a member shrinks the list

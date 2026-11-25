@@ -14,7 +14,7 @@
 -- adds nothing; completeness comes from the stopping condition, not a bound.
 -- The search is generic in its seeds, and LTL.5-States.Closure builds Ust with
 -- it too.  closure takes its Bar as an argument, so that Ust can use the
--- guarded vecBar; reachSet takes listBar, which is blocked while the list is
+-- guarded stateFinite; reachSet takes listFinite, which is blocked while the list is
 -- a variable, so it needs no guard against normalisation blow-up.
 
 open import LTL.1-Lib.Prelude
@@ -31,7 +31,7 @@ open import LTL.1-Lib.Bar
 open import LTL.1-Lib.Nodes eq
 
 -- The implicit arguments the signatures below leave out: the endpoints and
--- visited list of a trail, and the predicate of the Bar a search recurses on.
+-- visited list of a trail, and the pool of the Bar a search recurses on.
 -- So is the vertex list ws wherever a Reaches or closed-under hypothesis fixes
 -- it; it stays explicit where it only occurs under a function, as in
 -- reachSet ws v.
@@ -39,7 +39,7 @@ open import LTL.1-Lib.Nodes eq
 private variable
   u v w    : Node
   ws xs zs : List Node
-  E        : Pred
+  Pool     : Pred
 
 ------------------------------------------------------------------------
 -- Out-neighbours
@@ -90,72 +90,72 @@ module _ {ws C : List Node} (cl : C closed-under G within ws) where
 
   private
     trailInto : u ∈ C -> Trail u zs w -> zs ⊆ ws -> zs ⊆ C
-    trailInto mu tNil        sb z ()
-    trailInto mu (tCons e t) sb _ here      = cl mu (sb _ here) e
-    trailInto mu (tCons e t) sb z (there k) =
-      trailInto (cl mu (sb _ here) e) t (λ y m -> sb y (there m)) z k
+    trailInto mu tNil        subset z ()
+    trailInto mu (tCons e t) subset _ here      = cl mu (subset _ here) e
+    trailInto mu (tCons e t) subset z (there k) =
+      trailInto (cl mu (subset _ here) e) t (λ y m -> subset y (there m)) z k
 
     trailEndIn : u ∈ C -> Trail u zs w -> zs ⊆ ws -> w ∈ C
-    trailEndIn mu tNil        sb = mu
-    trailEndIn mu (tCons e t) sb =
-      trailEndIn (cl mu (sb _ here) e) t (λ y m -> sb y (there m))
+    trailEndIn mu tNil        subset = mu
+    trailEndIn mu (tCons e t) subset =
+      trailEndIn (cl mu (subset _ here) e) t (λ y m -> subset y (there m))
 
   reachesInto : u ∈ C -> Reaches ws u w -> Reaches C u w
-  reachesInto mu (reachesBy zs t sb) = reachesBy zs t (trailInto mu t sb)
+  reachesInto mu (reachesBy zs t subset) = reachesBy zs t (trailInto mu t subset)
 
   reachesEndIn : u ∈ C -> Reaches ws u w -> w ∈ C
-  reachesEndIn mu (reachesBy zs t sb) = trailEndIn mu t sb
+  reachesEndIn mu (reachesBy zs t subset) = trailEndIn mu t subset
 
 ------------------------------------------------------------------------
--- The growing search.  closure S ws is the least part of ws that contains
--- every member satisfying the seed test S and is closed under G-successors
--- inside ws.  A round adds every vertex of ws that is wanted -- satisfies S,
+-- The growing search.  closure Seed ws is the least part of ws that contains
+-- every member satisfying the seed test Seed and is closed under G-successors
+-- inside ws.  A round adds every vertex of ws that is wanted -- satisfies Seed,
 -- or is a G-successor of something already in acc -- and is not there yet;
 -- when a round adds nothing, acc contains every wanted vertex, which is
--- completeness.  Both the reachable set below (S = v ≡ᵛ_) and Ust of
--- LTL.5-States.Closure (S = "contains P") are instances.
+-- completeness.  Both the reachable set below (Seed = v ≡ᵛ_) and Ust of
+-- LTL.5-States.Closure (Seed = "contains P") are instances.
 
-module _ (S : Pred) (ws : List Node) where
+module _ (Seed : Pred) (ws : List Node) where
 
   wanted : List Node -> Node -> Bool
-  wanted acc x = S x ∨ᵇ any (λ y -> G y x) acc
+  wanted acc x = Seed x ∨ᵇ any (λ y -> G y x) acc
+
+  -- x is missing when it is wanted and acc lacks it.  A round looks for a
+  -- missing x with decideAny, and the search stops when none is missing.
 
   missing : List Node -> Node -> Bool
   missing acc x = wanted acc x ∧ᵇ ¬ᵇ (x ∈ᵛ acc)
-
-  -- x is settled when it needs no adding: it is not wanted, or acc has it.
-  -- A round looks for an unsettled x with decideAll.
-
-  settled : List Node -> Node -> Bool
-  settled acc x = ¬ᵇ missing acc x
 
   addRound : List Node -> List Node
   addRound acc = filter (missing acc) ws ++ acc
 
   notInAcc : (acc : List Node) (x : Node)
-          -> settled acc x ≡ false -> x ∈ᵛ acc ≡ false
-  notInAcc acc x q =
-    ¬ᵇ-true (x ∈ᵛ acc)
-            (∧ᵇ-trueʳ (wanted acc x) (¬ᵇ (x ∈ᵛ acc))
-                      (¬ᵇ-false (missing acc x) q))
+          -> missing acc x ≡ true -> x ∈ᵛ acc ≡ false
+  notInAcc acc x xMissing =
+    ¬ᵇ-true (x ∈ᵛ acc) (∧ᵇ-trueʳ (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) xMissing)
 
-  -- A settled vertex that is wanted is already in.
+  -- A wanted vertex that is not missing is already in.
 
-  settledIn : (acc : List Node) (x : Node)
-           -> settled acc x ≡ true -> wanted acc x ≡ true -> x ∈ acc
-  settledIn acc x s w =
+  wantedIn : (acc : List Node) (x : Node)
+          -> missing acc x ≡ false -> wanted acc x ≡ true -> x ∈ acc
+  wantedIn acc x s w =
     ∈ᵛ-sound x acc
-      (¬ᵇ-false (x ∈ᵛ acc) (¬ᵇ∧ᵇ-cancelˡ (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) s w))
+      (¬ᵇ-false (x ∈ᵛ acc)
+                (¬ᵇ∧ᵇ-cancelˡ (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) (cong ¬ᵇ_ s) w))
 
-  -- A round adds the unsettled x, so x leaves the candidates still available
-  -- and the Bar's predicate with it.
+  -- A round adds the missing x, so x leaves the candidates still available
+  -- and the Bar's pool with it.
 
   availRound : (acc : List Node) (x : Node)
-            -> x ∈ ws -> settled acc x ≡ false -> E holds-on ws except acc
-            -> (λ z -> E z ∧ᵇ (x ≢ᵛ z)) holds-on ws except addRound acc
-  availRound {E} acc x m q av {z} mz e =
-    ∧ᵇ-intro (E z) (x ≢ᵛ z) (av mz outAcc) (cong ¬ᵇ_ outX)
+            -> x ∈ ws -> missing acc x ≡ true -> AllSat Pool (ws ∖ acc)
+            -> AllSat (Pool ∩ (x ≢ᵛ_)) (ws ∖ addRound acc)
+  availRound {Pool} acc x m xMissing avail z mz =
+    ∧ᵇ-intro (Pool z) (x ≢ᵛ z) (avail z (∈-∖⁺ acc (∖-⊆ ws (addRound acc) z mz) outAcc))
+             (cong ¬ᵇ_ outX)
     where
+      e : z ∈ᵛ addRound acc ≡ false
+      e = ∈-∖⁻ ws (addRound acc) mz
+
       outAcc : z ∈ᵛ acc ≡ false
       outAcc = refuteTrue (z ∈ᵛ acc) λ eb ->
         ∈ᵛ-false z (addRound acc) e
@@ -166,171 +166,178 @@ module _ (S : Pred) (ws : List Node) where
         ∈ᵛ-false z (addRound acc) e
           (subst (λ y -> y ∈ addRound acc) (≡ᵛ-sound x z eb)
                  (∈-++⁺ˡ (filter (missing acc) ws) acc
-                         (∈-filter⁺ (missing acc) ws m
-                                    (¬ᵇ-false (missing acc x) q))))
+                         (∈-filter⁺ (missing acc) ws m xMissing)))
 
-  growGo   : (acc : List Node) -> E holds-on ws except acc
-          -> IFin E -> List Node
-  growFind : (acc : List Node) -> E holds-on ws except acc
-          -> IFin E -> AllDecision (settled acc) ws -> List Node
+  growGo   : (acc : List Node) -> AllSat Pool (ws ∖ acc)
+          -> Finite Pool -> List Node
+  growFind : (acc : List Node) -> AllSat Pool (ws ∖ acc)
+          -> Finite Pool -> AnyDecision (missing acc) ws -> List Node
 
-  growGo acc av bar = growFind acc av bar (decideAll (settled acc) ws)
+  growGo acc avail fin = growFind acc avail fin (decideAny (missing acc) ws)
 
-  growFind acc av bar      (allTrue f)            = acc
-  growFind acc av (cBar h) (counterexample x m q) =
-    growGo (addRound acc) (availRound acc x m q av)
-           (h x (av m (notInAcc acc x q)))
+  growFind acc avail fin          (noneTrue f)             = acc
+  growFind acc avail (picks next) (witness x m xMissing) =
+    growGo (addRound acc) (availRound acc x m xMissing avail)
+           (next x (avail x (∈-∖⁺ acc m (notInAcc acc x xMissing))))
 
   ------------------------------------------------------------------------
-  -- Two facts about the search, each by its recursion: an invariant of the
-  -- accumulator that every round preserves holds of the result, and every
-  -- vertex of ws is settled against the result (the stopping condition).
+  -- Induction on the search.  A property P acc r of the starting accumulator
+  -- and the result holds if it holds where the search stops (no vertex of ws
+  -- is missing from acc, and r is acc) and survives a round.  The stopping
+  -- condition and the invariants of the closure are its instances.
 
-  growInv   : (I : List Node -> Set)
-           -> ((acc : List Node) -> I acc -> I (addRound acc))
-           -> (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
-           -> I acc -> I (growGo acc av bar)
-  growInvFind : (I : List Node -> Set)
-             -> ((acc : List Node) -> I acc -> I (addRound acc))
-             -> (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
-                (fr : AllDecision (settled acc) ws)
-             -> I acc -> I (growFind acc av bar fr)
+  growElim : (P : List Node -> List Node -> Set)
+          -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
+                -> P acc acc)
+          -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
+          -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finite Pool)
+          -> P acc (growGo acc avail fin)
+  growElimFind : (P : List Node -> List Node -> Set)
+              -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
+                    -> P acc acc)
+              -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
+              -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finite Pool)
+                 (fr : AnyDecision (missing acc) ws)
+              -> P acc (growFind acc avail fin fr)
 
-  growInv I round acc av bar =
-    growInvFind I round acc av bar (decideAll (settled acc) ws)
+  growElim P stop round acc avail fin =
+    growElimFind P stop round acc avail fin (decideAny (missing acc) ws)
 
-  growInvFind I round acc av bar      (allTrue f)            i = i
-  growInvFind I round acc av (cBar h) (counterexample x m q) i =
-    growInv I round (addRound acc) _ (h x (av m (notInAcc acc x q)))
-            (round acc i)
+  growElimFind P stop round acc avail fin          (noneTrue f)             =
+    stop acc f
+  growElimFind P stop round acc avail (picks next) (witness x m xMissing) =
+    round acc _
+          (growElim P stop round (addRound acc) _
+                    (next x (avail x (∈-∖⁺ acc m (notInAcc acc x xMissing)))))
 
-  growDone     : (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
-              -> ∀ⁱ[ x ∈ ws ] settled (growGo acc av bar) x ≡ true
-  growDoneFind : (acc : List Node) (av : E holds-on ws except acc) (bar : IFin E)
-                 (fr : AllDecision (settled acc) ws)
-              -> ∀ⁱ[ x ∈ ws ] settled (growFind acc av bar fr) x ≡ true
+  -- An invariant of the accumulator that every round preserves holds of the
+  -- result.
 
-  growDone acc av bar = growDoneFind acc av bar (decideAll (settled acc) ws)
-
-  growDoneFind acc av bar      (allTrue f)            = f
-  growDoneFind acc av (cBar h) (counterexample x m q) =
-    growDone (addRound acc) _ (h x (av m (notInAcc acc x q)))
+  growInv : (I : List Node -> Set)
+         -> ((acc : List Node) -> I acc -> I (addRound acc))
+         -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finite Pool)
+         -> I acc -> I (growGo acc avail fin)
+  growInv I round =
+    growElim (λ acc r -> I acc -> I r) (λ acc f i -> i)
+             (λ acc r h i -> h (round acc i))
 
   ------------------------------------------------------------------------
   -- The invariants: the accumulator lies in ws, and each member is reached
   -- from a seed.
 
   roundIn : (acc : List Node) -> acc ⊆ ws -> addRound acc ⊆ ws
-  roundIn acc sb z mz =
-    [ ∈-filter⁻ (missing acc) ws , sb z ]
+  roundIn acc subset z mz =
+    [ ∈-filter⁻ (missing acc) ws , subset z ]
       (∈-++⁻ (filter (missing acc) ws) acc mz)
 
--- z is reached inside ws from a seed: a member of ws satisfying S.
+-- z is reached inside ws from a seed: a member of ws satisfying Seed.
 
-record Seeded (S : Pred) (ws : List Node) (z : Node) : Set where
+record Seeded (Seed : Pred) (ws : List Node) (z : Node) : Set where
   constructor seededBy
   field
     seed      : Node
     seedIn    : seed ∈ ws
-    seedHolds : S seed ≡ true
+    seedHolds : Seed seed ≡ true
     reaches   : Reaches ws seed z
 
 -- Every vertex a round adds is seeded: it is a seed itself, or a successor of
 -- a member of acc, whose trail grows by one step.
 
-roundSeeded : (S : Pred) (ws acc : List Node)
-           -> (∀[ z ∈ acc ] Seeded S ws z)
-           -> ∀[ z ∈ addRound S ws acc ] Seeded S ws z
-roundSeeded S ws acc sd z m =
-  [ fromNew , sd z ] (∈-++⁻ (filter (missing S ws acc) ws) acc m)
+roundSeeded : (Seed : Pred) (ws acc : List Node)
+           -> (∀[ z ∈ acc ] Seeded Seed ws z)
+           -> ∀[ z ∈ addRound Seed ws acc ] Seeded Seed ws z
+roundSeeded Seed ws acc sd z m =
+  [ fromNew , sd z ] (∈-++⁻ (filter (missing Seed ws acc) ws) acc m)
   where
-    fromNew : z ∈ filter (missing S ws acc) ws -> Seeded S ws z
-    fromNew m1 = [ isSeed , viaY ] (∨ᵇ-true (S z) (any (λ y -> G y z) acc) want)
+    fromNew : z ∈ filter (missing Seed ws acc) ws -> Seeded Seed ws z
+    fromNew z∈new = [ isSeed , viaY ] (∨ᵇ-true (Seed z) (any (λ y -> G y z) acc) want)
       where
-        mzw : z ∈ ws
-        mzw = ∈-filter⁻ (missing S ws acc) ws m1
+        z∈ws : z ∈ ws
+        z∈ws = ∈-filter⁻ (missing Seed ws acc) ws z∈new
 
-        want : wanted S ws acc z ≡ true
-        want = ∧ᵇ-trueˡ (wanted S ws acc z) (¬ᵇ (z ∈ᵛ acc))
-                        (filter-prop (missing S ws acc) ws m1)
+        want : wanted Seed ws acc z ≡ true
+        want = ∧ᵇ-trueˡ (wanted Seed ws acc z) (¬ᵇ (z ∈ᵛ acc))
+                        (filter-prop (missing Seed ws acc) ws z∈new)
 
-        isSeed : S z ≡ true -> Seeded S ws z
-        isSeed e = seededBy z mzw e (reachesBy [] tNil (λ _ ()))
+        isSeed : Seed z ≡ true -> Seeded Seed ws z
+        isSeed e = seededBy z z∈ws e (reachesBy [] tNil (λ _ ()))
 
-        viaY : any (λ y -> G y z) acc ≡ true -> Seeded S ws z
+        viaY : any (λ y -> G y z) acc ≡ true -> Seeded Seed ws z
         viaY ea = pick (any-true (λ y -> G y z) acc ea)
           where
-            pick : (∃[ y ∈ acc ] G y z ≡ true) -> Seeded S ws z
+            pick : (∃[ y ∈ acc ] G y z ≡ true) -> Seeded Seed ws z
             pick (y , my , gy) =
               seededBy seed seedIn seedHolds
                        (reachesBy (via ++ z ∷ [])
                                   (trailApp trail (tCons gy tNil))
-                                  (++-⊆ via inside (∷-⊆ mzw (λ _ ()))))
+                                  (++-⊆ via inside (∷-⊆ z∈ws (λ _ ()))))
               where
                 open Seeded (sd y my)
                 open Reaches reaches
 
 ------------------------------------------------------------------------
--- The closure itself, and its four properties.  sb and bar say which Bar the
--- search recurses on: every vertex of ws satisfies the Bar's predicate E.
+-- The closure itself, and its four properties.  subset and fin say which Bar
+-- the search recurses on: every vertex of ws is in the Bar's pool.
 
-closure : (S : Pred) (ws : List Node) -> AllSat E ws -> IFin E
+closure : (Seed : Pred) (ws : List Node) -> AllSat Pool ws -> Finite Pool
        -> List Node
-closure S ws sb bar = growGo S ws [] (λ mz _ -> sb _ mz) bar
+closure Seed ws subset fin =
+  growGo Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz)) fin
 
-module _ (S : Pred) (ws : List Node) {E : Pred} (sb : AllSat E ws)
-         (bar : IFin E) where
+module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : AllSat Pool ws)
+         (fin : Finite Pool) where
 
   private
-    av0 : E holds-on ws except []
-    av0 mz _ = sb _ mz
+    avail0 : AllSat Pool (ws ∖ [])
+    avail0 z mz = subset z (∖-⊆ ws [] z mz)
 
-    done : ∀ⁱ[ x ∈ ws ] settled S ws (closure S ws sb bar) x ≡ true
-    done = growDone S ws [] av0 bar
+    done : ∀ⁱ[ x ∈ ws ] missing Seed ws (closure Seed ws subset fin) x ≡ false
+    done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] missing Seed ws r x ≡ false)
+                    (λ acc f -> f) (λ acc r d -> d) [] avail0 fin
 
-  closureIn : ∀[ z ∈ closure S ws sb bar ] z ∈ ws
-  closureIn = growInv S ws (λ acc -> acc ⊆ ws) (roundIn S ws) [] av0 bar
+  closureIn : ∀[ z ∈ closure Seed ws subset fin ] z ∈ ws
+  closureIn = growInv Seed ws (λ acc -> acc ⊆ ws) (roundIn Seed ws) [] avail0 fin
                       (λ z ())
 
-  closureSeeded : ∀[ z ∈ closure S ws sb bar ] Seeded S ws z
-  closureSeeded = growInv S ws (λ acc -> ∀[ z ∈ acc ] Seeded S ws z)
-                          (roundSeeded S ws) [] av0 bar (λ z ())
+  closureSeeded : ∀[ z ∈ closure Seed ws subset fin ] Seeded Seed ws z
+  closureSeeded = growInv Seed ws (λ acc -> ∀[ z ∈ acc ] Seeded Seed ws z)
+                          (roundSeeded Seed ws) [] avail0 fin (λ z ())
 
-  closureSeed : {z : Node} -> z ∈ ws -> S z ≡ true -> z ∈ closure S ws sb bar
+  closureSeed : {z : Node} -> z ∈ ws -> Seed z ≡ true -> z ∈ closure Seed ws subset fin
   closureSeed {z} mz e =
-    settledIn S ws (closure S ws sb bar) z (done mz)
-      (∨ᵇ-introˡ (S z) (any (λ y -> G y z) (closure S ws sb bar)) e)
+    wantedIn Seed ws (closure Seed ws subset fin) z (done mz)
+      (∨ᵇ-introˡ (Seed z) (any (λ y -> G y z) (closure Seed ws subset fin)) e)
 
-  closureClosed : closure S ws sb bar closed-under G within ws
+  closureClosed : closure Seed ws subset fin closed-under G within ws
   closureClosed mu {w} mw e =
-    settledIn S ws (closure S ws sb bar) w (done mw)
-      (∨ᵇ-introʳ (S w) (any (λ y -> G y w) (closure S ws sb bar))
-                 (any-intro (λ y -> G y w) (closure S ws sb bar) mu e))
+    wantedIn Seed ws (closure Seed ws subset fin) w (done mw)
+      (∨ᵇ-introʳ (Seed w) (any (λ y -> G y w) (closure Seed ws subset fin))
+                 (any-intro (λ y -> G y w) (closure Seed ws subset fin) mu e))
 
 ------------------------------------------------------------------------
--- The reachable set: the closure of the single seed v, on the Bar listBar ws.
+-- The reachable set: the closure of the single seed v, on the Bar listFinite ws.
 
 reachSet : List Node -> Node -> List Node
-reachSet ws v = closure (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws)
+reachSet ws v = closure (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws)
 
 reachIn : (ws : List Node) (v : Node)
        -> ∀ⁱ[ z ∈ reachSet ws v ] z ∈ ws
-reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) z
+reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws) z
 
 reachTrail : (ws : List Node) (v : Node)
           -> ∀ⁱ[ z ∈ reachSet ws v ] Reaches ws v z
 reachTrail ws v {z} m =
   subst (λ y -> Reaches ws y z) (sym (≡ᵛ-sound v seed seedHolds)) reaches
-  where open Seeded (closureSeeded (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) z m)
+  where open Seeded (closureSeeded (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws) z m)
 
 reachSeed : (ws : List Node) (v : Node)
          -> v ∈ ws -> v ∈ reachSet ws v
 reachSeed ws v mv =
-  closureSeed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws) mv (≡ᵛ-refl v)
+  closureSeed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws) mv (≡ᵛ-refl v)
 
 reachClosed : (ws : List Node) (v : Node)
            -> reachSet ws v closed-under G within ws
-reachClosed ws v = closureClosed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws)
+reachClosed ws v = closureClosed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws)
 
 -- Completeness: the set is closed under G inside ws, so a trail inside ws
 -- from a member ends in it.

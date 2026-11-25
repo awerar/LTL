@@ -64,7 +64,7 @@ fair-gA = refl
 ------------------------------------------------------------------------
 -- A second graph:  p -> q ,  q -> s ,  s -> q .
 --
--- p is transient and {q,s} is recurrent, so findTerm moves the representative
+-- p is transient and {q,s} is recurrent, so findTerminal moves the representative
 -- once, the circuit has two legs, and the certificate uses all three of its
 -- constructors: cBlock removes {q,s}, then p is a sink (cSink), then cNil.
 
@@ -94,7 +94,7 @@ term-gQ = refl
 scc-gQ : map (λ z -> z ∈ᵛ sccOf gE2 gVs2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
 scc-gQ = refl
 
--- The lasso the fair branch returns.  findTerm settles on s, so the stem is
+-- The lasso the fair branch returns.  findTerminal settles on s, so the stem is
 -- p -> q -> s and the loop is s -> q -> s.  With the predicates "is q" and "is
 -- s", the cycle is one leg per predicate followed by the bare loop, each leg
 -- the loop again then out to the witness and back:

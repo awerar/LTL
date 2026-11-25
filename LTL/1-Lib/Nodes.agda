@@ -2,8 +2,8 @@
 
 -- LTL.1-Lib.Nodes -- finite sets of nodes, for a node type with an equality
 -- test eq (LTL.1-Lib.DecEq): the names of the hypotheses the graph searches
--- repeat, inductive finiteness (IFin, listBar), and the invariant of the
--- removing searches.
+-- repeat, list difference (∖ᵛ, ∖), inductive finiteness (Finite, listFinite), and
+-- the invariant of the searches.
 --
 -- The graph layer (LTL.1-Lib.Graph, LTL.1-Lib.FairGraph) uses it at any node
 -- type; LTL.5-States.Reach instantiates it at Val, and that instance is the one
@@ -56,72 +56,91 @@ HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
 ------------------------------------------------------------------------
 -- Inductive finiteness for nodes
 
--- IFin E: E is inductively finite, so a search that keeps picking new nodes
--- satisfying E stops.
+-- Finite Pool: Pool is inductively finite, so a search that keeps picking new
+-- nodes from Pool stops.
 
-IFin : Pred -> Set
-IFin E = Bar _≢ᵛ_ E
+Finite : Pred -> Set
+Finite Pool = Bar _≢ᵛ_ Pool
 
 ------------------------------------------------------------------------
 -- A list gives an inductively finite set.  The length bound is paid once, here,
 -- and no search counts anything afterwards.
 
-barOfList : {E : Pred} (n : Nat) (xs : List Node) -> length xs ≤ n
-         -> ((x : Node) -> E x ≡ true -> x ∈ xs) -> IFin E
-barOfList         zero    xs le sb =
-  cBar (λ x ex -> emptyElim (length-≤0-∈ xs le (sb x ex)))
-barOfList {E = E} (suc n) xs le sb =
-  cBar (λ x ex -> barOfList n (filter (x ≢ᵛ_) xs)
+barOfList : {Pool : Pred} (bound : Nat) (xs : List Node) -> length xs ≤ bound
+         -> ((x : Node) -> Pool x ≡ true -> x ∈ xs) -> Finite Pool
+barOfList               zero        xs short subset =
+  picks (λ x x∈ -> emptyElim (length-≤0-∈ xs short (subset x x∈)))
+barOfList {Pool = Pool} (suc bound) xs short subset =
+  picks (λ x x∈ -> barOfList bound (filter (x ≢ᵛ_) xs)
                     (≤-pred (≤-trans (filter-< (x ≢ᵛ_) xs
-                                         (x , sb x ex , ≢ᵛ-self x)) le))
-                    (λ z ez -> ∈-filter⁺ (x ≢ᵛ_) xs
-                               (sb z (∧ᵇ-trueˡ (E z) (x ≢ᵛ z) ez))
-                               (∧ᵇ-trueʳ (E z) (x ≢ᵛ z) ez)))
+                                         (x , subset x x∈ , ≢ᵛ-self x)) short))
+                    (λ z z∈ -> ∈-filter⁺ (x ≢ᵛ_) xs
+                               (subset z (∧ᵇ-trueˡ (Pool z) (x ≢ᵛ z) z∈))
+                               (∧ᵇ-trueʳ (Pool z) (x ≢ᵛ z) z∈)))
 
 ------------------------------------------------------------------------
--- The invariant the removing searches carry.  AllSat E xs says xs lies inside
--- E.  Removing x from xs passes to  E intersect (R x) , exactly the sub-Bar
--- that cBar hands over, so the pool of candidates is the Bar's own predicate.
+-- List difference.  ws ∖ C is what is left of ws once C is taken out; the
+-- lemmas take both lists explicitly, as filter's do, since Agda cannot read
+-- them back off the filter.
+
+infixl 6 _∖ᵛ_ _∖_
+
+_∖ᵛ_ : List Node -> Node -> List Node
+ws ∖ᵛ x = filter (x ≢ᵛ_) ws
+
+_∖_ : List Node -> List Node -> List Node
+ws ∖ C = filter (λ z -> ¬ᵇ (z ∈ᵛ C)) ws
+
+∖-⊆ : (ws C : List Node) -> ws ∖ C ⊆ ws
+∖-⊆ ws C z m = ∈-filter⁻ (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m
+
+∈-∖⁺ : {ws : List Node} {z : Node} (C : List Node)
+    -> z ∈ ws -> z ∈ᵛ C ≡ false -> z ∈ ws ∖ C
+∈-∖⁺ {ws} C m e = ∈-filter⁺ (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m (cong ¬ᵇ_ e)
+
+∈-∖⁻ : (ws C : List Node) {z : Node} -> z ∈ ws ∖ C -> z ∈ᵛ C ≡ false
+∈-∖⁻ ws C {z} m = ¬ᵇ-true (z ∈ᵛ C) (filter-prop (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m)
+
+------------------------------------------------------------------------
+-- The invariant the searches carry.  AllSat Pool xs says xs lies inside Pool.
+-- Taking x out of the candidates passes to  Pool ∩ (x ≢ᵛ_) , exactly the
+-- smaller Bar that picks hands over, so the candidates are the Bar's own
+-- pool.  A removing search shrinks ws and keeps AllSat Pool ws; a growing one
+-- grows an accumulator acc and keeps AllSat Pool (ws ∖ acc).
 
 -- Naming convention for the searches built on this (the growing closure of
--- LTL.1-Lib.Graph, the removing graphGo and findTerm of LTL.1-Lib.FairGraph):
---   sb    a subset proof: AllSat E xs, or xs ⊆ ys;
---   bar   the IFin E the search recurses on;
---   av    the "available" invariant of a growing search,
---         E holds-on ws except acc:
---         every candidate in ws not yet in the accumulator acc still
---         satisfies the Bar's predicate E.
+-- LTL.1-Lib.Graph, the removing graphGo and findTerminal of LTL.1-Lib.FairGraph):
+--   subset  AllSat Pool xs, or xs ⊆ ys;
+--   fin     the Finite Pool the search recurses on;
+--   avail   the "available" invariant of a growing search,
+--           AllSat Pool (ws ∖ acc): every candidate in ws not yet in the
+--           accumulator acc is still in the Bar's pool;
+--   next    the function picks carries: next x x∈ is the Bar left after
+--           picking x, where x∈ says x is in the pool.
 -- A search comes as a pair fooGo / fooFind: fooGo runs decideAll for one
 -- round, and fooFind cases on its AllDecision -- allTrue stops,
--- counterexample x recurses on the smaller Bar that cBar hands over.
+-- counterexample x recurses on the smaller Bar that picks hands over.  The
+-- growing closure runs decideAny instead: noneTrue stops, witness x recurses.
 
 AllSat : Pred -> List Node -> Set
-AllSat E xs = ∀[ x ∈ xs ] E x ≡ true
+AllSat Pool xs = ∀[ x ∈ xs ] Pool x ≡ true
 
--- E holds-on ws except acc: every candidate in ws not yet in acc satisfies E.
-
-infix 4 Avail
-
-Avail : (E : Pred) (ws acc : List Node) -> Set
-Avail E ws acc = ∀ⁱ[ z ∈ ws ] (z ∈ᵛ acc ≡ false -> E z ≡ true)
-
-syntax Avail E ws acc = E holds-on ws except acc
 
 AllSat-∈ᵛ : (xs : List Node) -> AllSat (λ v -> v ∈ᵛ xs) xs
 AllSat-∈ᵛ xs x m = ∈ᵛ-complete x xs m
 
-listBar : (xs : List Node) -> IFin (λ v -> v ∈ᵛ xs)
-listBar xs = barOfList (length xs) xs (≤-refl (length xs))
-                       (λ x ex -> ∈ᵛ-sound x xs ex)
+listFinite : (xs : List Node) -> Finite (λ v -> v ∈ᵛ xs)
+listFinite xs = barOfList (length xs) xs (≤-refl (length xs))
+                       (λ x x∈ -> ∈ᵛ-sound x xs x∈)
 
 -- Dropping x from the list is dropping x from the predicate.
 
-dropAllSat : {E : Pred} (p : Pred) (xs : List Node) -> AllSat E xs
+dropAllSat : {Pool : Pred} (p : Pred) (xs : List Node) -> AllSat Pool xs
           -> (x : Node) -> p x ≡ false
-          -> AllSat (λ y -> E y ∧ᵇ (x ≢ᵛ y)) (filter p xs)
-dropAllSat {E} p xs sb x q z mz =
-  ∧ᵇ-intro (E z) (x ≢ᵛ z)
-           (sb z (∈-filter⁻ p xs mz))
+          -> AllSat (Pool ∩ (x ≢ᵛ_)) (filter p xs)
+dropAllSat {Pool} p xs subset x q z mz =
+  ∧ᵇ-intro (Pool z) (x ≢ᵛ z)
+           (subset z (∈-filter⁻ p xs mz))
            (cong ¬ᵇ_ onEq)
   where
     onEq : x ≡ᵛ z ≡ false

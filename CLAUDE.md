@@ -61,9 +61,14 @@ derivation or a certified finite lasso countermodel.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
-  `C closed-under G within ws`, `NoneSat f C`, `HoldsOutside R ws`, `AllSat E xs`,
-  `E holds-on ws except acc`
-  (all `LTL/1-Lib/Nodes.agda`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
+  `C closed-under G within ws`, `NoneSat f C`, `HoldsOutside R ws`,
+  `AllSat Pool xs`, `Finite Pool` (all `LTL/1-Lib/Nodes.agda`, as is list
+  difference `ws ∖ C`, so a growing search's invariant is
+  `AllSat Pool (ws ∖ acc)`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
+  Boolean predicates as sets use `Bar`'s algebra: `E ∩ F`, `E ∪ F`, `f ⁻¹ E`,
+  `E ⊆ᵖ F`, so a Bar's shrunk pool is `Pool ∩ (x ≢ᵛ_)`, not
+  `λ y -> Pool y ∧ᵇ (x ≢ᵛ y)`. A Bar is `Bar Apart Pool`: `Pool` is the set
+  still to pick from, `Apart x` what may follow a pick of x.
   A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
@@ -71,7 +76,7 @@ derivation or a certified finite lasso countermodel.
   names is a `private variable`, declared at the top of the module
   (`A B C : Set` and `x y : A` in `Base`/`Prelude`/`Sets`/`Bar`, the formulas
   `A B C P Q : Formula` in `Prop`/`PropList`/`Temporal`, trail endpoints,
-  visited lists, `ws` and the Bar's predicate `E` in `Graph`/`FairGraph`), so
+  visited lists, `ws` and the Bar's pool `Pool` in `Graph`/`FairGraph`), so
   `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
@@ -111,7 +116,8 @@ derivation or a certified finite lasso countermodel.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
-  `sb`/`bar`/`av` binders) are explained above `AllSat` in `LTL/1-Lib/Nodes.agda`.
+  `subset`/`fin`/`avail`/`next` binders, `x∈` for "x is in the pool") are
+  explained above `AllSat` in `LTL/1-Lib/Nodes.agda`.
 - Comments explain the code as it is today. A module header is about 5–15
   lines: what the module provides and its one or two non-obvious design
   choices. A comment above a definition is 1–4 lines, longer only for a subtle
@@ -150,12 +156,14 @@ module name). Folder names never equal a module name.
    Generic set layer, importing only `Prelude` and used by the graph layer at
    any node type: `Sets` (what the searches run on: `≤`, `decideAll`, a
    shrinking filter, the `null` lemmas); `Bar`
-   (inductively finite sets after Coquand–Siles, closure lemmas; all searches
-   recurse on a Bar); `DecEq` (the record `DecEq A` bundling a Boolean
+   (Boolean predicates as subsets, `Subset A` with `∩ ∪ ⁻¹ ⊆ᵖ`; inductively
+   finite sets `Bar Apart Pool` after Coquand–Siles, built by `picks`, and
+   their closure lemmas `barSubset`, `barUnion`, `barProd`, `barPreimage`; all
+   searches recurse on a Bar); `DecEq` (the record `DecEq A` bundling a Boolean
    equality test `_≡ᵛ_` with its soundness and reflexivity, and module
    `Membership`: `∈ᵛ`, `≢ᵛ` and their lemmas); `Nodes` (parameterised by a
-   node type and `eq : DecEq Node`, re-exporting `Membership eq`: `IFin`,
-   `listBar`, the hypothesis names). m5's graph layer, parameterised like `Nodes` and by the
+   node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finite`,
+   `listFinite`, the hypothesis names, list difference `∖ᵛ`/`∖`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the
    `fairGraph` certificate theorem, `certAll`, exclusivity, `certShape`;
@@ -187,7 +195,7 @@ module name). Folder names never equal a module name.
    for any P, and `tautChi`) is unparameterised.
    The finite search infrastructure, in the same folder: `Reach` (`valEq`, the `DecEq` of
    valuations, and the `Val` instance of `Nodes`); `VecBar` (valuations of a given
-   length are inductively finite, `guardedVecBar`); `Closure` (`Ust`, the
+   length are inductively finite, `guardedVecFinite`); `Closure` (`Ust`, the
    explored state set: `Graph`'s growing `closure` at `step`, seeded by the
    states containing `P`; its members are states, `ustState`); `Extract`
    (`betaElim`, `Refuted`, (R1) and `extractR1`: the pieces of m4 Thm 4.1

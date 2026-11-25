@@ -10,10 +10,10 @@ open import LTL.5-States.Reach public
 ------------------------------------------------------------------------
 -- Vectors of a given length are inductively finite -- in O(n), not 2^n.  A
 -- valuation of length n+1 is a Bool paired with one of length n, so barProd
--- applies, and barPull transports the result back along uncons.  allVals never
--- appears.
+-- applies, and barPreimage transports the result back along uncons.  allVals
+-- never appears.
 
--- v has length n, as a boolean predicate (so that it can be a Bar's E).
+-- v has length n, as a boolean predicate (so that it can be a Bar's pool).
 
 hasLength : Nat -> Val -> Bool
 hasLength n v = length v ≡ⁿ n
@@ -40,36 +40,34 @@ lenTail m (b ∷ v) e = e
 
 unconsNeq : (m : Nat) (y z : Val) -> hasLength (suc m) y ≡ true
          -> hasLength (suc m) z ≡ true -> y ≢ᵛ z ≡ true
-         -> prodRel _≢ᵇ_ _≢ᵛ_ (unconsV y) (unconsV z) ≡ true
+         -> prodApart _≢ᵇ_ _≢ᵛ_ (unconsV y) (unconsV z) ≡ true
 unconsNeq m []      z       () ez e
 unconsNeq m (b ∷ v) []      ey () e
 unconsNeq m (b ∷ v) (c ∷ w) ey ez e = ¬ᵇ-∧ᵇ (b ⇔ᵇ c) (v ≡ᵛ w) e
 
-vecIFin : (n : Nat) -> IFin (hasLength n)
-vecIFin zero =
-  cBar (λ x ex -> cBar (λ y ey ->
-    emptyElim (clash x y ex (∧ᵇ-trueˡ (hasLength zero y) (x ≢ᵛ y) ey)
-                            (∧ᵇ-trueʳ (hasLength zero y) (x ≢ᵛ y) ey))))
+vecFinite : (n : Nat) -> Finite (hasLength n)
+vecFinite zero =
+  picks (λ x x∈ -> picks (λ y y∈ ->
+    emptyElim (clash x y x∈ (∧ᵇ-trueˡ (hasLength zero y) (x ≢ᵛ y) y∈)
+                            (∧ᵇ-trueʳ (hasLength zero y) (x ≢ᵛ y) y∈))))
   where
     clash : (x y : Val) -> hasLength zero x ≡ true -> hasLength zero y ≡ true
          -> x ≢ᵛ y ≡ true -> Empty
-    clash x y ex ey e = true≢false (sym nil2)
+    clash x y x∈ y∈ e = true≢false (sym nil2)
       where
         -- both are [], and [] ≢ᵛ [] is false
         nil2 : [] ≢ᵛ [] ≡ true
-        nil2 = subst (λ u -> u ≢ᵛ [] ≡ true) (lenZero x ex)
-                     (subst (λ u -> x ≢ᵛ u ≡ true) (lenZero y ey) e)
-vecIFin (suc m) =
-  barMono (λ v ev -> ∧ᵇ-intro (hasLength (suc m) v)
-                              (prodPred (λ b -> true) (hasLength m) (unconsV v))
-                              ev (lenTail m v ev))
-          (barPull unconsV (hasLength (suc m)) (unconsNeq m)
-                   (barProd boolIFin (vecIFin m)))
+        nil2 = subst (λ u -> u ≢ᵛ [] ≡ true) (lenZero x x∈)
+                     (subst (λ u -> x ≢ᵛ u ≡ true) (lenZero y y∈) e)
+vecFinite (suc m) =
+  barSubset (∩-intro ⊆ᵖ-refl (lenTail m))
+            (barPreimage unconsV (hasLength (suc m)) (unconsNeq m)
+                         (barProd boolFinite (vecFinite m)))
 
 ------------------------------------------------------------------------
--- A valuation of length n satisfies the Bar predicate hasLength n; with
--- allVals-len (LTL.2-Syntax.Skel) this makes it a correct Bar predicate for
--- St P, and the search never touches the enumeration.
+-- A valuation of length n is in the pool hasLength n; with allVals-len
+-- (LTL.2-Syntax.Skel) this makes it a correct pool for St P, and the search
+-- never touches the enumeration.
 
 hasLength-intro : (n : Nat) (v : Val) -> length v ≡ n -> hasLength n v ≡ true
 hasLength-intro n v e = subst (λ k -> length v ≡ⁿ k ≡ true) e (≡ⁿ-refl (length v))
@@ -77,33 +75,32 @@ hasLength-intro n v e = subst (λ k -> length v ≡ⁿ k ≡ true) e (≡ⁿ-ref
 ------------------------------------------------------------------------
 -- The guard of Barras, refined by Gonthier (Coquand and Siles, section 5).
 --
--- A function defined by recursion on a Bar forces the Bar as it runs.  vecIFin
--- gives the Pi-form a guard needs (every subset of the length-n vectors is Bar
--- by barMono), and guardBar k supplies 2^k constructors lazily, so a search of
--- depth below 2^k never touches vecIFin.
+-- A function defined by recursion on a Bar forces the Bar as it runs.
+-- vecFinite gives the Pi-form a guard needs (every pool inside the length-n
+-- vectors is finite, by barSubset), and guardFinite at a given depth supplies
+-- 2^depth constructors lazily, so a search of fewer than 2^depth picks never
+-- touches the fallback, vecFinite.
 
-AllBar : Nat -> Set
-AllBar n = (E : Pred)
-        -> ((v : Val) -> E v ≡ true -> hasLength n v ≡ true) -> IFin E
+AllFinite : Nat -> Set
+AllFinite n = (Pool : Pred) -> Pool ⊆ᵖ hasLength n -> Finite Pool
 
-allVecBar : (n : Nat) -> AllBar n
-allVecBar n E sb = barMono sb (vecIFin n)
+allVecFinite : (n : Nat) -> AllFinite n
+allVecFinite n Pool subset = barSubset subset (vecFinite n)
 
-guardBar : (n k : Nat) -> AllBar n -> AllBar n
-guardBar n zero    w = w
-guardBar n (suc k) w =
-  λ E sb -> cBar (λ x ex ->
-    guardBar n k (guardBar n k w)
-             (λ y -> E y ∧ᵇ (x ≢ᵛ y))
-             (λ v ev -> sb v (∧ᵇ-trueˡ (E v) (x ≢ᵛ v) ev)))
+guardFinite : (n depth : Nat) -> AllFinite n -> AllFinite n
+guardFinite n zero        fallback = fallback
+guardFinite n (suc depth) fallback =
+  λ Pool subset -> picks (λ x x∈ ->
+    guardFinite n depth (guardFinite n depth fallback)
+                (Pool ∩ (x ≢ᵛ_)) (⊆ᵖ-trans ∩-fst subset))
 
 -- The guard depth is n itself.  A search choosing distinct vectors of length n
--- runs at most 2^n steps, so k = n is exactly enough.  A literal depth would
--- be worse: guardBar k unfolds to 2^k copies, and Agda normalises the
--- constructor types of data types that mention U_inf (Trail, Lasso, ValidPos).
--- With k = n and P a variable the match on k is blocked and the guard stays
--- folded; on a closed formula n reduces and the guard does its
--- job.
+-- runs at most 2^n steps, so depth n is exactly enough.  A literal depth would
+-- be worse: guardFinite at depth d unfolds to 2^d copies, and Agda normalises
+-- the constructor types of data types that mention U_inf (Trail, Lasso,
+-- ValidPos).  With depth n and P a variable the match on the depth is blocked
+-- and the guard stays folded; on a closed formula n reduces and the guard
+-- does its job.
 
-guardedVecBar : (n : Nat) -> AllBar n
-guardedVecBar n = guardBar n n (allVecBar n)
+guardedVecFinite : (n : Nat) -> AllFinite n
+guardedVecFinite n = guardFinite n n (allVecFinite n)

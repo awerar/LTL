@@ -18,9 +18,9 @@
 -- 1. A component is a representative plus a filter (sccOf); the condensation
 --    is never built, and "terminal" is a boolean.
 -- 2. graphGo is a REMOVING iteration (refute a sink or a terminal component,
---    delete it), so a Bar covers termination; findTerm finds a terminal
+--    delete it), so a Bar covers termination; findTerminal finds a terminal
 --    component by following condensation edges, again by Bar recursion.  Both
---    take their Bar from listBar, so they need no guard.
+--    take their Bar from listFinite, so they need no guard.
 --
 -- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
 -- so a sink lies on no cycle; and any vertex of a cycle reaches any other, so
@@ -43,14 +43,14 @@ open import LTL.1-Lib.Graph eq G
 open import LTL.1-Lib.CertStep
 
 -- The implicit arguments the signatures below leave out: the endpoints and
--- visited list of a trail, and the predicate of the Bar a search recurses on.
+-- visited list of a trail, and the pool of the Bar a search recurses on.
 -- As in LTL.1-Lib.Graph, so is ws wherever a trail, loop or circuit fixes
 -- it; it stays explicit where it only occurs under a function (sccOf ws r).
 
 private variable
   u v w x s z : Node
   ws vs zs    : List Node
-  E           : Pred
+  Pool        : Pred
 
 ------------------------------------------------------------------------
 -- Components, without component objects: sccOf ws r is the vertices r
@@ -89,27 +89,27 @@ sccRep ws r mr =
 isTerminal : List Node -> Node -> Bool
 isTerminal ws r = all (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 
-termScc : (ws : List Node) (r : Node)
+terminalScc : (ws : List Node) (r : Node)
        -> isTerminal ws r ≡ true
        -> ∀ⁱ[ w ∈ reachSet ws r ] w ∈ sccOf ws r
-termScc ws r et {w} m =
+terminalScc ws r et {w} m =
   ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
             (all-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) et w m)
 
 -- A terminal component is closed under successors inside ws: the refutation
 -- needs exactly this of it.
 
-termClosed : (ws : List Node) (r : Node)
+terminalClosed : (ws : List Node) (r : Node)
           -> isTerminal ws r ≡ true -> sccOf ws r closed-under G within ws
-termClosed ws r et {z} mz my e =
-  termScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
+terminalClosed ws r et {z} mz my e =
+  terminalScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
 
 ------------------------------------------------------------------------
 -- A non-empty graph has a terminal component.  While r's component is not
 -- terminal, there is a w that r reaches and that does not reach r; move the
 -- representative to w.  This is a Bar search whose invariant is that every
 -- vertex of the current reachable set still satisfies the Bar predicate;
--- giving up r is the sub-Bar cBar hands over, and the new reachable set
+-- giving up r is the sub-Bar picks hands over, and the new reachable set
 -- avoids r because w does not reach r.
 
 -- A vertex whose component is terminal, found by the search above.
@@ -123,42 +123,45 @@ record Terminal (ws : List Node) : Set where
 
 module _ (ws : List Node) where
 
-  termGo   : (r : Node) -> r ∈ ws
-          -> AllSat E (reachSet ws r) -> IFin E -> Terminal ws
-  termFind : (r : Node) -> r ∈ ws
-          -> AllSat E (reachSet ws r) -> IFin E
-          -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
-          -> Terminal ws
+  terminalGo   : (r : Node) -> r ∈ ws
+              -> AllSat Pool (reachSet ws r) -> Finite Pool -> Terminal ws
+  terminalFind : (r : Node) -> r ∈ ws
+              -> AllSat Pool (reachSet ws r) -> Finite Pool
+              -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+              -> Terminal ws
 
-  termGo r mr av bar =
-    termFind r mr av bar
-             (decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r))
+  terminalGo r r∈ws avail fin =
+    terminalFind r r∈ws avail fin
+                 (decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r))
 
-  termFind r mr av bar          (allTrue f)             =
-    terminalAt r mr
+  terminalFind r r∈ws avail fin (allTrue f) =
+    terminalAt r r∈ws
                (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
                           (λ w m -> f m))
-  termFind {E} r mr av (cBar h) (counterexample w mw q) =
-    termGo w (reachIn ws r mw) av' (h r (av r (reachSeed ws r mr)))
+  terminalFind {Pool} r r∈ws avail (picks next)
+               (counterexample w w∈reach noReturn) =
+    terminalGo w (reachIn ws r w∈reach) avail'
+               (next r (avail r (reachSeed ws r r∈ws)))
     where
-      av' : ∀[ z ∈ reachSet ws w ] E z ∧ᵇ (r ≢ᵛ z) ≡ true
-      av' z mz =
-        ∧ᵇ-intro (E z) (r ≢ᵛ z)
-                 (av z (reachTrans ws r w z mw mz))
+      avail' : AllSat (Pool ∩ (r ≢ᵛ_)) (reachSet ws w)
+      avail' z mz =
+        ∧ᵇ-intro (Pool z) (r ≢ᵛ z)
+                 (avail z (reachTrans ws r w z w∈reach mz))
                  (cong ¬ᵇ_ notR)
         where
           notR : r ≡ᵛ z ≡ false
           notR = refuteTrue (r ≡ᵛ z) λ eb ->
-            true≢false (trans (sym (rIn eb)) q)
+            true≢false (trans (sym (rIn eb)) noReturn)
             where
               rIn : r ≡ᵛ z ≡ true -> r ∈ᵛ reachSet ws w ≡ true
               rIn eb = ∈ᵛ-complete r (reachSet ws w)
                          (subst (λ y -> y ∈ reachSet ws w)
                                 (sym (≡ᵛ-sound r z eb)) mz)
 
-  findTerm : ∀[ r ∈ ws ] Terminal ws
-  findTerm r mr =
-    termGo r mr (λ z mz -> ∈ᵛ-complete z ws (reachIn ws r mz)) (listBar ws)
+  findTerminal : ∀[ r ∈ ws ] Terminal ws
+  findTerminal r r∈ws =
+    terminalGo r r∈ws (λ z mz -> ∈ᵛ-complete z ws (reachIn ws r mz))
+               (listFinite ws)
 
 ------------------------------------------------------------------------
 -- The positive certificate: a fair circuit at r, a loop through r (a
@@ -194,8 +197,8 @@ module _ {ws vs : List Node} {r : Node} where
   loopRestrict (loopBy q qs t _) h = loopBy q qs t h
 
   circMono : {fs : List Pred} -> ws ⊆ vs -> Circuit ws fs r -> Circuit vs fs r
-  circMono sb (circuit (loopBy q qs t h) wit) =
-    circuit (loopBy q qs t (λ z mz -> sb z (h z mz))) wit
+  circMono subset (circuit (loopBy q qs t h) wit) =
+    circuit (loopBy q qs t (λ z mz -> subset z (h z mz))) wit
 
 -- C meets every fairness predicate: each f in fs holds somewhere in C.
 
@@ -225,7 +228,7 @@ module _ {ws : List Node} {r : Node} where
           inR : x ∈ reachSet ws r
           inR = reachClosed ws r (reachSeed ws r mr) mxw grx
 
-          open Reaches (sccFrom ws r x (termScc ws r et inR))
+          open Reaches (sccFrom ws r x (terminalScc ws r et inR))
 
   -- One fairness predicate added to a circuit.  The leg is  loop ++ (r to w)
   -- ++ (w to r) , with the loop in front so that the r-to-w half is non-empty
@@ -324,21 +327,13 @@ pickBlock : (ws : List Node) (fs : List Pred)
          -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true) -> Block ws fs
 pickBlock []       fs h = bEmpty refl
 pickBlock (u ∷ ws) fs h =
-  blockOf (u ∷ ws) fs h (findTerm (u ∷ ws) u here)
+  blockOf (u ∷ ws) fs h (findTerminal (u ∷ ws) u here)
 
 ------------------------------------------------------------------------
 -- The negative certificate: a well-founded record of the removal order,
 -- indexed by what is LEFT.  Each step removes a vertex with no out-edge inside
 -- ws, or a block closed under out-edges inside ws that misses a fairness
 -- predicate.  cNil says nothing is left.
-
-infixl 6 _∖ᵛ_ _∖_
-
-_∖ᵛ_ : List Node -> Node -> List Node
-ws ∖ᵛ x = filter (x ≢ᵛ_) ws
-
-_∖_ : List Node -> List Node -> List Node
-ws ∖ C = filter (λ z -> ¬ᵇ (z ∈ᵛ C)) ws
 
 data Cert (fs : List Pred) : List Node -> Set where
   cNil   : (ws : List Node) -> null ws ≡ true -> Cert fs ws
@@ -363,41 +358,41 @@ record FairIn (ws : List Node) (fs : List Pred) : Set where
 
 fairInMono : {fs : List Pred}
           -> ws ⊆ vs -> FairIn ws fs -> FairIn vs fs
-fairInMono sb (fairIn r mr c) = fairIn r (sb r mr) (circMono sb c)
+fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 -- Terminal-component removal, a REMOVING iteration: whichever step applies,
 -- the vertex it names (the sink x, or the block's representative r) leaves ws
--- and the Bar's predicate with it (dropAllSat).
+-- and the Bar's pool with it (dropAllSat).
 
 module _ (fs : List Pred) where
 
-  graphGo    : (ws : List Node) -> AllSat E ws -> IFin E
+  graphGo    : (ws : List Node) -> AllSat Pool ws -> Finite Pool
             -> FairIn ws fs ⊎ Cert fs ws
-  graphFind  : (ws : List Node) -> AllSat E ws -> IFin E
+  graphFind  : (ws : List Node) -> AllSat Pool ws -> Finite Pool
             -> AllDecision (hasOut ws) ws
             -> FairIn ws fs ⊎ Cert fs ws
-  graphBlock : (ws : List Node) -> AllSat E ws -> IFin E
+  graphBlock : (ws : List Node) -> AllSat Pool ws -> Finite Pool
             -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
 
-  graphGo ws sb bar = graphFind ws sb bar (decideAll (hasOut ws) ws)
+  graphGo ws subset fin = graphFind ws subset fin (decideAll (hasOut ws) ws)
 
-  graphFind ws sb bar      (allTrue f)              =
-    graphBlock ws sb bar (pickBlock ws fs f)
-  graphFind ws sb (cBar h) (counterexample x mx q) =
+  graphFind ws subset fin (allTrue f) =
+    graphBlock ws subset fin (pickBlock ws fs f)
+  graphFind ws subset (picks next) (counterexample x x∈ws noOut) =
     [ (λ fi -> inl (fairInMono (λ z m -> ∈-filter⁻ (x ≢ᵛ_) ws m) fi))
-    , (λ c  -> inr (cSink ws x mx (¬ᵇ-false (null (outs ws x)) q) c))
-    ] (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws sb x (≢ᵛ-self x))
-               (h x (sb x mx)))
+    , (λ c  -> inr (cSink ws x x∈ws (¬ᵇ-false (null (outs ws x)) noOut) c))
+    ] (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws subset x (≢ᵛ-self x))
+               (next x (subset x x∈ws)))
 
-  graphBlock ws sb bar      (bEmpty e)                 = inr (cNil ws e)
-  graphBlock ws sb bar      (bFair r mr c)             = inl (fairIn r mr c)
-  graphBlock ws sb (cBar h) (bUnfair r mr et g mg eg) =
+  graphBlock ws subset fin (bEmpty e)       = inr (cNil ws e)
+  graphBlock ws subset fin (bFair r r∈ws c) = inl (fairIn r r∈ws c)
+  graphBlock ws subset (picks next) (bUnfair r r∈ws terminal g g∈fs gMissed) =
     [ (λ fi -> inl (fairInMono (λ z m -> ∈-filter⁻ notInC ws m) fi))
-    , (λ c  -> inr (cBlock ws C g mg (termClosed ws r et) miss c))
+    , (λ c  -> inr (cBlock ws C g g∈fs (terminalClosed ws r terminal) miss c))
     ] (graphGo (ws ∖ C)
-               (dropAllSat notInC ws sb r
-                  (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws r mr))))
-               (h r (sb r mr)))
+               (dropAllSat notInC ws subset r
+                  (cong ¬ᵇ_ (∈ᵛ-complete r C (sccRep ws r r∈ws))))
+               (next r (subset r r∈ws)))
     where
       C : List Node
       C = sccOf ws r
@@ -406,7 +401,7 @@ module _ (fs : List Pred) where
       notInC y = ¬ᵇ (y ∈ᵛ C)
 
       miss : ∀[ z ∈ C ] g z ≡ false
-      miss z mz = any-false g C eg mz
+      miss z mz = any-false g C gMissed mz
 
 ------------------------------------------------------------------------
 -- The theorem
@@ -427,7 +422,7 @@ fairGraph : (vs : List Node) (fs : List Pred)
 fairGraph vs fs v mv =
   [ (λ fi -> inl (toLoop fi)) , inr ]
     (graphGo fs (reachSet vs v) (AllSat-∈ᵛ (reachSet vs v))
-             (listBar (reachSet vs v)))
+             (listFinite (reachSet vs v)))
   where
     into : ∀[ z ∈ reachSet vs v ] z ∈ vs
     into z m = reachIn vs v m
@@ -493,24 +488,24 @@ module _ (fs : List Pred) (R : Node -> Set)
 -- the "rotation" of a cycle the argument needs.
 
 reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
-reachesCons m e (reachesBy zs t sb) = reachesBy (_ ∷ zs) (tCons e t) (∷-⊆ m sb)
+reachesCons m e (reachesBy zs t subset) = reachesBy (_ ∷ zs) (tCons e t) (∷-⊆ m subset)
 
 reachesApp : Reaches ws u v -> Reaches ws v w -> Reaches ws u w
 reachesApp (reachesBy as ta sa) (reachesBy bs tb sb) =
   reachesBy (as ++ bs) (trailApp ta tb) (++-⊆ as sa sb)
 
 trailFrom : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
-trailFrom tNil        sb here      = reachesBy [] tNil (λ _ ())
-trailFrom tNil        sb (there ())
-trailFrom (tCons e t) sb here      = reachesBy _ (tCons e t) sb
-trailFrom (tCons e t) sb (there k) = trailFrom t (λ y m -> sb y (there m)) k
+trailFrom tNil        subset here      = reachesBy [] tNil (λ _ ())
+trailFrom tNil        subset (there ())
+trailFrom (tCons e t) subset here      = reachesBy _ (tCons e t) subset
+trailFrom (tCons e t) subset (there k) = trailFrom t (λ y m -> subset y (there m)) k
 
 trailTo : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
-trailTo tNil        sb ()
-trailTo (tCons e t) sb here      =
-  reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (sb _ here) (λ _ ()))
-trailTo (tCons e t) sb (there k) =
-  reachesCons (sb _ here) e (trailTo t (λ y m -> sb y (there m)) k)
+trailTo tNil        subset ()
+trailTo (tCons e t) subset here      =
+  reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (subset _ here) (λ _ ()))
+trailTo (tCons e t) subset (there k) =
+  reachesCons (subset _ here) e (trailTo t (λ y m -> subset y (there m)) k)
 
 -- Observation one: a vertex on a cycle has a successor inside ws.  Along a
 -- trail every vertex visited has one provided the endpoint has, and for a
@@ -524,16 +519,16 @@ record HasSucc (ws : List Node) (x : Node) : Set where
     edge   : G x next ≡ true
 
 headSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w -> HasSucc ws v
-headSucc tNil                sb hw = hw
-headSucc (tCons {x = y} e t) sb hw = hasSucc y (sb y here) e
+headSucc tNil                subset hw = hw
+headSucc (tCons {x = y} e t) subset hw = hasSucc y (subset y here) e
 
 trailSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w
          -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
-trailSucc tNil        sb hw ()
-trailSucc (tCons e t) sb hw here      =
-  headSucc t (λ y m -> sb y (there m)) hw
-trailSucc (tCons e t) sb hw (there k) =
-  trailSucc t (λ y m -> sb y (there m)) hw k
+trailSucc tNil        subset hw ()
+trailSucc (tCons e t) subset hw here      =
+  headSucc t (λ y m -> subset y (there m)) hw
+trailSucc (tCons e t) subset hw (there k) =
+  trailSucc t (λ y m -> subset y (there m)) hw k
 
 loopSucc : {r : Node} (l : Loop ws r) -> ∀ⁱ[ x ∈ Loop.cycle l ] HasSucc ws x
 loopSucc (loopBy q qs t@(tCons e _) h) = trailSucc t h (hasSucc q (h q here) e)
@@ -545,14 +540,14 @@ loopSucc (loopBy q qs t@(tCons e _) h) = trailSucc t h (hasSucc q (h q here) e)
 
 cycConn : {r : Node} -> Trail r zs r -> zs ⊆ ws
        -> u ∈ zs -> z ∈ zs -> Reaches ws u z
-cycConn t sb mu mz = reachesApp (trailFrom t sb (there mu)) (trailTo t sb mz)
+cycConn t subset mu mz = reachesApp (trailFrom t subset (there mu)) (trailTo t subset mz)
 
 -- Vertices of ws that all pass p stay inside filter p ws: this is how a
 -- cycle survives a removal step.
 
 keepIn : (p : Pred)
       -> zs ⊆ ws -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
-keepIn {ws = ws} p sb h z mz = ∈-filter⁺ p ws (sb z mz) (h z mz)
+keepIn {ws = ws} p subset h z mz = ∈-filter⁺ p ws (subset z mz) (h z mz)
 
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when

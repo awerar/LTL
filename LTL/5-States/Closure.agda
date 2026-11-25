@@ -16,7 +16,7 @@
 --
 -- Ust is the successor closure of the states containing P, by the growing
 -- search of LTL.1-Lib.Graph over St.  That search GROWS its accumulator, so it
--- recurses on a Bar (vecBar) rather than a length.
+-- recurses on a Bar (stateFinite) rather than a length.
 
 open import LTL.2-Syntax.Formula using (Formula)
 
@@ -35,12 +35,12 @@ open import LTL.1-Lib.Graph valEq step
 ------------------------------------------------------------------------
 -- The successor closure of the states containing P: the growing search
 -- closure of LTL.1-Lib.Graph, seeded by "contains P", over St.  Each round
--- adds a new vector of length |stateAtoms|, and vecBar says that cannot go on
--- forever.
+-- adds a new vector of length |stateAtoms|, and stateFinite says that cannot
+-- go on forever.
 
-vecBar : IFin (hasLength (length stateAtoms))
-vecBar = guardedVecBar (length stateAtoms) (hasLength (length stateAtoms))
-                       (λ v ev -> ev)
+stateFinite : Finite (hasLength (length stateAtoms))
+stateFinite = guardedVecFinite (length stateAtoms) (hasLength (length stateAtoms))
+                               ⊆ᵖ-refl
 
 containsP : Val -> Bool
 containsP v = valOf v P
@@ -52,10 +52,10 @@ stAllSat x m = hasLength-intro (length stateAtoms) x (stLen m)
 -- runs on it.
 
 Ust : List Val
-Ust = closure containsP St stAllSat vecBar
+Ust = closure containsP St stAllSat stateFinite
 
 ustSt : ∀ⁱ[ v ∈ Ust ] v ∈ St
-ustSt {v} m = closureIn containsP St stAllSat vecBar v m
+ustSt {v} m = closureIn containsP St stAllSat stateFinite v m
 
 -- Named rather than applied inline: giving filter-prop its list argument
 -- against the folded  St  keeps the elaborator from unfolding Ust.
@@ -70,8 +70,8 @@ ustState m = stIsState (ustSt m)
 
 ustSeed : {v : Val}
        -> v ∈ St -> valOf v P ≡ true -> v ∈ Ust
-ustSeed m e = closureSeed containsP St stAllSat vecBar m e
+ustSeed m e = closureSeed containsP St stAllSat stateFinite m e
 
 ustClosed : Ust closed-under step within St
 ustClosed mv mw st =
-  closureClosed containsP St stAllSat vecBar mv mw st
+  closureClosed containsP St stAllSat stateFinite mv mw st

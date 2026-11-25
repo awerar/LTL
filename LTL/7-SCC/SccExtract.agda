@@ -187,4 +187,4 @@ ustCertRefuted c = certRefuted c ustRefuted
 sccGraph : FairIn Ust evPreds ⊎
            Cert evPreds Ust
 sccGraph =
-  graphGo evPreds Ust (AllSat-∈ᵛ Ust) (listBar Ust)
+  graphGo evPreds Ust (AllSat-∈ᵛ Ust) (listFinite Ust)

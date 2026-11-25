@@ -37,7 +37,7 @@ data ValidPos (b : Val) : Pos -> Set where
 
 posIn : (b : Val) {pos : Pos}
      -> ValidPos b pos -> posState pos ∈ Ust
-posIn b (vpos s rest wk sb) = sb s here
+posIn b (vpos s rest wk subset) = subset s here
 
 ------------------------------------------------------------------------
 -- The cycle: from loop, a walk to b, and b steps back to loop.  The cycle is
@@ -63,7 +63,7 @@ Fair cy =
 
 endOnCycle : (cy : Cycle)
           -> Cycle.b cy ∈ stretchStates (Cycle.loop cy)
-endOnCycle (mkCycle b (s , rest) (vpos s rest wk sb) stb) =
+endOnCycle (mkCycle b (s , rest) (vpos s rest wk subset) stb) =
   trailEnd wk
 
 ------------------------------------------------------------------------
@@ -76,9 +76,9 @@ module _ (cy : Cycle) where
   posStep : {pos : Pos} -> ValidPos b pos
          -> ValidPos b (nextPos loop pos) ×
             step (posState pos) (posState (nextPos loop pos)) ≡ true
-  posStep (vpos s []       tNil           sb) = loopValid , closingStep
-  posStep (vpos s (w ∷ ws) (tCons st wk) sb) =
-    vpos w ws wk (λ z m -> sb z (there m)) , st
+  posStep (vpos s []       tNil           subset) = loopValid , closingStep
+  posStep (vpos s (w ∷ ws) (tCons st wk) subset) =
+    vpos w ws wk (λ z m -> subset z (there m)) , st
 
   posIterValid : (pos : Pos) (t : Nat) -> ValidPos b pos
               -> ValidPos b (posIter loop pos t)
