@@ -60,12 +60,12 @@ ustSt {v} m = closureIn containsP St stInside stateFinite v m
 -- Named rather than applied inline: giving filter-prop its list argument
 -- against the folded  St  keeps the elaborator from unfolding Ust.
 
-stIsState : ∀ⁱ[ v ∈ St ] v ∈ᵖ isState
+stIsState : ∀ⁱ[ v ∈ St ] isState v ≡ true
 stIsState m = filter-prop isState (allVals (length stateAtoms)) m
 
 -- Every member is a state, so (S2) can be read off it.
 
-ustState : ∀ⁱ[ v ∈ Ust ] v ∈ᵖ isState
+ustState : ∀ⁱ[ v ∈ Ust ] isState v ≡ true
 ustState m = stIsState (ustSt m)
 
 ustSeed : {v : Val}

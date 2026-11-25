@@ -52,7 +52,12 @@ derivation or a certified finite lasso countermodel.
   hypothesis or an abbreviation the body may be one parenthesised implication,
   `∀[ x ∈ C ] (H -> B)` (as in `Closed`, `Refuted`, `Fair`); a definition's own
   telescope with more premises stays written out. Elements that are private
-  variables have no binder to replace.
+  variables have no binder to replace. `x ∈ᵖ E`, `x ∉ᵖ E` and `∀[ x ∈ᵖ E ]` are
+  for predicates that the code treats as sets: pools and their `∩ ∪ ⁻¹ ⊆ᵖ`,
+  `Apart x`, fairness sets (`fs`, `evPred A`, `C avoids f`), and the generic
+  test of `filter`/`any`/`all`; a named test only ever evaluated at a point
+  (`isState v`, `hasOut ws x`, `missing acc x`, `evalAt A q`) is written
+  `… ≡ true`.
   Boolean-valued operators carry a superscript naming their domain:
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,

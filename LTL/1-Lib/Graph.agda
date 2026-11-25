@@ -147,7 +147,7 @@ module _ (Seed : Pred) (ws : List Node) where
   -- and the pool with it.
 
   availRound : (acc : List Node) (x : Node)
-            -> x ∈ ws -> x ∈ᵖ missing acc -> (ws ∖ acc) inside Pool
+            -> x ∈ ws -> missing acc x ≡ true -> (ws ∖ acc) inside Pool
             -> (ws ∖ addRound acc) inside Pool ∩ (x ≢ᵛ_)
   availRound acc x m xMissing avail =
     inside-∩ (inside-⊆ (∖-antitone ws (λ z -> ∈-++⁺ʳ (filter (missing acc) ws) acc))
@@ -175,13 +175,13 @@ module _ (Seed : Pred) (ws : List Node) where
   -- condition and the invariants of the closure are its instances.
 
   growElim : (P : List Node -> List Node -> Set)
-          -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] x ∉ᵖ missing acc)
+          -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
                 -> P acc acc)
           -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
           -> (acc : List Node) (avail : (ws ∖ acc) inside Pool) (fin : Finiteᵛ Pool)
           -> P acc (growGo acc avail fin)
   growElimFind : (P : List Node -> List Node -> Set)
-              -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] x ∉ᵖ missing acc)
+              -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
                     -> P acc acc)
               -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
               -> (acc : List Node) (avail : (ws ∖ acc) inside Pool) (fin : Finiteᵛ Pool)
@@ -280,8 +280,8 @@ module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : ws inside Pool)
     avail0 : (ws ∖ []) inside Pool
     avail0 z mz = subset z (∖-⊆ ws [] z mz)
 
-    done : ∀ⁱ[ x ∈ ws ] x ∉ᵖ missing Seed ws (closure Seed ws subset fin)
-    done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] x ∉ᵖ missing Seed ws r)
+    done : ∀ⁱ[ x ∈ ws ] missing Seed ws (closure Seed ws subset fin) x ≡ false
+    done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] missing Seed ws r x ≡ false)
                     (λ acc f -> f) (λ acc r d -> d) [] avail0 fin
 
   closureIn : closure Seed ws subset fin ⊆ ws

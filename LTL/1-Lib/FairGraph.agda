@@ -299,7 +299,7 @@ data Block (ws : List Node) (fs : List Pred) : Set where
          -> Block ws fs
 
 blockOf : (ws : List Node) (fs : List Pred)
-       -> (∀ⁱ[ x ∈ ws ] x ∈ᵖ hasOut ws)
+       -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true)
        -> Terminal ws -> Block ws fs
 blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
 ... | true  = bFair r mr (mkCirc (loopAt mr et (h mr)) (sccOf ws r)
@@ -311,7 +311,7 @@ blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
     unf (g , mg , eg) = bUnfair r mr et g mg eg
 
 pickBlock : (ws : List Node) (fs : List Pred)
-         -> (∀ⁱ[ x ∈ ws ] x ∈ᵖ hasOut ws) -> Block ws fs
+         -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true) -> Block ws fs
 pickBlock []       fs h = bEmpty refl
 pickBlock (u ∷ ws) fs h =
   blockOf (u ∷ ws) fs h (findTerminal (u ∷ ws) u here)

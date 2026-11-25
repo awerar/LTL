@@ -42,16 +42,16 @@ module _ (loop : Pos) where
 
   eval□-true : (A : Formula) (pos : Pos)
             -> evalAt (□ A) pos ≡ true
-            -> ∀[ q ∈ orbit loop pos ] q ∈ᵖ evalAt A
+            -> ∀[ q ∈ orbit loop pos ] evalAt A q ≡ true
   eval□-true A pos = all-true (evalAt A) (orbit loop pos)
 
   eval□-intro : (A : Formula) (pos : Pos)
-             -> (∀[ q ∈ orbit loop pos ] q ∈ᵖ evalAt A)
+             -> (∀[ q ∈ orbit loop pos ] evalAt A q ≡ true)
              -> evalAt (□ A) pos ≡ true
   eval□-intro A pos = all-intro (evalAt A) (orbit loop pos)
 
   eval□-false-intro : (A : Formula) (pos : Pos)
-                   -> (∃[ q ∈ orbit loop pos ] q ∉ᵖ evalAt A)
+                   -> (∃[ q ∈ orbit loop pos ] evalAt A q ≡ false)
                    -> evalAt (□ A) pos ≡ false
   eval□-false-intro A pos = all-false-intro (evalAt A) (orbit loop pos)
 

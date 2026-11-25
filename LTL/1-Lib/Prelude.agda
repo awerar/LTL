@@ -397,7 +397,7 @@ concatMap f (x ∷ xs) = f x ++ concatMap f xs
 infix 4 _∈_ _∈ᵖ_ _∉ᵖ_
 
 data _∈_ {A : Set} (x : A) : List A -> Set where
-  here  : {xs : List A}              -> x ∈ x ∷ xs
+  here  : {xs : List A}                   -> x ∈ x ∷ xs
   there : {y : A} {xs : List A} -> x ∈ xs -> x ∈ y ∷ xs
 
 -- Membership in a set given as a Boolean predicate (Subset in
