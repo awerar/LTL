@@ -22,21 +22,28 @@
 -- Subsets are Boolean predicates, which keeps Exhaustible in Set.  The first
 -- section names their algebra (∩, ∪, ⊆ᵖ, preimage ⁻¹) and the inclusions the
 -- proofs use, so the Boolean bookkeeping stays there and the proofs below
--- read as set reasoning.  The rest is generic: Exhaustible, its closure under
--- subsets, union, product and preimage, and Bool with ≢ᵇ (boolFinite).  The
--- other exhaustible pools are listFinite (LTL.1-Lib.Nodes, from a list in
--- hand) and guardedVecFinite (LTL.5-States.VecFinite, the vectors of a given
--- length, built from boolFinite).
+-- read as set reasoning.  The rest is generic: Exhaustible and its closure
+-- under subsets, union, product and preimage.  Finite (LTL.1-Lib.DecEq) is
+-- Exhaustible with inequality as the apartness; the finite pools themselves
+-- are boolFinite (LTL.1-Lib.DecEq), listFinite (LTL.1-Lib.Nodes, from a list
+-- in hand) and guardedVecFinite (LTL.5-States.VecFinite, the vectors of a
+-- given length).
 
 module LTL.1-Lib.Exhaustible where
 
 open import LTL.1-Lib.Prelude
 
 ------------------------------------------------------------------------
--- Subsets as Boolean predicates
+-- Subsets and apartness, as Boolean tests
 
 Subset : Set -> Set
 Subset A = A -> Bool
+
+-- A Boolean relation read as apartness: Apart x y says that y may still be
+-- picked after x.
+
+Apartness : Set -> Set
+Apartness A = A -> A -> Bool
 
 -- The implicit arguments the signatures below leave out.
 
@@ -44,7 +51,7 @@ private variable
   A B        : Set
   E F G      : Subset A
   Pool Pool' : Subset A
-  Apart      : A -> A -> Bool
+  Apart      : Apartness A
 
 infixr 7 _∩_
 infixr 6 _∪_
@@ -94,7 +101,8 @@ E ⊆ᵖ F = (x : _) -> E x ≡ true -> F x ≡ true
 ------------------------------------------------------------------------
 -- Exhaustible, and a subset of an exhaustible pool is exhaustible
 
-record Exhaustible {A : Set} (Apart : A -> A -> Bool) (Pool : Subset A) : Set where
+record Exhaustible {A : Set} (Apart : Apartness A) (Pool : Subset A)
+                   : Set where
   inductive
   pattern
   constructor everyPick
@@ -113,8 +121,7 @@ exhaustibleSubset subset (everyPick next) =
 -- exhaustibleSubset replaces funext, since the two sides are only pointwise
 -- equal predicates.
 
-exhaustibleUnion : {A : Set} {Apart : A -> A -> Bool}
-                   {Pool₁ Pool₂ : Subset A}
+exhaustibleUnion : {A : Set} {Apart : Apartness A} {Pool₁ Pool₂ : Subset A}
                 -> Exhaustible Apart Pool₁ -> Exhaustible Apart Pool₂
                 -> Exhaustible Apart (Pool₁ ∪ Pool₂)
 exhaustibleUnion {A} {Apart} {Pool₁} (everyPick next₁) ex₂ = inner ex₂
@@ -147,12 +154,10 @@ exhaustibleUnion {A} {Apart} {Pool₁} (everyPick next₁) ex₂ = inner ex₂
 prodPool : Subset A -> Subset B -> Subset (A × B)
 prodPool Pool₁ Pool₂ (x , y) = Pool₁ x ∧ᵇ Pool₂ y
 
-prodApart : (A -> A -> Bool) -> (B -> B -> Bool)
-         -> A × B -> A × B -> Bool
+prodApart : Apartness A -> Apartness B -> Apartness (A × B)
 prodApart Apart₁ Apart₂ (x , y) (u , v) = Apart₁ x u ∨ᵇ Apart₂ y v
 
-exhaustibleProd : {A B : Set} {Apart₁ : A -> A -> Bool}
-                  {Apart₂ : B -> B -> Bool}
+exhaustibleProd : {A B : Set} {Apart₁ : Apartness A} {Apart₂ : Apartness B}
                -> {Pool₁ : Subset A} {Pool₂ : Subset B}
                -> Exhaustible Apart₁ Pool₁ -> Exhaustible Apart₂ Pool₂
                -> Exhaustible (prodApart Apart₁ Apart₂) (prodPool Pool₁ Pool₂)
@@ -192,8 +197,7 @@ exhaustibleProd {A} {B} {Apart₁} {Apart₂} {Pool₁} (everyPick next₁) ex�
 -- The preimage along a map f that, on a domain Dom, keeps apart what is
 -- apart: Apart₂-related members of Dom go to Apart₁-related elements.
 
-exhaustiblePreimage : {A B : Set} {Apart₁ : A -> A -> Bool}
-                      {Apart₂ : B -> B -> Bool}
+exhaustiblePreimage : {A B : Set} {Apart₁ : Apartness A} {Apart₂ : Apartness B}
                    -> (f : B -> A) (Dom : Subset B)
                    -> ((y z : B) -> Dom y ≡ true -> Dom z ≡ true
                          -> Apart₂ y z ≡ true -> Apart₁ (f y) (f z) ≡ true)
@@ -217,24 +221,3 @@ exhaustiblePreimage {A} {B} {Apart₁} {Apart₂} f Dom keepsApart {Pool}
                    (∧ᵇ-intro (Pool (f z)) (Apart₁ (f y) (f z)) fz∈
                              (keepsApart y z (∧ᵇ-trueˡ (Dom y) (Pool (f y)) y∈)
                                          inDom apart))
-
-------------------------------------------------------------------------
--- Bool is inductively finite
-
-noThreeDistinct : (x y z : Bool) -> x ≢ᵇ y ≡ true -> x ≢ᵇ z ≡ true
-               -> y ≢ᵇ z ≡ true -> Empty
-noThreeDistinct true  true  z     () e2 e3
-noThreeDistinct true  false true  e1 () e3
-noThreeDistinct true  false false e1 e2 ()
-noThreeDistinct false false z     () e2 e3
-noThreeDistinct false true  false e1 () e3
-noThreeDistinct false true  true  e1 e2 ()
-
-boolFinite : Exhaustible _≢ᵇ_ (λ b -> true)
-boolFinite =
-  everyPick (λ x x∈ ->
-  everyPick (λ y y∈ ->
-  everyPick (λ z z∈ ->
-    emptyElim (noThreeDistinct x y z y∈
-                 (∧ᵇ-trueˡ (x ≢ᵇ z) (y ≢ᵇ z) z∈)
-                 (∧ᵇ-trueʳ (x ≢ᵇ z) (y ≢ᵇ z) z∈)))))

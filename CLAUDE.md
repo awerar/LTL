@@ -62,13 +62,13 @@ derivation or a certified finite lasso countermodel.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
   `C closed-under G within ws`, `NoneSat f C`, `HoldsOutside R ws`,
-  `AllSat Pool xs`, `Finite Pool` (all `LTL/1-Lib/Nodes.agda`, as is list
+  `AllSat Pool xs`, `Finiteᵛ Pool` (all `LTL/1-Lib/Nodes.agda`, as is list
   difference `ws ∖ C`, so a growing search's invariant is
   `AllSat Pool (ws ∖ acc)`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
   Boolean predicates as sets use `Exhaustible`'s algebra: `E ∩ F`, `E ∪ F`,
   `f ⁻¹ E`, `E ⊆ᵖ F`, so a pool shrunk by a pick is `Pool ∩ (x ≢ᵛ_)`, not
   `λ y -> Pool y ∧ᵇ (x ≢ᵛ y)`. The searches recurse on
-  `Exhaustible Apart Pool` (`Finite Pool` at nodes): `Pool` is the set
+  `Exhaustible Apart Pool` (`Finiteᵛ Pool` at nodes): `Pool` is the set
   still to pick from, `Apart x` what may follow a pick of x.
   A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
@@ -154,16 +154,20 @@ module name). Folder names never equal a module name.
    `≡`); `Prelude` (`≡ⁿ`, `⊎`, `Σ`, `×`, List from `Agda.Builtin.List`, `∈`, `⊆`,
    `<`, `nth`, Boolean connectives and all Boolean lemmas, `refuteTrue`, and
    membership in both directions for `++`, `map`, `filter`, `any`, `all`).
-   Generic set layer, importing only `Prelude` and used by the graph layer at
+   Generic set layer, used by the graph layer at
    any node type: `Sets` (what the searches run on: `≤`, `decideAll`, a
    shrinking filter, the `null` lemmas); `Exhaustible`
-   (Boolean predicates as subsets, `Subset A` with `∩ ∪ ⁻¹ ⊆ᵖ`; inductively
+   (Boolean predicates as subsets, `Subset A` with `∩ ∪ ⁻¹ ⊆ᵖ`, and Boolean
+   relations as `Apartness A`; inductively
    finite sets `Exhaustible Apart Pool`, Coquand–Siles's bar type, built by
    `everyPick`, and their closure lemmas `exhaustibleSubset`, `exhaustibleUnion`,
    `exhaustibleProd`, `exhaustiblePreimage`; all searches recurse on one); `DecEq` (the record `DecEq A` bundling a Boolean
-   equality test `_≡ᵛ_` with its soundness and reflexivity, and module
-   `Membership`: `∈ᵛ`, `≢ᵛ` and their lemmas); `Nodes` (parameterised by a
-   node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finite`,
+   equality test `_≡ᵛ_` with its soundness and reflexivity; module
+   `Membership`: `∈ᵛ`, `≢ᵛ` and their lemmas; `Finite eq Pool`, `Exhaustible`
+   with `≢ᵛ` as apartness; the instance `boolEq` at Bool and `boolFinite`);
+   `Nodes` (parameterised by a
+   node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finiteᵛ`
+   (`Finite eq`),
    `listFinite`, the hypothesis names, list difference `∖ᵛ`/`∖`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the

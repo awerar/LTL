@@ -6,6 +6,7 @@
 module LTL.5-States.VecFinite where
 
 open import LTL.5-States.Reach public
+open import LTL.1-Lib.DecEq using (boolFinite)
 
 ------------------------------------------------------------------------
 -- Vectors of a given length are inductively finite -- in O(n), not 2^n.  A
@@ -45,7 +46,7 @@ unconsNeq m []      z       () ez e
 unconsNeq m (b ∷ v) []      ey () e
 unconsNeq m (b ∷ v) (c ∷ w) ey ez e = ¬ᵇ-∧ᵇ (b ⇔ᵇ c) (v ≡ᵛ w) e
 
-vecFinite : (n : Nat) -> Finite (hasLength n)
+vecFinite : (n : Nat) -> Finiteᵛ (hasLength n)
 vecFinite zero =
   everyPick (λ x x∈ -> everyPick (λ y y∈ ->
     emptyElim (clash x y x∈ (∧ᵇ-trueˡ (hasLength zero y) (x ≢ᵛ y) y∈)
@@ -82,7 +83,7 @@ hasLength-intro n v e = subst (λ k -> length v ≡ⁿ k ≡ true) e (≡ⁿ-ref
 -- 2^depth picks never touches the fallback, vecFinite.
 
 AllFinite : Nat -> Set
-AllFinite n = (Pool : Pred) -> Pool ⊆ᵖ hasLength n -> Finite Pool
+AllFinite n = (Pool : Pred) -> Pool ⊆ᵖ hasLength n -> Finiteᵛ Pool
 
 allVecFinite : (n : Nat) -> AllFinite n
 allVecFinite n Pool subset = exhaustibleSubset subset (vecFinite n)

@@ -319,6 +319,10 @@ refuteTrue false no = refl
 
 -- Equivalence
 
+⇔ᵇ-refl : (a : Bool) -> a ⇔ᵇ a ≡ true
+⇔ᵇ-refl true  = refl
+⇔ᵇ-refl false = refl
+
 ⇔ᵇ-sound : (a b : Bool) -> a ⇔ᵇ b ≡ true -> a ≡ b
 ⇔ᵇ-sound true  true  e = refl
 ⇔ᵇ-sound true  false ()

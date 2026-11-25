@@ -13,7 +13,7 @@
 -- The reachable set is a GROWING search (closure) that stops when a round
 -- adds nothing; completeness comes from the stopping condition, not a bound.
 -- The search is generic in its seeds, and LTL.5-States.Closure builds Ust with
--- it too.  closure takes its Finite proof as an argument, so that Ust can use
+-- it too.  closure takes its Finiteᵛ proof as an argument, so that Ust can use
 -- the guarded stateFinite; reachSet takes listFinite, which is blocked while
 -- the list is a variable, so it needs no guard against normalisation blow-up.
 
@@ -169,9 +169,9 @@ module _ (Seed : Pred) (ws : List Node) where
                          (∈-filter⁺ (missing acc) ws m xMissing)))
 
   growGo   : (acc : List Node) -> AllSat Pool (ws ∖ acc)
-          -> Finite Pool -> List Node
+          -> Finiteᵛ Pool -> List Node
   growFind : (acc : List Node) -> AllSat Pool (ws ∖ acc)
-          -> Finite Pool -> AnyDecision (missing acc) ws -> List Node
+          -> Finiteᵛ Pool -> AnyDecision (missing acc) ws -> List Node
 
   growGo acc avail fin = growFind acc avail fin (decideAny (missing acc) ws)
 
@@ -190,13 +190,13 @@ module _ (Seed : Pred) (ws : List Node) where
           -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
                 -> P acc acc)
           -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
-          -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finite Pool)
+          -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
           -> P acc (growGo acc avail fin)
   growElimFind : (P : List Node -> List Node -> Set)
               -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
                     -> P acc acc)
               -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
-              -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finite Pool)
+              -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
                  (fr : AnyDecision (missing acc) ws)
               -> P acc (growFind acc avail fin fr)
 
@@ -216,7 +216,7 @@ module _ (Seed : Pred) (ws : List Node) where
 
   growInv : (I : List Node -> Set)
          -> ((acc : List Node) -> I acc -> I (addRound acc))
-         -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finite Pool)
+         -> (acc : List Node) (avail : AllSat Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
          -> I acc -> I (growGo acc avail fin)
   growInv I round =
     growElim (λ acc r -> I acc -> I r) (λ acc f i -> i)
@@ -280,13 +280,13 @@ roundSeeded Seed ws acc sd z m =
 -- The closure itself, and its four properties.  subset and fin say which pool
 -- the search recurses on: every vertex of ws is in it, and it is finite.
 
-closure : (Seed : Pred) (ws : List Node) -> AllSat Pool ws -> Finite Pool
+closure : (Seed : Pred) (ws : List Node) -> AllSat Pool ws -> Finiteᵛ Pool
        -> List Node
 closure Seed ws subset fin =
   growGo Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz)) fin
 
 module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : AllSat Pool ws)
-         (fin : Finite Pool) where
+         (fin : Finiteᵛ Pool) where
 
   private
     avail0 : AllSat Pool (ws ∖ [])

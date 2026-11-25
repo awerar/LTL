@@ -16,7 +16,7 @@
 --
 -- Ust is the successor closure of the states containing P, by the growing
 -- search of LTL.1-Lib.Graph over St.  That search GROWS its accumulator, so it
--- recurses on a Finite proof (stateFinite) rather than a length.
+-- recurses on a Finiteᵛ proof (stateFinite) rather than a length.
 
 open import LTL.2-Syntax.Formula using (Formula)
 
@@ -38,7 +38,7 @@ open import LTL.1-Lib.Graph valEq step
 -- adds a new vector of length |stateAtoms|, and stateFinite says that cannot
 -- go on forever.
 
-stateFinite : Finite (hasLength (length stateAtoms))
+stateFinite : Finiteᵛ (hasLength (length stateAtoms))
 stateFinite = guardedVecFinite (length stateAtoms) (hasLength (length stateAtoms))
                                ⊆ᵖ-refl
 

@@ -20,7 +20,7 @@
 -- 2. graphGo is a REMOVING iteration (refute a sink or a terminal component,
 --    delete it), so a finite pool covers termination; findTerminal finds a
 --    terminal component by following condensation edges, again by recursion
---    on a Finite proof.  Both take theirs from listFinite, so they need no
+--    on a Finiteᵛ proof.  Both take theirs from listFinite, so they need no
 --    guard.
 --
 -- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
@@ -108,7 +108,7 @@ terminalClosed ws r et {z} mz my e =
 ------------------------------------------------------------------------
 -- A non-empty graph has a terminal component.  While r's component is not
 -- terminal, there is a w that r reaches and that does not reach r; move the
--- representative to w.  The search recurses on a Finite proof, and its
+-- representative to w.  The search recurses on a Finiteᵛ proof, and its
 -- invariant is that every vertex of the current reachable set is still in the
 -- pool; giving up r is the smaller pool next hands over, and the new
 -- reachable set avoids r because w does not reach r.
@@ -125,9 +125,9 @@ record Terminal (ws : List Node) : Set where
 module _ (ws : List Node) where
 
   terminalGo   : (r : Node) -> r ∈ ws
-              -> AllSat Pool (reachSet ws r) -> Finite Pool -> Terminal ws
+              -> AllSat Pool (reachSet ws r) -> Finiteᵛ Pool -> Terminal ws
   terminalFind : (r : Node) -> r ∈ ws
-              -> AllSat Pool (reachSet ws r) -> Finite Pool
+              -> AllSat Pool (reachSet ws r) -> Finiteᵛ Pool
               -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
               -> Terminal ws
 
@@ -367,12 +367,12 @@ fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 module _ (fs : List Pred) where
 
-  graphGo    : (ws : List Node) -> AllSat Pool ws -> Finite Pool
+  graphGo    : (ws : List Node) -> AllSat Pool ws -> Finiteᵛ Pool
             -> FairIn ws fs ⊎ Cert fs ws
-  graphFind  : (ws : List Node) -> AllSat Pool ws -> Finite Pool
+  graphFind  : (ws : List Node) -> AllSat Pool ws -> Finiteᵛ Pool
             -> AllDecision (hasOut ws) ws
             -> FairIn ws fs ⊎ Cert fs ws
-  graphBlock : (ws : List Node) -> AllSat Pool ws -> Finite Pool
+  graphBlock : (ws : List Node) -> AllSat Pool ws -> Finiteᵛ Pool
             -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
 
   graphGo ws subset fin = graphFind ws subset fin (decideAll (hasOut ws) ws)

@@ -2,7 +2,7 @@
 
 -- LTL.1-Lib.Nodes -- finite sets of nodes, for a node type with an equality
 -- test eq (LTL.1-Lib.DecEq): the names of the hypotheses the graph searches
--- repeat, list difference (∖ᵛ, ∖), inductive finiteness (Finite, listFinite), and
+-- repeat, list difference (∖ᵛ, ∖), inductive finiteness (Finiteᵛ, listFinite), and
 -- the invariant of the searches.
 --
 -- The graph layer (LTL.1-Lib.Graph, LTL.1-Lib.FairGraph) uses it at any node
@@ -14,7 +14,7 @@
 -- so that two instances never bring two copies of their names into scope.
 
 open import LTL.1-Lib.Prelude
-open import LTL.1-Lib.DecEq using (DecEq; module Membership)
+open import LTL.1-Lib.DecEq using (DecEq; module Membership; Finite)
 
 module LTL.1-Lib.Nodes {Node : Set} (eq : DecEq Node) where
 
@@ -56,11 +56,12 @@ HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
 ------------------------------------------------------------------------
 -- Inductive finiteness for nodes
 
--- Finite Pool: Pool is inductively finite, so a search that keeps picking new
--- nodes from Pool stops.
+-- Finiteᵛ Pool: Finite (LTL.1-Lib.DecEq) at eq, so a search that keeps
+-- picking new nodes from Pool stops.  The superscript ᵛ marks the node
+-- instance, as in ≡ᵛ and ∈ᵛ.
 
-Finite : Pred -> Set
-Finite Pool = Exhaustible _≢ᵛ_ Pool
+Finiteᵛ : Pred -> Set
+Finiteᵛ Pool = Finite eq Pool
 
 ------------------------------------------------------------------------
 -- A list gives an inductively finite set.  The length bound is paid once, here,
@@ -68,7 +69,7 @@ Finite Pool = Exhaustible _≢ᵛ_ Pool
 
 finiteOfList : {Pool : Pred} (bound : Nat) (xs : List Node)
             -> length xs ≤ bound
-            -> ((x : Node) -> Pool x ≡ true -> x ∈ xs) -> Finite Pool
+            -> ((x : Node) -> Pool x ≡ true -> x ∈ xs) -> Finiteᵛ Pool
 finiteOfList               zero        xs short subset =
   everyPick (λ x x∈ -> emptyElim (length-≤0-∈ xs short (subset x x∈)))
 finiteOfList {Pool = Pool} (suc bound) xs short subset =
@@ -112,7 +113,7 @@ ws ∖ C = filter (λ z -> ¬ᵇ (z ∈ᵛ C)) ws
 -- Naming convention for the searches built on this (the growing closure of
 -- LTL.1-Lib.Graph, the removing graphGo and findTerminal of LTL.1-Lib.FairGraph):
 --   subset  AllSat Pool xs, or xs ⊆ ys;
---   fin     the Finite Pool the search recurses on;
+--   fin     the Finiteᵛ Pool the search recurses on;
 --   avail   the "available" invariant of a growing search,
 --           AllSat Pool (ws ∖ acc): every candidate in ws not yet in the
 --           accumulator acc is still in the pool;
@@ -130,7 +131,7 @@ AllSat Pool xs = ∀[ x ∈ xs ] Pool x ≡ true
 AllSat-∈ᵛ : (xs : List Node) -> AllSat (λ v -> v ∈ᵛ xs) xs
 AllSat-∈ᵛ xs x m = ∈ᵛ-complete x xs m
 
-listFinite : (xs : List Node) -> Finite (λ v -> v ∈ᵛ xs)
+listFinite : (xs : List Node) -> Finiteᵛ (λ v -> v ∈ᵛ xs)
 listFinite xs = finiteOfList (length xs) xs (≤-refl (length xs))
                        (λ x x∈ -> ∈ᵛ-sound x xs x∈)
 
