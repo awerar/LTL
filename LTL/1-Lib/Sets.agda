@@ -22,7 +22,7 @@ private variable
   ys        : List A
 
 ------------------------------------------------------------------------
--- Order on Nat, named as in the standard library.  Only barOfList
+-- Order on Nat, named as in the standard library.  Only finiteOfList
 -- (LTL.1-Lib.Nodes) uses it, to bound the length of a list.
 
 infix 4 _≤_

@@ -139,7 +139,7 @@ tools/proof-map next --up                # open definitions whose uses are revie
 tools/proof-map tree closure --up        # who uses closure, upwards
 tools/proof-map show provableSCC --src   # uses, users and source
 tools/proof-map done decide -m "note"    # mark as reviewed
-tools/proof-map done LTL/1-Lib/Bar.agda    # mark a whole file (or LTL.1-Lib.Bar)
+tools/proof-map done LTL/1-Lib/Exhaustible.agda    # mark a whole file (or LTL.1-Lib.Exhaustible)
 tools/proof-map status                   # progress per module
 tools/proof-map stale --diff             # reviews that are out of date, and what changed
 ```
@@ -241,11 +241,11 @@ formalise. A module's name follows its path, so `LTL/2-Syntax/Formula.agda` is
 | Folder | Modules | What it is |
 |---|---|---|
 | `LTL/` | `Statement`, `Main`, `Pretty` | the specification (semantics, the proof system `⊢`, the obligations) and the few lines stating they are met, the two files to trust; readable output |
-| `LTL/1-Lib/` | `Base`, `Prelude`, `Sets`, `Bar`, `DecEq`, `Nodes`, `Graph`, `FairGraph`, `CertStep` | foundations without the standard library; inductively finite sets; decidable equality and membership; graph search and the generic fair-graph certificate theorem of m5 |
+| `LTL/1-Lib/` | `Base`, `Prelude`, `Sets`, `Exhaustible`, `DecEq`, `Nodes`, `Graph`, `FairGraph`, `CertStep` | foundations without the standard library; inductively finite sets; decidable equality and membership; graph search and the generic fair-graph certificate theorem of m5 |
 | `LTL/2-Syntax/` | `Formula`, `Skel`, `Deriv`, `Val` | syntax and deductive rules (`⊢ A`: A is derivable), m4 §1 |
 | `LTL/3-Rules/` | `Prop`, `PropList`, `Temporal` | derived rules, m4 Lemmas 1.1–1.2 |
 | `LTL/4-Semantics/` | `Orbit`, `OrbitEval` | positions on a lasso and Boolean evaluation of formulas there |
-| `LTL/5-States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecBar`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
+| `LTL/5-States/` | `Reach`, `Common`, `State`, `Step`, `Taut`, `CompletePC`, `StepLemma`, `VecFinite`, `Closure`, `Extract` | states, transitions, the finite state space, and the building blocks of extraction, m4 §2 and §4 |
 | `LTL/6-Countermodel/` | `Walk`, `Lasso`, `Hintikka` | finite lasso countermodels and their correctness, m4 §5 |
 | `LTL/7-SCC/` | `SccLasso`, `SccExtract`, `SccSeed` | graph certificates applied to temporal logic, m5 |
 | `LTL/8-Procedures/` | `Answer`, `Inspect`, `Decide`, `Everything`, `Correct` | the decision procedure and its answer type, m4 Thm 6.1; functions that look inside an answer; the proof that the Boolean evaluation is the specification's semantics, so the procedure is a `DecisionProcedure` and derivability and countermodels match validity |

@@ -85,7 +85,7 @@ isState v = all (s2At v) eventualities
 St : List Val
 St = filter isState (allVals (length stateAtoms))
 
--- Every state has the length the search's Bar expects.
+-- Every state has the length the search's pool expects.
 
 stLen : ∀ⁱ[ v ∈ St ] length v ≡ length stateAtoms
 stLen {v} m =

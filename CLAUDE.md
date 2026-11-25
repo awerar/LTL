@@ -65,18 +65,19 @@ derivation or a certified finite lasso countermodel.
   `AllSat Pool xs`, `Finite Pool` (all `LTL/1-Lib/Nodes.agda`, as is list
   difference `ws ∖ C`, so a growing search's invariant is
   `AllSat Pool (ws ∖ acc)`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
-  Boolean predicates as sets use `Bar`'s algebra: `E ∩ F`, `E ∪ F`, `f ⁻¹ E`,
-  `E ⊆ᵖ F`, so a Bar's shrunk pool is `Pool ∩ (x ≢ᵛ_)`, not
-  `λ y -> Pool y ∧ᵇ (x ≢ᵛ y)`. A Bar is `Bar Apart Pool`: `Pool` is the set
+  Boolean predicates as sets use `Exhaustible`'s algebra: `E ∩ F`, `E ∪ F`,
+  `f ⁻¹ E`, `E ⊆ᵖ F`, so a pool shrunk by a pick is `Pool ∩ (x ≢ᵛ_)`, not
+  `λ y -> Pool y ∧ᵇ (x ≢ᵛ y)`. The searches recurse on
+  `Exhaustible Apart Pool` (`Finite Pool` at nodes): `Pool` is the set
   still to pick from, `Apart x` what may follow a pick of x.
   A run of lemmas that share leading arguments, passed on
   unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
   callers outside see the same arguments.
 - Implicit arguments: a leading implicit that no clause or `where` block
   names is a `private variable`, declared at the top of the module
-  (`A B C : Set` and `x y : A` in `Base`/`Prelude`/`Sets`/`Bar`, the formulas
+  (`A B C : Set` and `x y : A` in `Base`/`Prelude`/`Sets`/`Exhaustible`, the formulas
   `A B C P Q : Formula` in `Prop`/`PropList`/`Temporal`, trail endpoints,
-  visited lists, `ws` and the Bar's pool `Pool` in `Graph`/`FairGraph`), so
+  visited lists, `ws` and the search's pool `Pool` in `Graph`/`FairGraph`), so
   `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
@@ -102,7 +103,7 @@ derivation or a certified finite lasso countermodel.
   would be ambiguous. The exceptions are `Walk`, which re-exports its
   applications of `Graph` and `FairGraph` at `step`, and `Lasso`, which re-exports `OrbitEval`
   at `readVal`. Code that does not mention P goes in an unparameterised
-  module (`Common`, `Taut`, `VecBar`, `Reach`), or an importer opening the
+  module (`Common`, `Taut`, `VecFinite`, `Reach`), or an importer opening the
   P-module unapplied would see a spurious P argument. `Decide` works the same
   way one level up: its parameter is the input Q, and it opens the P-modules
   at `¬ Q`. Everywhere else (`Answer`, `Inspect`, `Correct`, `Pretty`, the tests) these
@@ -155,11 +156,11 @@ module name). Folder names never equal a module name.
    membership in both directions for `++`, `map`, `filter`, `any`, `all`).
    Generic set layer, importing only `Prelude` and used by the graph layer at
    any node type: `Sets` (what the searches run on: `≤`, `decideAll`, a
-   shrinking filter, the `null` lemmas); `Bar`
+   shrinking filter, the `null` lemmas); `Exhaustible`
    (Boolean predicates as subsets, `Subset A` with `∩ ∪ ⁻¹ ⊆ᵖ`; inductively
-   finite sets `Bar Apart Pool` after Coquand–Siles, built by `picks`, and
-   their closure lemmas `barSubset`, `barUnion`, `barProd`, `barPreimage`; all
-   searches recurse on a Bar); `DecEq` (the record `DecEq A` bundling a Boolean
+   finite sets `Exhaustible Apart Pool`, Coquand–Siles's bar type, built by
+   `everyPick`, and their closure lemmas `exhaustibleSubset`, `exhaustibleUnion`,
+   `exhaustibleProd`, `exhaustiblePreimage`; all searches recurse on one); `DecEq` (the record `DecEq A` bundling a Boolean
    equality test `_≡ᵛ_` with its soundness and reflexivity, and module
    `Membership`: `∈ᵛ`, `≢ᵛ` and their lemmas); `Nodes` (parameterised by a
    node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finite`,
@@ -194,7 +195,7 @@ module name). Folder names never equal a module name.
    and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated
    for any P, and `tautChi`) is unparameterised.
    The finite search infrastructure, in the same folder: `Reach` (`valEq`, the `DecEq` of
-   valuations, and the `Val` instance of `Nodes`); `VecBar` (valuations of a given
+   valuations, and the `Val` instance of `Nodes`); `VecFinite` (valuations of a given
    length are inductively finite, `guardedVecFinite`); `Closure` (`Ust`, the
    explored state set: `Graph`'s growing `closure` at `step`, seeded by the
    states containing `P`; its members are states, `ustState`); `Extract`

@@ -13,9 +13,9 @@
 -- The reachable set is a GROWING search (closure) that stops when a round
 -- adds nothing; completeness comes from the stopping condition, not a bound.
 -- The search is generic in its seeds, and LTL.5-States.Closure builds Ust with
--- it too.  closure takes its Bar as an argument, so that Ust can use the
--- guarded stateFinite; reachSet takes listFinite, which is blocked while the list is
--- a variable, so it needs no guard against normalisation blow-up.
+-- it too.  closure takes its Finite proof as an argument, so that Ust can use
+-- the guarded stateFinite; reachSet takes listFinite, which is blocked while
+-- the list is a variable, so it needs no guard against normalisation blow-up.
 
 open import LTL.1-Lib.Prelude
 open import LTL.1-Lib.DecEq using (DecEq)
@@ -27,11 +27,11 @@ module LTL.1-Lib.Graph {Node : Set} (eq : DecEq Node)
 -- the set layer from wherever it already has it (LTL.5-States.Reach, at Val).
 
 open import LTL.1-Lib.Sets
-open import LTL.1-Lib.Bar
+open import LTL.1-Lib.Exhaustible
 open import LTL.1-Lib.Nodes eq
 
 -- The implicit arguments the signatures below leave out: the endpoints and
--- visited list of a trail, and the pool of the Bar a search recurses on.
+-- visited list of a trail, and the pool a search recurses on.
 -- So is the vertex list ws wherever a Reaches or closed-under hypothesis fixes
 -- it; it stays explicit where it only occurs under a function, as in
 -- reachSet ws v.
@@ -144,7 +144,7 @@ module _ (Seed : Pred) (ws : List Node) where
                 (¬ᵇ∧ᵇ-cancelˡ (wanted acc x) (¬ᵇ (x ∈ᵛ acc)) (cong ¬ᵇ_ s) w))
 
   -- A round adds the missing x, so x leaves the candidates still available
-  -- and the Bar's pool with it.
+  -- and the pool with it.
 
   availRound : (acc : List Node) (x : Node)
             -> x ∈ ws -> missing acc x ≡ true -> AllSat Pool (ws ∖ acc)
@@ -175,8 +175,8 @@ module _ (Seed : Pred) (ws : List Node) where
 
   growGo acc avail fin = growFind acc avail fin (decideAny (missing acc) ws)
 
-  growFind acc avail fin          (noneTrue f)             = acc
-  growFind acc avail (picks next) (witness x m xMissing) =
+  growFind acc avail fin              (noneTrue f)             = acc
+  growFind acc avail (everyPick next) (witness x m xMissing) =
     growGo (addRound acc) (availRound acc x m xMissing avail)
            (next x (avail x (∈-∖⁺ acc m (notInAcc acc x xMissing))))
 
@@ -203,11 +203,12 @@ module _ (Seed : Pred) (ws : List Node) where
   growElim P stop round acc avail fin =
     growElimFind P stop round acc avail fin (decideAny (missing acc) ws)
 
-  growElimFind P stop round acc avail fin          (noneTrue f)             =
-    stop acc f
-  growElimFind P stop round acc avail (picks next) (witness x m xMissing) =
+  growElimFind P stop round acc avail fin (noneTrue f) = stop acc f
+  growElimFind P stop round acc avail (everyPick next)
+               (witness x m xMissing) =
     round acc _
-          (growElim P stop round (addRound acc) _
+          (growElim P stop round (addRound acc)
+                    (availRound acc x m xMissing avail)
                     (next x (avail x (∈-∖⁺ acc m (notInAcc acc x xMissing)))))
 
   -- An invariant of the accumulator that every round preserves holds of the
@@ -276,8 +277,8 @@ roundSeeded Seed ws acc sd z m =
                 open Reaches reaches
 
 ------------------------------------------------------------------------
--- The closure itself, and its four properties.  subset and fin say which Bar
--- the search recurses on: every vertex of ws is in the Bar's pool.
+-- The closure itself, and its four properties.  subset and fin say which pool
+-- the search recurses on: every vertex of ws is in it, and it is finite.
 
 closure : (Seed : Pred) (ws : List Node) -> AllSat Pool ws -> Finite Pool
        -> List Node
@@ -315,7 +316,7 @@ module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : AllSat Pool ws)
                  (any-intro (λ y -> G y w) (closure Seed ws subset fin) mu e))
 
 ------------------------------------------------------------------------
--- The reachable set: the closure of the single seed v, on the Bar listFinite ws.
+-- The reachable set: the closure of the single seed v, on listFinite ws.
 
 reachSet : List Node -> Node -> List Node
 reachSet ws v = closure (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listFinite ws)

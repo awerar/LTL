@@ -18,9 +18,10 @@
 -- 1. A component is a representative plus a filter (sccOf); the condensation
 --    is never built, and "terminal" is a boolean.
 -- 2. graphGo is a REMOVING iteration (refute a sink or a terminal component,
---    delete it), so a Bar covers termination; findTerminal finds a terminal
---    component by following condensation edges, again by Bar recursion.  Both
---    take their Bar from listFinite, so they need no guard.
+--    delete it), so a finite pool covers termination; findTerminal finds a
+--    terminal component by following condensation edges, again by recursion
+--    on a Finite proof.  Both take theirs from listFinite, so they need no
+--    guard.
 --
 -- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
 -- so a sink lies on no cycle; and any vertex of a cycle reaches any other, so
@@ -37,13 +38,13 @@ module LTL.1-Lib.FairGraph {Node : Set} (eq : DecEq Node)
 -- LTL.1-Lib.Graph and the set layer itself.
 
 open import LTL.1-Lib.Sets
-open import LTL.1-Lib.Bar
+open import LTL.1-Lib.Exhaustible
 open import LTL.1-Lib.Nodes eq
 open import LTL.1-Lib.Graph eq G
 open import LTL.1-Lib.CertStep
 
 -- The implicit arguments the signatures below leave out: the endpoints and
--- visited list of a trail, and the pool of the Bar a search recurses on.
+-- visited list of a trail, and the pool a search recurses on.
 -- As in LTL.1-Lib.Graph, so is ws wherever a trail, loop or circuit fixes
 -- it; it stays explicit where it only occurs under a function (sccOf ws r).
 
@@ -107,10 +108,10 @@ terminalClosed ws r et {z} mz my e =
 ------------------------------------------------------------------------
 -- A non-empty graph has a terminal component.  While r's component is not
 -- terminal, there is a w that r reaches and that does not reach r; move the
--- representative to w.  This is a Bar search whose invariant is that every
--- vertex of the current reachable set still satisfies the Bar predicate;
--- giving up r is the sub-Bar picks hands over, and the new reachable set
--- avoids r because w does not reach r.
+-- representative to w.  The search recurses on a Finite proof, and its
+-- invariant is that every vertex of the current reachable set is still in the
+-- pool; giving up r is the smaller pool next hands over, and the new
+-- reachable set avoids r because w does not reach r.
 
 -- A vertex whose component is terminal, found by the search above.
 
@@ -138,7 +139,7 @@ module _ (ws : List Node) where
     terminalAt r r∈ws
                (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
                           (λ w m -> f m))
-  terminalFind {Pool} r r∈ws avail (picks next)
+  terminalFind {Pool} r r∈ws avail (everyPick next)
                (counterexample w w∈reach noReturn) =
     terminalGo w (reachIn ws r w∈reach) avail'
                (next r (avail r (reachSeed ws r r∈ws)))
@@ -362,7 +363,7 @@ fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 -- Terminal-component removal, a REMOVING iteration: whichever step applies,
 -- the vertex it names (the sink x, or the block's representative r) leaves ws
--- and the Bar's pool with it (dropAllSat).
+-- and the pool with it (dropAllSat).
 
 module _ (fs : List Pred) where
 
@@ -378,7 +379,7 @@ module _ (fs : List Pred) where
 
   graphFind ws subset fin (allTrue f) =
     graphBlock ws subset fin (pickBlock ws fs f)
-  graphFind ws subset (picks next) (counterexample x x∈ws noOut) =
+  graphFind ws subset (everyPick next) (counterexample x x∈ws noOut) =
     [ (λ fi -> inl (fairInMono (λ z m -> ∈-filter⁻ (x ≢ᵛ_) ws m) fi))
     , (λ c  -> inr (cSink ws x x∈ws (¬ᵇ-false (null (outs ws x)) noOut) c))
     ] (graphGo (ws ∖ᵛ x) (dropAllSat (x ≢ᵛ_) ws subset x (≢ᵛ-self x))
@@ -386,7 +387,8 @@ module _ (fs : List Pred) where
 
   graphBlock ws subset fin (bEmpty e)       = inr (cNil ws e)
   graphBlock ws subset fin (bFair r r∈ws c) = inl (fairIn r r∈ws c)
-  graphBlock ws subset (picks next) (bUnfair r r∈ws terminal g g∈fs gMissed) =
+  graphBlock ws subset (everyPick next)
+             (bUnfair r r∈ws terminal g g∈fs gMissed) =
     [ (λ fi -> inl (fairInMono (λ z m -> ∈-filter⁻ notInC ws m) fi))
     , (λ c  -> inr (cBlock ws C g g∈fs (terminalClosed ws r terminal) miss c))
     ] (graphGo (ws ∖ C)

@@ -240,7 +240,7 @@ exports.run = async () => {
     await api.mark([data.root], false);
 
     // A whole file: marked, its top CodeLens, then the Undo path.
-    const barFile = 'LTL/1-Lib/Bar.agda';
+    const barFile = 'LTL/1-Lib/Exhaustible.agda';
     const inBar = () => Object.entries(api.data.defs).filter(([, d]) => d.path === barFile);
     const fresh = inBar().filter(([, d]) => d.status !== 'done').map(([k]) => k);
     await api.markFile({ file: barFile });
@@ -255,7 +255,7 @@ exports.run = async () => {
     // (one or two characters) for every file and folder that gets one.
     const deco = u => api.decorations.provideFileDecoration(u);
     const barDeco = deco(barUri);
-    log(`explorer: Bar.agda "${barDeco.badge}" ${barDeco.color && barDeco.color.id} | ${barDeco.tooltip}`);
+    log(`explorer: Exhaustible.agda "${barDeco.badge}" ${barDeco.color && barDeco.color.id} | ${barDeco.tooltip}`);
     assert.strictEqual(barDeco.badge, '✓');
     const uris = [...new Set(Object.values(api.data.defs).map(d => d.path))]
       .flatMap(f => [f, path.dirname(f)])

@@ -16,14 +16,14 @@
 --
 -- Ust is the successor closure of the states containing P, by the growing
 -- search of LTL.1-Lib.Graph over St.  That search GROWS its accumulator, so it
--- recurses on a Bar (stateFinite) rather than a length.
+-- recurses on a Finite proof (stateFinite) rather than a length.
 
 open import LTL.2-Syntax.Formula using (Formula)
 
 module LTL.5-States.Closure (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.VecBar
+open import LTL.5-States.VecFinite
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 

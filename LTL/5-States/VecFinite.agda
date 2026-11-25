@@ -1,19 +1,19 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.5-States.VecBar -- valuations of a given length are inductively finite,
--- and the guard that keeps the searches over them cheap.
+-- LTL.5-States.VecFinite -- valuations of a given length are inductively
+-- finite, and the guard that keeps the searches over them cheap.
 
-module LTL.5-States.VecBar where
+module LTL.5-States.VecFinite where
 
 open import LTL.5-States.Reach public
 
 ------------------------------------------------------------------------
 -- Vectors of a given length are inductively finite -- in O(n), not 2^n.  A
--- valuation of length n+1 is a Bool paired with one of length n, so barProd
--- applies, and barPreimage transports the result back along uncons.  allVals
+-- valuation of length n+1 is a Bool paired with one of length n, so exhaustibleProd
+-- applies, and exhaustiblePreimage transports the result back along uncons.  allVals
 -- never appears.
 
--- v has length n, as a boolean predicate (so that it can be a Bar's pool).
+-- v has length n, as a boolean predicate (so that it can be a pool).
 
 hasLength : Nat -> Val -> Bool
 hasLength n v = length v ≡ⁿ n
@@ -47,7 +47,7 @@ unconsNeq m (b ∷ v) (c ∷ w) ey ez e = ¬ᵇ-∧ᵇ (b ⇔ᵇ c) (v ≡ᵛ w)
 
 vecFinite : (n : Nat) -> Finite (hasLength n)
 vecFinite zero =
-  picks (λ x x∈ -> picks (λ y y∈ ->
+  everyPick (λ x x∈ -> everyPick (λ y y∈ ->
     emptyElim (clash x y x∈ (∧ᵇ-trueˡ (hasLength zero y) (x ≢ᵛ y) y∈)
                             (∧ᵇ-trueʳ (hasLength zero y) (x ≢ᵛ y) y∈))))
   where
@@ -60,9 +60,9 @@ vecFinite zero =
         nil2 = subst (λ u -> u ≢ᵛ [] ≡ true) (lenZero x x∈)
                      (subst (λ u -> x ≢ᵛ u ≡ true) (lenZero y y∈) e)
 vecFinite (suc m) =
-  barSubset (∩-intro ⊆ᵖ-refl (lenTail m))
-            (barPreimage unconsV (hasLength (suc m)) (unconsNeq m)
-                         (barProd boolFinite (vecFinite m)))
+  exhaustibleSubset (∩-intro ⊆ᵖ-refl (lenTail m))
+            (exhaustiblePreimage unconsV (hasLength (suc m)) (unconsNeq m)
+                         (exhaustibleProd boolFinite (vecFinite m)))
 
 ------------------------------------------------------------------------
 -- A valuation of length n is in the pool hasLength n; with allVals-len
@@ -75,22 +75,22 @@ hasLength-intro n v e = subst (λ k -> length v ≡ⁿ k ≡ true) e (≡ⁿ-ref
 ------------------------------------------------------------------------
 -- The guard of Barras, refined by Gonthier (Coquand and Siles, section 5).
 --
--- A function defined by recursion on a Bar forces the Bar as it runs.
--- vecFinite gives the Pi-form a guard needs (every pool inside the length-n
--- vectors is finite, by barSubset), and guardFinite at a given depth supplies
--- 2^depth constructors lazily, so a search of fewer than 2^depth picks never
--- touches the fallback, vecFinite.
+-- A function defined by recursion on an Exhaustible proof forces the proof as
+-- it runs.  vecFinite gives the Pi-form a guard needs (every pool inside the
+-- length-n vectors is finite, by exhaustibleSubset), and guardFinite at a
+-- given depth supplies 2^depth constructors lazily, so a search of fewer than
+-- 2^depth picks never touches the fallback, vecFinite.
 
 AllFinite : Nat -> Set
 AllFinite n = (Pool : Pred) -> Pool ⊆ᵖ hasLength n -> Finite Pool
 
 allVecFinite : (n : Nat) -> AllFinite n
-allVecFinite n Pool subset = barSubset subset (vecFinite n)
+allVecFinite n Pool subset = exhaustibleSubset subset (vecFinite n)
 
 guardFinite : (n depth : Nat) -> AllFinite n -> AllFinite n
 guardFinite n zero        fallback = fallback
 guardFinite n (suc depth) fallback =
-  λ Pool subset -> picks (λ x x∈ ->
+  λ Pool subset -> everyPick (λ x x∈ ->
     guardFinite n depth (guardFinite n depth fallback)
                 (Pool ∩ (x ≢ᵛ_)) (⊆ᵖ-trans ∩-fst subset))
 

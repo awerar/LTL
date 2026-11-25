@@ -1,27 +1,5 @@
 # Reviewed definitions, kept by tools/proof-map.
 # name	source hash	date	note
-LTL.1-Lib.Bar.Bar	5ff8f6900ef2	2026-11-25	
-LTL.1-Lib.Bar.Subset	eb5017104313	2026-11-25	
-LTL.1-Lib.Bar._⁻¹_	e5a514572b82	2026-11-25	
-LTL.1-Lib.Bar._∩_	7bcda2d6a1f3	2026-11-25	
-LTL.1-Lib.Bar._∪_	35c2d3fc54db	2026-11-25	
-LTL.1-Lib.Bar._⊆ᵖ_	1c6e318b41a3	2026-11-25	
-LTL.1-Lib.Bar.barMono	40c1738e2471	2026-11-24	
-LTL.1-Lib.Bar.barProd	03952a65a757	2026-11-24	
-LTL.1-Lib.Bar.barPull	4952855aa025	2026-11-24	
-LTL.1-Lib.Bar.barSubset	b7e3e8d9f76f	2026-11-25	
-LTL.1-Lib.Bar.barUnion	11dc6d691476	2026-11-24	
-LTL.1-Lib.Bar.boolIFin	f0b506110853	2026-11-24	
-LTL.1-Lib.Bar.noThreeDistinct	bafcf282a0dd	2026-11-24	
-LTL.1-Lib.Bar.prodPred	ed4d6c2ddfac	2026-11-24	
-LTL.1-Lib.Bar.prodRel	0d0d93037392	2026-11-24	
-LTL.1-Lib.Bar.∩-fst	5c2582e15d28	2026-11-25	
-LTL.1-Lib.Bar.∩-intro	52446837f4c8	2026-11-25	
-LTL.1-Lib.Bar.∩-monoˡ	c68e26c1c604	2026-11-25	
-LTL.1-Lib.Bar.∪-∩-distrib	2bcb449670bb	2026-11-25	
-LTL.1-Lib.Bar.∪-∩-weaken	a8a607a4d8a4	2026-11-25	
-LTL.1-Lib.Bar.⊆ᵖ-refl	27b2e2a2d2cc	2026-11-25	
-LTL.1-Lib.Bar.⊆ᵖ-trans	ba817e717cb2	2026-11-25	
 LTL.1-Lib.Base.Unit	425f69290eac	2026-11-24	
 LTL.1-Lib.Base.cong	52b17b617831	2026-11-24	
 LTL.1-Lib.Base.cong₂	f8611b1bddc9	2026-11-24	
@@ -39,6 +17,18 @@ LTL.1-Lib.DecEq.∈ᵛ-complete	568a3a307e83	2026-11-24
 LTL.1-Lib.DecEq.∈ᵛ-false	b2a7d3386b4e	2026-11-24	
 LTL.1-Lib.DecEq.∈ᵛ-sound	cccec7356262	2026-11-24	
 LTL.1-Lib.DecEq.≢ᵛ-self	f6de408b2294	2026-11-24	
+LTL.1-Lib.Exhaustible.Subset	eb5017104313	2026-11-25	
+LTL.1-Lib.Exhaustible._⁻¹_	e5a514572b82	2026-11-25	
+LTL.1-Lib.Exhaustible._∩_	7bcda2d6a1f3	2026-11-25	
+LTL.1-Lib.Exhaustible._∪_	35c2d3fc54db	2026-11-25	
+LTL.1-Lib.Exhaustible._⊆ᵖ_	1c6e318b41a3	2026-11-25	
+LTL.1-Lib.Exhaustible.noThreeDistinct	bafcf282a0dd	2026-11-24	
+LTL.1-Lib.Exhaustible.∩-fst	5c2582e15d28	2026-11-25	
+LTL.1-Lib.Exhaustible.∩-intro	52446837f4c8	2026-11-25	
+LTL.1-Lib.Exhaustible.∪-∩-distrib	2bcb449670bb	2026-11-25	
+LTL.1-Lib.Exhaustible.∪-∩-weaken	a8a607a4d8a4	2026-11-25	
+LTL.1-Lib.Exhaustible.⊆ᵖ-refl	27b2e2a2d2cc	2026-11-25	
+LTL.1-Lib.Exhaustible.⊆ᵖ-trans	ba817e717cb2	2026-11-25	
 LTL.1-Lib.Graph.Reaches	29fd1b3a05f3	2026-11-25	
 LTL.1-Lib.Graph.Trail	fe3bbd4e23ca	2026-11-25	
 LTL.1-Lib.Graph.addRound	06a6f753469a	2026-11-25	
