@@ -141,6 +141,7 @@ tools/proof-map show provableSCC --src   # uses, users and source
 tools/proof-map done decide -m "note"    # mark as reviewed
 tools/proof-map done LTL/1-Lib/Exhaustible.agda    # mark a whole file (or LTL.1-Lib.Exhaustible)
 tools/proof-map status                   # progress per module
+tools/proof-map file LTL/1-Lib/Graph.agda    # what is left to review in a file
 tools/proof-map stale --diff             # reviews that are out of date, and what changed
 ```
 
@@ -199,10 +200,16 @@ needs no npm packages or build step. It adds:
   how many definitions it uses (click to reveal it in the tree) and how many
   use it (click for its users). The editor's context menu has *Reveal in
   Proof Map* and *Show Users*.
-- at the top of each Agda file, how many of its definitions are reviewed;
-  click to mark them all. *Mark File Reviewed* is also in the explorer's,
-  the editor tab's and the tree's context menus, with an Undo button
-  afterwards; *Remove File's Review Marks* asks first.
+- at the top of each Agda file, how many of its definitions are reviewed:
+  click the count to list the rest and jump to one, or *mark all*. *Mark
+  File Reviewed* is also in the explorer's, the editor tab's and the tree's
+  context menus, with an Undo button afterwards; *Remove File's Review
+  Marks* asks first.
+- to find what is left in a file: `Alt+N` and `Alt+P` (*Go to Next/Previous
+  Unreviewed Definition*) move the cursor through the definitions not yet
+  reviewed, or changed since, wrapping around at the ends; *List Unreviewed
+  in This File…* (the editor's, the tab's and the explorer's context menus)
+  lists them; and each open definition has a blue mark in the scroll bar.
 - in the explorer and on editor tabs, a badge per Agda file and folder: the
   number of open definitions (`9+` beyond 99), a green `✓` when all are
   reviewed, a yellow `~` when some changed since their review; the tooltip

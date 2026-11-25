@@ -1,10 +1,13 @@
 // Drives the extension inside VS Code and writes a report to
-// $PROOF_MAP_TEST_OUT. Run from the repository root (a window opens briefly;
-// docs/review.tsv is restored afterwards):
+// $PROOF_MAP_TEST_OUT. Run from the repository root (a window opens briefly).
+// The test marks and unmarks definitions and restores the ledger afterwards;
+// give it a copy in PROOF_MAP_LEDGER so reviews made meanwhile are kept:
 //
-//   PROOF_MAP_TEST_OUT=/tmp/proof-map-test.txt code --user-data-dir /tmp/pm-user \
-//     --extensions-dir /tmp/pm-ext --extensionDevelopmentPath=$PWD/tools/vscode-proof-map \
-//     --extensionTestsPath=$PWD/tools/vscode-proof-map/test/suite.js $PWD
+//   cp docs/review.tsv /tmp/pm-ledger.tsv
+//   PROOF_MAP_LEDGER=/tmp/pm-ledger.tsv PROOF_MAP_TEST_OUT=/tmp/proof-map-test.txt \
+//     code --wait --user-data-dir /tmp/pm-user --extensions-dir /tmp/pm-ext \
+//     "--extensionDevelopmentPath=$PWD/tools/vscode-proof-map" \
+//     "--extensionTestsPath=$PWD/tools/vscode-proof-map/test/suite.js" "$PWD"
 
 const vscode = require('vscode');
 const assert = require('assert');
@@ -15,7 +18,8 @@ exports.run = async () => {
   const out = [];
   const log = s => out.push(s);
   const folder = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  const ledger = path.join(folder, 'docs', 'review.tsv');
+  // A copy of the ledger (see PROOF_MAP_LEDGER in tools/proof-map) when given.
+  const ledger = process.env.PROOF_MAP_LEDGER || path.join(folder, 'docs', 'review.tsv');
   const before = fs.existsSync(ledger) ? fs.readFileSync(ledger, 'utf8') : null;
   let failed = false;
   try {
@@ -45,8 +49,10 @@ exports.run = async () => {
       for (const c of api.tree.getChildren(el)) walk(c);
     };
     walk(root);
-    // The tree does not expand into Base and Prelude, which are folded.
-    const below = Object.values(api.data.defs).filter(d => d.belowRoot && !d.folded).length;
+    // The tree does not expand into Base and Prelude, which are folded; the
+    // root is shown but not counted when untracked (Main's statement).
+    const below = Object.values(api.data.defs).filter(d => d.belowRoot && !d.folded).length +
+      (api.data.defs[data.root].belowRoot ? 0 : 1);
     log(`folded (Base, Prelude) under the root: ` +
       Object.values(api.data.defs).filter(d => d.belowRoot && d.folded).length);
     log(`expanded ${seen.size} distinct definitions (belowRoot: ${below}), ${ids.size} items`);
@@ -239,8 +245,14 @@ exports.run = async () => {
     assert(!api.staleList.getChildren().some(e => e.qn === data.root));
     await api.mark([data.root], false);
 
-    // A whole file: marked, its top CodeLens, then the Undo path.
-    const barFile = 'LTL/1-Lib/Exhaustible.agda';
+    // A whole file: marked, its top CodeLens, then the Undo path. The file is
+    // the first with two or more definitions left to review.
+    const left = {};
+    for (const d of Object.values(api.data.defs)) {
+      if (d.status !== 'done' && d.belowRoot) left[d.path] = (left[d.path] || 0) + 1;
+    }
+    const barFile = Object.keys(left).sort().find(f => left[f] >= 2);
+    assert(barFile, 'no file with two definitions left to review');
     const inBar = () => Object.entries(api.data.defs).filter(([, d]) => d.path === barFile);
     const fresh = inBar().filter(([, d]) => d.status !== 'done').map(([k]) => k);
     await api.markFile({ file: barFile });
@@ -255,7 +267,7 @@ exports.run = async () => {
     // (one or two characters) for every file and folder that gets one.
     const deco = u => api.decorations.provideFileDecoration(u);
     const barDeco = deco(barUri);
-    log(`explorer: Exhaustible.agda "${barDeco.badge}" ${barDeco.color && barDeco.color.id} | ${barDeco.tooltip}`);
+    log(`explorer: ${path.basename(barFile)} "${barDeco.badge}" ${barDeco.color && barDeco.color.id} | ${barDeco.tooltip}`);
     assert.strictEqual(barDeco.badge, '✓');
     const uris = [...new Set(Object.values(api.data.defs).map(d => d.path))]
       .flatMap(f => [f, path.dirname(f)])
@@ -282,6 +294,33 @@ exports.run = async () => {
     log(`after undo: ${inBar().filter(([, d]) => d.status === 'done').length} marked; ` +
       `explorer badge "${deco(barUri).badge}"`);
     assert.notStrictEqual(deco(barUri).badge, '✓');
+
+    // Unreviewed definitions of a file: the list, the top lens that opens it,
+    // and next/previous from the cursor, wrapping around.
+    const barDoc = await vscode.workspace.openTextDocument(barUri);
+    const barEd = await vscode.window.showTextDocument(barDoc);
+    const todo = api.unreviewedIn(barDoc);
+    assert(todo.length >= 2, 'too few unreviewed definitions to step through');
+    assert(todo.every((u, i) => i === 0 || todo[i - 1].line <= u.line), 'not in file order');
+    const openLens = (await vscode.commands.executeCommand('vscode.executeCodeLensProvider', barUri))
+      .find(l => l.range.start.line === 0 && l.command);
+    assert.strictEqual(openLens.command.command, 'proofMap.listUnreviewed');
+    const cursor = () => barEd.selection.active.line;
+    barEd.selection = new vscode.Selection(0, 0, 0, 0);
+    await vscode.commands.executeCommand('proofMap.nextUnreviewed');
+    const first = cursor();
+    await vscode.commands.executeCommand('proofMap.nextUnreviewed');
+    const second = cursor();
+    await vscode.commands.executeCommand('proofMap.previousUnreviewed');
+    const back = cursor();
+    await vscode.commands.executeCommand('proofMap.previousUnreviewed');
+    const wrapped = cursor();
+    log(`unreviewed in ${barFile}: ${todo.length}; top lens: ${openLens.command.title}; ` +
+      `next ${first + 1}, ${second + 1}; previous ${back + 1}, ${wrapped + 1}`);
+    assert.strictEqual(first, todo[0].line);
+    assert.strictEqual(second, todo[1].line);
+    assert.strictEqual(back, todo[0].line);
+    assert.strictEqual(wrapped, todo[todo.length - 1].line);
   } catch (e) {
     failed = true;
     log('FAIL ' + (e.stack || e));

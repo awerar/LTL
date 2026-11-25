@@ -466,12 +466,33 @@ function staleRanges(doc) {
   return { changed, removed };
 }
 
+// The definitions of a document that are not reviewed (open, or changed
+// since their review), in the order they appear, each with its line.
+function unreviewedIn(doc) {
+  if (!data) return [];
+  const rel = path.relative(folder, doc.uri.fsPath).split(path.sep).join('/');
+  return Object.entries(data.defs)
+    .filter(([, d]) => d.path === rel && d.status !== 'done')
+    .map(([qn, d]) => ({ qn, d, line: locate(doc, d) }))
+    .sort((a, b) => a.line - b.line);
+}
+
+// Open definitions get a mark in the scrollbar; stale ones already have
+// theirs from the changed lines.
+const openRuler = vscode.window.createTextEditorDecorationType({
+  overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.infoForeground'),
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+});
+
 function highlightStale() {
   for (const ed of vscode.window.visibleTextEditors) {
     if (ed.document.uri.fsPath.endsWith('.agda')) {
       const { changed, removed } = staleRanges(ed.document);
       ed.setDecorations(staleChanged, changed);
       ed.setDecorations(staleRemoved, removed);
+      ed.setDecorations(openRuler, unreviewedIn(ed.document)
+        .filter(u => u.d.status === 'open')
+        .map(u => new vscode.Range(u.line, 0, u.line, 0)));
     }
   }
 }
@@ -515,18 +536,25 @@ class Lenses {
     }
     const rel = path.relative(folder, doc.uri.fsPath).split(path.sep).join('/');
     const lenses = [];
-    // At the top of the file: how much of it is reviewed, and a way to mark
-    // (or, once complete, unmark) all of it.
+    // At the top of the file: how much of it is reviewed (click to list what
+    // is not), and a way to mark (or, once complete, unmark) all of it.
     const inFile = Object.values(data.defs).filter(d => d.path === rel);
     if (inFile.length) {
       const done = inFile.filter(d => d.status === 'done').length;
       const top = new vscode.Range(0, 0, 0, 0);
-      lenses.push(new vscode.CodeLens(top, done < inFile.length
-        ? { title: `$(checklist) ${done}/${inFile.length} reviewed in this file · mark all`,
-            command: 'proofMap.markFile', arguments: [{ file: rel }] }
-        : { title: `$(pass-filled) all ${inFile.length} reviewed in this file`,
-            tooltip: 'Remove the marks of this file', command: 'proofMap.unmarkFile',
-            arguments: [{ file: rel }] }));
+      if (done < inFile.length) {
+        lenses.push(new vscode.CodeLens(top, {
+          title: `$(checklist) ${done}/${inFile.length} reviewed in this file`,
+          tooltip: 'List the unreviewed definitions of this file',
+          command: 'proofMap.listUnreviewed', arguments: [{ file: rel }] }));
+        lenses.push(new vscode.CodeLens(top, {
+          title: 'mark all', command: 'proofMap.markFile', arguments: [{ file: rel }] }));
+      } else {
+        lenses.push(new vscode.CodeLens(top, {
+          title: `$(pass-filled) all ${inFile.length} reviewed in this file`,
+          tooltip: 'Remove the marks of this file', command: 'proofMap.unmarkFile',
+          arguments: [{ file: rel }] }));
+      }
     }
     for (const [qn, d] of Object.entries(data.defs)) {
       if (d.path !== rel) continue;
@@ -724,6 +752,55 @@ function activate(context) {
     await refresh(false);
   };
 
+  // Moves the cursor to the next (dir > 0) or previous unreviewed
+  // definition of the active editor, wrapping around at the ends.
+  const stepUnreviewed = dir => {
+    const ed = vscode.window.activeTextEditor;
+    if (!ed || !data) return null;
+    const list = unreviewedIn(ed.document);
+    if (!list.length) {
+      vscode.window.showInformationMessage('Proof Map: everything in this file is reviewed.');
+      return null;
+    }
+    const cur = ed.selection.active.line;
+    const i = dir > 0
+      ? Math.max(list.findIndex(u => u.line > cur), 0)
+      : (list.findLastIndex(u => u.line < cur) + list.length) % list.length;
+    const pos = new vscode.Position(list[i].line, 0);
+    ed.selection = new vscode.Selection(pos, pos);
+    ed.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    vscode.window.setStatusBarMessage(
+      `Proof Map: ${list[i].d.name}, ${i + 1} of ${list.length} unreviewed in this file`, 4000);
+    return list[i].qn;
+  };
+
+  // A quick pick of the unreviewed definitions of a file, in file order.
+  const listUnreviewed = async arg => {
+    const rel = fileOf(arg);
+    if (!rel || !data) return;
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(folder, rel)));
+    const list = unreviewedIn(doc);
+    if (!list.length) {
+      vscode.window.showInformationMessage(`Proof Map: everything in ${rel} is reviewed.`);
+      return;
+    }
+    const total = Object.values(data.defs).filter(d => d.path === rel).length;
+    const pick = await vscode.window.showQuickPick(list.map(u => ({
+      label: `${u.d.status === 'stale' ? '$(warning)' : '$(circle-large-outline)'} ${u.d.name}`,
+      description: u.d.status === 'stale'
+        ? `line ${u.line + 1} · changed since its review on ${u.d.reviewed.date}`
+        : `line ${u.line + 1}`,
+      u,
+    })), {
+      title: `${total - list.length}/${total} reviewed in ${rel}`,
+      placeHolder: `Go to one of the ${list.length} unreviewed definitions`,
+      matchOnDescription: true,
+    });
+    if (!pick) return;
+    const range = new vscode.Range(pick.u.line, 0, pick.u.line, 0);
+    await vscode.window.showTextDocument(doc, { selection: range });
+  };
+
   const showUsers = async arg => {
     const qn = target(arg);
     if (!qn) return;
@@ -764,7 +841,7 @@ function activate(context) {
   };
 
   const sub = (...ds) => context.subscriptions.push(...ds);
-  sub(treeView, nextView, nextUpView, staleView, staleChanged, staleRemoved, status, unfocusItem, output,
+  sub(treeView, nextView, nextUpView, staleView, staleChanged, staleRemoved, openRuler, status, unfocusItem, output,
     staleView.onDidChangeCheckboxState(e => onCheck(e)),
     vscode.window.onDidChangeVisibleTextEditors(highlightStale),
     vscode.workspace.onDidChangeTextDocument(e => {
@@ -812,6 +889,9 @@ function activate(context) {
     vscode.commands.registerCommand('proofMap.showUsers', showUsers),
     vscode.commands.registerCommand('proofMap.goToFocus', () => data && openDef(data.root)),
     vscode.commands.registerCommand('proofMap.markFile', markFile),
+    vscode.commands.registerCommand('proofMap.nextUnreviewed', () => stepUnreviewed(1)),
+    vscode.commands.registerCommand('proofMap.previousUnreviewed', () => stepUnreviewed(-1)),
+    vscode.commands.registerCommand('proofMap.listUnreviewed', listUnreviewed),
     vscode.commands.registerCommand('proofMap.unmarkFile', unmarkFile),
     vscode.commands.registerCommand('proofMap.markWithNote', async el => {
       const d = def(el.qn);
@@ -844,7 +924,7 @@ function activate(context) {
   return { refresh, mark, reveal, showUsers, markFile, unmarkFile, tree, next, nextUp, lenses, treeView,
     setFocus: qn => vscode.commands.executeCommand('proofMap.setRoot', { qn }),
     decorations,
-    nextView, unfocusItem, staleList, staleView, staleRanges,
+    nextView, unfocusItem, staleList, staleView, staleRanges, unreviewedIn,
     get data() { return data; } };
 }
 

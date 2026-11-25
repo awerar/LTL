@@ -123,6 +123,36 @@
         "command": "proofMap.forgetMark",
         "title": "Remove This Mark",
         "category": "Proof Map"
+      },
+      {
+        "command": "proofMap.nextUnreviewed",
+        "title": "Go to Next Unreviewed Definition",
+        "category": "Proof Map",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "proofMap.previousUnreviewed",
+        "title": "Go to Previous Unreviewed Definition",
+        "category": "Proof Map",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "proofMap.listUnreviewed",
+        "title": "List Unreviewed in This File…",
+        "category": "Proof Map",
+        "icon": "$(checklist)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "proofMap.nextUnreviewed",
+        "key": "alt+n",
+        "when": "editorTextFocus && resourceExtname == .agda"
+      },
+      {
+        "command": "proofMap.previousUnreviewed",
+        "key": "alt+p",
+        "when": "editorTextFocus && resourceExtname == .agda"
       }
     ],
     "menus": {
@@ -204,12 +234,17 @@
         {
           "command": "proofMap.markFile",
           "when": "editorLangId == agda",
-          "group": "navigation@92"
+          "group": "navigation@93"
         },
         {
           "command": "proofMap.unfocus",
           "when": "editorLangId == agda && proofMap.focused",
           "group": "navigation@89"
+        },
+        {
+          "command": "proofMap.listUnreviewed",
+          "when": "editorLangId == agda",
+          "group": "navigation@92"
         }
       ],
       "commandPalette": [
@@ -248,9 +283,26 @@
         {
           "command": "proofMap.forgetMark",
           "when": "false"
+        },
+        {
+          "command": "proofMap.nextUnreviewed",
+          "when": "resourceExtname == .agda"
+        },
+        {
+          "command": "proofMap.previousUnreviewed",
+          "when": "resourceExtname == .agda"
+        },
+        {
+          "command": "proofMap.listUnreviewed",
+          "when": "resourceExtname == .agda"
         }
       ],
       "editor/title/context": [
+        {
+          "command": "proofMap.listUnreviewed",
+          "when": "resourceExtname == .agda",
+          "group": "7_proofmap@0"
+        },
         {
           "command": "proofMap.markFile",
           "when": "resourceExtname == .agda",
@@ -263,6 +315,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "proofMap.listUnreviewed",
+          "when": "resourceExtname == .agda",
+          "group": "7_proofmap@0"
+        },
         {
           "command": "proofMap.markFile",
           "when": "resourceExtname == .agda",

@@ -6,6 +6,7 @@ r"""Map the proof top down and track which definitions have been reviewed.
     tools/proof-map next [ROOT] [-n N] [--up] [--order O]  what to review next
     tools/proof-map show NAME [--src]                  one definition
     tools/proof-map status [ROOT]                      progress per module
+    tools/proof-map file FILE... [--all]               unreviewed in a file
     tools/proof-map stale [--diff]                     changed since review
     tools/proof-map done NAME... [-m NOTE]             mark as reviewed
     tools/proof-map undo NAME...                       remove the marks
@@ -24,7 +25,7 @@ that depend on it), --order tree lists it in tree order.
 ROOT defaults to statement (LTL.Main).  NAME is a definition's name (`decide`), or
 qualified by the end of its module path when the name is ambiguous
 (`Lasso.Fair`, `Countermodel.Lasso.Fair`); operators may omit underscores.
-For done and undo, NAME may also be an Agda file (`LTL/1-Lib/Exhaustible.agda`) or a
+For file, done and undo, NAME may also be an Agda file (`LTL/1-Lib/Exhaustible.agda`) or a
 module (`LTL.1-Lib.Exhaustible`), standing for every definition in it.
 
 The graph comes from `agda --html` on LTL/Main.agda (written to
@@ -58,7 +59,9 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOP_FILE = "LTL/Main.agda"
 HTML_DIR = os.path.join(REPO, "_build", "proof-map")
-LEDGER = os.path.join(REPO, "docs", "review.tsv")
+# PROOF_MAP_LEDGER points elsewhere, so the extension's test leaves the
+# real ledger alone.
+LEDGER = os.environ.get("PROOF_MAP_LEDGER") or os.path.join(REPO, "docs", "review.tsv")
 # A copy of each reviewed definition's source, by its hash, so a change made
 # after the review can be shown against it.  Local, like the HTML.
 SNAPSHOTS = os.path.join(REPO, "_build", "proof-map-reviewed")
@@ -722,6 +725,25 @@ def cmd_status(g, marks, args):
               f"no longer exist: {len(orphans)} (see tools/proof-map stale)")
 
 
+def cmd_file(g, marks, args):
+    """The definitions of a file (or module) that are not reviewed, or with
+    --all every one, in file order."""
+    for name in args.names:
+        keys = [k for k in targets(g, name) if not g.defs[k].leaf]
+        if len(keys) == 1 and name in (g.defs[keys[0]].name, g.defs[keys[0]].qname):
+            sys.exit(f"proof-map: {name} is a definition; give its file or module")
+        done = sum(status(g.defs[k], marks) == "done" for k in keys)
+        print(f"{g.defs[keys[0]].path}: {done}/{len(keys)} reviewed")
+        width = max(len(g.defs[k].name) for k in keys)
+        for k in keys:
+            d = g.defs[k]
+            s = status(d, marks)
+            if s == "done" and not args.all:
+                continue
+            since = f"  (changed since {marks[d.qname][1]})" if s == "stale" else ""
+            print(f"  {MARK[s]} {d.name:{width}}  {loc(d)}{since}")
+
+
 def stale_marks(g, marks):
     """Reviewed definitions whose code changed since (in file order), and
     marks whose definition no longer exists (renamed or removed)."""
@@ -990,9 +1012,12 @@ def cmd_json(g, marks, args, error):
     root = g.find(args.root)
     below = set(g.tracked_below(root))
     counts = above(g, root)
+    # Main's definitions are untracked but head the proof: kept, with their
+    # uses, so that a focus can be traced back to them.
+    heads = {k for k, d in g.defs.items() if d.path == TOP_FILE} | {root}
     out = {}
     for k, d in g.defs.items():
-        if d.leaf and k != root:    # an untracked root still heads the tree
+        if d.leaf and k not in heads:
             continue
         mark = marks.get(d.qname)
         out[d.qname] = {
@@ -1003,7 +1028,7 @@ def cmd_json(g, marks, args, error):
             "open": sum(status(g.defs[r], marks) != "done" for r in g.reach(k)),
             "uses": [g.defs[x].qname for x in g.expand(k)],
             "usedBy": [g.defs[x].qname for x in g.users[k]
-                       if not g.defs[x].leaf],
+                       if not g.defs[x].leaf or x in heads],
             "library": [g.defs[x].name for x in g.library(k)],
             "folded": d.folded,
             "belowRoot": k in below,
@@ -1054,6 +1079,10 @@ def main():
     s.add_argument("--src", action="store_true", help="print its source")
     st = sub.add_parser("status", help="progress per module")
     st.add_argument("root", nargs="?", default=DEFAULT_ROOT)
+    f = sub.add_parser("file", help="the unreviewed definitions of a file")
+    f.add_argument("names", nargs="+", help="Agda files or modules")
+    f.add_argument("--all", action="store_true",
+                   help="list the reviewed definitions too")
     sa = sub.add_parser("stale", help="reviews that are out of date")
     sa.add_argument("--diff", action="store_true",
                     help="show what changed since each review")
@@ -1074,7 +1103,7 @@ def main():
         cmd_json(g, marks, args, error)
         return
     {"tree": cmd_tree, "next": cmd_next, "show": cmd_show,
-     "status": cmd_status, "done": cmd_done, "undo": cmd_undo,
+     "status": cmd_status, "file": cmd_file, "done": cmd_done, "undo": cmd_undo,
      "stale": cmd_stale}[args.cmd](
         g, marks, args)
 
