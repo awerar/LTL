@@ -7,7 +7,7 @@
 -- argument for it; boolEq is the instance at Bool, LTL.5-States.Reach builds
 -- the one at Val, and LTL.9-Tests.GraphExamples one at Nat.  Membership eq
 -- opens the record and adds membership ∈ᵛ, inequality ≢ᵛ, list difference
--- ∖ and ∖ᵛ, and list intersection ∩ˡ; Nub eq adds nub.  It is a module rather than
+-- ∖ and ∖ᵛ, and list intersection ∩ˡ.  It is a module rather than
 -- definitions inside the record, so each lemma stays a definition of its own.
 -- Finite eq Pool is exhaustibility (LTL.1-Lib.Exhaustible) with ≢ᵛ as the
 -- apartness; LTL.1-Lib.Nodes fixes eq.  The superscript ᵛ reads "vertex", the
@@ -117,37 +117,6 @@ module Membership {A : Set} (eq : DecEq A) where
   ∈-∩ˡ⁺ : {C : List A} {z : A} (D : List A)
        -> z ∈ C -> z ∈ D -> z ∈ C ∩ˡ D
   ∈-∩ˡ⁺ {C} {z} D mc md = ∈-filter⁺ (_∈ᵛ D) C mc (∈ᵛ-complete z D md)
-
-------------------------------------------------------------------------
--- A list without repetition, keeping first occurrences: each element is
--- followed by the rest with it taken out.  A module of its own, not part of
--- Membership, so that LTL.1-Lib.Nodes, which re-exports Membership at Val,
--- does not bring a second nub into scope beside LTL.2-Syntax.Skel's, at
--- formulas.
-
-module Nub {A : Set} (eq : DecEq A) where
-
-  open Membership eq
-
-  nub : List A -> List A
-  nub []       = []
-  nub (x ∷ xs) = x ∷ (nub xs ∖ᵛ x)
-
-  ∈-nub⁺ : (xs : List A) -> ∀ⁱ[ z ∈ xs ] z ∈ nub xs
-  ∈-nub⁺ []       ()
-  ∈-nub⁺ (x ∷ xs) here = here
-  ∈-nub⁺ (x ∷ xs) {z} (there m) with z ∈ᵛ (x ∷ []) in e
-  ... | false = there (∈-∖⁺ (x ∷ []) (∈-nub⁺ xs m) e)
-  ... | true  = isX (∈ᵛ-sound z (x ∷ []) e)
-    where
-      isX : {y : A} -> y ∈ x ∷ [] -> y ∈ nub (x ∷ xs)
-      isX here       = here
-      isX (there ())
-
-  nub-sub : (xs : List A) -> ∀ⁱ[ z ∈ nub xs ] z ∈ xs
-  nub-sub []       ()
-  nub-sub (x ∷ xs) here      = here
-  nub-sub (x ∷ xs) (there m) = there (nub-sub xs (∖-⊆ (nub xs) (x ∷ []) _ m))
 
 ------------------------------------------------------------------------
 -- Inductive finiteness

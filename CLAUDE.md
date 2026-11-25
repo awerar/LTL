@@ -167,9 +167,7 @@ module name). Folder names never equal a module name.
    `exhaustibleProd`, `exhaustiblePreimage`; all searches recurse on one); `DecEq` (the record `DecEq A` bundling a Boolean
    equality test `_≡ᵛ_` with its soundness and reflexivity; module
    `Membership`: lists as sets, `∈ᵛ`, `≢ᵛ`, list difference `∖`/`∖ᵛ`
-   (`ws ∖ᵛ x` is `ws ∖ (x ∷ [])`), intersection `∩ˡ`, and their lemmas;
-   module `Nub`: `nub`, kept out of `Membership` so that `Nodes` at `Val`
-   brings no second copy beside `Skel`'s; `Finite eq Pool`, `Exhaustible`
+   (`ws ∖ᵛ x` is `ws ∖ (x ∷ [])`), intersection `∩ˡ`, and their lemmas; `Finite eq Pool`, `Exhaustible`
    with `≢ᵛ` as apartness; the instance `boolEq` at Bool and `boolFinite`);
    `Nodes` (parameterised by a
    node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finiteᵛ`
@@ -186,8 +184,8 @@ module name). Folder names never equal a module name.
    inside the P-modules their names read `Reaches ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
-   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ` and `formulaEq`, its `DecEq`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
-   `indexOf`, `nub` (`Nub formulaEq`), `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
+   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
+   `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L0–L7 via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
    `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).

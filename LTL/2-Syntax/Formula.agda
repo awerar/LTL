@@ -12,7 +12,6 @@
 module LTL.2-Syntax.Formula where
 
 open import LTL.1-Lib.Prelude public
-open import LTL.1-Lib.DecEq using (DecEq)
 
 ------------------------------------------------------------------------
 -- Formulas
@@ -149,11 +148,6 @@ var n    ≡ᶠ □ B     = false
 ≡ᶠ-sound (□ A)    (B ⇒ C) ()
 ≡ᶠ-sound (□ A)    (○ B)   ()
 ≡ᶠ-sound (□ A)    (□ B)   p = cong □_ (≡ᶠ-sound A B p)
-
--- ≡ᶠ as a DecEq (LTL.1-Lib.DecEq), for the generic list operations.
-
-formulaEq : DecEq Formula
-formulaEq = record { _≡ᵛ_ = _≡ᶠ_ ; ≡ᵛ-sound = ≡ᶠ-sound ; ≡ᵛ-refl = ≡ᶠ-refl }
 
 ------------------------------------------------------------------------
 -- Subformulas
