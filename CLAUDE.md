@@ -83,7 +83,7 @@ derivation or a certified finite lasso countermodel.
   `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
-  (`keepIn {ws = ws} p t h`) or sits in a `module _ {ws : List Node}` block,
+  (`terminalFind {Pool} r …`) or sits in a `module _ {ws : List Node}` block,
   which also carries shared explicit arguments (`reachesInto`'s `cl`).
   Generalised arguments come in order of first appearance in the signature.
   A variable clashes with any definition of the same name in the module,
