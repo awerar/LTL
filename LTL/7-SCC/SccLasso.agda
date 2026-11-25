@@ -62,12 +62,12 @@ evWitness A z ez pd =
 -- Persistence to a state VISITED, not to the endpoint: trailPersist with the
 -- target carried along and the walk cut short when it is reached.
 
-persistTo : {us : List Val} (A : Formula) -> □ A ∈ sub P
-         -> {v : Val} {ws : List Val} {x : Val} -> Trail us v ws x
+persistTo : (A : Formula) -> □ A ∈ sub P
+         -> {v : Val} {ws : List Val} {x : Val} -> Trail v ws x
          -> valOf v (□ A) ≡ false
          -> ∀ⁱ[ z ∈ ws ] (Fulfil A v ws ⊎ valOf z (□ A) ≡ false)
 persistTo A mb tNil e ()
-persistTo A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
+persistTo A mb (tCons {v} {w} {ws} {x} st wk) e {z} mz =
   onA z mz
   where
     onA : (y : Val) -> y ∈ w ∷ ws
@@ -85,19 +85,19 @@ persistTo A mb (tCons {v} {w} {ws} {x} mw st wk) e {z} mz =
 
 sccLasso : (v0 : Val) -> v0 ∈ Ust
         -> FairLoop Ust evPreds v0 -> Lasso v0
-sccLasso v0 mv0 (fairLoop r (reachesBy st ts)
-                          (circuit (loopBy q qs (tCons mq e tqs)) wit)) =
+sccLasso v0 mv0 (fairLoop r (reachesBy st ts sst)
+                          (circuit (loopBy q qs (tCons e tqs) scy) wit)) =
   mkLasso cyc fair (st ++ cy)
-          (vpos v0 (st ++ cy) mv0 (trailApp ts tcy))
+          (vpos v0 (st ++ cy) (trailApp ts tcy) (∷-⊆ mv0 (++-⊆ st sst scy)))
   where
     cy : List Val
     cy = q ∷ qs
 
-    tcy : Trail Ust r cy r
-    tcy = tCons mq e tqs
+    tcy : Trail r cy r
+    tcy = tCons e tqs
 
     cyc : Cycle
-    cyc = mkCycle r (q , qs) (vpos q qs mq tqs) e
+    cyc = mkCycle r (q , qs) (vpos q qs tqs scy) e
 
     -- Pending at the base point: go out to the witness the graph layer
     -- chose for evPred A.

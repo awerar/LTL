@@ -47,7 +47,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
               -> (A : Formula) -> A ∈ eventualities
               -> valOf (posState pos) (□ A) ≡ false
               -> ∃[ q ∈ orbit loop pos ] valOf (posState q) A ≡ false
-  globalFulfil (vpos s rest ms wk) A mA pend =
+  globalFulfil (vpos s rest wk sb) A mA pend =
     [ onStem , onCycle ] (trailPersist A (evSub mA) wk pend)
     where
       place : (q : Pos) -> q ∈ orbit loop (s , rest) -> {z : Val}
@@ -74,7 +74,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
           fromFul : Fulfil A b (stretchStates loop)
                  -> ∃[ q ∈ orbit loop (s , rest) ] valOf (posState q) A ≡ false
           fromFul (ful z mz ez) =
-            fromStretch (∈-stretchStates⁻ loop (∷-⊆ (endOnCycle cy) mz))
+            fromStretch (∈-stretchStates⁻ loop (∷-⊆ (endOnCycle cy) (λ _ m -> m) z mz))
             where
               fromStretch : (∃[ q ∈ stretch loop ] posState q ≡ z)
                     -> ∃[ q ∈ orbit loop (s , rest) ]

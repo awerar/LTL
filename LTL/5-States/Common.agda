@@ -39,10 +39,3 @@ allIntoMap : {C : Formula} (f : Val -> Formula) (ws : List Val)
           -> (∀[ w ∈ ws ] ⊢ (f w) ⇒ C) -> AllInto C (map f ws)
 allIntoMap f []       h = intoNil
 allIntoMap f (w ∷ ws) h = intoCons (h w here) (allIntoMap f ws (λ z m -> h z (there m)))
-
-------------------------------------------------------------------------
--- A state met from b is a state of a cycle that contains b
-
-∷-⊆ : {b : Val} {qs : List Val} -> b ∈ qs -> ∀ⁱ[ z ∈ b ∷ qs ] z ∈ qs
-∷-⊆ mb here      = mb
-∷-⊆ mb (there m) = m

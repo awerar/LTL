@@ -504,6 +504,15 @@ map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
 ∈-++⁻ (z ∷ xs) ys (there h) =
   [ (λ k -> inl (there k)) , inr ] (∈-++⁻ xs ys h)
 
+-- Building an inclusion by cons and by append.
+
+∷-⊆ : {xs zs : List A} -> x ∈ zs -> xs ⊆ zs -> x ∷ xs ⊆ zs
+∷-⊆ m h _ here      = m
+∷-⊆ m h z (there k) = h z k
+
+++-⊆ : (xs : List A) {zs : List A} -> xs ⊆ zs -> ys ⊆ zs -> xs ++ ys ⊆ zs
+++-⊆ {ys = ys} xs h1 h2 z m = [ h1 z , h2 z ] (∈-++⁻ xs ys m)
+
 ∈-concatMap⁺ : (f : A -> List B) {xs : List A} {x : A} {y : B}
             -> x ∈ xs -> y ∈ f x -> y ∈ concatMap f xs
 ∈-concatMap⁺ f {x ∷ xs} here      k = ∈-++⁺ˡ (f x) (concatMap f xs) k

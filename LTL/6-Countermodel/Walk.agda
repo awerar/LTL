@@ -5,13 +5,14 @@
 --
 -- A walk is LTL.1-Lib.Graph's Trail at the edge test step P:
 --
---   Trail us v ws x   --  v -> ws_1 -> ... -> ws_n = x, every ws_i in us
+--   Trail v ws x   --  v -> ws_1 -> ... -> ws_n = x
+--
+-- and that its states lie in a set us is the separate fact  ws ⊆ us .
 --
 -- This module is the one application of LTL.1-Lib.Graph and LTL.1-Lib.FairGraph,
 -- and re-exports both, so the lassos and the graph search share one path
--- type.  A P-module gets
--- Trail us v zs w, Cert fs ws, ... from here; an importer outside, opening it
--- unapplied, gets Trail P us v zs w, Cert P fs ws, ...
+-- type.  A P-module gets Trail v zs w, Cert fs ws, ... from here; an importer
+-- outside, opening it unapplied, gets Trail P v zs w, Cert P fs ws, ...
 --
 -- The main lemma is trailPersist: along a walk, an eventuality pending at the
 -- start is either fulfilled at a state visited, or still pending at the end.
@@ -53,12 +54,12 @@ fulfilCons (ful z m q) = ful z (there m) q
 -- either A fails somewhere on the way (the eventuality is fulfilled) or □ A
 -- is still pending at x.  Each step is `persist`, i.e. (T3).
 
-trailPersist : {us : List Val} (A : Formula) -> □ A ∈ sub P
-            -> {v : Val} {ws : List Val} {x : Val} -> Trail us v ws x
+trailPersist : (A : Formula) -> □ A ∈ sub P
+            -> {v : Val} {ws : List Val} {x : Val} -> Trail v ws x
             -> valOf v (□ A) ≡ false
             -> Fulfil A v ws ⊎ valOf x (□ A) ≡ false
 trailPersist A mb tNil e = inr e
-trailPersist A mb (tCons {v} {w} {ws} {x} mw st wk) e with valOf v A in ea
+trailPersist A mb (tCons {v} {w} {ws} {x} st wk) e with valOf v A in ea
 ... | false = inl (ful v here ea)
 ... | true  =
   [ (λ f -> inl (fulfilCons f)) , inr ]

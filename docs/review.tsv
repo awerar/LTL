@@ -26,11 +26,11 @@ LTL.1-Lib.DecEq.∈ᵛ-complete	568a3a307e83	2026-11-24
 LTL.1-Lib.DecEq.∈ᵛ-false	b2a7d3386b4e	2026-11-24	
 LTL.1-Lib.DecEq.∈ᵛ-sound	cccec7356262	2026-11-24	
 LTL.1-Lib.DecEq.≢ᵛ-self	f6de408b2294	2026-11-24	
-LTL.1-Lib.Graph.Trail	ab7bdae83e23	2026-11-24	
+LTL.1-Lib.Graph.Trail	fe3bbd4e23ca	2026-11-25	
 LTL.1-Lib.Graph.hasOut	2cebb58e26cd	2026-11-24	
 LTL.1-Lib.Graph.outs	fa8f3260dc70	2026-11-24	
-LTL.1-Lib.Graph.trailApp	241632eba15a	2026-11-24	
-LTL.1-Lib.Graph.trailEnd	03acb8fc31dc	2026-11-24	
+LTL.1-Lib.Graph.trailApp	deb3db82619e	2026-11-25	
+LTL.1-Lib.Graph.trailEnd	dc274499943f	2026-11-25	
 LTL.1-Lib.Nodes.AllSat	b91bb67d799c	2026-11-24	
 LTL.1-Lib.Nodes.AllSat-∈ᵛ	21f5a29b4d5d	2026-11-24	
 LTL.1-Lib.Nodes.Avail	af6ca98926ce	2026-11-24	

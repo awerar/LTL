@@ -168,14 +168,15 @@ module _ (ws : List Node) where
 --
 -- A loop is non-empty by its index: it visits next first, then back on the
 -- way round to r.  So every fact that rests on the first step holds by
--- computation.
+-- computation.  The vertices it visits lie in ws; r among them, as the end.
 
 record Loop (ws : List Node) (r : Node) : Set where
   constructor loopBy
   field
-    next  : Node
-    back  : List Node
-    trail : Trail ws r (next ∷ back) r
+    next   : Node
+    back   : List Node
+    trail  : Trail r (next ∷ back) r
+    inside : next ∷ back ⊆ ws
 
   cycle : List Node
   cycle = next ∷ back
@@ -190,11 +191,11 @@ record Circuit (ws : List Node) (fs : List Pred)
 module _ {ws vs : List Node} {r : Node} where
 
   loopRestrict : (l : Loop ws r) -> Loop.cycle l ⊆ vs -> Loop vs r
-  loopRestrict (loopBy q qs t) h = loopBy q qs (trailRestrict t h)
+  loopRestrict (loopBy q qs t _) h = loopBy q qs t h
 
   circMono : {fs : List Pred} -> ws ⊆ vs -> Circuit ws fs r -> Circuit vs fs r
-  circMono sb (circuit (loopBy q qs t) wit) =
-    circuit (loopBy q qs (trailMono sb t)) wit
+  circMono sb (circuit (loopBy q qs t h) wit) =
+    circuit (loopBy q qs t (λ z mz -> sb z (h z mz))) wit
 
 -- C meets every fairness predicate: each f in fs holds somewhere in C.
 
@@ -213,7 +214,7 @@ module _ {ws : List Node} {r : Node} where
     pick (null-false (outs ws r) (¬ᵇ-true (null (outs ws r)) ho))
     where
       pick : (Σ[ x ∈ Node ] x ∈ outs ws r) -> Loop ws r
-      pick (x , mx) = loopBy x via (tCons mxw grx trail)
+      pick (x , mx) = loopBy x via (tCons grx trail) (∷-⊆ mxw inside)
         where
           mxw : x ∈ ws
           mxw = ∈-filter⁻ (G r) ws mx
@@ -236,9 +237,11 @@ module _ {ws : List Node} {r : Node} where
           -> Reaches ws r w -> Reaches ws w r
           -> (fs : List Pred) -> Circuit ws fs r
           -> Circuit ws (f ∷ fs) r
-  consCirc (loopBy q0 qs0 t0) f w fw (reachesBy as ta) (reachesBy bs tb) fs
-           (circuit (loopBy q qs t) wit) =
-    circuit (loopBy q0 (leg ++ cy) (trailApp legT t)) each
+  consCirc (loopBy q0 qs0 (tCons g0 t0) s0) f w fw (reachesBy as ta sa)
+           (reachesBy bs tb sbs) fs (circuit (loopBy q qs t scy) wit) =
+    circuit (loopBy q0 (leg ++ cy) (trailApp legT t)
+                    (++-⊆ (q0 ∷ leg) legIn scy))
+            each
     where
       cy : List Node
       cy = q ∷ qs
@@ -247,17 +250,20 @@ module _ {ws : List Node} {r : Node} where
       front : List Node
       front = qs0 ++ as
 
-      frontT : Trail ws r (q0 ∷ front) w
-      frontT = trailApp t0 ta
+      frontT : Trail r (q0 ∷ front) w
+      frontT = tCons g0 (trailApp t0 ta)
 
       leg : List Node
       leg = front ++ bs
 
-      legT : Trail ws r (q0 ∷ leg) r
+      legT : Trail r (q0 ∷ leg) r
       legT = trailApp frontT tb
 
+      legIn : q0 ∷ leg ⊆ ws
+      legIn = ++-⊆ (q0 ∷ front) (++-⊆ (q0 ∷ qs0) s0 sa) sbs
+
       mw : w ∈ q0 ∷ leg
-      mw = ∈-++⁺ˡ (q0 ∷ front) bs (trailLast frontT)
+      mw = ∈-++⁺ˡ (q0 ∷ front) bs (trailEnd (trailApp t0 ta))
 
       each : ∀[ g ∈ f ∷ fs ] ∃[ z ∈ (q0 ∷ leg) ++ cy ] g z ≡ true
       each g here      = w , ∈-++⁺ˡ (q0 ∷ leg) cy mw , fw
@@ -487,22 +493,24 @@ module _ (fs : List Pred) (R : Node -> Set)
 -- the "rotation" of a cycle the argument needs.
 
 reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
-reachesCons m e (reachesBy zs t) = reachesBy (_ ∷ zs) (tCons m e t)
+reachesCons m e (reachesBy zs t sb) = reachesBy (_ ∷ zs) (tCons e t) (∷-⊆ m sb)
 
 reachesApp : Reaches ws u v -> Reaches ws v w -> Reaches ws u w
-reachesApp (reachesBy as ta) (reachesBy bs tb) =
-  reachesBy (as ++ bs) (trailApp ta tb)
+reachesApp (reachesBy as ta sa) (reachesBy bs tb sb) =
+  reachesBy (as ++ bs) (trailApp ta tb) (++-⊆ as sa sb)
 
-trailFrom : Trail ws v zs w -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
-trailFrom tNil          here      = reachesBy [] tNil
-trailFrom tNil          (there ())
-trailFrom (tCons m e t) here      = reachesBy _ (tCons m e t)
-trailFrom (tCons m e t) (there k) = trailFrom t k
+trailFrom : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
+trailFrom tNil        sb here      = reachesBy [] tNil (λ _ ())
+trailFrom tNil        sb (there ())
+trailFrom (tCons e t) sb here      = reachesBy _ (tCons e t) sb
+trailFrom (tCons e t) sb (there k) = trailFrom t (λ y m -> sb y (there m)) k
 
-trailTo : Trail ws v zs w -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
-trailTo tNil          ()
-trailTo (tCons m e t) here      = reachesBy (_ ∷ []) (tCons m e tNil)
-trailTo (tCons m e t) (there k) = reachesCons m e (trailTo t k)
+trailTo : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
+trailTo tNil        sb ()
+trailTo (tCons e t) sb here      =
+  reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (sb _ here) (λ _ ()))
+trailTo (tCons e t) sb (there k) =
+  reachesCons (sb _ here) e (trailTo t (λ y m -> sb y (there m)) k)
 
 -- Observation one: a vertex on a cycle has a successor inside ws.  Along a
 -- trail every vertex visited has one provided the endpoint has, and for a
@@ -515,33 +523,36 @@ record HasSucc (ws : List Node) (x : Node) : Set where
     nextIn : next ∈ ws
     edge   : G x next ≡ true
 
-headSucc : Trail ws v zs w -> HasSucc ws w -> HasSucc ws v
-headSucc tNil                  hw = hw
-headSucc (tCons {x = y} m e t) hw = hasSucc y m e
+headSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w -> HasSucc ws v
+headSucc tNil                sb hw = hw
+headSucc (tCons {x = y} e t) sb hw = hasSucc y (sb y here) e
 
-trailSucc : Trail ws v zs w -> HasSucc ws w
+trailSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w
          -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
-trailSucc tNil          hw ()
-trailSucc (tCons m e t) hw here      = headSucc t hw
-trailSucc (tCons m e t) hw (there k) = trailSucc t hw k
+trailSucc tNil        sb hw ()
+trailSucc (tCons e t) sb hw here      =
+  headSucc t (λ y m -> sb y (there m)) hw
+trailSucc (tCons e t) sb hw (there k) =
+  trailSucc t (λ y m -> sb y (there m)) hw k
 
 loopSucc : {r : Node} (l : Loop ws r) -> ∀ⁱ[ x ∈ Loop.cycle l ] HasSucc ws x
-loopSucc (loopBy q qs t@(tCons m e _)) = trailSucc t (hasSucc q m e)
+loopSucc (loopBy q qs t@(tCons e _) h) = trailSucc t h (hasSucc q (h q here) e)
 
 -- Observation two: any vertex of a cycle reaches any other (suffix to the
 -- base point, then prefix out), and a successor-closed block that a trail
--- starts in contains everything the trail reaches (trailEndIn, in
+-- starts in contains everything the trail reaches (reachesEndIn, in
 -- LTL.1-Lib.Graph).
 
-cycConn : {r : Node} -> Trail ws r zs r -> u ∈ zs -> z ∈ zs -> Reaches ws u z
-cycConn t mu mz = reachesApp (trailFrom t (there mu)) (trailTo t mz)
+cycConn : {r : Node} -> Trail r zs r -> zs ⊆ ws
+       -> u ∈ zs -> z ∈ zs -> Reaches ws u z
+cycConn t sb mu mz = reachesApp (trailFrom t sb (there mu)) (trailTo t sb mz)
 
--- A trail whose visited vertices all pass p stays inside filter p ws: this
--- is how a cycle survives a removal step.
+-- Vertices of ws that all pass p stay inside filter p ws: this is how a
+-- cycle survives a removal step.
 
 keepIn : (p : Pred)
-      -> Trail ws v zs w -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
-keepIn {ws = ws} p t h z mz = ∈-filter⁺ p ws (trailIn t mz) (h z mz)
+      -> zs ⊆ ws -> (∀[ z ∈ zs ] p z ≡ true) -> zs ⊆ filter p ws
+keepIn {ws = ws} p sb h z mz = ∈-filter⁺ p ws (sb z mz) (h z mz)
 
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when
@@ -549,11 +560,11 @@ keepIn {ws = ws} p t h z mz = ∈-filter⁺ p ws (trailIn t mz) (h z mz)
 
 certNoCirc : (fs : List Pred)
           -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
-certNoCirc fs (cNil ws e)         r (circuit (loopBy q qs t) wit) =
-  null-∈ ws e (trailIn t here)
-certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy q qs t) wit) =
+certNoCirc fs (cNil ws e)         r (circuit (loopBy q qs t h) wit) =
+  null-∈ ws e (h q here)
+certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy q qs t h) wit) =
   certNoCirc fs c r
-    (circuit (loopRestrict l (keepIn (x ≢ᵛ_) t keep)) wit)
+    (circuit (loopRestrict l (keepIn (x ≢ᵛ_) h keep)) wit)
   where
     offCycle : x ∈ q ∷ qs -> Empty
     offCycle m = onS (loopSucc l m)
@@ -569,9 +580,9 @@ certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy q qs t) wit) =
         out = refuteTrue (x ≡ᵛ z) λ eb ->
           offCycle (subst (λ y -> y ∈ q ∷ qs) (sym (≡ᵛ-sound x z eb)) mz)
 certNoCirc fs (cBlock ws C f mf cl mis c) r
-           (circuit l@(loopBy q qs t) wit) =
+           (circuit l@(loopBy q qs t h) wit) =
   certNoCirc fs c r
-    (circuit (loopRestrict l (keepIn (λ y -> ¬ᵇ (y ∈ᵛ C)) t keep)) wit)
+    (circuit (loopRestrict l (keepIn (λ y -> ¬ᵇ (y ∈ᵛ C)) h keep)) wit)
   where
     inBlock : (z : Node) -> z ∈ q ∷ qs -> z ∈ C -> Empty
     inBlock z mz mzc = onW (wit f mf)
@@ -580,7 +591,7 @@ certNoCirc fs (cBlock ws C f mf cl mis c) r
         onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
           where
             inC : y ∈ C
-            inC = trailEndIn cl mzc (Reaches.trail (cycConn t mz my))
+            inC = reachesEndIn cl mzc (cycConn t h mz my)
 
     keep : ∀[ z ∈ q ∷ qs ] ¬ᵇ (z ∈ᵛ C) ≡ true
     keep z mz = cong ¬ᵇ_ out
@@ -596,12 +607,11 @@ certNoCirc fs (cBlock ws C f mf cl mis c) r
 fairNoLoop : (vs : List Node) (fs : List Pred)
              (v : Node) -> v ∈ vs
           -> Cert fs (reachSet vs v) -> FairLoop vs fs v -> Empty
-fairNoLoop vs fs v mv c (fairLoop r stem (circuit l@(loopBy q qs t) wit)) =
+fairNoLoop vs fs v mv c (fairLoop r stem (circuit l@(loopBy q qs t h) wit)) =
   certNoCirc fs c r (circuit (loopRestrict l keep) wit)
   where
     keep : ∀[ z ∈ q ∷ qs ] z ∈ reachSet vs v
-    keep z mz = reachComplete vs v mv
-                  (Reaches.trail (reachesApp stem (trailTo t mz)))
+    keep z mz = reachComplete vs v mv (reachesApp stem (trailTo t h mz))
 
 fairComplete : (vs : List Node) (fs : List Pred)
                (v : Node) (mv : v ∈ vs)

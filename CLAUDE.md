@@ -76,14 +76,14 @@ derivation or a certified finite lasso countermodel.
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
   (`keepIn {ws = ws} p t h`) or sits in a `module _ {ws : List Node}` block,
-  which also carries shared explicit arguments (`trailInto`'s `cl`).
+  which also carries shared explicit arguments (`reachesInto`'s `cl`).
   Generalised arguments come in order of first appearance in the signature.
   A variable clashes with any definition of the same name in the module,
   `where`-local ones and record fields included; hence `r` is not a variable in
   `FairGraph` (the `r` fields of `Terminal`, `FairIn`, `FairLoop`). In the
   graph layer `ws` is a variable wherever another argument's type fixes it (a
-  `Trail`, `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc` or closed-under
-  hypothesis), so a call reads `trailApp t1 t2`; it stays explicit where it
+  `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc`, `zs ⊆ ws` or closed-under
+  hypothesis), so a call reads `reachesApp r1 r2`; it stays explicit where it
   only occurs under a function (`reachSet ws v`, `sccOf ws r`, `outs ws x`),
   since Agda cannot infer it there.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
@@ -162,7 +162,7 @@ module name). Folder names never equal a module name.
    largest module), whose step kinds `CertStep` are a module of their own so
    that they do not depend on the graph.
    The P-module `Walk` applies both at `G = step` and re-exports them, so
-   inside the P-modules their names read `Trail ws`, `Cert fs ws`, and
+   inside the P-modules their names read `Reaches ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
@@ -194,7 +194,8 @@ module name). Folder names never equal a module name.
    that `SccExtract` reuses); `Closure` and `Extract` are P-modules. m4's elimination (§3) is not formalised: the
    SCC search replaces it, and countermodels live in `Ust`.
 6. **Lasso countermodel branch (m4 §5)** (`6-Countermodel/`, all P-modules) —
-   `Walk` (`Graph` at `step`, so walks are `Trail Ust v zs w`; `Fulfil`,
+   `Walk` (`Graph` at `step`, so walks are `Trail v zs w`, with `zs ⊆ Ust`
+   kept beside them; `Fulfil`,
    `trailPersist`);
    `Lasso` (the record of Prop 5.3: a `Cycle` whose head `loop` is a valid
    position, as in `Statement`'s `Lasso`, fairness at its end `b`, and a valid

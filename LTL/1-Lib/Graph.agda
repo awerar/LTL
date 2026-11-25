@@ -32,13 +32,14 @@ open import LTL.1-Lib.Nodes eq
 
 -- The implicit arguments the signatures below leave out: the endpoints and
 -- visited list of a trail, and the predicate of the Bar a search recurses on.
--- So is the vertex list ws wherever a trail fixes it; it stays explicit
--- where it only occurs under a function, as in reachSet ws v.
+-- So is the vertex list ws wherever a Reaches or closed-under hypothesis fixes
+-- it; it stays explicit where it only occurs under a function, as in
+-- reachSet ws v.
 
 private variable
-  u v w x : Node
-  ws vs xs zs : List Node
-  E     : Pred
+  u v w    : Node
+  ws xs zs : List Node
+  E        : Pred
 
 ------------------------------------------------------------------------
 -- Out-neighbours
@@ -53,64 +54,57 @@ hasOut : List Node -> Node -> Bool
 hasOut ws x = ¬ᵇ null (outs ws x)
 
 ------------------------------------------------------------------------
--- Trails: finite paths inside ws, carrying the vertices visited and indexed by
--- the endpoint.  A cycle is a trail from r to r with a non-empty list.  At
--- G = step P they are the walks of LTL.6-Countermodel.Walk.
+-- Trails: finite G-paths, carrying the vertices visited and indexed by the
+-- endpoint.  A trail knows nothing of a vertex list: that it stays inside ws
+-- is the separate fact  zs ⊆ ws , kept beside it (Reaches below, Loop in
+-- LTL.1-Lib.FairGraph).  At G = step P trails are the walks of
+-- LTL.6-Countermodel.Walk.
 
-data Trail (ws : List Node) : Node -> List Node -> Node -> Set where
-  tNil  : {v : Node} -> Trail ws v [] v
+data Trail : Node -> List Node -> Node -> Set where
+  tNil  : {v : Node} -> Trail v [] v
   tCons : {v x : Node} {zs : List Node} {w : Node}
-       -> x ∈ ws -> G v x ≡ true -> Trail ws x zs w
-       -> Trail ws v (x ∷ zs) w
+       -> G v x ≡ true -> Trail x zs w -> Trail v (x ∷ zs) w
 
-trailApp : Trail ws u xs v -> Trail ws v zs w -> Trail ws u (xs ++ zs) w
-trailApp tNil           t2 = t2
-trailApp (tCons m e t1) t2 = tCons m e (trailApp t1 t2)
+trailApp : Trail u xs v -> Trail v zs w -> Trail u (xs ++ zs) w
+trailApp tNil         t2 = t2
+trailApp (tCons e t1) t2 = tCons e (trailApp t1 t2)
 
-trailEnd : Trail ws v zs w -> w ∈ v ∷ zs
-trailEnd tNil          = here
-trailEnd (tCons m e t) = there (trailEnd t)
+trailEnd : Trail v zs w -> w ∈ v ∷ zs
+trailEnd tNil        = here
+trailEnd (tCons e t) = there (trailEnd t)
 
--- A trail that takes at least one step ends at a vertex it visits.
-
-trailLast : Trail ws v (x ∷ zs) w -> w ∈ x ∷ zs
-trailLast (tCons m e t) = trailEnd t
-
-trailIn : Trail ws v zs w -> ∀ⁱ[ z ∈ zs ] z ∈ ws
-trailIn tNil          ()
-trailIn (tCons m e t) here      = m
-trailIn (tCons m e t) (there k) = trailIn t k
-
--- A trail whose visited vertices all lie in vs is a trail in vs.
-
-trailRestrict : Trail ws v zs w -> zs ⊆ vs -> Trail vs v zs w
-trailRestrict tNil                  h = tNil
-trailRestrict (tCons {x = y} m e t) h =
-  tCons (h y here) e (trailRestrict t (λ z mz -> h z (there mz)))
-
-trailMono : ws ⊆ vs -> Trail ws v zs w -> Trail vs v zs w
-trailMono sb t = trailRestrict t (λ z mz -> sb z (trailIn t mz))
-
--- A set C closed under G inside ws keeps every trail that starts in it: the
--- trail lies in C, and so does its endpoint.
-
-module _ {ws C : List Node} (cl : C closed-under G within ws) where
-
-  trailInto : u ∈ C -> Trail ws u zs w -> Trail C u zs w
-  trailInto mu tNil          = tNil
-  trailInto mu (tCons m e t) = tCons (cl mu m e) e (trailInto (cl mu m e) t)
-
-  trailEndIn : u ∈ C -> Trail ws u zs w -> w ∈ C
-  trailEndIn mu tNil          = mu
-  trailEndIn mu (tCons m e t) = trailEndIn (cl mu m e) t
-
--- w is reachable from v inside ws: a trail, and the vertices it visits.
+-- w is reachable from v inside ws: a trail, and the vertices it visits, all
+-- in ws.
 
 record Reaches (ws : List Node) (v w : Node) : Set where
   constructor reachesBy
   field
-    via   : List Node
-    trail : Trail ws v via w
+    via    : List Node
+    trail  : Trail v via w
+    inside : via ⊆ ws
+
+-- A set C closed under G inside ws keeps every trail inside ws that starts in
+-- it: the trail lies in C, and so does its endpoint.
+
+module _ {ws C : List Node} (cl : C closed-under G within ws) where
+
+  private
+    trailInto : u ∈ C -> Trail u zs w -> zs ⊆ ws -> zs ⊆ C
+    trailInto mu tNil        sb z ()
+    trailInto mu (tCons e t) sb _ here      = cl mu (sb _ here) e
+    trailInto mu (tCons e t) sb z (there k) =
+      trailInto (cl mu (sb _ here) e) t (λ y m -> sb y (there m)) z k
+
+    trailEndIn : u ∈ C -> Trail u zs w -> zs ⊆ ws -> w ∈ C
+    trailEndIn mu tNil        sb = mu
+    trailEndIn mu (tCons e t) sb =
+      trailEndIn (cl mu (sb _ here) e) t (λ y m -> sb y (there m))
+
+  reachesInto : u ∈ C -> Reaches ws u w -> Reaches C u w
+  reachesInto mu (reachesBy zs t sb) = reachesBy zs t (trailInto mu t sb)
+
+  reachesEndIn : u ∈ C -> Reaches ws u w -> w ∈ C
+  reachesEndIn mu (reachesBy zs t sb) = trailEndIn mu t sb
 
 ------------------------------------------------------------------------
 -- The growing search.  closure S ws is the least part of ws that contains
@@ -261,7 +255,7 @@ roundSeeded S ws acc sd z m =
                         (filter-prop (missing S ws acc) ws m1)
 
         isSeed : S z ≡ true -> Seeded S ws z
-        isSeed e = seededBy z mzw e (reachesBy [] tNil)
+        isSeed e = seededBy z mzw e (reachesBy [] tNil (λ _ ()))
 
         viaY : any (λ y -> G y z) acc ≡ true -> Seeded S ws z
         viaY ea = pick (any-true (λ y -> G y z) acc ea)
@@ -270,7 +264,8 @@ roundSeeded S ws acc sd z m =
             pick (y , my , gy) =
               seededBy seed seedIn seedHolds
                        (reachesBy (via ++ z ∷ [])
-                                  (trailApp trail (tCons mzw gy tNil)))
+                                  (trailApp trail (tCons gy tNil))
+                                  (++-⊆ via inside (∷-⊆ mzw (λ _ ()))))
               where
                 open Seeded (sd y my)
                 open Reaches reaches
@@ -337,17 +332,17 @@ reachClosed : (ws : List Node) (v : Node)
            -> reachSet ws v closed-under G within ws
 reachClosed ws v = closureClosed (v ≡ᵛ_) ws (AllSat-∈ᵛ ws) (listBar ws)
 
--- Completeness: the set is closed under G inside ws, so a trail from a member
--- ends in it.
+-- Completeness: the set is closed under G inside ws, so a trail inside ws
+-- from a member ends in it.
 
 reachComplete : (ws : List Node) (v : Node) -> v ∈ ws
-             -> Trail ws v zs w
+             -> Reaches ws v w
              -> w ∈ reachSet ws v
-reachComplete ws v mv t = trailEndIn (reachClosed ws v) (reachSeed ws v mv) t
+reachComplete ws v mv = reachesEndIn (reachClosed ws v) (reachSeed ws v mv)
 
 reachTrans : (ws : List Node) (v u w : Node)
           -> u ∈ reachSet ws v -> w ∈ reachSet ws u
           -> w ∈ reachSet ws v
 reachTrans ws v u w mu mw =
-  trailEndIn (reachClosed ws v) mu (Reaches.trail (reachTrail ws u mw))
+  reachesEndIn (reachClosed ws v) mu (reachTrail ws u mw)
 

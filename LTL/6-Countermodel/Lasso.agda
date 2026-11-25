@@ -3,8 +3,8 @@
 -- LTL.6-Countermodel.Lasso -- a fair lasso from v0, and its positions as those
 -- of LTL.4-Semantics.Orbit at valuations.
 --
--- A position (s , rest) is VALID when rest is a walk in Ust from s back to
--- b, the last state of the cycle.  Both the start (v0 , rest) and the
+-- A position (s , rest) is VALID when rest is a walk from s back to b, the
+-- last state of the cycle, and s ∷ rest lies in Ust.  Both the start (v0 , rest) and the
 -- position loop the lasso loops back to are valid, and b steps to loop: this
 -- is the whole invariant.  The successor preserves validity, and the step
 -- proof falls out of consuming the Trail constructor: no arithmetic.
@@ -32,12 +32,12 @@ import LTL.4-Semantics.OrbitEval
 -- Valid positions
 
 data ValidPos (b : Val) : Pos -> Set where
-  vpos : (s : Val) (rest : List Val) -> s ∈ Ust
-      -> Trail Ust s rest b -> ValidPos b (s , rest)
+  vpos : (s : Val) (rest : List Val)
+      -> Trail s rest b -> s ∷ rest ⊆ Ust -> ValidPos b (s , rest)
 
 posIn : (b : Val) {pos : Pos}
      -> ValidPos b pos -> posState pos ∈ Ust
-posIn b (vpos s rest ms wk) = ms
+posIn b (vpos s rest wk sb) = sb s here
 
 ------------------------------------------------------------------------
 -- The cycle: from loop, a walk to b, and b steps back to loop.  The cycle is
@@ -63,7 +63,7 @@ Fair cy =
 
 endOnCycle : (cy : Cycle)
           -> Cycle.b cy ∈ stretchStates (Cycle.loop cy)
-endOnCycle (mkCycle b (s , rest) (vpos s rest ms wk) stb) =
+endOnCycle (mkCycle b (s , rest) (vpos s rest wk sb) stb) =
   trailEnd wk
 
 ------------------------------------------------------------------------
@@ -76,8 +76,9 @@ module _ (cy : Cycle) where
   posStep : {pos : Pos} -> ValidPos b pos
          -> ValidPos b (nextPos loop pos) ×
             step (posState pos) (posState (nextPos loop pos)) ≡ true
-  posStep (vpos s []        ms tNil)             = loopValid , closingStep
-  posStep (vpos s (w ∷ ws) ms (tCons mw st wk)) = vpos w ws mw wk , st
+  posStep (vpos s []       tNil           sb) = loopValid , closingStep
+  posStep (vpos s (w ∷ ws) (tCons st wk) sb) =
+    vpos w ws wk (λ z m -> sb z (there m)) , st
 
   posIterValid : (pos : Pos) (t : Nat) -> ValidPos b pos
               -> ValidPos b (posIter loop pos t)
