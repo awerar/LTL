@@ -43,9 +43,16 @@ derivation or a certified finite lasso countermodel.
   `∀ⁱ[ x ∈ xs ] B` for `{x : _} -> x ∈ xs -> B` (x read off the membership
   proof; callers pass only `m`), and `∃[ x ∈ xs ] B` for
   `Σ[ x ∈ _ ] x ∈ xs × B` (the witness is a pair field, so it has no implicit
-  variant). Use ∀/∀ⁱ only when `B` is a single conclusion: the notation's body
-  stops at the first unparenthesised `->` (and a `⊎` body needs parentheses),
-  so when more hypotheses follow, write the telescope out.
+  variant). Bounded by a Boolean predicate: `∀[ x ∈ᵖ E ] B` for
+  `(x : _) -> x ∈ᵖ E -> B` (no implicit form: `E x ≡ true` does not determine
+  x). The notation's body stops at the first unparenthesised `->` (and a `⊎`
+  body needs parentheses). Use them consistently: a written binder followed
+  at once by its membership and then one conclusion is always the notation
+  (an inclusion is `xs ⊆ ys`, `E ⊆ᵖ F` or `xs inside Pool`); inside a
+  hypothesis or an abbreviation the body may be one parenthesised implication,
+  `∀[ x ∈ C ] (H -> B)` (as in `Closed`, `Refuted`, `Fair`); a definition's own
+  telescope with more premises stays written out. Elements that are private
+  variables have no binder to replace.
   Boolean-valued operators carry a superscript naming their domain:
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,

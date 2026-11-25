@@ -202,13 +202,13 @@ module _ (Ats : List Formula) (a : Val) where
 
 module _ (f : Formula -> Bool) (Ats : List Formula) where
 
-  atomLook : (X : Formula) -> X ∈ Ats -> atomBit Ats (map f Ats) X ≡ f X
+  atomLook : ∀[ X ∈ Ats ] atomBit Ats (map f Ats) X ≡ f X
   atomLook X mX =
     trans (nth-map f Ats (indexOf Ats X) (indexOf-< Ats mX) ⊥ false)
           (cong f (indexOf-nth Ats mX))
 
   module _ (P : Formula)
-           (at : (X : Formula) -> X ∈ sub P -> isAtomB X ≡ true -> X ∈ Ats)
+           (at : ∀[ X ∈ sub P ] (isAtomB X ≡ true -> X ∈ Ats))
            (fn : (X : Formula) -> ¬ X ∈ sub P -> f (¬ X) ≡ ¬ᵇ f X)
            (fi : (X Y : Formula) -> X ⇒ Y ∈ sub P -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
            where

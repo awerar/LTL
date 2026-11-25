@@ -39,12 +39,12 @@ lenTail : (m : Nat) (v : Val) -> hasLength (suc m) v ≡ true
 lenTail m []      ()
 lenTail m (b ∷ v) e = e
 
-unconsNeq : (m : Nat) (y z : Val) -> hasLength (suc m) y ≡ true
-         -> hasLength (suc m) z ≡ true -> y ≢ᵛ z ≡ true
+unconsNeq : (m : Nat) (y : Val) -> hasLength (suc m) y ≡ true
+         -> (z : Val) -> hasLength (suc m) z ≡ true -> y ≢ᵛ z ≡ true
          -> prodApart _≢ᵇ_ _≢ᵛ_ (unconsV y) (unconsV z) ≡ true
-unconsNeq m []      z       () ez e
-unconsNeq m (b ∷ v) []      ey () e
-unconsNeq m (b ∷ v) (c ∷ w) ey ez e = ¬ᵇ-∧ᵇ (b ⇔ᵇ c) (v ≡ᵛ w) e
+unconsNeq m []      ()  z       ez e
+unconsNeq m (b ∷ v) ey  []      () e
+unconsNeq m (b ∷ v) ey  (c ∷ w) ez e = ¬ᵇ-∧ᵇ (b ⇔ᵇ c) (v ≡ᵛ w) e
 
 vecFinite : (n : Nat) -> Finiteᵛ (hasLength n)
 vecFinite zero =

@@ -70,8 +70,7 @@ persistTo A mb tNil e ()
 persistTo A mb (tCons {v} {w} {ws} {x} st wk) e {z} mz =
   onA z mz
   where
-    onA : (y : Val) -> y ∈ w ∷ ws
-       -> Fulfil A v (w ∷ ws) ⊎ valOf y (□ A) ≡ false
+    onA : ∀[ y ∈ w ∷ ws ] (Fulfil A v (w ∷ ws) ⊎ valOf y (□ A) ≡ false)
     onA y my with valOf v A in ea
     ... | false = inl (ful v here ea)
     onA y here      | true = inr (persist v w A mb st e ea)

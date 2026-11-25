@@ -69,7 +69,7 @@ _⁻¹_ : (B -> A) -> Subset A -> Subset B
 (f ⁻¹ E) y = E (f y)
 
 _⊆ᵖ_ : Subset A -> Subset A -> Set
-E ⊆ᵖ F = (x : _) -> x ∈ᵖ E -> x ∈ᵖ F
+E ⊆ᵖ F = ∀[ x ∈ᵖ E ] x ∈ᵖ F
 
 ⊆ᵖ-refl : E ⊆ᵖ E
 ⊆ᵖ-refl x e = e
@@ -107,7 +107,7 @@ record Exhaustible {A : Set} (Apart : Apartness A) (Pool : Subset A)
   pattern
   constructor everyPick
   field
-    next : (x : A) -> x ∈ᵖ Pool -> Exhaustible Apart (Pool ∩ Apart x)
+    next : ∀[ x ∈ᵖ Pool ] Exhaustible Apart (Pool ∩ Apart x)
 
 exhaustibleSubset : Pool ⊆ᵖ Pool'
                  -> Exhaustible Apart Pool' -> Exhaustible Apart Pool
@@ -130,8 +130,8 @@ exhaustibleUnion {A} {Apart} {Pool₁} (everyPick next₁) ex₂ = inner ex₂
          -> Exhaustible Apart Pool₂ -> Exhaustible Apart (Pool₁ ∪ Pool₂)
     inner {Pool₂} ex₂@(everyPick next₂) = everyPick pick
       where
-        pick : (x : A) -> (Pool₁ ∪ Pool₂) x ≡ true
-            -> Exhaustible Apart ((Pool₁ ∪ Pool₂) ∩ Apart x)
+        pick : ∀[ x ∈ᵖ Pool₁ ∪ Pool₂ ]
+                 Exhaustible Apart ((Pool₁ ∪ Pool₂) ∩ Apart x)
         pick x x∈ = [ from₁ , from₂ ] (∨ᵇ-true (Pool₁ x) (Pool₂ x) x∈)
           where
             from₁ : Pool₁ x ≡ true
@@ -183,9 +183,9 @@ exhaustibleProd {A} {B} {Apart₁} {Apart₂} {Pool₁} (everyPick next₁) ex�
          -> Exhaustible (prodApart Apart₁ Apart₂) (prodPool Pool₁ Pool₂)
     inner {Pool₂} ex₂@(everyPick next₂) = everyPick pick
       where
-        pick : (p : A × B) -> prodPool Pool₁ Pool₂ p ≡ true
-            -> Exhaustible (prodApart Apart₁ Apart₂)
-                           (prodPool Pool₁ Pool₂ ∩ prodApart Apart₁ Apart₂ p)
+        pick : ∀[ p ∈ᵖ prodPool Pool₁ Pool₂ ]
+                 Exhaustible (prodApart Apart₁ Apart₂)
+                             (prodPool Pool₁ Pool₂ ∩ prodApart Apart₁ Apart₂ p)
         pick (x , y) xy∈ =
           exhaustibleSubset (prodSplit Pool₂ x y)
             (exhaustibleUnion
@@ -199,15 +199,15 @@ exhaustibleProd {A} {B} {Apart₁} {Apart₂} {Pool₁} (everyPick next₁) ex�
 
 exhaustiblePreimage : {A B : Set} {Apart₁ : Apartness A} {Apart₂ : Apartness B}
                    -> (f : B -> A) (Dom : Subset B)
-                   -> ((y z : B) -> Dom y ≡ true -> Dom z ≡ true
-                         -> Apart₂ y z ≡ true -> Apart₁ (f y) (f z) ≡ true)
+                   -> (∀[ y ∈ᵖ Dom ] ∀[ z ∈ᵖ Dom ]
+                         (z ∈ᵖ Apart₂ y -> f z ∈ᵖ Apart₁ (f y)))
                    -> {Pool : Subset A} -> Exhaustible Apart₁ Pool
                    -> Exhaustible Apart₂ (Dom ∩ f ⁻¹ Pool)
 exhaustiblePreimage {A} {B} {Apart₁} {Apart₂} f Dom keepsApart {Pool}
                     (everyPick next) = everyPick pick
   where
-    pick : (y : B) -> (Dom ∩ f ⁻¹ Pool) y ≡ true
-        -> Exhaustible Apart₂ ((Dom ∩ f ⁻¹ Pool) ∩ Apart₂ y)
+    pick : ∀[ y ∈ᵖ Dom ∩ f ⁻¹ Pool ]
+             Exhaustible Apart₂ ((Dom ∩ f ⁻¹ Pool) ∩ Apart₂ y)
     pick y y∈ =
       exhaustibleSubset keep
         (exhaustiblePreimage f Dom keepsApart
@@ -219,5 +219,5 @@ exhaustiblePreimage {A} {B} {Apart₁} {Apart₂} f Dom keepsApart {Pool}
         ...   | inDom , fz∈ =
           ∧ᵇ-intro (Dom z) (Pool (f z) ∧ᵇ Apart₁ (f y) (f z)) inDom
                    (∧ᵇ-intro (Pool (f z)) (Apart₁ (f y) (f z)) fz∈
-                             (keepsApart y z (∧ᵇ-trueˡ (Dom y) (Pool (f y)) y∈)
-                                         inDom apart))
+                             (keepsApart y (∧ᵇ-trueˡ (Dom y) (Pool (f y)) y∈)
+                                         z inDom apart))

@@ -284,7 +284,7 @@ module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : ws inside Pool)
     done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] x ∉ᵖ missing Seed ws r)
                     (λ acc f -> f) (λ acc r d -> d) [] avail0 fin
 
-  closureIn : ∀[ z ∈ closure Seed ws subset fin ] z ∈ ws
+  closureIn : closure Seed ws subset fin ⊆ ws
   closureIn = growInv Seed ws (λ acc -> acc ⊆ ws) (roundIn Seed ws) [] avail0 fin
                       (λ z ())
 
@@ -319,8 +319,7 @@ reachTrail ws v {z} m =
   subst (λ y -> Reaches ws y z) (sym (≡ᵛ-sound v seed seedHolds)) reaches
   where open Seeded (closureSeeded (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws) z m)
 
-reachSeed : (ws : List Node) (v : Node)
-         -> v ∈ ws -> v ∈ reachSet ws v
+reachSeed : (ws : List Node) -> ∀[ v ∈ ws ] v ∈ reachSet ws v
 reachSeed ws v mv =
   closureSeed (v ≡ᵛ_) ws (inside-∈ᵛ ws) (listFinite ws) mv (≡ᵛ-refl v)
 

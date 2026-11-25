@@ -85,7 +85,7 @@ module Membership {A : Set} (eq : DecEq A) where
       -> z ∈ ws -> z ∈ᵛ C ≡ false -> z ∈ ws ∖ C
   ∈-∖⁺ {ws} C m e = ∈-filter⁺ (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m (cong ¬ᵇ_ e)
 
-  ∈-∖⁻ : (ws C : List A) {z : A} -> z ∈ ws ∖ C -> z ∈ᵛ C ≡ false
+  ∈-∖⁻ : (ws C : List A) -> ∀ⁱ[ z ∈ ws ∖ C ] z ∈ᵛ C ≡ false
   ∈-∖⁻ ws C {z} m = ¬ᵇ-true (z ∈ᵛ C) (filter-prop (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m)
 
   -- A part of ws that misses C stays in ws ∖ C: how a cycle survives a

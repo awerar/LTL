@@ -133,8 +133,8 @@ module _ (Ats : List Formula) (a : Val) where
   skelVec : Formula -> Val
   skelVec P = map (valFrom Ats a) (stateAtoms P)
 
-  valOfSkelVec : (P A : Formula) -> A ∈ sub P
-              -> valOf P (skelVec P) A ≡ valFrom Ats a A
+  valOfSkelVec : (P : Formula)
+              -> ∀[ A ∈ sub P ] valOf P (skelVec P) A ≡ valFrom Ats a A
   valOfSkelVec P A m =
     skelEval (valFrom Ats a) (stateAtoms P) P
              (λ X mX aX -> ∈-atoms⁺ (sub P) mX aX)

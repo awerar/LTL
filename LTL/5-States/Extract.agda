@@ -52,7 +52,7 @@ betaIntro ws m = ⋁Intro (map chi ws) (∈-map⁺ chi m)
 
 Refuted : List Val -> Set
 Refuted us =
-  (u : Val) -> u ∈ Ust -> u ∈ᵛ us ≡ false -> ⊢ ¬ (chi u)
+  ∀[ u ∈ Ust ] (u ∈ᵛ us ≡ false -> ⊢ ¬ (chi u))
 
 ------------------------------------------------------------------------
 -- (R1): u has no successor inside us.

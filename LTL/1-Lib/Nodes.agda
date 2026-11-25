@@ -74,7 +74,7 @@ Finiteᵛ Pool = Finite eq Pool
 
 finiteOfList : {Pool : Pred} (bound : Nat) (xs : List Node)
             -> length xs ≤ bound
-            -> ((x : Node) -> x ∈ᵖ Pool -> x ∈ xs) -> Finiteᵛ Pool
+            -> (∀[ x ∈ᵖ Pool ] x ∈ xs) -> Finiteᵛ Pool
 finiteOfList               zero        xs short subset =
   everyPick (λ x x∈ -> emptyElim (length-≤0-∈ xs short (subset x x∈)))
 finiteOfList {Pool = Pool} (suc bound) xs short subset =
@@ -136,7 +136,7 @@ inside-apart : {xs : List Node} {x : Node} (p : Pred) -> x ∉ᵖ p -> xs inside
 inside-apart p q h z m = separate p q (h z m)
 
 -- What is left once C is taken out holds no member of C.
-∖-apart : (ws C : List Node) {x : Node} -> x ∈ C -> (ws ∖ C) inside (x ≢ᵛ_)
+∖-apart : (ws C : List Node) -> ∀ⁱ[ x ∈ C ] (ws ∖ C) inside (x ≢ᵛ_)
 ∖-apart ws C {x} m = inside-apart (λ z -> ¬ᵇ (z ∈ᵛ C)) (cong ¬ᵇ_ (∈ᵛ-complete x C m))
                                   (inside-filter _ ws)
 

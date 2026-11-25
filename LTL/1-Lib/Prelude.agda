@@ -412,11 +412,13 @@ x ∉ᵖ E = E x ≡ false
 -- Quantifiers bounded by a list.  ∀[ x ∈ xs ] B  is  (x : _) -> x ∈ xs -> B,
 -- ∀ⁱ[ x ∈ xs ] B  is  {x : _} -> x ∈ xs -> B, for when x is read off the
 -- membership proof, and  ∃[ x ∈ xs ] B  is  Σ[ x ∈ _ ] x ∈ xs × B; here ∈ is
--- list membership.  Arrows are parsed before notations, so the body of ∀ ends
+-- list membership.  ∀[ x ∈ᵖ E ] B  is  (x : _) -> x ∈ᵖ E -> B, bounded by a
+-- Boolean predicate; it has no implicit form, since E x ≡ true does not
+-- determine x.  Arrows are parsed before notations, so the body of ∀ ends
 -- at the first unparenthesised ->; when more hypotheses follow, write the
 -- telescope out.
 
-infix 2 ∀∈-syntax ∀ⁱ∈-syntax ∃∈-syntax
+infix 2 ∀∈-syntax ∀ⁱ∈-syntax ∃∈-syntax ∀ᵖ-syntax
 
 ∀∈-syntax : List A -> (A -> Set) -> Set
 ∀∈-syntax xs B = (x : _) -> x ∈ xs -> B x
@@ -432,6 +434,11 @@ syntax ∀ⁱ∈-syntax xs (λ x -> B) = ∀ⁱ[ x ∈ xs ] B
 ∃∈-syntax xs B = Σ[ x ∈ _ ] x ∈ xs × B x
 
 syntax ∃∈-syntax xs (λ x -> B) = ∃[ x ∈ xs ] B
+
+∀ᵖ-syntax : (A -> Bool) -> (A -> Set) -> Set
+∀ᵖ-syntax E B = (x : _) -> x ∈ᵖ E -> B x
+
+syntax ∀ᵖ-syntax E (λ x -> B) = ∀[ x ∈ᵖ E ] B
 
 -- A witness found in ys is a witness in y ∷ ys.
 

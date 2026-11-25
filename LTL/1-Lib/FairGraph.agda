@@ -60,24 +60,20 @@ private variable
 sccOf : List Node -> Node -> List Node
 sccOf ws r = filter (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 
-sccReach : (ws : List Node) (r : Node) (w : Node)
-        -> w ∈ sccOf ws r -> w ∈ reachSet ws r
+sccReach : (ws : List Node) (r : Node) -> sccOf ws r ⊆ reachSet ws r
 sccReach ws r w m =
   ∈-filter⁻ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
 
-sccTo : (ws : List Node) (r : Node) (w : Node)
-     -> w ∈ sccOf ws r -> Reaches ws r w
+sccTo : (ws : List Node) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws r w
 sccTo ws r w m = reachTrail ws r (sccReach ws r w m)
 
-sccFrom : (ws : List Node) (r : Node) (w : Node)
-       -> w ∈ sccOf ws r -> Reaches ws w r
+sccFrom : (ws : List Node) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws w r
 sccFrom ws r w m =
   reachTrail ws w
     (∈ᵛ-sound r (reachSet ws w)
       (filter-prop (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m))
 
-sccRep : (ws : List Node) (r : Node)
-      -> r ∈ ws -> r ∈ sccOf ws r
+sccRep : (ws : List Node) -> ∀[ r ∈ ws ] r ∈ sccOf ws r
 sccRep ws r mr =
   ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
             (reachSeed ws r mr)
@@ -404,14 +400,13 @@ record FairLoop (vs : List Node) (fs : List Pred)
     fairCircuit : Circuit vs fs r
 
 fairGraph : (vs : List Node) (fs : List Pred)
-            (v : Node) -> v ∈ vs
-         -> FairLoop vs fs v ⊎ Cert fs (reachSet vs v)
+         -> ∀[ v ∈ vs ] (FairLoop vs fs v ⊎ Cert fs (reachSet vs v))
 fairGraph vs fs v mv =
   [ (λ fi -> inl (toLoop fi)) , inr ]
     (graphGo fs (reachSet vs v) (inside-∈ᵛ (reachSet vs v))
              (listFinite (reachSet vs v)))
   where
-    into : ∀[ z ∈ reachSet vs v ] z ∈ vs
+    into : reachSet vs v ⊆ vs
     into z m = reachIn vs v m
 
     toLoop : FairIn (reachSet vs v) fs -> FairLoop vs fs v
@@ -568,7 +563,7 @@ fairNoLoop : (vs : List Node) (fs : List Pred)
 fairNoLoop vs fs v mv c (fairLoop r stem (circuit l@(loopBy q qs t h) wit)) =
   certNoCirc fs c r (circuit (loopRestrict l keep) wit)
   where
-    keep : ∀[ z ∈ q ∷ qs ] z ∈ reachSet vs v
+    keep : q ∷ qs ⊆ reachSet vs v
     keep z mz = reachComplete vs v mv (reachesApp stem (trailTo t h mz))
 
 fairComplete : (vs : List Node) (fs : List Pred)
