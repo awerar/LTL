@@ -155,60 +155,6 @@ module _ (Seed : Pred) (ws : List Node) where
           (∈-++⁺ˡ (filter (missing acc) ws) acc
                   (∈-filter⁺ (missing acc) ws m xMissing))
 
-  growGo   : (acc : List Node) -> All Pool (ws ∖ acc)
-          -> Finiteᵛ Pool -> List Node
-  growFind : (acc : List Node) -> All Pool (ws ∖ acc)
-          -> Finiteᵛ Pool -> AnyDecision (missing acc) ws -> List Node
-
-  growGo acc avail fin = growFind acc avail fin (decideAny (missing acc) ws)
-
-  growFind acc avail fin              (noneTrue f)             = acc
-  growFind acc avail (everyPick next) (witness x m xMissing) =
-    growGo (addRound acc) (availRound acc x m xMissing avail)
-           (next x (avail x (∈-∖⁺ acc m (notInAcc acc x xMissing))))
-
-  ------------------------------------------------------------------------
-  -- Induction on the search.  A property P acc r of the starting accumulator
-  -- and the result holds if it holds where the search stops (no vertex of ws
-  -- is missing from acc, and r is acc) and survives a round.  The stopping
-  -- condition and the invariants of the closure are its instances.
-
-  growElim : (P : List Node -> List Node -> Set)
-          -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
-                -> P acc acc)
-          -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
-          -> (acc : List Node) (avail : All Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
-          -> P acc (growGo acc avail fin)
-  growElimFind : (P : List Node -> List Node -> Set)
-              -> ((acc : List Node) -> (∀ⁱ[ x ∈ ws ] missing acc x ≡ false)
-                    -> P acc acc)
-              -> ((acc r : List Node) -> P (addRound acc) r -> P acc r)
-              -> (acc : List Node) (avail : All Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
-                 (fr : AnyDecision (missing acc) ws)
-              -> P acc (growFind acc avail fin fr)
-
-  growElim P stop round acc avail fin =
-    growElimFind P stop round acc avail fin (decideAny (missing acc) ws)
-
-  growElimFind P stop round acc avail fin (noneTrue f) = stop acc f
-  growElimFind P stop round acc avail (everyPick next)
-               (witness x m xMissing) =
-    round acc _
-          (growElim P stop round (addRound acc)
-                    (availRound acc x m xMissing avail)
-                    (next x (avail x (∈-∖⁺ acc m (notInAcc acc x xMissing)))))
-
-  -- An invariant of the accumulator that every round preserves holds of the
-  -- result.
-
-  growInv : (I : List Node -> Set)
-         -> ((acc : List Node) -> I acc -> I (addRound acc))
-         -> (acc : List Node) (avail : All Pool (ws ∖ acc)) (fin : Finiteᵛ Pool)
-         -> I acc -> I (growGo acc avail fin)
-  growInv I round =
-    growElim (λ acc r -> I acc -> I r) (λ acc f i -> i)
-             (λ acc r h i -> h (round acc i))
-
   ------------------------------------------------------------------------
   -- The invariants: the accumulator lies in ws, and each member is reached
   -- from a seed.
@@ -264,43 +210,70 @@ roundSeeded Seed ws acc sd z m =
                 open Reaches reaches
 
 ------------------------------------------------------------------------
--- The closure itself, and its four properties.  subset and fin say which pool
--- the search recurses on: every vertex of ws is in it, and it is finite.
+-- The search itself.  Its invariant keeps three facts about acc: the
+-- candidates still to add are in the pool, acc lies in ws, and every member
+-- is seeded.  It returns the final accumulator with the last two facts and
+-- completeness (nothing is missing), so the closure's properties are fields.
+
+record Grown (Seed : Pred) (ws : List Node) : Set where
+  constructor grown
+  field
+    result   : List Node
+    resultIn : result ⊆ ws
+    seeded   : ∀[ z ∈ result ] Seeded Seed ws z
+    complete : ∀ⁱ[ x ∈ ws ] missing Seed ws result x ≡ false
+
+module _ (Seed : Pred) (ws : List Node) where
+
+  GrowInv : Pred -> List Node -> Set
+  GrowInv Pool acc =
+    All Pool (ws ∖ acc) × acc ⊆ ws × (∀[ z ∈ acc ] Seeded Seed ws z)
+
+  -- Stop when nothing is missing, else add the missing vertices and recurse.
+
+  growGo : (acc : List Node) -> GrowInv Pool acc -> Finiteᵛ Pool -> Grown Seed ws
+  growGo acc (avail , accIn , accSeeded) (everyPick next)
+    with decideAny (missing Seed ws acc) ws
+  ... | noneTrue f           = grown acc accIn accSeeded f
+  ... | witness x m xMissing =
+    growGo (addRound Seed ws acc)
+           ( availRound Seed ws acc x m xMissing avail
+           , roundIn Seed ws acc accIn
+           , roundSeeded Seed ws acc accSeeded )
+           (next x (avail x (∈-∖⁺ acc m (notInAcc Seed ws acc x xMissing))))
+
+  -- subset and fin say which pool the search recurses on: every vertex of ws
+  -- is in it, and it is finite.
+
+  grow : All Pool ws -> Finiteᵛ Pool -> Grown Seed ws
+  grow subset =
+    growGo [] ((λ z mz -> subset z (∖-⊆ ws [] z mz)) , (λ _ ()) , (λ _ ()))
 
 closure : (Seed : Pred) (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
        -> List Node
-closure Seed ws subset fin =
-  growGo Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz)) fin
+closure Seed ws subset fin = Grown.result (grow Seed ws subset fin)
 
 module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : All Pool ws)
          (fin : Finiteᵛ Pool) where
 
-  private
-    avail0 : All Pool (ws ∖ [])
-    avail0 z mz = subset z (∖-⊆ ws [] z mz)
-
-    done : ∀ⁱ[ x ∈ ws ] missing Seed ws (closure Seed ws subset fin) x ≡ false
-    done = growElim Seed ws (λ acc r -> ∀ⁱ[ x ∈ ws ] missing Seed ws r x ≡ false)
-                    (λ acc f -> f) (λ acc r d -> d) [] avail0 fin
+  open Grown (grow Seed ws subset fin)
 
   closureIn : closure Seed ws subset fin ⊆ ws
-  closureIn = growInv Seed ws (λ acc -> acc ⊆ ws) (roundIn Seed ws) [] avail0 fin
-                      (λ z ())
+  closureIn = resultIn
 
   closureSeeded : ∀[ z ∈ closure Seed ws subset fin ] Seeded Seed ws z
-  closureSeeded = growInv Seed ws (λ acc -> ∀[ z ∈ acc ] Seeded Seed ws z)
-                          (roundSeeded Seed ws) [] avail0 fin (λ z ())
+  closureSeeded = seeded
 
   closureSeed : {z : Node} -> z ∈ ws -> Seed z ≡ true -> z ∈ closure Seed ws subset fin
   closureSeed {z} mz e =
-    wantedIn Seed ws (closure Seed ws subset fin) z (done mz)
-      (∨ᵇ-introˡ (Seed z) (any (λ y -> G y z) (closure Seed ws subset fin)) e)
+    wantedIn Seed ws result z (complete mz)
+      (∨ᵇ-introˡ (Seed z) (any (λ y -> G y z) result) e)
 
   closureClosed : Closed[ G ▷ ws ] (closure Seed ws subset fin)
   closureClosed mu {w} mw e =
-    wantedIn Seed ws (closure Seed ws subset fin) w (done mw)
-      (∨ᵇ-introʳ (Seed w) (any (λ y -> G y w) (closure Seed ws subset fin))
-                 (any-intro (λ y -> G y w) (closure Seed ws subset fin) mu e))
+    wantedIn Seed ws result w (complete mw)
+      (∨ᵇ-introʳ (Seed w) (any (λ y -> G y w) result)
+                 (any-intro (λ y -> G y w) result mu e))
 
 ------------------------------------------------------------------------
 -- The reachable set: the closure of the single seed v, on listFinite ws.

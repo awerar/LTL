@@ -55,6 +55,7 @@ LTL.1-Lib.Exhaustible.∪-∩-weaken	a8a607a4d8a4	2026-11-25
 LTL.1-Lib.Exhaustible.⊆ᵖ-refl	27b2e2a2d2cc	2026-11-25	
 LTL.1-Lib.Exhaustible.⊆ᵖ-trans	ba817e717cb2	2026-11-25	
 LTL.1-Lib.Graph.Reaches	b0d73127c22e	2026-11-25	
+LTL.1-Lib.Graph.Seeded	bc9bc0956a27	2026-11-26	
 LTL.1-Lib.Graph.Trail	fe3bbd4e23ca	2026-11-25	
 LTL.1-Lib.Graph.addRound	06a6f753469a	2026-11-25	
 LTL.1-Lib.Graph.availRound	57e7715c8182	2026-11-26	
@@ -64,6 +65,7 @@ LTL.1-Lib.Graph.notInAcc	41eaf2494f62	2026-11-25
 LTL.1-Lib.Graph.outs	fa8f3260dc70	2026-11-24	
 LTL.1-Lib.Graph.reachesEndIn	01c7157255df	2026-11-25	
 LTL.1-Lib.Graph.reachesInto	142224b26ffb	2026-11-25	
+LTL.1-Lib.Graph.roundIn	2bca0d96336c	2026-11-26	
 LTL.1-Lib.Graph.trailApp	deb3db82619e	2026-11-25	
 LTL.1-Lib.Graph.trailEnd	dc274499943f	2026-11-25	
 LTL.1-Lib.Graph.trailEndIn	03d2f4625ab4	2026-11-25	

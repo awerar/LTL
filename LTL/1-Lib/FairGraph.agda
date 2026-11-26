@@ -81,23 +81,22 @@ sccRep ws r mr =
 
 ------------------------------------------------------------------------
 -- r's component is terminal when everything r reaches reaches r back, i.e.
--- the reachable set of r IS its component.
+-- the reachable set of r IS its component.  It is stated as decideAll's
+-- allTrue gives it, so the search hands it over unchanged.
 
-isTerminal : List Node -> Node -> Bool
-isTerminal ws r = all (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+IsTerminal : List Node -> Node -> Set
+IsTerminal ws r = ∀ⁱ[ w ∈ reachSet ws r ] r ∈ᵛ reachSet ws w ≡ true
 
 terminalScc : (ws : List Node) (r : Node)
-       -> isTerminal ws r ≡ true
-       -> ∀ⁱ[ w ∈ reachSet ws r ] w ∈ sccOf ws r
-terminalScc ws r et {w} m =
-  ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
-            (all-true (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) et w m)
+       -> IsTerminal ws r -> ∀ⁱ[ w ∈ reachSet ws r ] w ∈ sccOf ws r
+terminalScc ws r et m =
+  ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m (et m)
 
 -- A terminal component is closed under successors inside ws: the refutation
 -- needs exactly this of it.
 
 terminalClosed : (ws : List Node) (r : Node)
-          -> isTerminal ws r ≡ true -> Closed[ G ▷ ws ] (sccOf ws r)
+          -> IsTerminal ws r -> Closed[ G ▷ ws ] (sccOf ws r)
 terminalClosed ws r et {z} mz my e =
   terminalScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
 
@@ -116,27 +115,16 @@ record Terminal (ws : List Node) : Set where
   field
     r        : Node
     rIn      : r ∈ ws
-    terminal : isTerminal ws r ≡ true
+    terminal : IsTerminal ws r
 
 module _ (ws : List Node) where
 
-  terminalGo   : (r : Node) -> r ∈ ws
-              -> All Pool (reachSet ws r) -> Finiteᵛ Pool -> Terminal ws
-  terminalFind : (r : Node) -> r ∈ ws
-              -> All Pool (reachSet ws r) -> Finiteᵛ Pool
-              -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
-              -> Terminal ws
-
-  terminalGo r r∈ws avail fin =
-    terminalFind r r∈ws avail fin
-                 (decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r))
-
-  terminalFind r r∈ws avail fin (allTrue f) =
-    terminalAt r r∈ws
-               (all-intro (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
-                          (λ w m -> f m))
-  terminalFind {Pool} r r∈ws avail (everyPick next)
-               (counterexample w w∈reach noReturn) =
+  terminalGo : (r : Node) -> r ∈ ws
+            -> All Pool (reachSet ws r) -> Finiteᵛ Pool -> Terminal ws
+  terminalGo {Pool} r r∈ws avail (everyPick next)
+    with decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+  ... | allTrue f = terminalAt r r∈ws f
+  ... | counterexample w w∈reach noReturn =
     terminalGo w (reachIn ws r w∈reach) avail'
                (next r (avail r (reachSeed ws r r∈ws)))
     where
@@ -187,11 +175,6 @@ module _ {ws vs : List Node} {r : Node} where
   circMono subset (circuit (loopBy q qs t h) wit) =
     circuit (loopBy q qs t (λ z mz -> subset z (h z mz))) wit
 
--- C meets every fairness predicate: each f in fs holds somewhere in C.
-
-meetsAll : List Pred -> List Node -> Bool
-meetsAll fs C = all (λ g -> any g C) fs
-
 -- A terminal component of a vertex that has a successor is non-trivial: the
 -- successor is reached, so terminality sends a trail back.  No separate cycle
 -- detection is needed.
@@ -199,7 +182,7 @@ meetsAll fs C = all (λ g -> any g C) fs
 module _ {ws : List Node} {r : Node} where
 
   loopAt : r ∈ ws
-        -> isTerminal ws r ≡ true -> hasOut ws r ≡ true -> Loop ws r
+        -> IsTerminal ws r -> hasOut ws r ≡ true -> Loop ws r
   loopAt mr et ho =
     pick (null-false (outs ws r) (¬ᵇ-true (null (outs ws r)) ho))
     where
@@ -267,18 +250,17 @@ module _ {ws : List Node} {r : Node} where
         -> (C : List Node)
         -> (∀[ u ∈ C ] Reaches ws r u)
         -> (∀[ u ∈ C ] Reaches ws u r)
-        -> (fs : List Pred) -> meetsAll fs C ≡ true
+        -> (fs : List Pred) -> (∀ⁱ[ g ∈ fs ] any g C ≡ true)
         -> Circuit ws fs r
   mkCirc l0 C to from []        e = circuit l0 noF
     where
       noF : ∀[ f ∈ [] ] ∃[ z ∈ Loop.cycle l0 ] z ∈ᵖ f
       noF f ()
   mkCirc l0 C to from (f ∷ fs) e =
-    pick (any-true f C (∧ᵇ-trueˡ (any f C) (meetsAll fs C) e))
+    pick (any-true f C (e here))
     where
       rest : Circuit ws fs r
-      rest = mkCirc l0 C to from fs
-                    (∧ᵇ-trueʳ (any f C) (meetsAll fs C) e)
+      rest = mkCirc l0 C to from fs (λ m -> e (there m))
 
       pick : (∃[ w ∈ C ] w ∈ᵖ f)
           -> Circuit ws (f ∷ fs) r
@@ -294,21 +276,18 @@ module _ {ws : List Node} {r : Node} where
 data Block (ws : List Node) (fs : List Pred) : Set where
   bEmpty  : null ws ≡ true -> Block ws fs
   bFair   : (r : Node) -> r ∈ ws -> Circuit ws fs r -> Block ws fs
-  bUnfair : (r : Node) -> r ∈ ws -> isTerminal ws r ≡ true
+  bUnfair : (r : Node) -> r ∈ ws -> IsTerminal ws r
          -> (f : Pred) -> f ∈ fs -> any f (sccOf ws r) ≡ false
          -> Block ws fs
 
 blockOf : (ws : List Node) (fs : List Pred)
        -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true)
        -> Terminal ws -> Block ws fs
-blockOf ws fs h (terminalAt r mr et) with meetsAll fs (sccOf ws r) in eb
-... | true  = bFair r mr (mkCirc (loopAt mr et (h mr)) (sccOf ws r)
-                                 (sccTo ws r) (sccFrom ws r) fs eb)
-... | false = unf (all-false (λ g -> any g (sccOf ws r)) fs eb)
-  where
-    unf : (∃[ g ∈ fs ] any g (sccOf ws r) ≡ false)
-       -> Block ws fs
-    unf (g , mg , eg) = bUnfair r mr et g mg eg
+blockOf ws fs h (terminalAt r mr et)
+  with decideAll (λ g -> any g (sccOf ws r)) fs
+... | allTrue e = bFair r mr (mkCirc (loopAt mr et (h mr)) (sccOf ws r)
+                                     (sccTo ws r) (sccFrom ws r) fs e)
+... | counterexample g mg eg = bUnfair r mr et g mg eg
 
 pickBlock : (ws : List Node) (fs : List Pred)
          -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true) -> Block ws fs
@@ -353,28 +332,18 @@ fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 module _ (fs : List Pred) where
 
-  graphGo    : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
-            -> FairIn ws fs ⊎ Cert fs ws
-  graphFind  : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
-            -> AllDecision (hasOut ws) ws
-            -> FairIn ws fs ⊎ Cert fs ws
-  graphBlock : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
-            -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
-
-  graphGo ws subset fin = graphFind ws subset fin (decideAll (hasOut ws) ws)
-
-  graphFind ws subset fin (allTrue f) =
-    graphBlock ws subset fin (pickBlock ws fs f)
-  graphFind ws subset (everyPick next) (counterexample x x∈ws noOut) =
+  graphGo : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
+         -> FairIn ws fs ⊎ Cert fs ws
+  graphGo ws subset (everyPick next) with decideAll (hasOut ws) ws
+  ... | counterexample x x∈ws noOut =
     [ (λ fi -> inl (fairInMono (∖-⊆ ws (x ∷ [])) fi))
     , (λ c  -> inr (cSink ws x x∈ws (¬ᵇ-false (null (outs ws x)) noOut) c))
     ] (graphGo (ws ∖ᵛ x) (All-∖ ws (x ∷ []) (∖-⊆ ws (x ∷ [])) subset here)
                (next x (subset x x∈ws)))
-
-  graphBlock ws subset fin (bEmpty e)       = inr (cNil ws e)
-  graphBlock ws subset fin (bFair r r∈ws c) = inl (fairIn r r∈ws c)
-  graphBlock ws subset (everyPick next)
-             (bUnfair r r∈ws terminal g g∈fs gMissed) =
+  ... | allTrue f with pickBlock ws fs f
+  ...   | bEmpty e       = inr (cNil ws e)
+  ...   | bFair r r∈ws c = inl (fairIn r r∈ws c)
+  ...   | bUnfair r r∈ws terminal g g∈fs gMissed =
     [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi))
     , (λ c  -> inr (cBlock ws C g g∈fs (terminalClosed ws r terminal) miss c))
     ] (graphGo (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (sccRep ws r r∈ws))
@@ -385,6 +354,7 @@ module _ (fs : List Pred) where
 
       miss : ∀[ z ∈ C ] z ∉ᵖ g
       miss z mz = any-false g C gMissed mz
+
 
 ------------------------------------------------------------------------
 -- The theorem

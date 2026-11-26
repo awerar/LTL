@@ -95,7 +95,7 @@ derivation or a certified finite lasso countermodel.
   `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
-  (`terminalFind {Pool} r …`) or sits in a `module _ {ws : List Node}` block,
+  (`terminalGo {Pool} r …`) or sits in a `module _ {ws : List Node}` block,
   which also carries shared explicit arguments (`reachesInto`'s `cl`).
   Generalised arguments come in order of first appearance in the signature.
   A variable clashes with any definition of the same name in the module,
@@ -130,7 +130,7 @@ derivation or a certified finite lasso countermodel.
   `Everything`.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
-  comment at the definition. The search conventions (`fooGo`/`fooFind`, the
+  comment at the definition. The search conventions (one recursive `fooGo` with a `with`, the
   `subset`/`fin`/`avail`/`next` binders, `x∈` for "x is in the pool") are
   explained above `All` in `LTL/1-Lib/Nodes.agda`.
 - Comments explain the code as it is today. A module header is about 5–15

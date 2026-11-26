@@ -100,10 +100,11 @@ finiteOfList {Pool = Pool} (suc bound) xs short subset =
 --           accumulator acc is still in the pool;
 --   next    the field of everyPick: next x x∈ proves the pool left
 --           after picking x finite, where x∈ says x is in the pool.
--- A search comes as a pair fooGo / fooFind: fooGo runs decideAll for one
--- round, and fooFind cases on its AllDecision -- allTrue stops,
--- counterexample x recurses on the smaller pool that next hands over.  The
--- growing closure runs decideAny instead: noneTrue stops, witness x recurses.
+-- A search is one recursive function, fooGo: it matches fin as everyPick next
+-- and cases on decideAll with a with-clause.  allTrue stops, counterexample x
+-- recurses on the smaller pool that next hands over.  The growing closure
+-- runs decideAny instead: noneTrue stops, witness x recurses.  Each search
+-- returns its correctness with its answer, so no lemma is proved about it.
 
 All : Pred -> List Node -> Set
 All Pool xs = ∀[ x ∈ xs ] x ∈ᵖ Pool

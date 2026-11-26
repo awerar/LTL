@@ -41,10 +41,12 @@ gE v w = w ≡ⁿ gB
 reach-gA : reachSet gE gVs gA ≡ gB ∷ gA ∷ []
 reach-gA = refl
 
-term-gA : isTerminal gE gVs gA ≡ false
+-- findTerminal moves from a to b, and stays at b.
+
+term-gA : Terminal.r (findTerminal gE gVs gA here) ≡ gB
 term-gA = refl
 
-term-gB : isTerminal gE gVs gB ≡ true
+term-gB : Terminal.r (findTerminal gE gVs gB (there here)) ≡ gB
 term-gB = refl
 
 scc-gB : sccOf gE gVs gB ≡ gB ∷ []
@@ -85,10 +87,13 @@ gE2 v w = (v ≡ⁿ gP) ∧ᵇ (w ≡ⁿ gQ) ∨ᵇ
           (v ≡ⁿ gQ) ∧ᵇ (w ≡ⁿ gS) ∨ᵇ
           (v ≡ⁿ gS) ∧ᵇ (w ≡ⁿ gQ)
 
-term-gP : isTerminal gE2 gVs2 gP ≡ false
+-- findTerminal moves from p to s, in the terminal component {q,s}, and
+-- stays at q.
+
+term-gP : Terminal.r (findTerminal gE2 gVs2 gP here) ≡ gS
 term-gP = refl
 
-term-gQ : isTerminal gE2 gVs2 gQ ≡ true
+term-gQ : Terminal.r (findTerminal gE2 gVs2 gQ (there here)) ≡ gQ
 term-gQ = refl
 
 scc-gQ : map (λ z -> z ∈ᵛ sccOf gE2 gVs2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
