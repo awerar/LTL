@@ -17,11 +17,12 @@
 --
 -- 1. A component is a representative plus a filter (sccOf); the condensation
 --    is never built, and "terminal" is a boolean.
--- 2. graphGo is a REMOVING iteration (refute a sink or a terminal component,
---    delete it), so a finite pool covers termination; findTerminal finds a
---    terminal component by following condensation edges, again by recursion
---    on a Finiteᵛ proof.  Both take theirs from listFinite, so they need no
---    guard.
+-- 2. graphGo is a REMOVING iteration (find a terminal component; unless it is
+--    fair, refute it, as a sink or as missing a predicate, and delete it), so
+--    a finite pool covers termination; findTerminal finds a terminal
+--    component by following condensation edges, again by recursion on a
+--    Finiteᵛ proof.  Both take theirs from listFinite, so they need no guard.
+--    Every step of a certificate therefore removes a whole component.
 --
 -- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
 -- so a sink lies on no cycle; and any vertex of a cycle reaches any other, so
@@ -41,7 +42,6 @@ open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Exhaustible
 open import LTL.1-Lib.Nodes eq
 open import LTL.1-Lib.Graph eq G
-open import LTL.1-Lib.CertStep
 
 -- The implicit arguments the signatures below leave out: the endpoints and
 -- visited list of a trail, and the pool a search recurses on.
@@ -99,6 +99,24 @@ terminalClosed : (ws : List Node) (r : Node)
           -> IsTerminal ws r -> Closed[ G ▷ ws ] (sccOf ws r)
 terminalClosed ws r et {z} mz my e =
   terminalScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
+
+-- A sink is a trivial terminal component: it reaches only itself, so its
+-- component is {x}.  A trail out of x would start with an out-edge.
+
+sinkOnly : (ws : List Node) (x : Node) -> null (outs ws x) ≡ true
+        -> ∀ⁱ[ w ∈ reachSet ws x ] w ≡ x
+sinkOnly ws x e m = onTrail (reachTrail ws x m)
+  where
+    onTrail : Reaches ws x w -> w ≡ x
+    onTrail (reachesBy _ tNil        subset) = refl
+    onTrail (reachesBy _ (tCons g t) subset) =
+      emptyElim (null-∈ (outs ws x) e (∈-filter⁺ (G x) ws (subset _ here) g))
+
+sinkTerminal : (ws : List Node) (x : Node) -> x ∈ ws
+            -> null (outs ws x) ≡ true -> IsTerminal ws x
+sinkTerminal ws x mx e m =
+  subst (λ y -> x ∈ᵛ reachSet ws y ≡ true) (sym (sinkOnly ws x e m))
+        (∈ᵛ-complete (reachSet ws x) x (reachSeed ws x mx))
 
 ------------------------------------------------------------------------
 -- A non-empty graph has a terminal component.  While r's component is not
@@ -268,47 +286,47 @@ module _ {ws : List Node} {r : Node} where
         consCirc l0 f w fw (to w mw) (from w mw) fs rest
 
 ------------------------------------------------------------------------
--- One step of the outer iteration, decided: given that every vertex of ws has
--- an out-edge, ws is empty, or its terminal component is fair and a circuit is
--- built, or it misses some f and is a block to be refuted.  Nothing here
--- recurses.
-
-data Block (ws : List Node) (fs : List Pred) : Set where
-  bEmpty  : null ws ≡ true -> Block ws fs
-  bFair   : (r : Node) -> r ∈ ws -> Circuit ws fs r -> Block ws fs
-  bUnfair : (r : Node) -> r ∈ ws -> IsTerminal ws r
-         -> (f : Pred) -> f ∈ fs -> any f (sccOf ws r) ≡ false
-         -> Block ws fs
-
-blockOf : (ws : List Node) (fs : List Pred)
-       -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true)
-       -> Terminal ws -> Block ws fs
-blockOf ws fs h (terminalAt r mr et)
-  with decideAll (λ g -> any g (sccOf ws r)) fs
-... | allTrue e = bFair r mr (mkCirc (loopAt mr et (h mr)) (sccOf ws r)
-                                     (sccTo ws r) (sccFrom ws r) fs e)
-... | counterexample g mg eg = bUnfair r mr et g mg eg
-
-pickBlock : (ws : List Node) (fs : List Pred)
-         -> (∀ⁱ[ x ∈ ws ] hasOut ws x ≡ true) -> Block ws fs
-pickBlock []       fs h = bEmpty refl
-pickBlock (u ∷ ws) fs h =
-  blockOf (u ∷ ws) fs h (findTerminal (u ∷ ws) u here)
-
-------------------------------------------------------------------------
 -- The negative certificate: a well-founded record of the removal order,
--- indexed by what is LEFT.  Each step removes a vertex with no out-edge inside
--- ws, or a block closed under out-edges inside ws that misses a fairness
--- predicate.  cNil says nothing is left.
+-- indexed by what is LEFT.  ws is the vertices still under consideration, and
+-- every graph notion of a step (outs ws, IsTerminal ws, sccOf ws) is taken in
+-- the subgraph on ws.  Each step removes a terminal component of it: a trivial
+-- one, which is a sink (cSink), or one that misses a fairness predicate
+-- (cUnfair).  The components are those of the starting graph, since removing
+-- a closed union of components splits no other; only "terminal" is relative
+-- to what is left.  cNil says nothing is left.
 
 data Cert (fs : List Pred) : List Node -> Set where
-  cNil   : (ws : List Node) -> null ws ≡ true -> Cert fs ws
-  cSink  : (ws : List Node) (x : Node) -> x ∈ ws
-        -> null (outs ws x) ≡ true
-        -> Cert fs (ws ∖ᵛ x) -> Cert fs ws
-  cBlock : (ws C : List Node) (f : Pred) -> f ∈ fs
-        -> Closed[ G ▷ ws ] C -> None f C
-        -> Cert fs (ws ∖ C) -> Cert fs ws
+  cNil    : Cert fs []
+  cSink   : (ws : List Node) (r : Node) -> r ∈ ws -> IsTerminal ws r
+         -> null (outs ws r) ≡ true
+         -> Cert fs (ws ∖ sccOf ws r) -> Cert fs ws
+  cUnfair : (ws : List Node) (r : Node) -> r ∈ ws -> IsTerminal ws r
+         -> (f : Pred) -> f ∈ fs -> None f (sccOf ws r)
+         -> Cert fs (ws ∖ sccOf ws r) -> Cert fs ws
+
+------------------------------------------------------------------------
+-- One step of the outer iteration, decided on a terminal component: if r has
+-- no out-edge it is a sink; otherwise the component carries a loop, and it is
+-- fair and a circuit is built, or it misses some f.  In the two cases that are
+-- not fair the component is to be removed, and bRemove carries the
+-- certificate step that says why.  Nothing here recurses.
+
+data Block (ws : List Node) (fs : List Pred) : Set where
+  bFair   : (r : Node) -> r ∈ ws -> Circuit ws fs r -> Block ws fs
+  bRemove : (r : Node) -> r ∈ ws
+         -> (Cert fs (ws ∖ sccOf ws r) -> Cert fs ws) -> Block ws fs
+
+blockOf : (ws : List Node) (fs : List Pred) -> Terminal ws -> Block ws fs
+blockOf ws fs (terminalAt r mr et) with hasOut ws r in eo
+... | false =
+  bRemove r mr (cSink ws r mr et (¬ᵇ-false (null (outs ws r)) eo))
+... | true with decideAll (λ g -> any g (sccOf ws r)) fs
+...   | allTrue e = bFair r mr (mkCirc (loopAt mr et eo) (sccOf ws r)
+                                       (sccTo ws r) (sccFrom ws r) fs e)
+...   | counterexample g mg eg = bRemove r mr (cUnfair ws r mr et g mg miss)
+  where
+    miss : None g (sccOf ws r)
+    miss z mz = any-false g (sccOf ws r) eg mz
 
 ------------------------------------------------------------------------
 -- The theorem, on a sub-list
@@ -326,34 +344,26 @@ fairInMono : {fs : List Pred}
           -> ws ⊆ vs -> FairIn ws fs -> FairIn vs fs
 fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
--- Terminal-component removal, a REMOVING iteration: whichever step applies,
--- the vertex it names (the sink x, or the block's representative r) leaves ws
--- and the pool with it (All-∖).
+-- Terminal-component removal, a REMOVING iteration: while ws is non-empty,
+-- find a terminal component and decide it; if it is not fair, its
+-- representative r leaves ws with the rest of the component, and the pool
+-- loses r (All-∖).
 
 module _ (fs : List Pred) where
 
   graphGo : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
          -> FairIn ws fs ⊎ Cert fs ws
-  graphGo ws subset (everyPick next) with decideAll (hasOut ws) ws
-  ... | counterexample x x∈ws noOut =
-    [ (λ fi -> inl (fairInMono (∖-⊆ ws (x ∷ [])) fi))
-    , (λ c  -> inr (cSink ws x x∈ws (¬ᵇ-false (null (outs ws x)) noOut) c))
-    ] (graphGo (ws ∖ᵛ x) (All-∖ ws (x ∷ []) (∖-⊆ ws (x ∷ [])) subset here)
-               (next x (subset x x∈ws)))
-  ... | allTrue f with pickBlock ws fs f
-  ...   | bEmpty e       = inr (cNil ws e)
-  ...   | bFair r r∈ws c = inl (fairIn r r∈ws c)
-  ...   | bUnfair r r∈ws terminal g g∈fs gMissed =
-    [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi))
-    , (λ c  -> inr (cBlock ws C g g∈fs (terminalClosed ws r terminal) miss c))
-    ] (graphGo (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (sccRep ws r r∈ws))
+  graphGo []         subset fin              = inr cNil
+  graphGo ws@(u ∷ _) subset (everyPick next)
+    with blockOf ws fs (findTerminal ws u here)
+  ... | bFair r r∈ws c      = inl (fairIn r r∈ws c)
+  ... | bRemove r r∈ws step =
+    [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi)) , (λ c -> inr (step c)) ]
+      (graphGo (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (sccRep ws r r∈ws))
                (next r (subset r r∈ws)))
     where
       C : List Node
       C = sccOf ws r
-
-      miss : ∀[ z ∈ C ] z ∉ᵖ g
-      miss z mz = any-false g C gMissed mz
 
 
 ------------------------------------------------------------------------
@@ -388,7 +398,8 @@ fairGraph vs fs v mv =
 -- What a certificate is for: an induction over the removal order.  R is the
 -- property to establish of every vertex (for LTL.7-SCC.SccExtract, refutability
 -- of chi), and the hypothesis carried is "R holds outside ws".  The sink and
--- block cases are the two hypotheses of certAll.
+-- block cases are the two hypotheses of certAll; they ask only for what each
+-- refutation uses, a sink and a closed block, not for a component.
 
 module _ (fs : List Pred) (R : Node -> Set)
          (sinkCase  : (ws : List Node) (x : Node) -> x ∈ ws
@@ -400,7 +411,7 @@ module _ (fs : List Pred) (R : Node -> Set)
          where
 
   -- One removal step: R holds outside ws ∖ C once it holds outside ws and
-  -- on C.  A sink is the block x ∷ [].
+  -- on C.
 
   dropOutside : (ws C : List Node) -> HoldsOutside R ws -> (∀[ y ∈ C ] R y)
              -> HoldsOutside R (ws ∖ C)
@@ -411,15 +422,18 @@ module _ (fs : List Pred) (R : Node -> Set)
 
   certAll : Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z
-  certAll (cNil ws e)          ih z = ih z (null-∈ᵛ ws z e)
-  certAll (cSink ws x mx e c)  ih z =
-    certAll c (dropOutside ws (x ∷ []) ih onX) z
+  certAll cNil                         ih z = ih z refl
+  certAll (cSink ws r mr et e c)       ih z =
+    certAll c (dropOutside ws (sccOf ws r) ih onR) z
     where
-      onX : ∀[ y ∈ x ∷ [] ] R y
-      onX y here       = sinkCase ws x mx e ih
-      onX y (there ())
-  certAll (cBlock ws C f mf cl mis c) ih z =
-    certAll c (dropOutside ws C ih (blockCase ws C f mf cl mis ih)) z
+      -- the component of a sink is r alone
+      onR : ∀[ y ∈ sccOf ws r ] R y
+      onR y my = subst R (sym (sinkOnly ws r e (sccReach ws r y my)))
+                       (sinkCase ws r mr e ih)
+  certAll (cUnfair ws r mr et f mf mis c) ih z =
+    certAll c (dropOutside ws (sccOf ws r) ih
+                 (blockCase ws (sccOf ws r) f mf (terminalClosed ws r et) mis ih))
+            z
 
 ------------------------------------------------------------------------
 -- The two outputs are EXCLUSIVE, by two observations about a closed trail:
@@ -492,27 +506,31 @@ cycConn t subset mu mz = reachesApp (trailFrom t subset (there mu)) (trailTo t s
 
 certNoCirc : (fs : List Pred)
           -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
-certNoCirc fs (cNil ws e)         r (circuit (loopBy q qs t h) wit) =
-  null-∈ ws e (h q here)
-certNoCirc fs (cSink ws x mx e c) r (circuit l@(loopBy q qs t h) wit) =
-  certNoCirc fs c r
-    (circuit (loopRestrict l (⊆-∖ (x ∷ []) h offX)) wit)
+certNoCirc fs cNil                   s (circuit (loopBy q qs t h) wit) =
+  null-∈ [] refl (h q here)
+certNoCirc fs (cSink ws r mr et e c) s (circuit l@(loopBy q qs t h) wit) =
+  certNoCirc fs c s
+    (circuit (loopRestrict l (⊆-∖ (sccOf ws r) h offR)) wit)
   where
-    offCycle : x ∈ q ∷ qs -> Empty
+    offCycle : r ∈ q ∷ qs -> Empty
     offCycle m = onS (loopSucc l m)
       where
-        onS : HasSucc ws x -> Empty
+        onS : HasSucc ws r -> Empty
         onS (hasSucc y my gy) =
-          null-∈ (outs ws x) e (∈-filter⁺ (G x) ws my gy)
+          null-∈ (outs ws r) e (∈-filter⁺ (G r) ws my gy)
 
-    offX : ∀[ z ∈ q ∷ qs ] (z ∈ x ∷ [] -> Empty)
-    offX z mz here       = offCycle mz
-    offX z mz (there ())
-certNoCirc fs (cBlock ws C f mf cl mis c) r
+    -- the component of a sink is r alone, and r is on no cycle
+    offR : ∀[ z ∈ q ∷ qs ] (z ∈ sccOf ws r -> Empty)
+    offR z mz mzc =
+      offCycle (subst (_∈ q ∷ qs) (sinkOnly ws r e (sccReach ws r z mzc)) mz)
+certNoCirc fs (cUnfair ws r mr et f mf mis c) s
            (circuit l@(loopBy q qs t h) wit) =
-  certNoCirc fs c r
+  certNoCirc fs c s
     (circuit (loopRestrict l (⊆-∖ C h inBlock)) wit)
   where
+    C : List Node
+    C = sccOf ws r
+
     inBlock : (z : Node) -> z ∈ q ∷ qs -> z ∈ C -> Empty
     inBlock z mz mzc = onW (wit f mf)
       where
@@ -520,7 +538,7 @@ certNoCirc fs (cBlock ws C f mf cl mis c) r
         onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
           where
             inC : y ∈ C
-            inC = reachesEndIn cl mzc (cycConn t h mz my)
+            inC = reachesEndIn (terminalClosed ws r et) mzc (cycConn t h mz my)
 
 ------------------------------------------------------------------------
 -- The dichotomy at the top level: fairGraph's two answers cannot both hold, so
@@ -546,13 +564,3 @@ fairComplete vs fs v mv fl = onS (fairGraph vs fs v mv) refl
        -> isInl (fairGraph vs fs v mv) ≡ true
     onS (inl l) es = cong isInl es
     onS (inr c) es = emptyElim (fairNoLoop vs fs v mv c fl)
-
-------------------------------------------------------------------------
--- The removal order as a list of step kinds (LTL.1-Lib.CertStep), one per
--- constructor of Cert.
-
-certShape : {fs : List Pred}
-         -> Cert fs ws -> List CertStep
-certShape (cNil ws e)                    = emptied ∷ []
-certShape (cSink ws x mx e c)            = removedSink ∷ certShape c
-certShape (cBlock ws C f mf cl mis c) = removedBlock ∷ certShape c

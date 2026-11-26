@@ -189,9 +189,10 @@ module name). Folder names never equal a module name.
    `All-∖`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the
-   `fairGraph` certificate theorem, `certAll`, exclusivity, `certShape`;
-   largest module), whose step kinds `CertStep` are a module of their own so
-   that they do not depend on the graph.
+   `fairGraph` certificate theorem, `certAll`, exclusivity; largest
+   module). Off the proof path, `CertShape` (`certShape`: a certificate's
+   steps, of type `List CertStep`; unparameterised, so the type does not
+   depend on the graph) is read only by the tests and `Inspect`'s `sccShape`.
    The P-module `Walk` applies both at `G = step` and re-exports them, so
    inside the P-modules their names read `Reaches ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
@@ -241,9 +242,9 @@ module name). Folder names never equal a module name.
    (`LassoCountermodel`, `isProof` with `proofFrom` and `countermodelFrom`:
    only what `decideCorrect` uses); `Inspect` (off the proof path, for
    `Pretty`, tests and benchmarks: `cmRest`, `cmCycle`, `cmTrace`, `cmShape`,
-   `derivCounts`);
+   `derivCounts`, `sccShape`);
    `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
-   `sccShape`, and `decide`, Thm 6.1); `Everything` (re-exports
+   and `decide`, Thm 6.1); `Everything` (re-exports
    all of the above unapplied, for importers); `Correct` (imports
    `Everything`; the bridge: on a `Statement` lasso that starts at `pos0` and
    loops back to `loop`, `evalAt` is `Statement`'s `⊨` (`evalAt-holds`,

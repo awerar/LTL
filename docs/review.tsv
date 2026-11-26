@@ -8,7 +8,6 @@ LTL.1-Lib.Base.if_then_else_	b242a34d3caf	2026-11-24
 LTL.1-Lib.Base.subst	f0d5769407a4	2026-11-24	
 LTL.1-Lib.Base.sym	58dd135e1dd0	2026-11-24	
 LTL.1-Lib.Base.trans	f8488fd91871	2026-11-24	
-LTL.1-Lib.CertStep.CertStep	e55e1a8d3f7c	2026-11-23	
 LTL.1-Lib.DecEq.DecEq	60937efde8be	2026-11-24	
 LTL.1-Lib.DecEq.Finite	931b3eda075d	2026-11-25	
 LTL.1-Lib.DecEq._∈ᵛ_	5102fd860d7a	2026-11-24	

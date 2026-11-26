@@ -145,7 +145,7 @@ Ust-¬Bnb = refl
 shape-benAri : sccShape benAri ≡ removedSink ∷ emptied ∷ []
 shape-benAri = refl
 
-shape-bnb : sccShape bnb ≡ removedSink ∷ removedBlock ∷ emptied ∷ []
+shape-bnb : sccShape bnb ≡ removedSink ∷ removedUnfair ∷ emptied ∷ []
 shape-bnb = refl
 
 -- and the positive side: ◇ p is satisfiable, so its state set has a fair

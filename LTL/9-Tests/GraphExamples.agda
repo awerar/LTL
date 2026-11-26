@@ -19,7 +19,7 @@ natEq = record { _≡ᵛ_ = _≡ⁿ_ ; ≡ᵛ-sound = ≡ⁿ-sound ; ≡ᵛ-refl
 open import LTL.1-Lib.Graph natEq
 open import LTL.1-Lib.FairGraph natEq
 open import LTL.1-Lib.Nodes natEq using (_∈ᵛ_; Edges; Pred)
-open import LTL.1-Lib.CertStep
+open import LTL.1-Lib.CertShape
 
 ------------------------------------------------------------------------
 -- The first graph: a = 0 and b = 1, with a -> b and b -> b.  b's component
@@ -68,7 +68,7 @@ fair-gA = refl
 --
 -- p is transient and {q,s} is recurrent, so findTerminal moves the representative
 -- once, the circuit has two legs, and the certificate uses all three of its
--- constructors: cBlock removes {q,s}, then p is a sink (cSink), then cNil.
+-- constructors: cUnfair removes {q,s}, then p is a sink (cSink), then cNil.
 
 gP : Nat
 gP = 0
@@ -98,6 +98,11 @@ term-gQ = refl
 
 scc-gQ : map (λ z -> z ∈ᵛ sccOf gE2 gVs2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
 scc-gQ = refl
+
+-- Once {q,s} is removed, p is a sink, and its component is p alone (sinkOnly).
+
+scc-sinkP : sccOf gE2 (gP ∷ []) gP ≡ gP ∷ []
+scc-sinkP = refl
 
 -- The lasso the fair branch returns.  findTerminal settles on s, so the stem is
 -- p -> q -> s and the loop is s -> q -> s.  With the predicates "is q" and "is
@@ -142,15 +147,15 @@ cycle-QS = refl
 fair-P : isInl (fairGraph gE2 gVs2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
 fair-P = refl
 
--- The certificate it returns instead, as the list of its steps:  cBlock,
+-- The certificate it returns instead, as the list of its steps:  cUnfair,
 -- cSink, cNil .  The component {q,s} misses "is p" and is refuted first, and
 -- only then is p a sink: p is refuted because its successor already was.
 
 certSteps : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}
          -> FairLoop G vs fs v ⊎ Cert G fs (reachSet G vs v) -> List CertStep
 certSteps (inl l) = []
-certSteps {G} (inr c) = certShape G c
+certSteps (inr c) = certShape c
 
 cert-P : certSteps (fairGraph gE2 gVs2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡
-         removedBlock ∷ removedSink ∷ emptied ∷ []
+         removedUnfair ∷ removedSink ∷ emptied ∷ []
 cert-P = refl

@@ -270,7 +270,7 @@ K5fwd-closure = refl
 -- the certificate: four blocks, then nothing is left
 
 K5fwd-cert : sccShape axK5fwd ≡
-             removedBlock ∷ removedBlock ∷ removedBlock ∷ removedBlock ∷ emptied ∷ []
+             removedUnfair ∷ removedUnfair ∷ removedUnfair ∷ removedUnfair ∷ emptied ∷ []
 K5fwd-cert = refl
 
 check-K5fwd : isProof (decide axK5fwd) ≡ true

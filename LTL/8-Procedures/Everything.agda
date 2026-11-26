@@ -7,7 +7,7 @@
 -- name takes its formula first: St P, Lasso P v0, Cert P fs ws, decide Q.
 -- LTL.8-Procedures.Correct, LTL.Pretty, the tests and the benchmarks import
 -- this module.
--- It also re-exports LTL.1-Lib.CertStep, the type of Decide's sccShape.
+-- It also re-exports LTL.1-Lib.CertShape, the steps Inspect's sccShape lists.
 
 module LTL.8-Procedures.Everything where
 
@@ -29,4 +29,4 @@ open import LTL.7-SCC.SccSeed             public
 open import LTL.8-Procedures.Answer       public
 open import LTL.8-Procedures.Inspect      public
 open import LTL.8-Procedures.Decide       public
-open import LTL.1-Lib.CertStep            public
+open import LTL.1-Lib.CertShape           public

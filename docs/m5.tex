@@ -112,18 +112,22 @@ The certificates $\mathrm{Cert}(W)$, indexed by the list $W$ of vertices
 \emph{still under consideration}, are generated inductively by
 \begin{itemize}
 \item[(C0)] $W$ is empty;
-\item[(C1)] there is $x\in W$ with $\outs_W(x)=\varnothing$, and a certificate
-  for $W\setminus\{x\}$;
-\item[(C2)] there are $C\subseteq W$ closed under $G$-successors lying in $W$,
-  and an $i$ with $f_i(z)=0$ for every $z\in C$, and a certificate for
-  $W\setminus C$.
+\item[(C1)] there is $x\in W$, terminal in $W$, with $\outs_W(x)=\varnothing$,
+  and a certificate for $W\setminus\mathrm{scc}_W(x)$;
+\item[(C2)] there are $r\in W$, terminal in $W$, and an $i$ with $f_i(z)=0$
+  for every $z\in\mathrm{scc}_W(r)$, and a certificate for
+  $W\setminus\mathrm{scc}_W(r)$,
 \end{itemize}
+with $\mathrm{scc}_W$ and terminality as in Definition~\ref{def:scc} below.
 \end{definition}
 
 A certificate is a finite object: it is the removal order, with a reason
-attached to each step.  It is \emph{not} a decomposition into components ---
-no component object, no quotient and no equality of components occurs --- and
-(C2) does not require $C$ to be strongly connected, only successor-closed.
+attached to each step.  Each step removes a whole terminal component of what
+is left --- a trivial one, which is a sink, or one that misses some $f_i$ ---
+yet no component object, no quotient and no equality of components occurs: a
+component is a representative and a filter.  Since only closed unions of
+components are removed, the components of what is left are those of the
+starting graph; only terminality is relative to $W$.
 
 \begin{lemma}[Induction principle]\label{lem:certall}
 Let $R$ be a property of vertices.  Suppose
@@ -140,10 +144,16 @@ vertex.
 
 \begin{proof}
 Induction on the certificate.  In case (C0) nothing is left, so the hypothesis
-already gives $R$ everywhere.  In case (C1) apply (H1) and note that a vertex
-outside $W\setminus\{x\}$ is outside $W$ or is $x$.  Case (C2) is the same with
-(H2) and $C$ in place of $x$.
+already gives $R$ everywhere.  In case (C1) apply (H1), and note that a sink
+reaches only itself, so $\mathrm{scc}_W(x)=\{x\}$ and a vertex outside
+$W\setminus\mathrm{scc}_W(x)$ is outside $W$ or is $x$.  Case (C2) is the same
+with (H2) and $C:=\mathrm{scc}_W(r)$, which is closed under $G$-successors in
+$W$ because $r$ is terminal.
 \end{proof}
+
+The lemma asks less than a certificate records: (H1) and (H2) need only a sink
+and a successor-closed set, not a component, which is all the refutations of
+Section~\ref{sec:extract} use.
 
 Lemma~\ref{lem:certall} is the whole reason the certificate is defined as it
 is: (H1) and (H2) are, on the nose, cases (R1) and (R2)
@@ -169,7 +179,7 @@ terminates all of its searches, applied here to the one computation that note
 deliberately avoided: \cite[Rem.~3.2]{m4} reads (R2) as a greatest fixed point
 precisely so as not to compute reachability.
 
-\begin{definition}
+\begin{definition}\label{def:scc}
 $\mathrm{scc}_W(r):=\{w\in\Reach_W(r): r\in\Reach_W(w)\}$, and $r$ is
 \emph{terminal} in $W$ when $\Reach_W(r)=\mathrm{scc}_W(r)$, i.e.\ when
 everything $r$ reaches reaches $r$ back.
@@ -194,14 +204,14 @@ not a lemma but the termination of this search.
 \end{proof}
 
 \begin{lemma}[One step]\label{lem:block}
-Suppose every $x\in W$ has an out-edge in $W$.  Then either $W$ is empty, or
-its terminal component is fair and a circuit is built in it, or its terminal
-component misses some $f_i$ everywhere.
+Let $r$ be terminal in $W$ and $C:=\mathrm{scc}_W(r)$.  Then either $r$ has no
+out-edge in $W$, or $C$ is fair and a circuit is built in it, or $C$ misses
+some $f_i$ everywhere.
 \end{lemma}
 
 \begin{proof}
-Take $r$ terminal by Lemma~\ref{lem:findterm} and $C:=\mathrm{scc}_W(r)$.  If
-some $f_i$ is false throughout $C$ we are in the third case.  Otherwise each
+If $r$ has no out-edge in $W$ we are in the first case.  If some $f_i$ is false
+throughout $C$ we are in the third case.  Otherwise each
 $f_i$ has a witness $w_i\in C$.  Since $r$ has an out-edge $x\in W$ and $r$
 reaches $x$, terminality sends a trail from $x$ back to $r$, so there is a
 non-empty closed trail $c_0$ at $r$.  Now add one \emph{leg} per fairness
@@ -222,14 +232,13 @@ Given a graph, a fairness family and a vertex $v\in V$, one can compute either
 \end{theorem}
 
 \begin{proof}
-Run the following removing iteration on $W:=\Reach_V(v)$.  Ask whether some
-$x\in W$ has $\outs_W(x)=\varnothing$.  If so, recurse on $W\setminus\{x\}$;
-a lasso found there is a lasso in $W$, and a certificate found there is
-extended by (C1).  If not, apply Lemma~\ref{lem:block}: the empty case gives
-(C0), the fair case gives a circuit, and the unfair case gives a $C$ and an $i$,
-and we recurse on $W\setminus C$, extending by (C2).  Each step removes at least
-one vertex --- for (C2) the representative $r$, which lies in its own component
---- so the iteration terminates.  Finally a circuit at $r$ inside $\Reach_V(v)$
+Run the following removing iteration on $W:=\Reach_V(v)$.  If $W$ is empty,
+that is (C0).  Otherwise take $r$ terminal by Lemma~\ref{lem:findterm} and
+apply Lemma~\ref{lem:block}: the fair case gives a circuit; in the other two
+cases recurse on $W\setminus\mathrm{scc}_W(r)$, where a lasso found is a lasso
+in $W$, and a certificate found is extended by (C1) or (C2).  Each step removes
+at least the representative $r$, which lies in its own component, so the
+iteration terminates.  Finally a circuit at $r$ inside $\Reach_V(v)$
 is joined to $v$ by the trail that put $r$ in the reachable set.
 \end{proof}
 
@@ -253,12 +262,13 @@ removal, so it is still there when nothing is left, which (C0) forbids.
 For (C1): a vertex on a cycle has a successor --- along a trail, every vertex
 visited has a successor provided the endpoint has, and for a closed trail the
 endpoint is the start, whose successor is the trail's own first step --- so a
-sink lies on no cycle, and the cycle avoids $x$.
+sink lies on no cycle, and the cycle avoids $\mathrm{scc}_W(x)=\{x\}$.
 
 For (C2): any vertex of a cycle reaches any other --- take the suffix of the
 trail to the base point and then the prefix out again --- and a successor-closed
-block that a trail starts in contains everything the trail reaches.  So if the
-cycle met $C$ it would lie inside $C$, and then its witness for $f_i$ would
+block that a trail starts in contains everything the trail reaches; a terminal
+component $C:=\mathrm{scc}_W(r)$ is one.  So if the cycle met $C$ it would lie
+inside $C$, and then its witness for $f_i$ would
 satisfy an $f_i$ that is false throughout $C$.  Hence the cycle avoids $C$.
 \end{proof}
 
