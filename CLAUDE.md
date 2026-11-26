@@ -48,13 +48,13 @@ derivation or a certified finite lasso countermodel.
   x). The notation's body stops at the first unparenthesised `->` (and a `⊎`
   body needs parentheses). Use them consistently: a written binder followed
   at once by its membership and then one conclusion is always the notation
-  (an inclusion is `xs ⊆ ys`, `E ⊆ᵖ F` or `xs inside Pool`); inside a
+  (an inclusion is `xs ⊆ ys`, `E ⊆ᵖ F` or `All Pool xs`); inside a
   hypothesis or an abbreviation the body may be one parenthesised implication,
   `∀[ x ∈ C ] (H -> B)` (as in `Closed`, `Refuted`, `Fair`); a definition's own
   telescope with more premises stays written out. Elements that are private
   variables have no binder to replace. `x ∈ᵖ E`, `x ∉ᵖ E` and `∀[ x ∈ᵖ E ]` are
   for predicates that the code treats as sets: pools and their `∩ ∪ ⁻¹ ⊆ᵖ`,
-  `Apart x`, fairness sets (`fs`, `evPred A`, `C avoids f`), and the generic
+  `Apart x`, fairness sets (`fs`, `evPred A`, `None f C`), and the generic
   test of `filter`/`any`/`all`; a named test only ever evaluated at a point
   (`isState v`, `hasOut ws x`, `missing acc x`, `evalAt A q`) is written
   `… ≡ true`.
@@ -73,10 +73,10 @@ derivation or a certified finite lasso countermodel.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
   `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
-  `C closed-under G within ws`, `C avoids f`, `HoldsOutside R ws`,
-  `xs inside Pool`, `Finiteᵛ Pool` (all `LTL/1-Lib/Nodes.agda`; list
+  `Closed[ G ▷ ws ] C`, `None f C`, `HoldsOutside R ws`,
+  `All Pool xs`, `Finiteᵛ Pool` (all `LTL/1-Lib/Nodes.agda`; list
   difference `ws ∖ C` is `Membership`'s, in `LTL/1-Lib/DecEq.agda`, and a
-  growing search's invariant is `(ws ∖ acc) inside Pool`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
+  growing search's invariant is `All Pool (ws ∖ acc)`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
   Boolean predicates as sets: membership is `x ∈ᵖ E` / `x ∉ᵖ E` (`Prelude`;
   `E x ≡ true` / `≡ false`), so "every member of xs passes p" is
   `∀[ x ∈ xs ] x ∈ᵖ p`; the algebra is `Exhaustible`'s: `E ∩ F`, `E ∪ F`,
@@ -102,7 +102,7 @@ derivation or a certified finite lasso countermodel.
   `where`-local ones and record fields included; hence `r` is not a variable in
   `FairGraph` (the `r` fields of `Terminal`, `FairIn`, `FairLoop`). In the
   graph layer `ws` is a variable wherever another argument's type fixes it (a
-  `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc`, `zs ⊆ ws` or closed-under
+  `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc`, `zs ⊆ ws` or `Closed`
   hypothesis), so a call reads `reachesApp r1 r2`; it stays explicit where it
   only occurs under a function (`reachSet ws v`, `sccOf ws r`, `outs ws x`),
   since Agda cannot infer it there.
@@ -132,7 +132,7 @@ derivation or a certified finite lasso countermodel.
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (`fooGo`/`fooFind`, the
   `subset`/`fin`/`avail`/`next` binders, `x∈` for "x is in the pool") are
-  explained above `Inside` in `LTL/1-Lib/Nodes.agda`.
+  explained above `All` in `LTL/1-Lib/Nodes.agda`.
 - Comments explain the code as it is today. A module header is about 5–15
   lines: what the module provides and its one or two non-obvious design
   choices. A comment above a definition is 1–4 lines, longer only for a subtle
@@ -184,9 +184,9 @@ module name). Folder names never equal a module name.
    `Nodes` (parameterised by a
    node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finiteᵛ`
    (`Finite eq`),
-   `listFinite`, the hypothesis names, and the algebra of `xs inside Pool`,
-   the bridge from lists to pools: `inside-⊆`, `inside-∩`, `inside-apart`,
-   `dropInside`). m5's graph layer, parameterised like `Nodes` and by the
+   `listFinite`, the hypothesis names, and the algebra of `All Pool xs`,
+   the bridge from lists to pools: `All-⊆`, `All-∩`, `All-apart`,
+   `All-∖`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
    reachable set as an instance of it); `FairGraph` (components, the
    `fairGraph` certificate theorem, `certAll`, exclusivity, `certShape`;

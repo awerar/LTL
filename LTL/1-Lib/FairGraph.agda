@@ -70,14 +70,14 @@ sccTo ws r w m = reachTrail ws r (sccReach ws r w m)
 sccFrom : (ws : List Node) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws w r
 sccFrom ws r w m =
   reachTrail ws w
-    (∈ᵛ-sound r (reachSet ws w)
-      (filter-prop (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m))
+    (∈ᵛ-sound (reachSet ws w) r
+      (filter-prop (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) w m))
 
 sccRep : (ws : List Node) -> ∀[ r ∈ ws ] r ∈ sccOf ws r
 sccRep ws r mr =
   ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
             (reachSeed ws r mr)
-            (∈ᵛ-complete r (reachSet ws r) (reachSeed ws r mr))
+            (∈ᵛ-complete (reachSet ws r) r (reachSeed ws r mr))
 
 ------------------------------------------------------------------------
 -- r's component is terminal when everything r reaches reaches r back, i.e.
@@ -97,7 +97,7 @@ terminalScc ws r et {w} m =
 -- needs exactly this of it.
 
 terminalClosed : (ws : List Node) (r : Node)
-          -> isTerminal ws r ≡ true -> sccOf ws r closed-under G within ws
+          -> isTerminal ws r ≡ true -> Closed[ G ▷ ws ] (sccOf ws r)
 terminalClosed ws r et {z} mz my e =
   terminalScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
 
@@ -121,9 +121,9 @@ record Terminal (ws : List Node) : Set where
 module _ (ws : List Node) where
 
   terminalGo   : (r : Node) -> r ∈ ws
-              -> reachSet ws r inside Pool -> Finiteᵛ Pool -> Terminal ws
+              -> All Pool (reachSet ws r) -> Finiteᵛ Pool -> Terminal ws
   terminalFind : (r : Node) -> r ∈ ws
-              -> reachSet ws r inside Pool -> Finiteᵛ Pool
+              -> All Pool (reachSet ws r) -> Finiteᵛ Pool
               -> AllDecision (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
               -> Terminal ws
 
@@ -140,14 +140,14 @@ module _ (ws : List Node) where
     terminalGo w (reachIn ws r w∈reach) avail'
                (next r (avail r (reachSeed ws r r∈ws)))
     where
-      avail' : reachSet ws w inside Pool ∩ (r ≢ᵛ_)
-      avail' = inside-∩ (inside-⊆ (λ z -> reachTrans ws r w z w∈reach) avail)
-                        (inside-apart (_∈ᵛ reachSet ws w) noReturn
-                                      (inside-∈ᵛ (reachSet ws w)))
+      avail' : All (Pool ∩ (r ≢ᵛ_)) (reachSet ws w)
+      avail' = All-∩ (All-⊆ (λ z -> reachTrans ws r w z w∈reach) avail)
+                     (All-apart (_∈ᵛ reachSet ws w) noReturn
+                                (∈ᵛ-complete (reachSet ws w)))
 
   findTerminal : ∀[ r ∈ ws ] Terminal ws
   findTerminal r r∈ws =
-    terminalGo r r∈ws (λ z mz -> ∈ᵛ-complete z ws (reachIn ws r mz))
+    terminalGo r r∈ws (λ z mz -> ∈ᵛ-complete ws z (reachIn ws r mz))
                (listFinite ws)
 
 ------------------------------------------------------------------------
@@ -210,7 +210,7 @@ module _ {ws : List Node} {r : Node} where
           mxw = ∈-filter⁻ (G r) ws mx
 
           grx : G r x ≡ true
-          grx = filter-prop (G r) ws mx
+          grx = filter-prop (G r) ws x mx
 
           inR : x ∈ reachSet ws r
           inR = reachClosed ws r (reachSeed ws r mr) mxw grx
@@ -328,7 +328,7 @@ data Cert (fs : List Pred) : List Node -> Set where
         -> null (outs ws x) ≡ true
         -> Cert fs (ws ∖ᵛ x) -> Cert fs ws
   cBlock : (ws C : List Node) (f : Pred) -> f ∈ fs
-        -> C closed-under G within ws -> C avoids f
+        -> Closed[ G ▷ ws ] C -> None f C
         -> Cert fs (ws ∖ C) -> Cert fs ws
 
 ------------------------------------------------------------------------
@@ -349,16 +349,16 @@ fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 -- Terminal-component removal, a REMOVING iteration: whichever step applies,
 -- the vertex it names (the sink x, or the block's representative r) leaves ws
--- and the pool with it (dropInside).
+-- and the pool with it (All-∖).
 
 module _ (fs : List Pred) where
 
-  graphGo    : (ws : List Node) -> ws inside Pool -> Finiteᵛ Pool
+  graphGo    : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
             -> FairIn ws fs ⊎ Cert fs ws
-  graphFind  : (ws : List Node) -> ws inside Pool -> Finiteᵛ Pool
+  graphFind  : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
             -> AllDecision (hasOut ws) ws
             -> FairIn ws fs ⊎ Cert fs ws
-  graphBlock : (ws : List Node) -> ws inside Pool -> Finiteᵛ Pool
+  graphBlock : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
             -> Block ws fs -> FairIn ws fs ⊎ Cert fs ws
 
   graphGo ws subset fin = graphFind ws subset fin (decideAll (hasOut ws) ws)
@@ -368,7 +368,7 @@ module _ (fs : List Pred) where
   graphFind ws subset (everyPick next) (counterexample x x∈ws noOut) =
     [ (λ fi -> inl (fairInMono (∖-⊆ ws (x ∷ [])) fi))
     , (λ c  -> inr (cSink ws x x∈ws (¬ᵇ-false (null (outs ws x)) noOut) c))
-    ] (graphGo (ws ∖ᵛ x) (dropInside ws (x ∷ []) subset here)
+    ] (graphGo (ws ∖ᵛ x) (All-∖ ws (x ∷ []) (∖-⊆ ws (x ∷ [])) subset here)
                (next x (subset x x∈ws)))
 
   graphBlock ws subset fin (bEmpty e)       = inr (cNil ws e)
@@ -377,7 +377,7 @@ module _ (fs : List Pred) where
              (bUnfair r r∈ws terminal g g∈fs gMissed) =
     [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi))
     , (λ c  -> inr (cBlock ws C g g∈fs (terminalClosed ws r terminal) miss c))
-    ] (graphGo (ws ∖ C) (dropInside ws C subset (sccRep ws r r∈ws))
+    ] (graphGo (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (sccRep ws r r∈ws))
                (next r (subset r r∈ws)))
     where
       C : List Node
@@ -403,7 +403,7 @@ fairGraph : (vs : List Node) (fs : List Pred)
          -> ∀[ v ∈ vs ] (FairLoop vs fs v ⊎ Cert fs (reachSet vs v))
 fairGraph vs fs v mv =
   [ (λ fi -> inl (toLoop fi)) , inr ]
-    (graphGo fs (reachSet vs v) (inside-∈ᵛ (reachSet vs v))
+    (graphGo fs (reachSet vs v) (∈ᵛ-complete (reachSet vs v))
              (listFinite (reachSet vs v)))
   where
     into : reachSet vs v ⊆ vs
@@ -425,7 +425,7 @@ module _ (fs : List Pred) (R : Node -> Set)
                    -> null (outs ws x) ≡ true
                    -> HoldsOutside R ws -> R x)
          (blockCase : (ws C : List Node) (f : Pred) -> f ∈ fs
-                   -> C closed-under G within ws -> C avoids f
+                   -> Closed[ G ▷ ws ] C -> None f C
                    -> HoldsOutside R ws -> ∀[ z ∈ C ] R z)
          where
 
@@ -435,9 +435,9 @@ module _ (fs : List Pred) (R : Node -> Set)
   dropOutside : (ws C : List Node) -> HoldsOutside R ws -> (∀[ y ∈ C ] R y)
              -> HoldsOutside R (ws ∖ C)
   dropOutside ws C ih onC y eo with y ∈ᵛ C in ec
-  ... | true  = onC y (∈ᵛ-sound y C ec)
+  ... | true  = onC y (∈ᵛ-sound C y ec)
   ... | false =
-    ih y (∉ᵛ-intro y ws λ my -> ∈ᵛ-false y (ws ∖ C) eo (∈-∖⁺ C my ec))
+    ih y (∉ᵛ-intro ws y λ my -> ∈ᵛ-false (ws ∖ C) y eo (∈-∖⁺ C my ec))
 
   certAll : Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z

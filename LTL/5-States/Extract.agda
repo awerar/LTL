@@ -73,7 +73,7 @@ extractR1 us u mu ih e1 =
          (liftP (mp linFwd (○Gen (¬Beta (succs St u) each))))
   where
     outside : ∀[ w ∈ succs St u ] w ∈ᵛ us ≡ false
-    outside w m = ∉ᵛ-intro w us λ mw ->
+    outside w m = ∉ᵛ-intro us w λ mw ->
       null-∈ (succs us u) e1 (succsIn us u mw (snd (∈-succs⁻ St u m)))
 
     each : ∀[ w ∈ succs St u ] ⊢ ¬ (chi w)
@@ -85,4 +85,4 @@ extractR1 us u mu ih e1 =
 -- The base of the induction: outside Ust there is nothing to refute.
 
 ustRefuted : Refuted Ust
-ustRefuted u mu e = emptyElim (∈ᵛ-false u Ust e mu)
+ustRefuted u mu e = emptyElim (∈ᵛ-false Ust u e mu)

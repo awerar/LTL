@@ -57,8 +57,8 @@ provableEachSCC c w m = byPosition
     byPosition with w ∈ᵛ Ust in ec
     ... | false =
       fromR (refuteTrue (valOf w (¬ Q)) λ ed ->
-               ∈ᵛ-false w Ust ec (ustSeed m ed))
-    ... | true = mp ¬Elim (ustCertRefuted c w (∈ᵛ-sound w Ust ec))
+               ∈ᵛ-false Ust w ec (ustSeed m ed))
+    ... | true = mp ¬Elim (ustCertRefuted c w (∈ᵛ-sound Ust w ec))
 
 provableSCC : Cert evPreds Ust -> ⊢ Q
 provableSCC c =

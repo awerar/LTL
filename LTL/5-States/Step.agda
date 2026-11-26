@@ -95,8 +95,8 @@ succs us v = filter (step v) us
 
 ∈-succs⁻ : (us : List Val) (v : Val)
         -> ∀ⁱ[ w ∈ succs us v ] w ∈ us × step v w ≡ true
-∈-succs⁻ us v m =
-  ∈-filter⁻ (step v) us m , filter-prop (step v) us m
+∈-succs⁻ us v {w} m =
+  ∈-filter⁻ (step v) us m , filter-prop (step v) us w m
 
 succsIn : (us : List Val) (v : Val) {w : Val}
        -> w ∈ us -> step v w ≡ true -> w ∈ succs us v

@@ -5,7 +5,7 @@
 -- Defines the equality test on valuations, proves it sound and reflexive,
 -- bundles the three as valEq (LTL.1-Lib.DecEq), and instantiates
 -- LTL.1-Lib.Nodes at it.  That instance supplies ≡ᵛ, ∈ᵛ, ≢ᵛ, the hypothesis
--- names (Closed, Inside, ...) and listFinite to the rest of the development;
+-- names (Closed, All, ...) and listFinite to the rest of the development;
 -- LTL.6-Countermodel.Walk instantiates LTL.1-Lib.Graph at valEq too.  The test
 -- itself is private (sameVal), so ≡ᵛ reaches importers once, as valEq's field.
 

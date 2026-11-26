@@ -43,18 +43,18 @@ module Membership {A : Set} (eq : DecEq A) where
   ≢ᵛ-self : (x : A) -> x ≢ᵛ x ≡ false
   ≢ᵛ-self x = cong ¬ᵇ_ (≡ᵛ-refl x)
 
-  ∈ᵛ-sound : (v : A) (us : List A) -> v ∈ᵛ us ≡ true -> v ∈ us
-  ∈ᵛ-sound v us e with any-true (v ≡ᵛ_) us e
+  ∈ᵛ-sound : (us : List A) -> ∀[ v ∈ᵖ (_∈ᵛ us) ] v ∈ us
+  ∈ᵛ-sound us v e with any-true (v ≡ᵛ_) us e
   ... | u , m , e1 = subst (λ z -> z ∈ us) (sym (≡ᵛ-sound v u e1)) m
 
-  ∈ᵛ-complete : (v : A) (us : List A) -> v ∈ us -> v ∈ᵛ us ≡ true
-  ∈ᵛ-complete v us m = any-intro (v ≡ᵛ_) us m (≡ᵛ-refl v)
+  ∈ᵛ-complete : (us : List A) -> ∀[ v ∈ us ] v ∈ᵛ us ≡ true
+  ∈ᵛ-complete us v m = any-intro (v ≡ᵛ_) us m (≡ᵛ-refl v)
 
-  ∈ᵛ-false : (v : A) (us : List A) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
-  ∈ᵛ-false v us e m = true≢false (trans (sym (∈ᵛ-complete v us m)) e)
+  ∈ᵛ-false : (us : List A) (v : A) -> v ∈ᵛ us ≡ false -> v ∈ us -> Empty
+  ∈ᵛ-false us v e m = true≢false (trans (sym (∈ᵛ-complete us v m)) e)
 
-  ∉ᵛ-intro : (v : A) (us : List A) -> (v ∈ us -> Empty) -> v ∈ᵛ us ≡ false
-  ∉ᵛ-intro v us no = refuteTrue (v ∈ᵛ us) λ e -> no (∈ᵛ-sound v us e)
+  ∉ᵛ-intro : (us : List A) (v : A) -> (v ∈ us -> Empty) -> v ∈ᵛ us ≡ false
+  ∉ᵛ-intro us v no = refuteTrue (v ∈ᵛ us) λ e -> no (∈ᵛ-sound us v e)
 
   null-∈ᵛ : (ws : List A) (z : A) -> null ws ≡ true -> z ∈ᵛ ws ≡ false
   null-∈ᵛ []       z e = refl
@@ -86,19 +86,19 @@ module Membership {A : Set} (eq : DecEq A) where
   ∈-∖⁺ {ws} C m e = ∈-filter⁺ (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m (cong ¬ᵇ_ e)
 
   ∈-∖⁻ : (ws C : List A) -> ∀ⁱ[ z ∈ ws ∖ C ] z ∈ᵛ C ≡ false
-  ∈-∖⁻ ws C {z} m = ¬ᵇ-true (z ∈ᵛ C) (filter-prop (λ y -> ¬ᵇ (y ∈ᵛ C)) ws m)
+  ∈-∖⁻ ws C {z} m = ¬ᵇ-true (z ∈ᵛ C) (filter-prop (λ y -> ¬ᵇ (y ∈ᵛ C)) ws z m)
 
   -- A part of ws that misses C stays in ws ∖ C: how a cycle survives a
   -- removal step.
 
   ⊆-∖ : {zs ws : List A} (C : List A)
       -> zs ⊆ ws -> (∀[ z ∈ zs ] (z ∈ C -> Empty)) -> zs ⊆ ws ∖ C
-  ⊆-∖ C subset out z mz = ∈-∖⁺ C (subset z mz) (∉ᵛ-intro z C (out z mz))
+  ⊆-∖ C subset out z mz = ∈-∖⁺ C (subset z mz) (∉ᵛ-intro C z (out z mz))
 
   ∖-antitone : (ws : List A) {C D : List A} -> C ⊆ D -> ws ∖ D ⊆ ws ∖ C
   ∖-antitone ws {C} {D} s z m =
     ∈-∖⁺ C (∖-⊆ ws D z m)
-         (∉ᵛ-intro z C (λ mc -> ∈ᵛ-false z D (∈-∖⁻ ws D m) (s z mc)))
+         (∉ᵛ-intro C z (λ mc -> ∈ᵛ-false D z (∈-∖⁻ ws D m) (s z mc)))
 
   -- List intersection.  C ∩ˡ D keeps the members of C that are in D; the
   -- superscript tells it from ∩, the intersection of predicates.
@@ -112,11 +112,11 @@ module Membership {A : Set} (eq : DecEq A) where
   ∩ˡ-fst C D z m = ∈-filter⁻ (_∈ᵛ D) C m
 
   ∩ˡ-snd : (C D : List A) -> C ∩ˡ D ⊆ D
-  ∩ˡ-snd C D z m = ∈ᵛ-sound z D (filter-prop (_∈ᵛ D) C m)
+  ∩ˡ-snd C D z m = ∈ᵛ-sound D z (filter-prop (_∈ᵛ D) C z m)
 
   ∈-∩ˡ⁺ : {C : List A} {z : A} (D : List A)
        -> z ∈ C -> z ∈ D -> z ∈ C ∩ˡ D
-  ∈-∩ˡ⁺ {C} {z} D mc md = ∈-filter⁺ (_∈ᵛ D) C mc (∈ᵛ-complete z D md)
+  ∈-∩ˡ⁺ {C} {z} D mc md = ∈-filter⁺ (_∈ᵛ D) C mc (∈ᵛ-complete D z md)
 
 ------------------------------------------------------------------------
 -- Inductive finiteness

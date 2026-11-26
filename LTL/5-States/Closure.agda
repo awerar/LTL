@@ -45,23 +45,23 @@ stateFinite = guardedVecFinite (length stateAtoms) (hasLength (length stateAtoms
 containsP : Val -> Bool
 containsP v = valOf v P
 
-stInside : St inside (hasLength (length stateAtoms))
-stInside x m = hasLength-intro (length stateAtoms) x (stLen m)
+stHasLength : All (hasLength (length stateAtoms)) St
+stHasLength x m = hasLength-intro (length stateAtoms) x (stLen m)
 
 -- Ust P: the successor closure of the states that contain P.  Every search
 -- runs on it.
 
 Ust : List Val
-Ust = closure containsP St stInside stateFinite
+Ust = closure containsP St stHasLength stateFinite
 
 ustSt : ∀ⁱ[ v ∈ Ust ] v ∈ St
-ustSt {v} m = closureIn containsP St stInside stateFinite v m
+ustSt {v} m = closureIn containsP St stHasLength stateFinite v m
 
 -- Named rather than applied inline: giving filter-prop its list argument
 -- against the folded  St  keeps the elaborator from unfolding Ust.
 
 stIsState : ∀ⁱ[ v ∈ St ] isState v ≡ true
-stIsState m = filter-prop isState (allVals (length stateAtoms)) m
+stIsState {v} m = filter-prop isState (allVals (length stateAtoms)) v m
 
 -- Every member is a state, so (S2) can be read off it.
 
@@ -70,8 +70,8 @@ ustState m = stIsState (ustSt m)
 
 ustSeed : {v : Val}
        -> v ∈ St -> valOf v P ≡ true -> v ∈ Ust
-ustSeed m e = closureSeed containsP St stInside stateFinite m e
+ustSeed m e = closureSeed containsP St stHasLength stateFinite m e
 
-ustClosed : Ust closed-under step within St
+ustClosed : Closed[ step ▷ St ] Ust
 ustClosed mv mw st =
-  closureClosed containsP St stInside stateFinite mv mw st
+  closureClosed containsP St stHasLength stateFinite mv mw st

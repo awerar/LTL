@@ -173,7 +173,7 @@ argsOf c = concatMap (argsAt c)
 ∈-argsOf⁻ c As {A} m with ∈-concatMap⁻ (argsAt c) As m
 ... | X , mX , k =
   subst (λ Y -> Y ∈ As)
-        (sym (≡ᶠ-sound (c A) X (filter-prop (λ B -> c B ≡ᶠ X) (children X) k)))
+        (sym (≡ᶠ-sound (c A) X (filter-prop (λ B -> c B ≡ᶠ X) (children X) A k)))
         mX
 
 ------------------------------------------------------------------------

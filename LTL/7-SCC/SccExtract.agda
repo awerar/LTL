@@ -54,7 +54,7 @@ extractBlock : (ws C : List Val) (u : Val)
             -> u ∈ Ust -> Refuted ws
             -> (A : Formula) -> □ A ∈ sub P
             -> C ⊆ Ust
-            -> C closed-under step within (St ∩ˡ ws)
+            -> Closed[ step ▷ St ∩ˡ ws ] C
             -> (∀[ z ∈ C ] valOf z A ≡ true)
             -> valOf u (□ A) ≡ false -> u ∈ C
             -> ⊢ ¬ (chi u)
@@ -83,7 +83,7 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
             ... | false =
               mp ¬Elim (ih w' (ustClosed (cUst w m) (fst pr) (snd pr)) eb)
             ... | true  =
-              betaIntro C (cCl m (∈-∩ˡ⁺ ws (fst pr) (∈ᵛ-sound w' ws eb)) (snd pr))
+              betaIntro C (cCl m (∈-∩ˡ⁺ ws (fst pr) (∈ᵛ-sound ws w' eb)) (snd pr))
 
     bNext : ⊢ (beta C) ⇒ ○ (beta C)
     bNext = betaElim C eachN
@@ -115,7 +115,7 @@ sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 -- component is intersected with Ust P.
 
 blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
-         -> C closed-under step within ws -> C avoids f
+         -> Closed[ step ▷ ws ] C -> None f C
          -> HoldsOutside UstRef ws
          -> ∀[ z ∈ C ] UstRef z
 blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
@@ -135,7 +135,7 @@ blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
 
         -- still closed: C's closure puts the successor in C, ustClosed puts
         -- it in Ust P, and D is the intersection
-        dCl : D closed-under step within (St ∩ˡ ws)
+        dCl : Closed[ step ▷ St ∩ˡ ws ] D
         dCl my my' st =
           ∈-∩ˡ⁺ Ust (cl (∩ˡ-fst C Ust _ my) (∩ˡ-snd St ws _ my') st)
                     (ustClosed (∩ˡ-snd C Ust _ my) (∩ˡ-fst St ws _ my') st)
@@ -173,4 +173,4 @@ ustCertRefuted c = certRefuted c ustRefuted
 sccGraph : FairIn Ust evPreds ⊎
            Cert evPreds Ust
 sccGraph =
-  graphGo evPreds Ust (inside-∈ᵛ Ust) (listFinite Ust)
+  graphGo evPreds Ust (∈ᵛ-complete Ust) (listFinite Ust)

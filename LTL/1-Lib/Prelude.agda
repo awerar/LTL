@@ -492,15 +492,15 @@ xs ⊆ ys = ∀[ x ∈ xs ] x ∈ ys
     aux false m         = inr m
 
 filter-prop : (p : A -> Bool) (xs : List A)
-           -> ∀ⁱ[ x ∈ filter p xs ] x ∈ᵖ p
-filter-prop p []       ()
-filter-prop p (y ∷ ys) m = aux (p y) refl m
+           -> ∀[ x ∈ filter p xs ] x ∈ᵖ p
+filter-prop p []       x ()
+filter-prop p (y ∷ ys) x m = aux (p y) refl x m
   where
     aux : (b : Bool) -> p y ≡ b
-       -> ∀ {x} -> x ∈ (if b then (y ∷ filter p ys) else filter p ys) -> x ∈ᵖ p
-    aux true  e here      = e
-    aux true  e (there m) = filter-prop p ys m
-    aux false e m         = filter-prop p ys m
+       -> ∀[ z ∈ (if b then (y ∷ filter p ys) else filter p ys) ] z ∈ᵖ p
+    aux true  e z here      = e
+    aux true  e z (there m) = filter-prop p ys z m
+    aux false e z m         = filter-prop p ys z m
 
 ∈-map⁺ : (f : A -> B) {xs : List A}
       -> ∀ⁱ[ x ∈ xs ] f x ∈ map f xs
