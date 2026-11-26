@@ -95,12 +95,12 @@ derivation or a certified finite lasso countermodel.
   `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
-  (`terminalGo {Pool} r …`) or sits in a `module _ {ws : List Node}` block,
+  (`finiteOfList {Pool = Pool} …`) or sits in a `module _ {ws : List Node}` block,
   which also carries shared explicit arguments (`reachesInto`'s `cl`).
   Generalised arguments come in order of first appearance in the signature.
   A variable clashes with any definition of the same name in the module,
   `where`-local ones and record fields included; hence `r` is not a variable in
-  `FairGraph` (the `r` fields of `Terminal`, `FairIn`, `FairLoop`). In the
+  `FairGraph` (the `r` fields of `TerminalIn`, `FairIn`, `FairLoop`). In the
   graph layer `ws` is a variable wherever another argument's type fixes it (a
   `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc`, `zs ⊆ ws` or `Closed`
   hypothesis), so a call reads `reachesApp r1 r2`; it stays explicit where it
@@ -130,7 +130,8 @@ derivation or a certified finite lasso countermodel.
   `Everything`.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
   (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
-  comment at the definition. The search conventions (one recursive `fooGo` with a `with`, the
+  comment at the definition. The search conventions (one recursive function
+  with a `with`, named for what it does or returns, not with a `Go` suffix; the
   `subset`/`fin`/`avail`/`next` binders, `x∈` for "x is in the pool") are
   explained above `All` in `LTL/1-Lib/Nodes.agda`.
 - Comments explain the code as it is today. A module header is about 5–15
@@ -188,7 +189,10 @@ module name). Folder names never equal a module name.
    the bridge from lists to pools: `All-⊆`, `All-∩`, `All-apart`,
    `All-∖`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
-   reachable set as an instance of it); `FairGraph` (components, the
+   reachable set as an instance of it); `FairGraph` (components; a
+   terminal one is the record `TerminalIn`, whose fields derive its
+   `component` and the facts about it; certificates `Cert`, whose one step
+   `cRemove` removes a `TerminalIn` with its `Reason`, `sink` or `unfair`; the
    `fairGraph` certificate theorem, `certAll`, exclusivity; largest
    module). Off the proof path, `CertShape` (`certShape`: a certificate's
    steps, of type `List CertStep`; unparameterised, so the type does not

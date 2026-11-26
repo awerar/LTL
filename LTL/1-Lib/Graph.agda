@@ -53,6 +53,11 @@ outs ws x = filter (G x) ws
 hasOut : List Node -> Node -> Bool
 hasOut ws x = ¬ᵇ null (outs ws x)
 
+-- x is a sink in ws: it has no out-neighbour there.
+
+Sink : List Node -> Node -> Set
+Sink ws x = null (outs ws x) ≡ true
+
 ------------------------------------------------------------------------
 -- Trails: finite G-paths, carrying the vertices visited and indexed by the
 -- endpoint.  A trail knows nothing of a vertex list: that it stays inside ws
@@ -233,14 +238,14 @@ module _ (Seed : Pred) (ws : List Node) where
 
   -- Stop when nothing is missing, else add the missing vertices and recurse.
 
-  growGo : (acc : List Node) -> All Pool (ws ∖ acc) -> GrowInv acc
-        -> Finiteᵛ Pool -> Grown
-  growGo acc avail inv (everyPick next) with decideAny (missing Seed ws acc) ws
+  grow : (acc : List Node) -> All Pool (ws ∖ acc) -> GrowInv acc
+      -> Finiteᵛ Pool -> Grown
+  grow acc avail inv (everyPick next) with decideAny (missing Seed ws acc) ws
   ... | noneTrue f           = grown acc inv f
   ... | witness x m xMissing =
-    growGo (addRound Seed ws acc) (availRound Seed ws acc x m xMissing avail)
-           (growInv (roundIn Seed ws acc accIn) (roundSeeded Seed ws acc accSeeded))
-           (next x (avail x (∈-∖⁺ acc m (notInAcc Seed ws acc x xMissing))))
+    grow (addRound Seed ws acc) (availRound Seed ws acc x m xMissing avail)
+         (growInv (roundIn Seed ws acc accIn) (roundSeeded Seed ws acc accSeeded))
+         (next x (avail x (∈-∖⁺ acc m (notInAcc Seed ws acc x xMissing))))
     where open GrowInv inv
 
 -- The closure: the search from the empty accumulator, and its properties.
@@ -251,8 +256,8 @@ module _ (Seed : Pred) (ws : List Node) where
 module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : All Pool ws)
          (fin : Finiteᵛ Pool) where
 
-  open Grown (growGo Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz))
-                     (growInv (λ _ ()) (λ _ ())) fin)
+  open Grown (grow Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz))
+                   (growInv (λ _ ()) (λ _ ())) fin)
   open GrowInv inv
 
   closure : List Node

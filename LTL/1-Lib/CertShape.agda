@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.1-Lib.CertShape -- the shape of a certificate of LTL.1-Lib.FairGraph:
--- the kinds of its steps, in removal order, one per constructor of Cert.
+-- the kinds of its steps, in removal order: one per Reason, then emptied.
 --
 -- Off the proof path: the decision procedure never looks at a certificate's
 -- shape.  The tests do, at Nat in LTL.9-Tests.GraphExamples and at the state
@@ -15,7 +15,7 @@ module LTL.1-Lib.CertShape where
 
 open import LTL.1-Lib.Prelude
 open import LTL.1-Lib.DecEq using (DecEq)
-open import LTL.1-Lib.FairGraph using (Cert; cNil; cSink; cUnfair)
+open import LTL.1-Lib.FairGraph using (Cert; cNil; cRemove; sink; unfair)
 
 private variable
   Node : Set
@@ -28,6 +28,6 @@ data CertStep : Set where
   removedSink removedUnfair emptied : CertStep
 
 certShape : Cert eq G fs ws -> List CertStep
-certShape cNil                        = emptied ∷ []
-certShape (cSink _ _ _ _ _ c)         = removedSink ∷ certShape c
-certShape (cUnfair _ _ _ _ _ _ _ c)   = removedUnfair ∷ certShape c
+certShape cNil                         = emptied ∷ []
+certShape (cRemove _ (sink _) c)       = removedSink ∷ certShape c
+certShape (cRemove _ (unfair _ _ _) c) = removedUnfair ∷ certShape c

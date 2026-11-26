@@ -89,21 +89,25 @@ finiteOfList {Pool = Pool} (suc bound) xs short subset =
 -- Taking x out of the candidates passes to  Pool ∩ (x ≢ᵛ_) , exactly the
 -- smaller pool that next hands over, so the candidates are the pool
 -- itself.  A removing search shrinks ws and keeps All Pool ws; a growing
--- one grows an accumulator acc and keeps All Pool (ws ∖ acc).
+-- one grows an accumulator acc and keeps All Pool (ws ∖ acc); a descending
+-- one moves a vertex r and keeps All Pool (reachSet ws r).
 
--- Naming convention for the searches built on this (the growing closure of
--- LTL.1-Lib.Graph, the removing graphGo and findTerminal of LTL.1-Lib.FairGraph):
+-- Naming convention for the searches built on this (in LTL.1-Lib.Graph,
+-- grow, the growing search behind closure; in LTL.1-Lib.FairGraph, the
+-- removing fairOrCert and the descending descend):
 --   subset  All Pool xs, or xs ⊆ ys;
 --   fin     the Finiteᵛ Pool the search recurses on;
---   avail   the "available" invariant of a growing search,
+--   avail   the "available" invariant of a growing or descending search,
 --           All Pool (ws ∖ acc): every candidate in ws not yet in the
---           accumulator acc is still in the pool;
+--           accumulator acc is still in the pool, or All Pool (reachSet ws r):
+--           everything r reaches is;
 --   next    the field of everyPick: next x x∈ proves the pool left
 --           after picking x finite, where x∈ says x is in the pool.
--- A search is one recursive function, fooGo: it matches fin as everyPick next
--- and cases on decideAll with a with-clause.  allTrue stops, counterexample x
--- recurses on the smaller pool that next hands over.  The growing closure
--- runs decideAny instead: noneTrue stops, witness x recurses.  Each search
+-- A search is one recursive function, named for what it does or returns: it
+-- matches fin as everyPick next and cases on decideAll with a with-clause.
+-- allTrue stops, counterexample x recurses on the smaller pool that next
+-- hands over.  grow runs decideAny instead: noneTrue stops, witness x
+-- recurses.  Each search
 -- returns its correctness with its answer, so no lemma is proved about it.
 
 All : Pred -> List Node -> Set

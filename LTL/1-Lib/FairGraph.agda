@@ -16,13 +16,15 @@
 -- Design choices:
 --
 -- 1. A component is a representative plus a filter (sccOf); the condensation
---    is never built, and "terminal" is a boolean.
--- 2. graphGo is a REMOVING iteration (find a terminal component; unless it is
---    fair, refute it, as a sink or as missing a predicate, and delete it), so
---    a finite pool covers termination; findTerminal finds a terminal
---    component by following condensation edges, again by recursion on a
---    Finiteᵛ proof.  Both take theirs from listFinite, so they need no guard.
---    Every step of a certificate therefore removes a whole component.
+--    is never built, and "terminal" is a boolean.  A terminal component is
+--    the record TerminalIn, whose fields derive the component and its facts.
+-- 2. fairOrCert is a REMOVING iteration (find a terminal component; unless
+--    it is fair, delete it with its Reason: a sink, or missing a
+--    predicate), so a finite pool covers termination; findTerminal finds a
+--    terminal component by descending condensation edges, again by
+--    recursion on a Finiteᵛ proof.  Both take theirs from listFinite, so
+--    they need no guard.  Every step of a certificate therefore removes a
+--    whole component.
 --
 -- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
 -- so a sink lies on no cycle; and any vertex of a cycle reaches any other, so
@@ -103,7 +105,7 @@ terminalClosed ws r et {z} mz my e =
 -- A sink is a trivial terminal component: it reaches only itself, so its
 -- component is {x}.  A trail out of x would start with an out-edge.
 
-sinkOnly : (ws : List Node) (x : Node) -> null (outs ws x) ≡ true
+sinkOnly : (ws : List Node) (x : Node) -> Sink ws x
         -> ∀ⁱ[ w ∈ reachSet ws x ] w ≡ x
 sinkOnly ws x e m = onTrail (reachTrail ws x m)
   where
@@ -113,48 +115,84 @@ sinkOnly ws x e m = onTrail (reachTrail ws x m)
       emptyElim (null-∈ (outs ws x) e (∈-filter⁺ (G x) ws (subset _ here) g))
 
 sinkTerminal : (ws : List Node) (x : Node) -> x ∈ ws
-            -> null (outs ws x) ≡ true -> IsTerminal ws x
+            -> Sink ws x -> IsTerminal ws x
 sinkTerminal ws x mx e m =
   subst (λ y -> x ∈ᵛ reachSet ws y ≡ true) (sym (sinkOnly ws x e m))
         (∈ᵛ-complete (reachSet ws x) x (reachSeed ws x mx))
 
 ------------------------------------------------------------------------
--- A non-empty graph has a terminal component.  While r's component is not
--- terminal, there is a w that r reaches and that does not reach r; move the
--- representative to w.  The search recurses on a Finiteᵛ proof, and its
--- invariant is that every vertex of the current reachable set is still in the
--- pool; giving up r is the smaller pool next hands over, and the new
--- reachable set avoids r because w does not reach r.
+-- A terminal component of ws, as its representative r: found by
+-- findTerminal below, decided by blockOf, removed by a certificate step.  The
+-- component itself and what the steps use of it are derived from r.
 
--- A vertex whose component is terminal, found by the search above.
-
-record Terminal (ws : List Node) : Set where
+record TerminalIn (ws : List Node) : Set where
   constructor terminalAt
   field
     r        : Node
     rIn      : r ∈ ws
     terminal : IsTerminal ws r
 
+  component : List Node
+  component = sccOf ws r
+
+  rInComponent : r ∈ component
+  rInComponent = sccRep ws r rIn
+
+  componentClosed : Closed[ G ▷ ws ] component
+  componentClosed = terminalClosed ws r terminal
+
+  repReaches : ∀[ w ∈ component ] Reaches ws r w
+  repReaches = sccTo ws r
+
+  reachesRep : ∀[ w ∈ component ] Reaches ws w r
+  reachesRep = sccFrom ws r
+
+  -- If r is a sink, its component is r alone.
+
+  sinkAlone : Sink ws r -> ∀[ y ∈ component ] y ≡ r
+  sinkAlone e y my = sinkOnly ws r e (sccReach ws r y my)
+
+open TerminalIn using (component; rInComponent; componentClosed;
+                     repReaches; reachesRep; sinkAlone)
+
+------------------------------------------------------------------------
+-- A non-empty graph has a terminal component.  Start the search at any
+-- vertex, r.  If r's component is not terminal, some w that r reaches does
+-- not reach r back; move to w.  Then w reaches less than r did: everything w
+-- reaches, r reaches, and r is not among it.  So no vertex the search leaves
+-- is reached again, and it stops once the vertices run out.
+--
+-- For Agda, "reaches less" is a pool: Pool is the vertices the search may
+-- still move to, avail says everything r reaches is in it, and each move
+-- gives up r, which is the smaller pool next hands over.
+
 module _ (ws : List Node) where
 
-  terminalGo : (r : Node) -> r ∈ ws
-            -> All Pool (reachSet ws r) -> Finiteᵛ Pool -> Terminal ws
-  terminalGo {Pool} r r∈ws avail (everyPick next)
-    with decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
-  ... | allTrue f = terminalAt r r∈ws f
-  ... | counterexample w w∈reach noReturn =
-    terminalGo w (reachIn ws r w∈reach) avail'
-               (next r (avail r (reachSeed ws r r∈ws)))
-    where
-      avail' : All (Pool ∩ (r ≢ᵛ_)) (reachSet ws w)
-      avail' = All-∩ (All-⊆ (λ z -> reachTrans ws r w z w∈reach) avail)
-                     (All-apart (_∈ᵛ reachSet ws w) noReturn
-                                (∈ᵛ-complete (reachSet ws w)))
+  -- One move, from r to a w that does not reach r: what w reaches is
+  -- still in the pool once r is given up.
 
-  findTerminal : ∀[ r ∈ ws ] Terminal ws
-  findTerminal r r∈ws =
-    terminalGo r r∈ws (λ z mz -> ∈ᵛ-complete ws z (reachIn ws r mz))
-               (listFinite ws)
+  reachesLess : (r w : Node) -> w ∈ reachSet ws r -> r ∈ᵛ reachSet ws w ≡ false
+             -> All Pool (reachSet ws r) -> All (Pool ∩ (r ≢ᵛ_)) (reachSet ws w)
+  reachesLess r w w∈reach noReturn avail =
+    All-∩ (All-⊆ (λ z -> reachTrans ws r w z w∈reach) avail)
+          (All-apart (_∈ᵛ reachSet ws w) noReturn (∈ᵛ-complete (reachSet ws w)))
+
+  descend : (r : Node) -> r ∈ ws
+         -> All Pool (reachSet ws r) -> Finiteᵛ Pool -> TerminalIn ws
+  descend r r∈ws avail (everyPick next)
+    with decideAll (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
+  ... | allTrue reachBack = terminalAt r r∈ws reachBack
+  ... | counterexample w w∈reach noReturn =
+    descend w (reachIn ws r w∈reach) (reachesLess r w w∈reach noReturn avail)
+            (next r (avail r (reachSeed ws r r∈ws)))
+
+  -- A non-empty ws, one with a member x, has a terminal component.  The
+  -- search starts at x, with all of ws in the pool.
+
+  findTerminal : x ∈ ws -> TerminalIn ws
+  findTerminal {x} x∈ws =
+    descend x x∈ws (All-⊆ (λ z -> reachIn ws x) (∈ᵛ-complete ws))
+            (listFinite ws)
 
 ------------------------------------------------------------------------
 -- The positive certificate: a fair circuit at r, a loop through r (a
@@ -289,47 +327,27 @@ module _ {ws : List Node} {r : Node} where
 -- The negative certificate: a well-founded record of the removal order,
 -- indexed by what is LEFT.  ws is the vertices still under consideration, and
 -- every graph notion of a step (outs ws, IsTerminal ws, sccOf ws) is taken in
--- the subgraph on ws.  Each step removes a terminal component of it: a trivial
--- one, which is a sink (cSink), or one that misses a fairness predicate
--- (cUnfair).  The components are those of the starting graph, since removing
+-- the subgraph on ws.  Each step (cRemove) removes a terminal component of it,
+-- with the Reason it may go: it is trivial, a sink, or it misses a fairness
+-- predicate.  The components are those of the starting graph, since removing
 -- a closed union of components splits no other; only "terminal" is relative
 -- to what is left.  cNil says nothing is left.
 
+data Reason (fs : List Pred) {ws : List Node} (t : TerminalIn ws) : Set where
+  sink   : Sink ws (TerminalIn.r t) -> Reason fs t
+  unfair : (f : Pred) -> f ∈ fs -> None f (component t) -> Reason fs t
+
 data Cert (fs : List Pred) : List Node -> Set where
   cNil    : Cert fs []
-  cSink   : (ws : List Node) (r : Node) -> r ∈ ws -> IsTerminal ws r
-         -> null (outs ws r) ≡ true
-         -> Cert fs (ws ∖ sccOf ws r) -> Cert fs ws
-  cUnfair : (ws : List Node) (r : Node) -> r ∈ ws -> IsTerminal ws r
-         -> (f : Pred) -> f ∈ fs -> None f (sccOf ws r)
-         -> Cert fs (ws ∖ sccOf ws r) -> Cert fs ws
+  cRemove : (t : TerminalIn ws) -> Reason fs t
+         -> Cert fs (ws ∖ component t) -> Cert fs ws
 
 ------------------------------------------------------------------------
 -- One step of the outer iteration, decided on a terminal component: if r has
 -- no out-edge it is a sink; otherwise the component carries a loop, and it is
 -- fair and a circuit is built, or it misses some f.  In the two cases that are
--- not fair the component is to be removed, and bRemove carries the
--- certificate step that says why.  Nothing here recurses.
-
-data Block (ws : List Node) (fs : List Pred) : Set where
-  bFair   : (r : Node) -> r ∈ ws -> Circuit ws fs r -> Block ws fs
-  bRemove : (r : Node) -> r ∈ ws
-         -> (Cert fs (ws ∖ sccOf ws r) -> Cert fs ws) -> Block ws fs
-
-blockOf : (ws : List Node) (fs : List Pred) -> Terminal ws -> Block ws fs
-blockOf ws fs (terminalAt r mr et) with hasOut ws r in eo
-... | false =
-  bRemove r mr (cSink ws r mr et (¬ᵇ-false (null (outs ws r)) eo))
-... | true with decideAll (λ g -> any g (sccOf ws r)) fs
-...   | allTrue e = bFair r mr (mkCirc (loopAt mr et eo) (sccOf ws r)
-                                       (sccTo ws r) (sccFrom ws r) fs e)
-...   | counterexample g mg eg = bRemove r mr (cUnfair ws r mr et g mg miss)
-  where
-    miss : None g (sccOf ws r)
-    miss z mz = any-false g (sccOf ws r) eg mz
-
-------------------------------------------------------------------------
--- The theorem, on a sub-list
+-- not fair the component is to be removed, and bRemove carries the Reason.
+-- Nothing here recurses.
 
 -- A fair circuit somewhere in ws, at the representative r.
 
@@ -339,6 +357,25 @@ record FairIn (ws : List Node) (fs : List Pred) : Set where
     r           : Node
     rIn         : r ∈ ws
     fairCircuit : Circuit ws fs r
+
+data Block (ws : List Node) (fs : List Pred) : Set where
+  bFair   : FairIn ws fs -> Block ws fs
+  bRemove : (t : TerminalIn ws) -> Reason fs t -> Block ws fs
+
+blockOf : (ws : List Node) (fs : List Pred) -> TerminalIn ws -> Block ws fs
+blockOf ws fs t@(terminalAt r mr et) with hasOut ws r in eo
+... | false = bRemove t (sink (¬ᵇ-false (null (outs ws r)) eo))
+... | true with decideAll (λ g -> any g (component t)) fs
+...   | allTrue e =
+  bFair (fairIn r mr (mkCirc (loopAt mr et eo) (component t)
+                             (repReaches t) (reachesRep t) fs e))
+...   | counterexample g mg eg = bRemove t (unfair g mg miss)
+  where
+    miss : None g (component t)
+    miss z mz = any-false g (component t) eg mz
+
+------------------------------------------------------------------------
+-- The theorem, on a sub-list
 
 fairInMono : {fs : List Pred}
           -> ws ⊆ vs -> FairIn ws fs -> FairIn vs fs
@@ -351,19 +388,21 @@ fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 module _ (fs : List Pred) where
 
-  graphGo : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
-         -> FairIn ws fs ⊎ Cert fs ws
-  graphGo []         subset fin              = inr cNil
-  graphGo ws@(u ∷ _) subset (everyPick next)
-    with blockOf ws fs (findTerminal ws u here)
-  ... | bFair r r∈ws c      = inl (fairIn r r∈ws c)
-  ... | bRemove r r∈ws step =
-    [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi)) , (λ c -> inr (step c)) ]
-      (graphGo (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (sccRep ws r r∈ws))
-               (next r (subset r r∈ws)))
+  fairOrCert : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
+            -> FairIn ws fs ⊎ Cert fs ws
+  fairOrCert []         subset fin              = inr cNil
+  fairOrCert ws@(u ∷ _) subset (everyPick next)
+    with blockOf ws fs (findTerminal ws here)
+  ... | bFair fi       = inl fi
+  ... | bRemove t why =
+    [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi)) , (λ c -> inr (cRemove t why c)) ]
+      (fairOrCert (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (rInComponent t))
+                  (next r (subset r rIn)))
     where
+      open TerminalIn t using (r; rIn)
+
       C : List Node
-      C = sccOf ws r
+      C = component t
 
 
 ------------------------------------------------------------------------
@@ -383,8 +422,8 @@ fairGraph : (vs : List Node) (fs : List Pred)
          -> ∀[ v ∈ vs ] (FairLoop vs fs v ⊎ Cert fs (reachSet vs v))
 fairGraph vs fs v mv =
   [ (λ fi -> inl (toLoop fi)) , inr ]
-    (graphGo fs (reachSet vs v) (∈ᵛ-complete (reachSet vs v))
-             (listFinite (reachSet vs v)))
+    (fairOrCert fs (reachSet vs v) (∈ᵛ-complete (reachSet vs v))
+                (listFinite (reachSet vs v)))
   where
     into : reachSet vs v ⊆ vs
     into z m = reachIn vs v m
@@ -403,7 +442,7 @@ fairGraph vs fs v mv =
 
 module _ (fs : List Pred) (R : Node -> Set)
          (sinkCase  : (ws : List Node) (x : Node) -> x ∈ ws
-                   -> null (outs ws x) ≡ true
+                   -> Sink ws x
                    -> HoldsOutside R ws -> R x)
          (blockCase : (ws C : List Node) (f : Pred) -> f ∈ fs
                    -> Closed[ G ▷ ws ] C -> None f C
@@ -420,20 +459,22 @@ module _ (fs : List Pred) (R : Node -> Set)
   ... | false =
     ih y (∉ᵛ-intro ws y λ my -> ∈ᵛ-false (ws ∖ C) y eo (∈-∖⁺ C my ec))
 
+  -- A component removed for a reason: R holds on all of it, by sinkCase at
+  -- its only vertex or by blockCase.
+
+  removedHolds : (t : TerminalIn ws) -> Reason fs t -> HoldsOutside R ws
+              -> ∀[ y ∈ component t ] R y
+  removedHolds {ws} t (sink e) ih y my =
+    subst R (sym (sinkAlone t e y my)) (sinkCase ws r rIn e ih)
+    where open TerminalIn t using (r; rIn)
+  removedHolds {ws} t (unfair f mf mis) ih =
+    blockCase ws (component t) f mf (componentClosed t) mis ih
+
   certAll : Cert fs ws -> HoldsOutside R ws
          -> (z : Node) -> R z
-  certAll cNil                         ih z = ih z refl
-  certAll (cSink ws r mr et e c)       ih z =
-    certAll c (dropOutside ws (sccOf ws r) ih onR) z
-    where
-      -- the component of a sink is r alone
-      onR : ∀[ y ∈ sccOf ws r ] R y
-      onR y my = subst R (sym (sinkOnly ws r e (sccReach ws r y my)))
-                       (sinkCase ws r mr e ih)
-  certAll (cUnfair ws r mr et f mf mis c) ih z =
-    certAll c (dropOutside ws (sccOf ws r) ih
-                 (blockCase ws (sccOf ws r) f mf (terminalClosed ws r et) mis ih))
-            z
+  certAll       cNil              ih z = ih z refl
+  certAll {ws} (cRemove t why c) ih z =
+    certAll c (dropOutside ws (component t) ih (removedHolds t why ih)) z
 
 ------------------------------------------------------------------------
 -- The two outputs are EXCLUSIVE, by two observations about a closed trail:
@@ -500,45 +541,42 @@ cycConn : {r : Node} -> Trail r zs r -> zs ⊆ ws
        -> u ∈ zs -> z ∈ zs -> Reaches ws u z
 cycConn t subset mu mz = reachesApp (trailFrom t subset (there mu)) (trailTo t subset mz)
 
+-- A circuit in ws misses every component removed for a reason: a sink is on
+-- no cycle, and a closed component that the cycle entered would contain the
+-- whole cycle, with it the witness of the f the component misses.
+
+avoids : {fs : List Pred} (t : TerminalIn ws) -> Reason fs t
+      -> (c : Circuit ws fs s)
+      -> ∀[ z ∈ Loop.cycle (Circuit.loop c) ] (z ∈ component t -> Empty)
+avoids {ws} t (sink e) (circuit l wit) z mz mzc =
+  onS (loopSucc l (subst (_∈ Loop.cycle l) (sinkAlone t e z mzc) mz))
+  where
+    open TerminalIn t using (r)
+
+    onS : HasSucc ws r -> Empty
+    onS (hasSucc y my gy) = null-∈ (outs ws r) e (∈-filter⁺ (G r) ws my gy)
+avoids t (unfair f mf mis) (circuit (loopBy q qs tr h) wit) z mz mzc =
+  onW (wit f mf)
+  where
+    onW : (∃[ y ∈ q ∷ qs ] y ∈ᵖ f) -> Empty
+    onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
+      where
+        inC : y ∈ component t
+        inC = reachesEndIn (componentClosed t) mzc (cycConn tr h mz my)
+
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when
 -- nothing is left, which cNil forbids.
 
 certNoCirc : (fs : List Pred)
           -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
-certNoCirc fs cNil                   s (circuit (loopBy q qs t h) wit) =
+certNoCirc fs cNil              s (circuit (loopBy q qs t h) wit) =
   null-∈ [] refl (h q here)
-certNoCirc fs (cSink ws r mr et e c) s (circuit l@(loopBy q qs t h) wit) =
+certNoCirc fs (cRemove t why c) s ci@(circuit l wit) =
   certNoCirc fs c s
-    (circuit (loopRestrict l (⊆-∖ (sccOf ws r) h offR)) wit)
-  where
-    offCycle : r ∈ q ∷ qs -> Empty
-    offCycle m = onS (loopSucc l m)
-      where
-        onS : HasSucc ws r -> Empty
-        onS (hasSucc y my gy) =
-          null-∈ (outs ws r) e (∈-filter⁺ (G r) ws my gy)
-
-    -- the component of a sink is r alone, and r is on no cycle
-    offR : ∀[ z ∈ q ∷ qs ] (z ∈ sccOf ws r -> Empty)
-    offR z mz mzc =
-      offCycle (subst (_∈ q ∷ qs) (sinkOnly ws r e (sccReach ws r z mzc)) mz)
-certNoCirc fs (cUnfair ws r mr et f mf mis c) s
-           (circuit l@(loopBy q qs t h) wit) =
-  certNoCirc fs c s
-    (circuit (loopRestrict l (⊆-∖ C h inBlock)) wit)
-  where
-    C : List Node
-    C = sccOf ws r
-
-    inBlock : (z : Node) -> z ∈ q ∷ qs -> z ∈ C -> Empty
-    inBlock z mz mzc = onW (wit f mf)
-      where
-        onW : (∃[ y ∈ q ∷ qs ] y ∈ᵖ f) -> Empty
-        onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
-          where
-            inC : y ∈ C
-            inC = reachesEndIn (terminalClosed ws r et) mzc (cycConn t h mz my)
+    (circuit (loopRestrict l (⊆-∖ (component t) (Loop.staysIn l)
+                                 (avoids t why ci)))
+             wit)
 
 ------------------------------------------------------------------------
 -- The dichotomy at the top level: fairGraph's two answers cannot both hold, so

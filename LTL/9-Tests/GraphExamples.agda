@@ -43,10 +43,10 @@ reach-gA = refl
 
 -- findTerminal moves from a to b, and stays at b.
 
-term-gA : Terminal.r (findTerminal gE gVs gA here) ≡ gB
+term-gA : TerminalIn.r (findTerminal gE gVs {gA} here) ≡ gB
 term-gA = refl
 
-term-gB : Terminal.r (findTerminal gE gVs gB (there here)) ≡ gB
+term-gB : TerminalIn.r (findTerminal gE gVs {gB} (there here)) ≡ gB
 term-gB = refl
 
 scc-gB : sccOf gE gVs gB ≡ gB ∷ []
@@ -67,8 +67,8 @@ fair-gA = refl
 -- A second graph:  p -> q ,  q -> s ,  s -> q .
 --
 -- p is transient and {q,s} is recurrent, so findTerminal moves the representative
--- once, the circuit has two legs, and the certificate uses all three of its
--- constructors: cUnfair removes {q,s}, then p is a sink (cSink), then cNil.
+-- once, the circuit has two legs, and the certificate uses both reasons: it
+-- removes {q,s} as unfair, then p as a sink, and ends in cNil.
 
 gP : Nat
 gP = 0
@@ -90,10 +90,10 @@ gE2 v w = (v ≡ⁿ gP) ∧ᵇ (w ≡ⁿ gQ) ∨ᵇ
 -- findTerminal moves from p to s, in the terminal component {q,s}, and
 -- stays at q.
 
-term-gP : Terminal.r (findTerminal gE2 gVs2 gP here) ≡ gS
+term-gP : TerminalIn.r (findTerminal gE2 gVs2 {gP} here) ≡ gS
 term-gP = refl
 
-term-gQ : Terminal.r (findTerminal gE2 gVs2 gQ (there here)) ≡ gQ
+term-gQ : TerminalIn.r (findTerminal gE2 gVs2 {gQ} (there here)) ≡ gQ
 term-gQ = refl
 
 scc-gQ : map (λ z -> z ∈ᵛ sccOf gE2 gVs2 gQ) gVs2 ≡ false ∷ true ∷ true ∷ []
@@ -147,8 +147,8 @@ cycle-QS = refl
 fair-P : isInl (fairGraph gE2 gVs2 ((λ v -> v ≡ⁿ gP) ∷ []) gP here) ≡ false
 fair-P = refl
 
--- The certificate it returns instead, as the list of its steps:  cUnfair,
--- cSink, cNil .  The component {q,s} misses "is p" and is refuted first, and
+-- The certificate it returns instead, as the list of its steps:  unfair,
+-- sink, cNil .  The component {q,s} misses "is p" and is refuted first, and
 -- only then is p a sink: p is refuted because its successor already was.
 
 certSteps : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}

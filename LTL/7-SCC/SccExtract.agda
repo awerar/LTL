@@ -8,7 +8,7 @@
 -- the vertices, each a sink or a block (a closed component missing some
 -- fairness predicate).  certAll turns it into an induction:
 --
---   sink   null (outs ws x) ≡ true  is  r1 ws x ≡ true
+--   sink   Sink ws x, null (outs ws x) ≡ true, is  r1 ws x ≡ true
 --          definitionally, so extractR1 refutes x.
 --   block  the component C misses  evPred A , i.e. at every state of C the
 --          eventuality □ A is pending and A holds.  extractBlock refutes the
@@ -102,10 +102,10 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
 ------------------------------------------------------------------------
 -- certAll's two hypotheses.
 
--- The sink.  null (outs ws x) ≡ true  IS  r1 ws x ≡ true .
+-- The sink.  Sink ws x, null (outs ws x) ≡ true, IS  r1 ws x ≡ true .
 
 sinkStep : (ws : List Val) (x : Val) -> x ∈ ws
-        -> null (outs ws x) ≡ true
+        -> Sink ws x
         -> HoldsOutside UstRef ws
         -> UstRef x
 sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
@@ -166,11 +166,11 @@ ustCertRefuted : Cert evPreds Ust
 ustCertRefuted c = certRefuted c ustRefuted
 
 ------------------------------------------------------------------------
--- The search, run on the whole state set.  graphGo rather than fairGraph:
+-- The search, run on the whole state set.  fairOrCert rather than fairGraph:
 -- fairGraph certifies only the states reachable from one vertex, while the
 -- refutation has to cover every state of Ust P.
 
 sccGraph : FairIn Ust evPreds ⊎
            Cert evPreds Ust
 sccGraph =
-  graphGo evPreds Ust (∈ᵛ-complete Ust) (listFinite Ust)
+  fairOrCert evPreds Ust (∈ᵛ-complete Ust) (listFinite Ust)
