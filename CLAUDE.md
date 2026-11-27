@@ -107,7 +107,7 @@ derivation or a certified finite lasso countermodel.
   `FairGraph` (the `r` fields of `TerminalIn`, `FairIn`, `FairLoop`). In the
   graph layer `ws` is a variable wherever another argument's type fixes it (a
   `Reaches`, `Loop`, `Circuit`, `FairIn`, `TerminalIn`, `v ∈ ws`, `zs ⊆ ws` or
-  `Closed` hypothesis), so a call reads `reachesApp r1 r2`, `reachSeed v mv`;
+  `Closed` hypothesis), so a call reads `trailTo t h m`, `reachSeed v mv`;
   it stays explicit where it only occurs under a function (`reachSet ws v`,
   `sccOf ws r`, `outs ws x`, so also `Sink ws x` and `IsTerminal ws r`), since
   Agda cannot infer it there.
@@ -197,9 +197,10 @@ module name). Folder names never equal a module name.
    reachable set as an instance of it); `FairGraph` (components; a
    terminal one is the record `TerminalIn`, whose fields derive its
    `component` and the facts about it; certificates `Cert`, whose one step
-   `cRemove` removes a `TerminalIn` with its `Reason`, `sink` or `unfair`; the
-   `fairGraph` certificate theorem, `certAll`, exclusivity; largest
-   module). Off the proof path, `CertShape` (`certShape`: a certificate's
+   `cRemove` removes a `TerminalIn` with its `Reason`, `sink` or `unfair`;
+   `decideTerminal`, one step of the search, gives a `FairIn` or a `Reason`;
+   the search `fairOrCert`, its form from one vertex `fairGraph`, and
+   `certAll`; largest module). Off the proof path, `CertShape` (`certShape`: a certificate's
    steps, of type `List CertStep`; unparameterised, so the type does not
    depend on the graph) is read only by the tests and `Inspect`'s `sccShape`.
    The P-module `Walk` applies both at `G = step` and re-exports them, so

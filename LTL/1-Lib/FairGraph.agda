@@ -2,16 +2,16 @@
 
 -- LTL.1-Lib.FairGraph -- the finite fair-graph certificate theorem.
 --
---   Given a finite graph, finitely many decidable fairness predicates, and a
---   vertex v, compute either
---     (a) a lasso from v whose cycle meets every predicate (FairLoop), or
---     (b) a well-founded certificate that every recurrent component reachable
---         from v misses some predicate (Cert).
+--   Given a finite graph and finitely many decidable fairness predicates,
+--   fairOrCert computes either
+--     (a) a fair circuit in it, a cycle that meets every predicate (FairIn), or
+--     (b) a well-founded certificate that removes the graph one terminal
+--         component at a time, each a sink or missing some predicate (Cert).
 --
--- That is fairGraph; certAll is the induction principle a Cert supplies.  The
--- two answers are proved exclusive (certNoCirc, fairNoLoop), so the negative
--- answer is a decision.  The module is parameterised like LTL.1-Lib.Graph, whose
--- trails and reachable set it uses; the fairness sets are fs : List Pred.
+-- fairGraph runs it on what a vertex v reaches, and turns (a) into a lasso
+-- from v (FairLoop); certAll is the induction principle a Cert supplies.  The
+-- module is parameterised like LTL.1-Lib.Graph, whose trails and reachable
+-- set it uses; the fairness sets are fs : List Pred.
 --
 -- Design choices:
 --
@@ -25,12 +25,6 @@
 --    recursion on a Finiteᵛ proof.  Both take theirs from listFinite, so
 --    they need no guard.  Every step of a certificate therefore removes a
 --    whole component.
---
--- Exclusivity needs no infinite paths: any vertex of a cycle reaches any
--- other, so a cycle that enters a successor-closed block lies inside it.  A
--- removed component is such a block, and it either is a sink, out of which
--- the cycle could not step, or misses a predicate the cycle meets.  This is
--- an induction on a finite trail.
 
 open import LTL.1-Lib.Prelude
 open import LTL.1-Lib.DecEq using (DecEq)
@@ -105,8 +99,8 @@ terminalClosed : (ws : Subgraph) (r : Node)
 terminalClosed ws r et {z} mz my e =
   terminalScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
 
--- A sink is a trivial terminal component: it reaches only itself, so its
--- component is {x}.  A trail out of x would start with an out-edge.
+-- A sink reaches only itself, so its component is {x}: a trail out of x
+-- would start with an out-edge.
 
 sinkOnly : (ws : Subgraph) (x : Node) -> Sink ws x
         -> ∀ⁱ[ w ∈ reachSet ws x ] w ≡ x
@@ -117,16 +111,11 @@ sinkOnly ws x e m = onTrail (reachTrail ws x m)
     onTrail (reachesBy _ (tCons g t) subset) =
       emptyElim (null-∈ (outs ws x) e (∈-filter⁺ (G x) ws (subset _ here) g))
 
-sinkTerminal : (x : Node) -> x ∈ ws
-            -> Sink ws x -> IsTerminal ws x
-sinkTerminal {ws} x mx e m =
-  subst (λ y -> x ∈ᵛ reachSet ws y ≡ true) (sym (sinkOnly ws x e m))
-        (∈ᵛ-complete (reachSet ws x) x (reachSeed x mx))
-
 ------------------------------------------------------------------------
 -- A terminal component of ws, as its representative r: found by
--- findTerminal below, decided by blockOf, removed by a certificate step.  The
--- component itself and what the steps use of it are derived from r.
+-- findTerminal below, decided by decideTerminal, removed by a certificate
+-- step.  The component itself and what the steps use of it are derived
+-- from r.
 
 record TerminalIn (ws : Subgraph) : Set where
   constructor terminalAt
@@ -225,10 +214,12 @@ record Circuit (ws : Subgraph) (fs : List Pred)
     loop  : Loop ws r
     meets : ∀[ f ∈ fs ] ∃[ z ∈ Loop.cycle loop ] z ∈ᵖ f
 
-module _ {ws vs : Subgraph} {r : Node} where
+-- The base point r is the end of the loop's trail, so a vertex it visits.
 
-  loopRestrict : (l : Loop ws r) -> Loop.cycle l ⊆ vs -> Loop vs r
-  loopRestrict (loopBy q qs t _) h = loopBy q qs t h
+loopBase : {r : Node} -> Loop ws r -> r ∈ ws
+loopBase (loopBy q qs (tCons e t) h) = h _ (trailEnd t)
+
+module _ {ws vs : Subgraph} {r : Node} where
 
   circMono : {fs : List Pred} -> ws ⊆ vs -> Circuit ws fs r -> Circuit vs fs r
   circMono subset (circuit (loopBy q qs t h) wit) =
@@ -329,33 +320,29 @@ data Cert (fs : List Pred) : Subgraph -> Set where
          -> Cert fs (ws ∖ component t) -> Cert fs ws
 
 ------------------------------------------------------------------------
--- One step of the outer iteration, decided on a terminal component: if r has
--- no out-edge it is a sink; otherwise the component carries a loop, and it is
--- fair and a circuit is built, or it misses some f.  In the two cases that are
--- not fair the component is to be removed, and bRemove carries the Reason.
+-- One step of the outer iteration, decided on a terminal component t: if r
+-- has no out-edge it is a sink; otherwise the component carries a loop, and
+-- it is fair and a circuit is built, or it misses some f.  In the two cases
+-- that are not fair t is to be removed, and the answer is the Reason.
 -- Nothing here recurses.
 
--- A fair circuit somewhere in ws, at the representative r.
+-- A fair circuit somewhere in ws, at r (which is in ws by loopBase).
 
 record FairIn (ws : Subgraph) (fs : List Pred) : Set where
   constructor fairIn
   field
     r           : Node
-    rIn         : r ∈ ws
     fairCircuit : Circuit ws fs r
 
-data Block (ws : Subgraph) (fs : List Pred) : Set where
-  bFair   : FairIn ws fs -> Block ws fs
-  bRemove : (t : TerminalIn ws) -> Reason fs t -> Block ws fs
-
-blockOf : (fs : List Pred) -> TerminalIn ws -> Block ws fs
-blockOf {ws} fs t@(terminalAt r mr et) with hasOut ws r in eo
-... | false = bRemove t (sink (¬ᵇ-false (null (outs ws r)) eo))
+decideTerminal : (fs : List Pred) (t : TerminalIn ws)
+              -> FairIn ws fs ⊎ Reason fs t
+decideTerminal {ws} fs t@(terminalAt r mr et) with hasOut ws r in eo
+... | false = inr (sink (¬ᵇ-false (null (outs ws r)) eo))
 ... | true with decideAll (λ g -> any g (component t)) fs
 ...   | allTrue e =
-  bFair (fairIn r mr (mkCirc (loopAt mr et eo) (component t)
-                             (repReaches t) (reachesRep t) fs e))
-...   | counterexample g mg eg = bRemove t (unfair g mg miss)
+  inl (fairIn r (mkCirc (loopAt mr et eo) (component t)
+                        (repReaches t) (reachesRep t) fs e))
+...   | counterexample g mg eg = inr (unfair g mg miss)
   where
     miss : None g (component t)
     miss z mz = any-false g (component t) eg mz
@@ -365,7 +352,7 @@ blockOf {ws} fs t@(terminalAt r mr et) with hasOut ws r in eo
 
 fairInMono : {fs : List Pred}
           -> ws ⊆ vs -> FairIn ws fs -> FairIn vs fs
-fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
+fairInMono subset (fairIn r c) = fairIn r (circMono subset c)
 
 -- Terminal-component removal, a REMOVING iteration: while ws is non-empty,
 -- find a terminal component and decide it; if it is not fair, its
@@ -378,9 +365,10 @@ module _ (fs : List Pred) where
             -> FairIn ws fs ⊎ Cert fs ws
   fairOrCert []         subset fin              = inr cNil
   fairOrCert ws@(u ∷ _) subset (everyPick next)
-    with blockOf fs (findTerminal ws here)
-  ... | bFair fi       = inl fi
-  ... | bRemove t why =
+    with findTerminal ws here
+  ... | t with decideTerminal fs t
+  ...   | inl fi  = inl fi
+  ...   | inr why =
     [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi)) , (λ c -> inr (cRemove t why c)) ]
       (fairOrCert (ws ∖ C) (All-∖ ws C (∖-⊆ ws C) subset (rInComponent t))
                   (next r (subset r rIn)))
@@ -415,8 +403,8 @@ fairGraph vs fs v mv =
     into z m = reachIn vs v m
 
     toLoop : FairIn (reachSet vs v) fs -> FairLoop vs fs v
-    toLoop (fairIn r mr c) =
-      fairLoop r (reachTrail vs v mr)
+    toLoop (fairIn r c) =
+      fairLoop r (reachTrail vs v (loopBase (Circuit.loop c)))
                  (circMono into c)
 
 ------------------------------------------------------------------------
@@ -464,25 +452,11 @@ module _ (fs : List Pred) (R : Node -> Set)
     certAll c (dropOutside ws (component t) ih (removedHolds t why ih)) z
 
 ------------------------------------------------------------------------
--- The two outputs are EXCLUSIVE, by one observation about a closed trail:
--- any vertex of a cycle reaches any other, so a cycle that enters a
--- successor-closed block lies inside it.
-
--- The suffix of a trail from any vertex it visits, and the prefix to one: all
--- the "rotation" of a cycle the argument needs.
+-- The prefix of a trail to any vertex it visits: LTL.7-SCC.SccLasso follows a
+-- cycle's prefix to a fairness witness.
 
 reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
 reachesCons m e (reachesBy zs t subset) = reachesBy (_ ∷ zs) (tCons e t) (∷-⊆ m subset)
-
-reachesApp : Reaches ws u v -> Reaches ws v w -> Reaches ws u w
-reachesApp (reachesBy as ta sa) (reachesBy bs tb sb) =
-  reachesBy (as ++ bs) (trailApp ta tb) (++-⊆ as sa sb)
-
-trailFrom : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ v ∷ zs ] Reaches ws s w
-trailFrom tNil        subset here      = reachesBy [] tNil (λ _ ())
-trailFrom tNil        subset (there ())
-trailFrom (tCons e t) subset here      = reachesBy _ (tCons e t) subset
-trailFrom (tCons e t) subset (there k) = trailFrom t (⊆-tail subset) k
 
 trailTo : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
 trailTo tNil        subset ()
@@ -490,83 +464,3 @@ trailTo (tCons e t) subset here      =
   reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (subset _ here) (λ _ ()))
 trailTo (tCons e t) subset (there k) =
   reachesCons (subset _ here) e (trailTo t (⊆-tail subset) k)
-
--- Any vertex of a cycle reaches any other: the suffix to the base point, then
--- the prefix out.
-
-cycConn : {r : Node} -> Trail r zs r -> zs ⊆ ws
-       -> u ∈ zs -> z ∈ zs -> Reaches ws u z
-cycConn t subset mu mz = reachesApp (trailFrom t subset (there mu)) (trailTo t subset mz)
-
--- A closed set that a cycle enters contains the whole cycle, since it
--- contains everything a trail starting in it reaches (reachesEndIn, in
--- LTL.1-Lib.Graph).
-
-cycleIn : {C : List Node} -> Closed[ G ▷ ws ] C -> Trail s zs s -> zs ⊆ ws
-       -> z ∈ zs -> z ∈ C -> ∀ⁱ[ y ∈ zs ] y ∈ C
-cycleIn cl t subset mz mzc my = reachesEndIn cl mzc (cycConn t subset mz my)
-
--- A circuit in ws misses every component removed for a reason, since the
--- component is closed: entered, it would contain the whole cycle.  For a sink
--- that puts the base point s, the end of the cycle, in {r}, and the loop's
--- first step leaves s; for an unfair component, the witness of the f it
--- misses.
-
-avoids : {fs : List Pred} (t : TerminalIn ws) -> Reason fs t
-      -> (c : Circuit ws fs s)
-      -> ∀[ z ∈ Loop.cycle (Circuit.loop c) ] (z ∈ component t -> Empty)
-avoids {ws} {s = s} t (sink e) (circuit (loopBy q qs tr@(tCons g tq) h) wit) z mz mzc =
-  null-∈ (outs ws r) e
-    (∈-filter⁺ (G r) ws (h q here) (subst (λ y -> G y q ≡ true) sIsR g))
-  where
-    open TerminalIn t using (r)
-
-    sIsR : s ≡ r
-    sIsR = sinkAlone t e _
-             (cycleIn (componentClosed t) tr h mz mzc (trailEnd tq))
-avoids t (unfair f mf mis) (circuit (loopBy q qs tr h) wit) z mz mzc =
-  onW (wit f mf)
-  where
-    onW : (∃[ y ∈ q ∷ qs ] y ∈ᵖ f) -> Empty
-    onW (y , my , fy) =
-      true≢false
-        (trans (sym fy) (mis y (cycleIn (componentClosed t) tr h mz mzc my)))
-
--- A certificate for ws forbids a fair circuit inside ws.  By induction on the
--- certificate: each step leaves the cycle untouched, so it is still there when
--- nothing is left, which cNil forbids.
-
-certNoCirc : (fs : List Pred)
-          -> Cert fs ws -> (r : Node) -> Circuit ws fs r -> Empty
-certNoCirc fs cNil              s (circuit (loopBy q qs t h) wit) =
-  null-∈ [] refl (h q here)
-certNoCirc fs (cRemove t why c) s ci@(circuit l wit) =
-  certNoCirc fs c s
-    (circuit (loopRestrict l (⊆-∖ (component t) (Loop.staysIn l)
-                                 (avoids t why ci)))
-             wit)
-
-------------------------------------------------------------------------
--- The dichotomy at the top level: fairGraph's two answers cannot both hold, so
--- if a fair lasso from v exists, fairGraph returns one.  Restricting the
--- lasso's cycle to the reachable set uses reachComplete.
-
-fairNoLoop : (vs : Subgraph) (fs : List Pred)
-             (v : Node) -> v ∈ vs
-          -> Cert fs (reachSet vs v) -> FairLoop vs fs v -> Empty
-fairNoLoop vs fs v mv c (fairLoop r stem (circuit l@(loopBy q qs t h) wit)) =
-  certNoCirc fs c r (circuit (loopRestrict l keep) wit)
-  where
-    keep : q ∷ qs ⊆ reachSet vs v
-    keep z mz = reachComplete v mv (reachesApp stem (trailTo t h mz))
-
-fairComplete : (vs : Subgraph) (fs : List Pred)
-               (v : Node) (mv : v ∈ vs)
-            -> FairLoop vs fs v -> isInl (fairGraph vs fs v mv) ≡ true
-fairComplete vs fs v mv fl = onS (fairGraph vs fs v mv) refl
-  where
-    onS : (s : FairLoop vs fs v ⊎ Cert fs (reachSet vs v))
-       -> fairGraph vs fs v mv ≡ s
-       -> isInl (fairGraph vs fs v mv) ≡ true
-    onS (inl l) es = cong isInl es
-    onS (inr c) es = emptyElim (fairNoLoop vs fs v mv c fl)

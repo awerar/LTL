@@ -81,9 +81,9 @@ buildCM v0 l ev = countermodel v0 l evalFalse
 -- loop from s, and so a countermodel.
 
 fairCountermodel : FairIn Ust evPreds -> LassoCountermodel Q
-fairCountermodel (fairIn r mr c) =
+fairCountermodel (fairIn r c) =
   buildCM seed (sccLasso seed seedIn (fairLoop r reaches c)) seedHolds
-  where open Seeded (ustSeedTo r mr)
+  where open Seeded (ustSeedTo r (loopBase (Circuit.loop c)))
 
 ------------------------------------------------------------------------
 -- The decision: the search's certificate gives a derivation, its fair

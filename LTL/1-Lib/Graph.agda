@@ -310,14 +310,6 @@ reachClosed : (ws : Subgraph) (v : Node)
            -> Closed[ G ▷ ws ] (reachSet ws v)
 reachClosed ws v = closureClosed (v ≡ᵛ_) ws (∈ᵛ-complete ws) (listFinite ws)
 
--- Completeness: the set is closed under G inside ws, so a trail inside ws
--- from a member ends in it.
-
-reachComplete : (v : Node) -> v ∈ ws
-             -> Reaches ws v w
-             -> w ∈ reachSet ws v
-reachComplete {ws} v mv = reachesEndIn (reachClosed ws v) (reachSeed v mv)
-
 reachTrans : (ws : Subgraph) (v u w : Node)
           -> u ∈ reachSet ws v -> w ∈ reachSet ws u
           -> w ∈ reachSet ws v

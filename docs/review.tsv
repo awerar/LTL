@@ -53,16 +53,18 @@ LTL.1-Lib.Exhaustible.∪-∩-distrib	2bcb449670bb	2026-11-25
 LTL.1-Lib.Exhaustible.∪-∩-weaken	a8a607a4d8a4	2026-11-25	
 LTL.1-Lib.Exhaustible.⊆ᵖ-refl	27b2e2a2d2cc	2026-11-25	
 LTL.1-Lib.Exhaustible.⊆ᵖ-trans	ba817e717cb2	2026-11-25	
+LTL.1-Lib.FairGraph.Cert	6d5d0981ef12	2026-11-27	
 LTL.1-Lib.FairGraph.Circuit	cd2515559838	2026-11-27	
+LTL.1-Lib.FairGraph.FairIn	44a387732ce7	2026-11-27	
 LTL.1-Lib.FairGraph.IsTerminal	ff0a00137017	2026-11-27	
 LTL.1-Lib.FairGraph.Loop	8f64a243c22c	2026-11-27	
+LTL.1-Lib.FairGraph.Reason	6e60e94e2ba7	2026-11-27	
 LTL.1-Lib.FairGraph.TerminalIn	8c7908a915b5	2026-11-27	
 LTL.1-Lib.FairGraph.circMono	70ecf9b09545	2026-11-27	
 LTL.1-Lib.FairGraph.consCirc	030fce005c6d	2026-11-27	
 LTL.1-Lib.FairGraph.descend	3ffe7fb9d5ca	2026-11-27	
 LTL.1-Lib.FairGraph.findTerminal	7ba8121ba46f	2026-11-27	
 LTL.1-Lib.FairGraph.loopAt	4547e8357a5e	2026-11-27	
-LTL.1-Lib.FairGraph.loopRestrict	abcb1af08a5d	2026-11-27	
 LTL.1-Lib.FairGraph.mkCirc	6d84434209bf	2026-11-27	
 LTL.1-Lib.FairGraph.reachesLess	e1ccfc37ff3f	2026-11-27	
 LTL.1-Lib.FairGraph.sccFrom	a90a05b2fecc	2026-11-27	
@@ -71,7 +73,6 @@ LTL.1-Lib.FairGraph.sccReach	4cee0c3e9cb9	2026-11-27
 LTL.1-Lib.FairGraph.sccRep	c874138711a4	2026-11-27	
 LTL.1-Lib.FairGraph.sccTo	e8f4624f793d	2026-11-27	
 LTL.1-Lib.FairGraph.sinkOnly	e49d9e3fec15	2026-11-27	
-LTL.1-Lib.FairGraph.sinkTerminal	c2966036f058	2026-11-27	
 LTL.1-Lib.FairGraph.terminalClosed	60ef6d95d454	2026-11-27	
 LTL.1-Lib.FairGraph.terminalScc	bb380aa14f64	2026-11-27	
 LTL.1-Lib.Graph.GrowInv	7830d0274afe	2026-11-26	
@@ -93,7 +94,6 @@ LTL.1-Lib.Graph.missing	872c4d90f9ad	2026-11-25
 LTL.1-Lib.Graph.notInAcc	41eaf2494f62	2026-11-25	
 LTL.1-Lib.Graph.outs	cf24ab30c21a	2026-11-27	
 LTL.1-Lib.Graph.reachClosed	6b0b19c3160c	2026-11-27	
-LTL.1-Lib.Graph.reachComplete	e22519417577	2026-11-27	
 LTL.1-Lib.Graph.reachIn	fb90e0062238	2026-11-27	
 LTL.1-Lib.Graph.reachSeed	d812190bdc99	2026-11-27	
 LTL.1-Lib.Graph.reachSet	3dd294500b6e	2026-11-27	
