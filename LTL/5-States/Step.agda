@@ -17,6 +17,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.Step (P : Formula) where
 
 open import LTL.2-Syntax.Deriv
+open import LTL.5-States.Reach using (Subgraph)
 open import LTL.5-States.State P
 
 ------------------------------------------------------------------------
@@ -90,15 +91,15 @@ stepFails v w e =
 ------------------------------------------------------------------------
 -- Successors within a given set of states
 
-succs : List Val -> Val -> List Val
+succs : Subgraph -> Val -> List Val
 succs us v = filter (step v) us
 
-∈-succs⁻ : (us : List Val) (v : Val)
+∈-succs⁻ : (us : Subgraph) (v : Val)
         -> ∀ⁱ[ w ∈ succs us v ] w ∈ us × step v w ≡ true
 ∈-succs⁻ us v {w} m =
   ∈-filter⁻ (step v) us m , filter-prop (step v) us w m
 
-succsIn : (us : List Val) (v : Val) {w : Val}
+succsIn : (us : Subgraph) (v : Val) {w : Val}
        -> w ∈ us -> step v w ≡ true -> w ∈ succs us v
 succsIn us v mw st = ∈-filter⁺ (step v) us mw st
 

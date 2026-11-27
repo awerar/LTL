@@ -48,49 +48,51 @@ open import LTL.1-Lib.Graph eq G
 
 -- The implicit arguments the signatures below leave out: the endpoints and
 -- visited list of a trail, and the pool a search recurses on.
--- As in LTL.1-Lib.Graph, so is ws wherever a trail, loop or circuit fixes
--- it; it stays explicit where it only occurs under a function (sccOf ws r).
+-- As in LTL.1-Lib.Graph, so is ws wherever a trail, loop, circuit, r ∈ ws or
+-- TerminalIn ws fixes it; it stays explicit where it only occurs under a
+-- function (sccOf ws r).
 
 private variable
   u v w x s z : Node
-  ws vs zs    : List Node
+  ws vs       : Subgraph
+  zs          : List Node
   Pool        : Pred
 
 ------------------------------------------------------------------------
 -- Components, without component objects: sccOf ws r is the vertices r
 -- reaches that reach r back.  A filter of a list, nothing more.
 
-sccOf : List Node -> Node -> List Node
+sccOf : Subgraph -> Node -> List Node
 sccOf ws r = filter (λ w -> r ∈ᵛ reachSet ws w) (reachSet ws r)
 
-sccReach : (ws : List Node) (r : Node) -> sccOf ws r ⊆ reachSet ws r
+sccReach : (ws : Subgraph) (r : Node) -> sccOf ws r ⊆ reachSet ws r
 sccReach ws r w m =
   ∈-filter⁻ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m
 
-sccTo : (ws : List Node) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws r w
+sccTo : (ws : Subgraph) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws r w
 sccTo ws r w m = reachTrail ws r (sccReach ws r w m)
 
-sccFrom : (ws : List Node) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws w r
+sccFrom : (ws : Subgraph) (r : Node) -> ∀[ w ∈ sccOf ws r ] Reaches ws w r
 sccFrom ws r w m =
   reachTrail ws w
     (∈ᵛ-sound (reachSet ws w) r
       (filter-prop (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) w m))
 
-sccRep : (ws : List Node) -> ∀[ r ∈ ws ] r ∈ sccOf ws r
-sccRep ws r mr =
+sccRep : ∀[ r ∈ ws ] r ∈ sccOf ws r
+sccRep {ws} r mr =
   ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
-            (reachSeed ws r mr)
-            (∈ᵛ-complete (reachSet ws r) r (reachSeed ws r mr))
+            (reachSeed r mr)
+            (∈ᵛ-complete (reachSet ws r) r (reachSeed r mr))
 
 ------------------------------------------------------------------------
 -- r's component is terminal when everything r reaches reaches r back, i.e.
 -- the reachable set of r IS its component.  It is stated as decideAll's
 -- allTrue gives it, so the search hands it over unchanged.
 
-IsTerminal : List Node -> Node -> Set
+IsTerminal : Subgraph -> Node -> Set
 IsTerminal ws r = ∀ⁱ[ w ∈ reachSet ws r ] r ∈ᵛ reachSet ws w ≡ true
 
-terminalScc : (ws : List Node) (r : Node)
+terminalScc : (ws : Subgraph) (r : Node)
        -> IsTerminal ws r -> ∀ⁱ[ w ∈ reachSet ws r ] w ∈ sccOf ws r
 terminalScc ws r et m =
   ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) m (et m)
@@ -98,7 +100,7 @@ terminalScc ws r et m =
 -- A terminal component is closed under successors inside ws: the refutation
 -- needs exactly this of it.
 
-terminalClosed : (ws : List Node) (r : Node)
+terminalClosed : (ws : Subgraph) (r : Node)
           -> IsTerminal ws r -> Closed[ G ▷ ws ] (sccOf ws r)
 terminalClosed ws r et {z} mz my e =
   terminalScc ws r et (reachClosed ws r (sccReach ws r z mz) my e)
@@ -106,7 +108,7 @@ terminalClosed ws r et {z} mz my e =
 -- A sink is a trivial terminal component: it reaches only itself, so its
 -- component is {x}.  A trail out of x would start with an out-edge.
 
-sinkOnly : (ws : List Node) (x : Node) -> Sink ws x
+sinkOnly : (ws : Subgraph) (x : Node) -> Sink ws x
         -> ∀ⁱ[ w ∈ reachSet ws x ] w ≡ x
 sinkOnly ws x e m = onTrail (reachTrail ws x m)
   where
@@ -115,18 +117,18 @@ sinkOnly ws x e m = onTrail (reachTrail ws x m)
     onTrail (reachesBy _ (tCons g t) subset) =
       emptyElim (null-∈ (outs ws x) e (∈-filter⁺ (G x) ws (subset _ here) g))
 
-sinkTerminal : (ws : List Node) (x : Node) -> x ∈ ws
+sinkTerminal : (x : Node) -> x ∈ ws
             -> Sink ws x -> IsTerminal ws x
-sinkTerminal ws x mx e m =
+sinkTerminal {ws} x mx e m =
   subst (λ y -> x ∈ᵛ reachSet ws y ≡ true) (sym (sinkOnly ws x e m))
-        (∈ᵛ-complete (reachSet ws x) x (reachSeed ws x mx))
+        (∈ᵛ-complete (reachSet ws x) x (reachSeed x mx))
 
 ------------------------------------------------------------------------
 -- A terminal component of ws, as its representative r: found by
 -- findTerminal below, decided by blockOf, removed by a certificate step.  The
 -- component itself and what the steps use of it are derived from r.
 
-record TerminalIn (ws : List Node) : Set where
+record TerminalIn (ws : Subgraph) : Set where
   constructor terminalAt
   field
     r        : Node
@@ -137,7 +139,7 @@ record TerminalIn (ws : List Node) : Set where
   component = sccOf ws r
 
   rInComponent : r ∈ component
-  rInComponent = sccRep ws r rIn
+  rInComponent = sccRep r rIn
 
   componentClosed : Closed[ G ▷ ws ] component
   componentClosed = terminalClosed ws r terminal
@@ -167,7 +169,7 @@ open TerminalIn using (component; rInComponent; componentClosed;
 -- still move to, avail says everything r reaches is in it, and each move
 -- gives up r, which is the smaller pool next hands over.
 
-module _ (ws : List Node) where
+module _ (ws : Subgraph) where
 
   -- One move, from r to a w that does not reach r: what w reaches is
   -- still in the pool once r is given up.
@@ -185,7 +187,7 @@ module _ (ws : List Node) where
   ... | allTrue reachBack = terminalAt r r∈ws reachBack
   ... | counterexample w w∈reach noReturn =
     descend w (reachIn ws r w∈reach) (reachesLess r w w∈reach noReturn avail)
-            (next r (avail r (reachSeed ws r r∈ws)))
+            (next r (avail r (reachSeed r r∈ws)))
 
   -- A non-empty ws, one with a member x, has a terminal component.  The
   -- search starts at x, with all of ws in the pool.
@@ -205,7 +207,7 @@ module _ (ws : List Node) where
 -- way round to r.  So every fact that rests on the first step holds by
 -- computation.  The vertices it visits lie in ws; r among them, as the end.
 
-record Loop (ws : List Node) (r : Node) : Set where
+record Loop (ws : Subgraph) (r : Node) : Set where
   constructor loopBy
   field
     next    : Node
@@ -216,14 +218,14 @@ record Loop (ws : List Node) (r : Node) : Set where
   cycle : List Node
   cycle = next ∷ back
 
-record Circuit (ws : List Node) (fs : List Pred)
+record Circuit (ws : Subgraph) (fs : List Pred)
                (r : Node) : Set where
   constructor circuit
   field
     loop  : Loop ws r
     meets : ∀[ f ∈ fs ] ∃[ z ∈ Loop.cycle loop ] z ∈ᵖ f
 
-module _ {ws vs : List Node} {r : Node} where
+module _ {ws vs : Subgraph} {r : Node} where
 
   loopRestrict : (l : Loop ws r) -> Loop.cycle l ⊆ vs -> Loop vs r
   loopRestrict (loopBy q qs t _) h = loopBy q qs t h
@@ -236,7 +238,7 @@ module _ {ws vs : List Node} {r : Node} where
 -- successor is reached, so terminality sends a trail back.  No separate cycle
 -- detection is needed.
 
-module _ {ws : List Node} {r : Node} where
+module _ {ws : Subgraph} {r : Node} where
 
   loopAt : r ∈ ws
         -> IsTerminal ws r -> hasOut ws r ≡ true -> Loop ws r
@@ -253,7 +255,7 @@ module _ {ws : List Node} {r : Node} where
           grx = filter-prop (G r) ws x mx
 
           inR : x ∈ reachSet ws r
-          inR = reachClosed ws r (reachSeed ws r mr) mxw grx
+          inR = reachClosed ws r (reachSeed r mr) mxw grx
 
           open Reaches (sccFrom ws r x (terminalScc ws r et inR))
 
@@ -317,11 +319,11 @@ module _ {ws : List Node} {r : Node} where
 -- a closed union of components splits no other; only "terminal" is relative
 -- to what is left.  cNil says nothing is left.
 
-data Reason (fs : List Pred) {ws : List Node} (t : TerminalIn ws) : Set where
+data Reason (fs : List Pred) {ws : Subgraph} (t : TerminalIn ws) : Set where
   sink   : Sink ws (TerminalIn.r t) -> Reason fs t
   unfair : (f : Pred) -> f ∈ fs -> None f (component t) -> Reason fs t
 
-data Cert (fs : List Pred) : List Node -> Set where
+data Cert (fs : List Pred) : Subgraph -> Set where
   cNil    : Cert fs []
   cRemove : (t : TerminalIn ws) -> Reason fs t
          -> Cert fs (ws ∖ component t) -> Cert fs ws
@@ -335,19 +337,19 @@ data Cert (fs : List Pred) : List Node -> Set where
 
 -- A fair circuit somewhere in ws, at the representative r.
 
-record FairIn (ws : List Node) (fs : List Pred) : Set where
+record FairIn (ws : Subgraph) (fs : List Pred) : Set where
   constructor fairIn
   field
     r           : Node
     rIn         : r ∈ ws
     fairCircuit : Circuit ws fs r
 
-data Block (ws : List Node) (fs : List Pred) : Set where
+data Block (ws : Subgraph) (fs : List Pred) : Set where
   bFair   : FairIn ws fs -> Block ws fs
   bRemove : (t : TerminalIn ws) -> Reason fs t -> Block ws fs
 
-blockOf : (ws : List Node) (fs : List Pred) -> TerminalIn ws -> Block ws fs
-blockOf ws fs t@(terminalAt r mr et) with hasOut ws r in eo
+blockOf : (fs : List Pred) -> TerminalIn ws -> Block ws fs
+blockOf {ws} fs t@(terminalAt r mr et) with hasOut ws r in eo
 ... | false = bRemove t (sink (¬ᵇ-false (null (outs ws r)) eo))
 ... | true with decideAll (λ g -> any g (component t)) fs
 ...   | allTrue e =
@@ -372,11 +374,11 @@ fairInMono subset (fairIn r mr c) = fairIn r (subset r mr) (circMono subset c)
 
 module _ (fs : List Pred) where
 
-  fairOrCert : (ws : List Node) -> All Pool ws -> Finiteᵛ Pool
+  fairOrCert : (ws : Subgraph) -> All Pool ws -> Finiteᵛ Pool
             -> FairIn ws fs ⊎ Cert fs ws
   fairOrCert []         subset fin              = inr cNil
   fairOrCert ws@(u ∷ _) subset (everyPick next)
-    with blockOf ws fs (findTerminal ws here)
+    with blockOf fs (findTerminal ws here)
   ... | bFair fi       = inl fi
   ... | bRemove t why =
     [ (λ fi -> inl (fairInMono (∖-⊆ ws C) fi)) , (λ c -> inr (cRemove t why c)) ]
@@ -394,7 +396,7 @@ module _ (fs : List Pred) where
 
 -- A fair lasso from v: a stem from v to r, then a fair circuit at r.
 
-record FairLoop (vs : List Node) (fs : List Pred)
+record FairLoop (vs : Subgraph) (fs : List Pred)
                 (v : Node) : Set where
   constructor fairLoop
   field
@@ -402,7 +404,7 @@ record FairLoop (vs : List Node) (fs : List Pred)
     stem        : Reaches vs v r
     fairCircuit : Circuit vs fs r
 
-fairGraph : (vs : List Node) (fs : List Pred)
+fairGraph : (vs : Subgraph) (fs : List Pred)
          -> ∀[ v ∈ vs ] (FairLoop vs fs v ⊎ Cert fs (reachSet vs v))
 fairGraph vs fs v mv =
   [ (λ fi -> inl (toLoop fi)) , inr ]
@@ -425,10 +427,10 @@ fairGraph vs fs v mv =
 -- refutation uses, a sink and a closed block, not for a component.
 
 module _ (fs : List Pred) (R : Node -> Set)
-         (sinkCase  : (ws : List Node) (x : Node) -> x ∈ ws
+         (sinkCase  : (ws : Subgraph) (x : Node) -> x ∈ ws
                    -> Sink ws x
                    -> HoldsOutside R ws -> R x)
-         (blockCase : (ws C : List Node) (f : Pred) -> f ∈ fs
+         (blockCase : (ws : Subgraph) (C : List Node) (f : Pred) -> f ∈ fs
                    -> Closed[ G ▷ ws ] C -> None f C
                    -> HoldsOutside R ws -> ∀[ z ∈ C ] R z)
          where
@@ -436,7 +438,8 @@ module _ (fs : List Pred) (R : Node -> Set)
   -- One removal step: R holds outside ws ∖ C once it holds outside ws and
   -- on C.
 
-  dropOutside : (ws C : List Node) -> HoldsOutside R ws -> (∀[ y ∈ C ] R y)
+  dropOutside : (ws : Subgraph) (C : List Node)
+             -> HoldsOutside R ws -> (∀[ y ∈ C ] R y)
              -> HoldsOutside R (ws ∖ C)
   dropOutside ws C ih onC y eo with y ∈ᵛ C in ec
   ... | true  = onC y (∈ᵛ-sound C y ec)
@@ -548,16 +551,16 @@ certNoCirc fs (cRemove t why c) s ci@(circuit l wit) =
 -- if a fair lasso from v exists, fairGraph returns one.  Restricting the
 -- lasso's cycle to the reachable set uses reachComplete.
 
-fairNoLoop : (vs : List Node) (fs : List Pred)
+fairNoLoop : (vs : Subgraph) (fs : List Pred)
              (v : Node) -> v ∈ vs
           -> Cert fs (reachSet vs v) -> FairLoop vs fs v -> Empty
 fairNoLoop vs fs v mv c (fairLoop r stem (circuit l@(loopBy q qs t h) wit)) =
   certNoCirc fs c r (circuit (loopRestrict l keep) wit)
   where
     keep : q ∷ qs ⊆ reachSet vs v
-    keep z mz = reachComplete vs v mv (reachesApp stem (trailTo t h mz))
+    keep z mz = reachComplete v mv (reachesApp stem (trailTo t h mz))
 
-fairComplete : (vs : List Node) (fs : List Pred)
+fairComplete : (vs : Subgraph) (fs : List Pred)
                (v : Node) (mv : v ∈ vs)
             -> FairLoop vs fs v -> isInl (fairGraph vs fs v mv) ≡ true
 fairComplete vs fs v mv fl = onS (fairGraph vs fs v mv) refl

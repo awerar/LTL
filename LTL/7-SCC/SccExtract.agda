@@ -39,7 +39,7 @@ open import LTL.7-SCC.SccLasso P
 UstRef : Val -> Set
 UstRef z = z ∈ Ust -> ⊢ ¬ (chi z)
 
-refutedOf : (ws : List Val)
+refutedOf : (ws : Subgraph)
          -> HoldsOutside UstRef ws -> Refuted ws
 refutedOf ws ih u mu e = ih u e mu
 
@@ -50,7 +50,7 @@ refutedOf ws ih u mu e = ih u e mu
 -- successors outside ws by the induction hypothesis and keeping the rest by
 -- closure; (iii) B ⇒ □ A by (Ind).
 
-extractBlock : (ws C : List Val) (u : Val)
+extractBlock : (ws : Subgraph) (C : List Val) (u : Val)
             -> u ∈ Ust -> Refuted ws
             -> (A : Formula) -> □ A ∈ sub P
             -> C ⊆ Ust
@@ -104,7 +104,7 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
 
 -- The sink.  Sink ws x, null (outs ws x) ≡ true, IS  r1 ws x ≡ true .
 
-sinkStep : (ws : List Val) (x : Val) -> x ∈ ws
+sinkStep : (ws : Subgraph) (x : Val) -> x ∈ ws
         -> Sink ws x
         -> HoldsOutside UstRef ws
         -> UstRef x
@@ -114,7 +114,7 @@ sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 -- (∈-evPreds⁻), its falsity on C gives the two hypotheses, and the
 -- component is intersected with Ust P.
 
-blockStep : (ws C : List Val) (f : Pred) -> f ∈ evPreds
+blockStep : (ws : Subgraph) (C : List Val) (f : Pred) -> f ∈ evPreds
          -> Closed[ step ▷ ws ] C -> None f C
          -> HoldsOutside UstRef ws
          -> ∀[ z ∈ C ] UstRef z
@@ -152,7 +152,7 @@ blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
 ------------------------------------------------------------------------
 -- A certificate refutes everything it covers.
 
-certRefuted : {ws : List Val}
+certRefuted : {ws : Subgraph}
            -> Cert evPreds ws -> Refuted ws
            -> ∀[ z ∈ Ust ] ⊢ ¬ (chi z)
 certRefuted {ws} c ih =

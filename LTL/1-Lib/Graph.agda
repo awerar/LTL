@@ -30,15 +30,21 @@ open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Exhaustible
 open import LTL.1-Lib.Nodes eq
 
+-- G is fixed, so a Subgraph (LTL.1-Lib.Nodes), a vertex list, is the
+-- subgraph of G induced on it.  Every graph notion below is taken inside one
+-- (outs ws x, Reaches ws v w, reachSet ws v); other lists of nodes (the
+-- vertices a trail visits, a component C) stay List Node.
+
 -- The implicit arguments the signatures below leave out: the endpoints and
 -- visited list of a trail, and the pool a search recurses on.
--- So is the vertex list ws wherever a Reaches or Closed hypothesis fixes
--- it; it stays explicit where it only occurs under a function, as in
+-- So is the subgraph ws wherever a Reaches, Closed or v ∈ ws hypothesis
+-- fixes it; it stays explicit where it only occurs under a function, as in
 -- reachSet ws v.
 
 private variable
-  u v w    : Node
-  ws xs zs : List Node
+  u v w : Node
+  ws    : Subgraph
+  xs zs : List Node
   Pool     : Pred
 
 ------------------------------------------------------------------------
@@ -47,15 +53,15 @@ private variable
 -- The out-neighbours of x inside ws.  For G = step P this is succs P ws x on
 -- the nose.
 
-outs : List Node -> Node -> List Node
+outs : Subgraph -> Node -> List Node
 outs ws x = filter (G x) ws
 
-hasOut : List Node -> Node -> Bool
+hasOut : Subgraph -> Node -> Bool
 hasOut ws x = ¬ᵇ null (outs ws x)
 
 -- x is a sink in ws: it has no out-neighbour there.
 
-Sink : List Node -> Node -> Set
+Sink : Subgraph -> Node -> Set
 Sink ws x = null (outs ws x) ≡ true
 
 ------------------------------------------------------------------------
@@ -81,7 +87,7 @@ trailEnd (tCons e t) = there (trailEnd t)
 -- w is reachable from v inside ws: a trail, and the vertices it visits, all
 -- in ws.
 
-record Reaches (ws : List Node) (v w : Node) : Set where
+record Reaches (ws : Subgraph) (v w : Node) : Set where
   constructor reachesBy
   field
     via     : List Node
@@ -91,7 +97,7 @@ record Reaches (ws : List Node) (v w : Node) : Set where
 -- A set C closed under G inside ws keeps every trail inside ws that starts in
 -- it: the trail lies in C, and so does its endpoint.
 
-module _ {ws C : List Node} (cl : Closed[ G ▷ ws ] C) where
+module _ {ws : Subgraph} {C : List Node} (cl : Closed[ G ▷ ws ] C) where
 
   private
     trailInto : u ∈ C -> Trail u zs w -> zs ⊆ ws -> zs ⊆ C
@@ -120,7 +126,7 @@ module _ {ws C : List Node} (cl : Closed[ G ▷ ws ] C) where
 -- completeness.  Both the reachable set below (Seed = v ≡ᵛ_) and Ust of
 -- LTL.5-States.Closure (Seed = "contains P") are instances.
 
-module _ (Seed : Pred) (ws : List Node) where
+module _ (Seed : Pred) (ws : Subgraph) where
 
   wanted : List Node -> Node -> Bool
   wanted acc x = Seed x ∨ᵇ any (λ y -> G y x) acc
@@ -171,7 +177,7 @@ module _ (Seed : Pred) (ws : List Node) where
 
 -- z is reached inside ws from a seed: a member of ws satisfying Seed.
 
-record Seeded (Seed : Pred) (ws : List Node) (z : Node) : Set where
+record Seeded (Seed : Pred) (ws : Subgraph) (z : Node) : Set where
   constructor seededBy
   field
     seed      : Node
@@ -182,7 +188,7 @@ record Seeded (Seed : Pred) (ws : List Node) (z : Node) : Set where
 -- Every vertex a round adds is seeded: it is a seed itself, or a successor of
 -- a member of acc, whose trail grows by one step.
 
-roundSeeded : (Seed : Pred) (ws acc : List Node)
+roundSeeded : (Seed : Pred) (ws : Subgraph) (acc : List Node)
            -> (∀[ z ∈ acc ] Seeded Seed ws z)
            -> ∀[ z ∈ addRound Seed ws acc ] Seeded Seed ws z
 roundSeeded Seed ws acc sd z m =
@@ -221,7 +227,7 @@ roundSeeded Seed ws acc sd z m =
 -- nothing missing, and the closure's properties are read off the two.  The
 -- search also keeps All Pool (ws ∖ acc), which only makes it stop.
 
-module _ (Seed : Pred) (ws : List Node) where
+module _ (Seed : Pred) (ws : Subgraph) where
 
   record GrowInv (acc : List Node) : Set where
     constructor growInv
@@ -253,7 +259,7 @@ module _ (Seed : Pred) (ws : List Node) where
 -- is in it, and it is finite.  Outside the block, closure takes all five
 -- arguments.
 
-module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : All Pool ws)
+module _ (Seed : Pred) (ws : Subgraph) {Pool : Pred} (subset : All Pool ws)
          (fin : Finiteᵛ Pool) where
 
   open Grown (grow Seed ws [] (λ z mz -> subset z (∖-⊆ ws [] z mz))
@@ -283,36 +289,36 @@ module _ (Seed : Pred) (ws : List Node) {Pool : Pred} (subset : All Pool ws)
 ------------------------------------------------------------------------
 -- The reachable set: the closure of the single seed v, on listFinite ws.
 
-reachSet : List Node -> Node -> List Node
+reachSet : Subgraph -> Node -> List Node
 reachSet ws v = closure (v ≡ᵛ_) ws (∈ᵛ-complete ws) (listFinite ws)
 
-reachIn : (ws : List Node) (v : Node)
+reachIn : (ws : Subgraph) (v : Node)
        -> ∀ⁱ[ z ∈ reachSet ws v ] z ∈ ws
 reachIn ws v {z} = closureIn (v ≡ᵛ_) ws (∈ᵛ-complete ws) (listFinite ws) z
 
-reachTrail : (ws : List Node) (v : Node)
+reachTrail : (ws : Subgraph) (v : Node)
           -> ∀ⁱ[ z ∈ reachSet ws v ] Reaches ws v z
 reachTrail ws v {z} m =
   subst (λ y -> Reaches ws y z) (sym (≡ᵛ-sound v seed seedHolds)) reaches
   where open Seeded (closureSeeded (v ≡ᵛ_) ws (∈ᵛ-complete ws) (listFinite ws) z m)
 
-reachSeed : (ws : List Node) -> ∀[ v ∈ ws ] v ∈ reachSet ws v
-reachSeed ws v mv =
+reachSeed : ∀[ v ∈ ws ] v ∈ reachSet ws v
+reachSeed {ws} v mv =
   closureSeed (v ≡ᵛ_) ws (∈ᵛ-complete ws) (listFinite ws) mv (≡ᵛ-refl v)
 
-reachClosed : (ws : List Node) (v : Node)
+reachClosed : (ws : Subgraph) (v : Node)
            -> Closed[ G ▷ ws ] (reachSet ws v)
 reachClosed ws v = closureClosed (v ≡ᵛ_) ws (∈ᵛ-complete ws) (listFinite ws)
 
 -- Completeness: the set is closed under G inside ws, so a trail inside ws
 -- from a member ends in it.
 
-reachComplete : (ws : List Node) (v : Node) -> v ∈ ws
+reachComplete : (v : Node) -> v ∈ ws
              -> Reaches ws v w
              -> w ∈ reachSet ws v
-reachComplete ws v mv = reachesEndIn (reachClosed ws v) (reachSeed ws v mv)
+reachComplete {ws} v mv = reachesEndIn (reachClosed ws v) (reachSeed v mv)
 
-reachTrans : (ws : List Node) (v u w : Node)
+reachTrans : (ws : Subgraph) (v u w : Node)
           -> u ∈ reachSet ws v -> w ∈ reachSet ws u
           -> w ∈ reachSet ws v
 reachTrans ws v u w mu mw =

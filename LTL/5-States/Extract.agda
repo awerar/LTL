@@ -50,14 +50,14 @@ betaIntro ws m = ⋁Intro (map chi ws) (∈-map⁺ chi m)
 -- lemma offers ALL state-successors of u, and each lies in Ust P, where the
 -- hypothesis applies.
 
-Refuted : List Val -> Set
+Refuted : Subgraph -> Set
 Refuted us =
   ∀[ u ∈ Ust ] (u ∈ᵛ us ≡ false -> ⊢ ¬ (chi u))
 
 ------------------------------------------------------------------------
 -- (R1): u has no successor inside us.
 
-r1 : List Val -> Val -> Bool
+r1 : Subgraph -> Val -> Bool
 r1 us u = null (succs us u)
 
 -- A state to which (R1) applies.  stepLemma gives the successors of u
@@ -65,7 +65,7 @@ r1 us u = null (succs us u)
 -- empty.  So every disjunct of beta is refuted by the hypothesis, (D1) puts
 -- the refutation under ○, and (Lin) brings the negation out.
 
-extractR1 : (us : List Val) (u : Val)
+extractR1 : (us : Subgraph) (u : Val)
          -> u ∈ Ust -> Refuted us -> r1 us u ≡ true
          -> ⊢ ¬ (chi u)
 extractR1 us u mu ih e1 =

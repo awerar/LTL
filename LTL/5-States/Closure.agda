@@ -51,7 +51,7 @@ stHasLength x m = hasLength-intro (length stateAtoms) x (stLen m)
 -- Ust P: the successor closure of the states that contain P.  Every search
 -- runs on it.
 
-Ust : List Val
+Ust : Subgraph
 Ust = closure containsP St stHasLength stateFinite
 
 ustSt : ∀ⁱ[ v ∈ Ust ] v ∈ St

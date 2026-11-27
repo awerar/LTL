@@ -31,6 +31,8 @@ open Membership eq public
 --
 --   Pred                a predicate on nodes
 --   Edges               a graph, given as its edge test
+--   Subgraph            a vertex list, read as the subgraph it induces: the
+--                       edges of the graph at hand between its members
 --   Closed[ G ▷ ws ] C  C is closed under G-successors that lie in ws
 --                       (▷ is Z's range restriction: G's edges into ws)
 --   None f C            no member of C is in f (All's counterpart)
@@ -43,9 +45,15 @@ Pred = Node -> Bool
 Edges : Set
 Edges = Node -> Node -> Bool
 
+-- A synonym, so a list a search computes (reachSet ws v, ws ∖ C) is a
+-- subgraph as it stands.
+
+Subgraph : Set
+Subgraph = List Node
+
 infix 4 Closed
 
-Closed : (ws : List Node) (G : Edges) (C : List Node) -> Set
+Closed : (ws : Subgraph) (G : Edges) (C : List Node) -> Set
 Closed ws G C = ∀ⁱ[ z ∈ C ] ∀ⁱ[ y ∈ ws ] (G z y ≡ true -> y ∈ C)
 
 syntax Closed ws G C = Closed[ G ▷ ws ] C
@@ -53,7 +61,7 @@ syntax Closed ws G C = Closed[ G ▷ ws ] C
 None : Pred -> List Node -> Set
 None f C = ∀[ z ∈ C ] z ∉ᵖ f
 
-HoldsOutside : (Node -> Set) -> List Node -> Set
+HoldsOutside : (Node -> Set) -> Subgraph -> Set
 HoldsOutside R ws = (z : Node) -> z ∈ᵛ ws ≡ false -> R z
 
 ------------------------------------------------------------------------
@@ -133,8 +141,9 @@ All-apart p q h z m = separate p q (h z m)
 -- next hands over.  A removing search has xs = ws (∖-⊆), a growing one the
 -- candidates of the round before (∖-antitone).
 
-All-∖ : {Pool : Pred} {xs : List Node} (ws C : List Node) {x : Node}
-     -> ws ∖ C ⊆ xs -> All Pool xs -> x ∈ C -> All (Pool ∩ (x ≢ᵛ_)) (ws ∖ C)
+All-∖ : {Pool : Pred} {xs : List Node} (ws : Subgraph) (C : List Node)
+     -> {x : Node} -> ws ∖ C ⊆ xs -> All Pool xs -> x ∈ C
+     -> All (Pool ∩ (x ≢ᵛ_)) (ws ∖ C)
 All-∖ ws C {x} s subset m =
   All-∩ (All-⊆ s subset)
         (All-apart (λ z -> ¬ᵇ (z ∈ᵛ C)) (cong ¬ᵇ_ (∈ᵛ-complete C x m))

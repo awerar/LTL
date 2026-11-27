@@ -72,8 +72,12 @@ derivation or a certified finite lasso countermodel.
   `⊥`/`⊤` are formulas; `Empty` is `Statement`'s, re-exported by `Base`.
   Function types and lambdas stay ASCII (`->`) apart from `λ`.
 - Signatures: use the named hypotheses instead of spelling them out:
-  `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `xs ⊆ ys`,
-  `Closed[ G ▷ ws ] C`, `None f C`, `HoldsOutside R ws`,
+  `Pred`/`Edges` (`Node -> Bool`, `Node -> Node -> Bool`), `Subgraph`
+  (`List Node`: a vertex list, read as the subgraph of the edge test it
+  induces; the type of every argument a graph notion is taken inside, such
+  as `ws` in `outs ws x`, `Reaches ws`, `Cert fs ws`, `Refuted ws`, and of
+  `Ust`, while visited lists, components and accumulators stay `List Node`),
+  `xs ⊆ ys`, `Closed[ G ▷ ws ] C`, `None f C`, `HoldsOutside R ws`,
   `All Pool xs`, `Finiteᵛ Pool` (all `LTL/1-Lib/Nodes.agda`; list
   difference `ws ∖ C` is `Membership`'s, in `LTL/1-Lib/DecEq.agda`, and a
   growing search's invariant is `All Pool (ws ∖ acc)`), `Fair P cy` (`LTL/6-Countermodel/Lasso.agda`).
@@ -85,7 +89,7 @@ derivation or a certified finite lasso countermodel.
   `Exhaustible Apart Pool` (`Finiteᵛ Pool` at nodes): `Pool` is the set
   still to pick from, `Apart x` what may follow a pick of x.
   A run of lemmas that share leading arguments, passed on
-  unchanged, sits in a `module _ (ws : List Val) (G : Edges) where` block, so
+  unchanged, sits in a `module _ (ws : Subgraph) (G : Edges) where` block, so
   callers outside see the same arguments.
 - Implicit arguments: a leading implicit that no clause or `where` block
   names is a `private variable`, declared at the top of the module
@@ -95,17 +99,18 @@ derivation or a certified finite lasso countermodel.
   `⇒Trans : ⊢ A ⇒ B -> ⊢ B ⇒ C -> ⊢ A ⇒ C`. A variable is not in scope in the
   body: a definition whose clauses bind its implicits (`∧Fst {A} {B} = …`)
   keeps its binders, and one whose body needs a single name binds it by name
-  (`finiteOfList {Pool = Pool} …`) or sits in a `module _ {ws : List Node}` block,
+  (`finiteOfList {Pool = Pool} …`) or sits in a `module _ {ws : Subgraph}` block,
   which also carries shared explicit arguments (`reachesInto`'s `cl`).
   Generalised arguments come in order of first appearance in the signature.
   A variable clashes with any definition of the same name in the module,
   `where`-local ones and record fields included; hence `r` is not a variable in
   `FairGraph` (the `r` fields of `TerminalIn`, `FairIn`, `FairLoop`). In the
   graph layer `ws` is a variable wherever another argument's type fixes it (a
-  `Reaches`, `Loop`, `Circuit`, `FairIn`, `zs ⊆ ws` or `Closed`
-  hypothesis), so a call reads `reachesApp r1 r2`; it stays explicit where it
-  only occurs under a function (`reachSet ws v`, `sccOf ws r`, `outs ws x`),
-  since Agda cannot infer it there.
+  `Reaches`, `Loop`, `Circuit`, `FairIn`, `TerminalIn`, `v ∈ ws`, `zs ⊆ ws` or
+  `Closed` hypothesis), so a call reads `reachesApp r1 r2`, `reachSeed v mv`;
+  it stays explicit where it only occurs under a function (`reachSet ws v`,
+  `sccOf ws r`, `outs ws x`, so also `Sink ws x` and `IsTerminal ws r`), since
+  Agda cannot infer it there.
 - P-modules: the modules that work over one formula P — `State`, `Step`,
   `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,
@@ -185,7 +190,7 @@ module name). Folder names never equal a module name.
    `Nodes` (parameterised by a
    node type and `eq : DecEq Node`, re-exporting `Membership eq`: `Finiteᵛ`
    (`Finite eq`),
-   `listFinite`, the hypothesis names, and the algebra of `All Pool xs`,
+   `listFinite`, the hypothesis names (with `Subgraph`), and the algebra of `All Pool xs`,
    the bridge from lists to pools: `All-⊆`, `All-∩`, `All-apart`,
    `All-∖`). m5's graph layer, parameterised like `Nodes` and by the
    edge test `G`: `Graph` (trails, the growing search `closure`, and the
