@@ -280,6 +280,7 @@ LTL.2-Syntax.Skel.argsAt	3e5f4b4c5350	2026-11-24
 LTL.2-Syntax.Skel.argsOf	0694bf32e789	2026-11-24	
 LTL.2-Syntax.Skel.atomBit	5f8d4c0de937	2026-11-27	
 LTL.2-Syntax.Skel.atomBit-rowOf	d2c5e5526d58	2026-11-27	
+LTL.2-Syntax.Skel.atomIsAtom	f60846cba75e	2026-11-27	
 LTL.2-Syntax.Skel.atomLook	6d627b65da26	2026-11-25	
 LTL.2-Syntax.Skel.atomSub	c06718b6d8c8	2026-11-27	
 LTL.2-Syntax.Skel.atoms	9718700495c8	2026-11-27	

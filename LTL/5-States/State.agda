@@ -42,22 +42,24 @@ valOf v = propValue (atomBit v)
 -- once, with their round trips to sub P.
 
 eventualities : List Formula
-eventualities = argsOf □_ stateAtoms
+eventualities = concatMap □Arg stateAtoms
 
 nexts : List Formula
-nexts = argsOf ○_ stateAtoms
+nexts = concatMap ○Arg stateAtoms
 
 evIn : {A : Formula} -> □ A ∈ sub P -> A ∈ eventualities
-evIn m = ∈-argsOf⁺ □_ stateAtoms here (∈-atoms⁺ P _ m refl)
+evIn m = ∈-concatMap⁺ □Arg (∈-atoms⁺ P _ m refl) here
 
 evSub : ∀ⁱ[ A ∈ eventualities ] □ A ∈ sub P
-evSub m = atomSub P (∈-argsOf⁻ □_ stateAtoms m)
+evSub {A} m with ∈-concatMap⁻ □Arg stateAtoms m
+... | X , mX , k = atomSub P (subst (λ Y -> Y ∈ stateAtoms) (□Arg-inv X k) mX)
 
 nextIn : {A : Formula} -> ○ A ∈ sub P -> A ∈ nexts
-nextIn m = ∈-argsOf⁺ ○_ stateAtoms here (∈-atoms⁺ P _ m refl)
+nextIn m = ∈-concatMap⁺ ○Arg (∈-atoms⁺ P _ m refl) here
 
 nextSub : ∀ⁱ[ A ∈ nexts ] ○ A ∈ sub P
-nextSub m = atomSub P (∈-argsOf⁻ ○_ stateAtoms m)
+nextSub {A} m with ∈-concatMap⁻ ○Arg stateAtoms m
+... | X , mX , k = atomSub P (subst (λ Y -> Y ∈ stateAtoms) (○Arg-inv X k) mX)
 
 ------------------------------------------------------------------------
 -- The characteristic formula chi v of a valuation, and beta vs, the

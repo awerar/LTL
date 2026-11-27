@@ -209,7 +209,7 @@ module name). Folder names never equal a module name.
    abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (the propositional skeleton: `Statement`'s
    `propValue` is the one propositional evaluation, of a reading ρ of the atoms;
    rows `Row As` (one bit per member of `As`, constructors `∅` and `_▸_`), `atomBit`,
-   `rowOf`, the truth table `rows`; `nub`, `atoms`, `argsOf` (the A with `c A` in a list);
+   `rowOf`, the truth table `rows`; `nub`, `atoms`, `□Arg`/`○Arg` (the A with X = □ A, resp. ○ A, by pattern matching);
    `propValue-cong` (readings agreeing on the atoms agree on `sub P`),
    `propValue-agree` (a compositional reading is its own `propValue`); `isTaut` for (PC),
    equivalent to `Tautology` by `isTaut-sound`/`isTaut-complete`); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).

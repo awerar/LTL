@@ -114,40 +114,41 @@ atomIsAtom : (B : Formula) -> ∀ⁱ[ A ∈ atoms B ] isAtom A ≡ true
 atomIsAtom B {A} m = filter-prop isAtom (nub (sub B)) A m
 
 ------------------------------------------------------------------------
--- The arguments of the box- and next-subformulas.
---
--- argsOf c As collects the A for which c A occurs in As.  At c = □_ these
--- are the eventualities, at c = ○_ the arguments (T1) is imposed at;
--- LTL.5-States.State reads both at the atoms of P, so each is listed
--- once.  argsAt c X keeps the immediate subformulas A of X with c A = X, so
--- the one equality test ≡ᶠ serves every connective.
+-- The arguments of the □- and ○-formulas.  □Arg X is [ A ] when X is
+-- □ A and [] otherwise, so concatMap □Arg over a list collects the A with
+-- □ A in it: LTL.5-States.State's eventualities, read at the atoms of P so
+-- each is listed once.  ○Arg is the same at ○, for the arguments (T1) is
+-- imposed at.  The inversion lemmas are by pattern matching.
 
-children : Formula -> List Formula
-children (var n) = []
-children (¬ A)   = A ∷ []
-children (A ⇒ B) = A ∷ B ∷ []
-children (○ A)   = A ∷ []
-children (□ A)   = A ∷ []
+□Arg : Formula -> List Formula
+□Arg (var n) = []
+□Arg (¬ A)   = []
+□Arg (A ⇒ B) = []
+□Arg (○ A)   = []
+□Arg (□ A)   = A ∷ []
 
-argsAt : (Formula -> Formula) -> Formula -> List Formula
-argsAt c X = filter (λ A -> c A ≡ᶠ X) (children X)
+□Arg-inv : (X : Formula) -> ∀ⁱ[ A ∈ □Arg X ] X ≡ □ A
+□Arg-inv (var n) ()
+□Arg-inv (¬ B)   ()
+□Arg-inv (B ⇒ C) ()
+□Arg-inv (○ B)   ()
+□Arg-inv (□ B)   here       = refl
+□Arg-inv (□ B)   (there ())
 
-argsOf : (Formula -> Formula) -> List Formula -> List Formula
-argsOf c = concatMap (argsAt c)
+○Arg : Formula -> List Formula
+○Arg (var n) = []
+○Arg (¬ A)   = []
+○Arg (A ⇒ B) = []
+○Arg (○ A)   = A ∷ []
+○Arg (□ A)   = []
 
-∈-argsOf⁺ : (c : Formula -> Formula) (As : List Formula) {A : Formula}
-         -> A ∈ children (c A) -> c A ∈ As -> A ∈ argsOf c As
-∈-argsOf⁺ c As {A} ch m =
-  ∈-concatMap⁺ (argsAt c) m
-    (∈-filter⁺ (λ B -> c B ≡ᶠ c A) (children (c A)) ch (≡ᶠ-refl (c A)))
-
-∈-argsOf⁻ : (c : Formula -> Formula) (As : List Formula)
-         -> ∀ⁱ[ A ∈ argsOf c As ] c A ∈ As
-∈-argsOf⁻ c As {A} m with ∈-concatMap⁻ (argsAt c) As m
-... | X , mX , k =
-  subst (λ Y -> Y ∈ As)
-        (sym (≡ᶠ-sound (c A) X (filter-prop (λ B -> c B ≡ᶠ X) (children X) A k)))
-        mX
+○Arg-inv : (X : Formula) -> ∀ⁱ[ A ∈ ○Arg X ] X ≡ ○ A
+○Arg-inv (var n) ()
+○Arg-inv (¬ B)   ()
+○Arg-inv (B ⇒ C) ()
+○Arg-inv (○ B)   here       = refl
+○Arg-inv (○ B)   (there ())
+○Arg-inv (□ B)   ()
 
 ------------------------------------------------------------------------
 -- The skeleton evaluation is propValue (LTL.Statement): ρ reads the atoms,
