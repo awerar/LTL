@@ -15,9 +15,9 @@
 -- visits a state where the eventuality is not pending (and then, by
 -- persistence, it is pending nowhere on the cycle) or one where A fails.
 --
--- Fairness of the cycle: given □ A pending at the base point r, persistTo
--- from r to the witness z either fulfils it or leaves it pending at z, where
--- evPred says A fails.  The graph search runs on Ust P, whose members are
+-- Fairness of the cycle: given □ A pending at the base point r,
+-- trailPersist along the cycle's prefix from r to the witness z (trailTo)
+-- either fulfils it or leaves it pending at z, where evPred says A fails.  The graph search runs on Ust P, whose members are
 -- states, so its loops are lassos as they stand.
 
 open import LTL.2-Syntax.Formula using (Formula)
@@ -59,26 +59,6 @@ evWitness A z ez pd =
   ] (∨ᵇ-true (valOf z (□ A)) (¬ᵇ valOf z A) ez)
 
 ------------------------------------------------------------------------
--- Persistence to a state VISITED, not to the endpoint: trailPersist with the
--- target carried along and the walk cut short when it is reached.
-
-persistTo : (A : Formula) -> □ A ∈ sub P
-         -> {v : Val} {ws : List Val} {x : Val} -> Trail v ws x
-         -> valOf v (□ A) ≡ false
-         -> ∀ⁱ[ z ∈ ws ] (Fulfil A v ws ⊎ valOf z (□ A) ≡ false)
-persistTo A mb tNil e ()
-persistTo A mb (tCons {v} {w} {ws} {x} st wk) e {z} mz =
-  onA z mz
-  where
-    onA : ∀[ y ∈ w ∷ ws ] (Fulfil A v (w ∷ ws) ⊎ valOf y (□ A) ≡ false)
-    onA y my with valOf v A in ea
-    ... | false = inl (ful v here ea)
-    onA y here      | true = inr (persist v w A mb st e ea)
-    onA y (there k) | true =
-      [ (λ f -> inl (fulfilCons f)) , inr ]
-        (persistTo A mb wk (persist v w A mb st e ea) k)
-
-------------------------------------------------------------------------
 -- A FairLoop in Ust is a Lasso.  The loop's cycle is q ∷ qs, and the first
 -- edge of its trail is the lasso's closing step from the base point r to q.
 
@@ -105,6 +85,11 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts sst)
       where
         onW : (∃[ z ∈ cy ] z ∈ᵖ evPred A)
            -> Fulfil A r cy
-        onW (z , mz , ez) =
-          [ (λ f -> f) , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]
-            (persistTo A (evSub mA) tcy pr mz)
+        onW (z , mz , ez) = onPrefix (trailTo tcy ⊆-refl mz)
+          where
+            -- trailPersist along the prefix of the cycle that ends at z
+            onPrefix : Reaches cy r z -> Fulfil A r cy
+            onPrefix (reachesBy pre tp spre) =
+              [ fulfilWiden spre
+              , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]
+                (trailPersist A (evSub mA) tp pr)

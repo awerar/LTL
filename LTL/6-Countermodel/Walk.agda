@@ -49,6 +49,13 @@ fulfilCons : {A : Formula} {v w : Val} {ws : List Val}
           -> Fulfil A w ws -> Fulfil A v (w ∷ ws)
 fulfilCons (ful z m q) = ful z (there m) q
 
+-- ... and to a walk that visits more.
+
+fulfilWiden : {A : Formula} {v : Val} {xs ys : List Val}
+           -> xs ⊆ ys -> Fulfil A v xs -> Fulfil A v ys
+fulfilWiden subset (ful z here      q) = ful z here q
+fulfilWiden subset (ful z (there m) q) = ful z (there (subset z m)) q
+
 ------------------------------------------------------------------------
 -- Persistence along a walk.  If □ A is pending at v then, walking to x,
 -- either A fails somewhere on the way (the eventuality is fulfilled) or □ A

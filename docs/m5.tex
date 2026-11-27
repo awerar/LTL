@@ -214,12 +214,12 @@ If $r$ has no out-edge in $W$ we are in the first case.  If some $f_i$ is false
 throughout $C$ we are in the third case.  Otherwise each
 $f_i$ has a witness $w_i\in C$.  Since $r$ has an out-edge $x\in W$ and $r$
 reaches $x$, terminality sends a trail from $x$ back to $r$, so there is a
-non-empty closed trail $c_0$ at $r$.  Now add one \emph{leg} per fairness
-predicate: the leg for $f_i$ is $c_0$ followed by a trail $r\to w_i$ inside $C$
-followed by a trail $w_i\to r$ inside $C$, both of which exist because $C$ is a
-component.  Carrying $c_0$ in front makes the first half non-empty, so $w_i$ is
-a vertex the leg \emph{visits} and not merely an endpoint --- which matters when
-$w_i=r$.  The concatenation of the legs with $c_0$ is a circuit at $r$.
+non-empty closed trail $c_0$ at $r$.  Now append one \emph{leg} per fairness
+predicate: the leg for $f_i$ is a trail $r\to w_i$ inside $C$ followed by a
+trail $w_i\to r$ inside $C$, both of which exist because $C$ is a component.
+Since the leg follows the non-empty $c_0$, $w_i$ is a vertex the circuit
+\emph{visits} and not merely an endpoint --- which matters when $w_i=r$, and the
+leg is empty.  $c_0$ followed by the legs is a circuit at $r$.
 \end{proof}
 
 \begin{theorem}[Fair-graph certificate]\label{thm:fairgraph}
@@ -259,17 +259,19 @@ A certificate for $W$ forbids a circuit inside $W$.
 Induction on the certificate; each step shows the circuit \emph{survives} the
 removal, so it is still there when nothing is left, which (C0) forbids.
 
-For (C1): a vertex on a cycle has a successor --- along a trail, every vertex
-visited has a successor provided the endpoint has, and for a closed trail the
-endpoint is the start, whose successor is the trail's own first step --- so a
-sink lies on no cycle, and the cycle avoids $\mathrm{scc}_W(x)=\{x\}$.
+Both cases rest on one observation: any vertex of a cycle reaches any other ---
+take the suffix of the trail to the base point and then the prefix out again ---
+and a successor-closed block that a trail starts in contains everything the
+trail reaches; a terminal component is one.  So a cycle that meets the removed
+component lies inside it.
 
-For (C2): any vertex of a cycle reaches any other --- take the suffix of the
-trail to the base point and then the prefix out again --- and a successor-closed
-block that a trail starts in contains everything the trail reaches; a terminal
-component $C:=\mathrm{scc}_W(r)$ is one.  So if the cycle met $C$ it would lie
-inside $C$, and then its witness for $f_i$ would
-satisfy an $f_i$ that is false throughout $C$.  Hence the cycle avoids $C$.
+For (C1) the component is $\mathrm{scc}_W(x)=\{x\}$, so the cycle's base point
+would be $x$, and its first step an out-edge of $x$.  Hence the cycle avoids
+$\{x\}$.
+
+For (C2), with $C:=\mathrm{scc}_W(r)$, the cycle's witness for $f_i$ would lie
+in $C$ and satisfy an $f_i$ that is false throughout $C$.  Hence the cycle
+avoids $C$.
 \end{proof}
 
 \begin{corollary}\label{cor:decision}
@@ -539,13 +541,13 @@ $\Always(p\vee q)\to(\Always p\vee\Always q)$ the two countermodels differ:
 \begin{tabular}{lccc}
               & start & stem & cycle\\\hline
 $\mathrm{decide}$    & $p\wedge q$, neither forever & 3 & 1\\
-$\mathrm{decideSCC}$ & $q$, not $p$                 & 2 & 4\\
+$\mathrm{decideSCC}$ & $q$, not $p$                 & 2 & 1\\
 \end{tabular}
 \end{center}
 Both are countermodels and each carries its own refutation of derivability.
-The cycle of length four is not an accident: the construction of
-Lemma~\ref{lem:block} prepends one leg per fairness predicate to the bare loop,
-and $\Sub$ of the negation has three eventualities.
+The cycle is a single state: the construction of Lemma~\ref{lem:block}
+appends one leg per fairness predicate to the bare loop, and here every
+witness is the base point, so each of the three legs is empty.
 
 \medskip\noindent\textbf{Cost.}  Measured cold, with the import baseline
 subtracted:

@@ -26,10 +26,11 @@
 --    they need no guard.  Every step of a certificate therefore removes a
 --    whole component.
 --
--- Exclusivity needs no infinite paths: a vertex on a cycle has a successor,
--- so a sink lies on no cycle; and any vertex of a cycle reaches any other, so
--- a cycle that enters a successor-closed block never leaves it.  Both are
--- inductions on a finite trail.
+-- Exclusivity needs no infinite paths: any vertex of a cycle reaches any
+-- other, so a cycle that enters a successor-closed block lies inside it.  A
+-- removed component is such a block, and it either is a sink, out of which
+-- the cycle could not step, or misses a predicate the cycle meets.  This is
+-- an induction on a finite trail.
 
 open import LTL.1-Lib.Prelude
 open import LTL.1-Lib.DecEq using (DecEq)
@@ -256,51 +257,34 @@ module _ {ws : List Node} {r : Node} where
 
           open Reaches (sccFrom ws r x (terminalScc ws r et inR))
 
-  -- One fairness predicate added to a circuit.  The leg is  loop ++ (r to w)
-  -- ++ (w to r) , with the loop in front so that the r-to-w half is non-empty
-  -- and w is a vertex the leg VISITS.  trailApp is left-nested so that
-  -- associativity never appears.
+  -- One fairness predicate added to a circuit: the cycle, then a trail out
+  -- to the witness w and one back to r.  The trail out starts at the cycle's
+  -- first vertex q, so w is a vertex the new cycle VISITS.  trailApp is
+  -- left-nested so that associativity never appears.
 
-  consCirc : Loop ws r
-          -> (f : Pred) (w : Node) -> f w ≡ true
+  consCirc : (f : Pred) (w : Node) -> f w ≡ true
           -> Reaches ws r w -> Reaches ws w r
           -> (fs : List Pred) -> Circuit ws fs r
           -> Circuit ws (f ∷ fs) r
-  consCirc (loopBy q0 qs0 (tCons g0 t0) s0) f w fw (reachesBy as ta sa)
-           (reachesBy bs tb sbs) fs (circuit (loopBy q qs t scy) wit) =
-    circuit (loopBy q0 (leg ++ cy) (trailApp legT t)
-                    (++-⊆ (q0 ∷ leg) legIn scy))
+  consCirc f w fw (reachesBy as ta sa) (reachesBy bs tb sb) fs
+           (circuit (loopBy q qs t@(tCons e tq) scy) wit) =
+    circuit (loopBy q ((qs ++ as) ++ bs) (trailApp (trailApp t ta) tb)
+                    (++-⊆ out (++-⊆ cy scy sa) sb))
             each
     where
-      cy : List Node
-      cy = q ∷ qs
+      cy out : List Node
+      cy  = q ∷ qs
+      out = cy ++ as
 
-      -- front and leg are the visited lists after q0, the loop's first vertex
-      front : List Node
-      front = qs0 ++ as
-
-      frontT : Trail r (q0 ∷ front) w
-      frontT = tCons g0 (trailApp t0 ta)
-
-      leg : List Node
-      leg = front ++ bs
-
-      legT : Trail r (q0 ∷ leg) r
-      legT = trailApp frontT tb
-
-      legIn : q0 ∷ leg ⊆ ws
-      legIn = ++-⊆ (q0 ∷ front) (++-⊆ (q0 ∷ qs0) s0 sa) sbs
-
-      mw : w ∈ q0 ∷ leg
-      mw = ∈-++⁺ˡ (q0 ∷ front) bs (trailEnd (trailApp t0 ta))
-
-      each : ∀[ g ∈ f ∷ fs ] ∃[ z ∈ (q0 ∷ leg) ++ cy ] z ∈ᵖ g
-      each g here      = w , ∈-++⁺ˡ (q0 ∷ leg) cy mw , fw
+      each : ∀[ g ∈ f ∷ fs ] ∃[ z ∈ out ++ bs ] z ∈ᵖ g
+      each g here      = w , ∈-++⁺ˡ out bs (trailEnd (trailApp tq ta)) , fw
       each g (there m) = shift (wit g m)
         where
-          shift : (∃[ z ∈ cy ] z ∈ᵖ g)
-               -> ∃[ z ∈ (q0 ∷ leg) ++ cy ] z ∈ᵖ g
-          shift (z , mz , gz) = z , ∈-++⁺ʳ (q0 ∷ leg) cy mz , gz
+          shift : (∃[ z ∈ cy ] z ∈ᵖ g) -> ∃[ z ∈ out ++ bs ] z ∈ᵖ g
+          shift (z , mz , gz) = z , ∈-++⁺ˡ out bs (∈-++⁺ˡ cy as mz) , gz
+
+  -- The circuit for fs: the loop l0, then one leg for each predicate, out
+  -- to a witness in C and back.
 
   mkCirc : Loop ws r
         -> (C : List Node)
@@ -321,7 +305,7 @@ module _ {ws : List Node} {r : Node} where
       pick : (∃[ w ∈ C ] w ∈ᵖ f)
           -> Circuit ws (f ∷ fs) r
       pick (w , mw , fw) =
-        consCirc l0 f w fw (to w mw) (from w mw) fs rest
+        consCirc f w fw (to w mw) (from w mw) fs rest
 
 ------------------------------------------------------------------------
 -- The negative certificate: a well-founded record of the removal order,
@@ -477,11 +461,9 @@ module _ (fs : List Pred) (R : Node -> Set)
     certAll c (dropOutside ws (component t) ih (removedHolds t why ih)) z
 
 ------------------------------------------------------------------------
--- The two outputs are EXCLUSIVE, by two observations about a closed trail:
---
---   a vertex on a cycle has a successor,  so a sink is on no cycle;
---   any vertex of a cycle reaches any other,  so a cycle that enters a
---     successor-closed block never leaves it.
+-- The two outputs are EXCLUSIVE, by one observation about a closed trail:
+-- any vertex of a cycle reaches any other, so a cycle that enters a
+-- successor-closed block lies inside it.
 
 -- The suffix of a trail from any vertex it visits, and the prefix to one: all
 -- the "rotation" of a cycle the argument needs.
@@ -506,63 +488,46 @@ trailTo (tCons e t) subset here      =
 trailTo (tCons e t) subset (there k) =
   reachesCons (subset _ here) e (trailTo t (⊆-tail subset) k)
 
--- Observation one: a vertex on a cycle has a successor inside ws.  Along a
--- trail every vertex visited has one provided the endpoint has, and for a
--- loop the endpoint is r, whose successor is the loop's first vertex.
-
-record HasSucc (ws : List Node) (x : Node) : Set where
-  constructor hasSucc
-  field
-    next   : Node
-    nextIn : next ∈ ws
-    edge   : G x next ≡ true
-
-headSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w -> HasSucc ws v
-headSucc tNil                subset hw = hw
-headSucc (tCons {x = y} e t) subset hw = hasSucc y (subset y here) e
-
-trailSucc : Trail v zs w -> zs ⊆ ws -> HasSucc ws w
-         -> ∀ⁱ[ x ∈ zs ] HasSucc ws x
-trailSucc tNil        subset hw ()
-trailSucc (tCons e t) subset hw here      =
-  headSucc t (⊆-tail subset) hw
-trailSucc (tCons e t) subset hw (there k) =
-  trailSucc t (⊆-tail subset) hw k
-
-loopSucc : {r : Node} (l : Loop ws r) -> ∀ⁱ[ x ∈ Loop.cycle l ] HasSucc ws x
-loopSucc (loopBy q qs t@(tCons e _) h) = trailSucc t h (hasSucc q (h q here) e)
-
--- Observation two: any vertex of a cycle reaches any other (suffix to the
--- base point, then prefix out), and a successor-closed block that a trail
--- starts in contains everything the trail reaches (reachesEndIn, in
--- LTL.1-Lib.Graph).
+-- Any vertex of a cycle reaches any other: the suffix to the base point, then
+-- the prefix out.
 
 cycConn : {r : Node} -> Trail r zs r -> zs ⊆ ws
        -> u ∈ zs -> z ∈ zs -> Reaches ws u z
 cycConn t subset mu mz = reachesApp (trailFrom t subset (there mu)) (trailTo t subset mz)
 
--- A circuit in ws misses every component removed for a reason: a sink is on
--- no cycle, and a closed component that the cycle entered would contain the
--- whole cycle, with it the witness of the f the component misses.
+-- A closed set that a cycle enters contains the whole cycle, since it
+-- contains everything a trail starting in it reaches (reachesEndIn, in
+-- LTL.1-Lib.Graph).
+
+cycleIn : {C : List Node} -> Closed[ G ▷ ws ] C -> Trail s zs s -> zs ⊆ ws
+       -> z ∈ zs -> z ∈ C -> ∀ⁱ[ y ∈ zs ] y ∈ C
+cycleIn cl t subset mz mzc my = reachesEndIn cl mzc (cycConn t subset mz my)
+
+-- A circuit in ws misses every component removed for a reason, since the
+-- component is closed: entered, it would contain the whole cycle.  For a sink
+-- that puts the base point s, the end of the cycle, in {r}, and the loop's
+-- first step leaves s; for an unfair component, the witness of the f it
+-- misses.
 
 avoids : {fs : List Pred} (t : TerminalIn ws) -> Reason fs t
       -> (c : Circuit ws fs s)
       -> ∀[ z ∈ Loop.cycle (Circuit.loop c) ] (z ∈ component t -> Empty)
-avoids {ws} t (sink e) (circuit l wit) z mz mzc =
-  onS (loopSucc l (subst (_∈ Loop.cycle l) (sinkAlone t e z mzc) mz))
+avoids {ws} {s = s} t (sink e) (circuit (loopBy q qs tr@(tCons g tq) h) wit) z mz mzc =
+  null-∈ (outs ws r) e
+    (∈-filter⁺ (G r) ws (h q here) (subst (λ y -> G y q ≡ true) sIsR g))
   where
     open TerminalIn t using (r)
 
-    onS : HasSucc ws r -> Empty
-    onS (hasSucc y my gy) = null-∈ (outs ws r) e (∈-filter⁺ (G r) ws my gy)
+    sIsR : s ≡ r
+    sIsR = sinkAlone t e _
+             (cycleIn (componentClosed t) tr h mz mzc (trailEnd tq))
 avoids t (unfair f mf mis) (circuit (loopBy q qs tr h) wit) z mz mzc =
   onW (wit f mf)
   where
     onW : (∃[ y ∈ q ∷ qs ] y ∈ᵖ f) -> Empty
-    onW (y , my , fy) = true≢false (trans (sym fy) (mis y inC))
-      where
-        inC : y ∈ component t
-        inC = reachesEndIn (componentClosed t) mzc (cycConn tr h mz my)
+    onW (y , my , fy) =
+      true≢false
+        (trans (sym fy) (mis y (cycleIn (componentClosed t) tr h mz mzc my)))
 
 -- A certificate for ws forbids a fair circuit inside ws.  By induction on the
 -- certificate: each step leaves the cycle untouched, so it is still there when

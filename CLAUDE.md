@@ -102,7 +102,7 @@ derivation or a certified finite lasso countermodel.
   `where`-local ones and record fields included; hence `r` is not a variable in
   `FairGraph` (the `r` fields of `TerminalIn`, `FairIn`, `FairLoop`). In the
   graph layer `ws` is a variable wherever another argument's type fixes it (a
-  `Reaches`, `Loop`, `Circuit`, `FairIn`, `HasSucc`, `zs ⊆ ws` or `Closed`
+  `Reaches`, `Loop`, `Circuit`, `FairIn`, `zs ⊆ ws` or `Closed`
   hypothesis), so a call reads `reachesApp r1 r2`; it stays explicit where it
   only occurs under a function (`reachSet ws v`, `sccOf ws r`, `outs ws x`),
   since Agda cannot infer it there.

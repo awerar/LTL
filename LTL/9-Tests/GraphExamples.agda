@@ -106,13 +106,12 @@ scc-sinkP = refl
 
 -- The lasso the fair branch returns.  findTerminal settles on s, so the stem is
 -- p -> q -> s and the loop is s -> q -> s.  With the predicates "is q" and "is
--- s", the cycle is one leg per predicate followed by the bare loop, each leg
--- the loop again then out to the witness and back:
+-- s", the cycle is the bare loop followed by one leg per predicate, the last
+-- predicate's first, each leg out to the witness and back:
 --
---   q s q s   for "is q" ,   q s   for "is s" ,   q s   the loop
+--   q s   the loop ,   nothing for "is s" (s is the base point) ,   q s   for "is q"
 --
--- The loop goes in FRONT so that the witness is a vertex the leg visits.  It
--- is not the shortest fair cycle; q s would do.
+-- It is not the shortest fair cycle; q s would do.
 
 loopCycle : {G : Edges} {vs : List Nat} {fs : List Pred} {v : Nat}
          -> FairLoop G vs fs v -> List Nat
@@ -139,7 +138,7 @@ fair-QS = refl
 stem-QS : stemOf fairQS ≡ gQ ∷ gS ∷ []
 stem-QS = refl
 
-cycle-QS : cycleOf fairQS ≡ gQ ∷ gS ∷ gQ ∷ gS ∷ gQ ∷ gS ∷ gQ ∷ gS ∷ []
+cycle-QS : cycleOf fairQS ≡ gQ ∷ gS ∷ gQ ∷ gS ∷ []
 cycle-QS = refl
 
 -- And the unfair side: nothing recurrent meets "is p".

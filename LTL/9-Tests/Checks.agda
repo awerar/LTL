@@ -185,8 +185,9 @@ axT-size = refl
 
 -- ◇ p is not valid, and the answer is a lasso.  The procedure runs on
 -- ¬ ◇ p = ¬ ¬ □ ¬ p , whose atoms are  □ ¬ p , p .  The countermodel is the
--- state  1 0  (□ ¬ p holds, p fails) looping to itself: p false forever.  The cycle holds two copies of the loop, since
--- the SCC construction prepends one leg per eventuality to the bare loop.
+-- state  1 0  (□ ¬ p holds, p fails) looping to itself: p false forever.  The
+-- cycle is that state alone: the leg for the one eventuality is empty, since
+-- its witness is the base point.
 
 ◇P-cmState : Val
 ◇P-cmState = true ∷ false ∷ []
@@ -204,11 +205,10 @@ cmLasso : (Q : Formula) -> LassoCountermodel Q -> Val × List Val × List Val
 cmLasso Q c = LassoCountermodel.start c , cmRest Q c , cmCycle Q c
 
 decide-◇P-lasso : cmLasso ◇P ◇P-cm ≡
-                  (◇P-cmState , ◇P-cmState ∷ ◇P-cmState ∷ [] ,
-                                ◇P-cmState ∷ ◇P-cmState ∷ [])
+                  (◇P-cmState , ◇P-cmState ∷ [] , ◇P-cmState ∷ [])
 decide-◇P-lasso = refl
 
-◇P-shape : cmShape ◇P ◇P-cm ≡ (2 , 2)
+◇P-shape : cmShape ◇P ◇P-cm ≡ (1 , 1)
 ◇P-shape = refl
 
 -- p fails at every stage, and so does ◇ p, the formula decided.  cmTrace uses
@@ -237,8 +237,7 @@ decide-◇P-lasso = refl
 --   (0,1)  ->  (1,0)  ->  (1,1)  ->  (1,1)  ->  ...
 --
 -- so p or q holds at every stage, while p fails at stage 0 and q at stage 1.
--- The cycle is the state where both hold, recorded four times (the loop and
--- one leg per eventuality).
+-- The cycle is the state where both hold.
 
 -- The atoms p and q of c5.
 
@@ -270,8 +269,7 @@ c5-cm : LassoCountermodel c5
 c5-cm = countermodelFrom (decide c5) refl
 
 decide-c5-lasso : cmLasso c5 c5-cm ≡
-                  (c5q , c5p ∷ c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ [] ,
-                         c5pq ∷ c5pq ∷ c5pq ∷ c5pq ∷ [])
+                  (c5q , c5p ∷ c5pq ∷ c5pq ∷ [] , c5pq ∷ [])
 decide-c5-lasso = refl
 
 c5-p : cmTrace c5 c5-cm cp 4 ≡ false ∷ true ∷ true ∷ true ∷ []
@@ -308,7 +306,7 @@ pretty-sugar :
 pretty-sugar = refl
 
 pretty-countermodel : prove (var 0 ⇒ □ var 0) ≡
-  "⊬ p ⇒ □ p\n\nCountermodel: the formula is false at time 0.  Variables true at each time:\n    0  {p}\n    1  {}\n    2  {p}\n    3  {p}\n    4  {p}\nthen repeating forever:\n    5  {p}\n    6  {p}\n  (back to time 5)\n"
+  "⊬ p ⇒ □ p\n\nCountermodel: the formula is false at time 0.  Variables true at each time:\n    0  {p}\n    1  {}\n    2  {p}\n    3  {p}\nthen repeating forever:\n    4  {p}\n  (back to time 4)\n"
 pretty-countermodel = refl
 
 ------------------------------------------------------------------------
