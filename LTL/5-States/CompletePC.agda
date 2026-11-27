@@ -48,8 +48,8 @@ stateFml = ⇒List s2List (beta St)
 tautState : isTaut stateFml ≡ true
 tautState =
   isTaut-intro stateFml λ a ->
-    □Chain (atomsOf stateFml) a eventualities (beta St)
-           (betaSkel (atomsOf stateFml) a P)
+    □Chain (atoms stateFml) a eventualities (beta St)
+           (betaSkel (atoms stateFml) a P)
 
 stateCompletePC : ⊢ beta St
 stateCompletePC = mpChain eventualities (pcTaut tautState)

@@ -1,8 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.3-Rules.PropList -- binary conjunction, case analysis, monotonicity
--- of ∨, and the list-indexed rules: (L2) projection out of ⋀, (L5) ⋁
--- introduction and elimination.
+-- of ∨, and the list-indexed rules of (L5): ⋁ introduction and elimination.
 --
 -- ⋀ and ⋁ are from LTL.2-Syntax.Formula, with ⋀ [] = ⊤ and ⋁ [] = ⊥.  ⋁Elim
 -- eliminates beta over a set of states (betaElim, LTL.5-States.Extract); its
@@ -71,15 +70,6 @@ caseU {P} {X} {Z} f g = ⇒Trans (¬IntroU h1 h2) dne
 
 ∨MonoR : ⊢ A ⇒ B -> ⊢ C ∨ A ⇒ C ∨ B
 ∨MonoR d = mp p2 (liftP d)
-
-------------------------------------------------------------------------
--- (L2)
-
-⋀Proj : (As : List Formula)
-     -> A ∈ As -> ⊢ ⋀ As ⇒ A
-⋀Proj []       ()
-⋀Proj (B ∷ Bs) here      = ∧Fst
-⋀Proj (B ∷ Bs) (there h) = ⇒Trans ∧Snd (⋀Proj Bs h)
 
 ------------------------------------------------------------------------
 -- (L5)

@@ -206,10 +206,10 @@ module name). Folder names never equal a module name.
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
-   `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
+   `nub`, `atoms`, `atomBit`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L1, L3, L7, ⊥ ⇒ C, via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem; only the rules the proof
-   uses); `PropList` (`∧`, `caseU`, `∨MonoR`, `⋀Proj`, `⋁Intro`, `⋁Elim`); `Temporal` (D1–D6, `expConv`, `indRule`).
+   uses); `PropList` (`∧`, `caseU`, `∨MonoR`, `⋁Intro`, `⋁Elim`); `Temporal` (D1–D6, `expConv`, `indRule`).
 4. **Semantics on lassos** (`4-Semantics/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Statement`'s `Position`/`step`); `OrbitEval` (Boolean `evalAt` at positions,
@@ -218,13 +218,13 @@ module name). Folder names never equal a module name.
    (the formula-independent base of the
    P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
    lemmas); P-modules `State` (a valuation is a row of bits over
-   `stateAtoms = atoms (sub P)`, read by the skeleton evaluation, so (S1) holds
-   by definition and `isState` is (S2) alone; `valOf`, `subformulas`,
-   `eventualities`, `nexts`, `St`, `stLen`, `chi`, `beta`); `Step` (`step` as
+   `stateAtoms = atoms P`, read by the skeleton evaluation, so (S1) holds
+   by definition and `isState` is (S2) alone; `valOf`,
+   `eventualities`, `nexts`, `St`, `stLen`, `chi` (a literal per atom), `beta`); `Step` (`step` as
    T1–T3 over `nexts` and `eventualities`, `StepFails`, `succs`); `StepLemma` (`chiProj`, Lemmas
    2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness
    and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated
-   for any P, and `tautChi`) is unparameterised.
+   for any P, `tautProj` and `tautChi`) is unparameterised.
    The finite search infrastructure, in the same folder: `Reach` (`valEq`, the `DecEq` of
    valuations, and the `Val` instance of `Nodes`); `VecFinite` (valuations of a given
    length are inductively finite, `guardedVecFinite`); `Closure` (`Ust`, the

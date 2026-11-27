@@ -2,16 +2,19 @@
 
 -- LTL.5-States.Taut -- Boolean facts about how the skeleton evaluation valFrom
 -- reads lit, ⋀, ⋁, chi and beta.  They are the side conditions of the pc
--- nodes built in LTL.5-States.CompletePC and LTL.8-Procedures.Decide.  The
--- one derivation here is mpChain, which discharges the premises of □Chain.
+-- nodes built in LTL.5-States.CompletePC, LTL.5-States.StepLemma and
+-- LTL.8-Procedures.Decide.  The one derivation here is mpChain, which
+-- discharges the premises of □Chain.
 --
 -- Every row lemma fixes one atom list Ats and one row a (the module block
--- below).  Each caller uses atomsOf of the one formula its pc node proves.
+-- below).  Each caller uses atoms of the one formula its pc node proves.
 --
 -- The central fact: row a gives a valuation of P, skelVec P, that reads every
 -- subformula of P as row a does, and it is a state as soon as the (S2)
 -- instances hold in row a.  So beta P (St P) is true in every row satisfying
--- (S2), which is state completeness as a Boolean fact.
+-- (S2), which is state completeness as a Boolean fact.  Conversely, a row
+-- that makes chi v true reads every subformula of P as v does (chiReads), so
+-- chi v implies the literal of any subformula (tautProj).
 
 module LTL.5-States.Taut where
 
@@ -136,8 +139,8 @@ module _ (Ats : List Formula) (a : Val) where
   valOfSkelVec : (P : Formula)
               -> ∀[ A ∈ sub P ] valOf P (skelVec P) A ≡ valFrom Ats a A
   valOfSkelVec P A m =
-    skelEval (valFrom Ats a) (stateAtoms P) P
-             (λ X mX aX -> ∈-atoms⁺ (sub P) mX aX)
+    skelEval (valFrom Ats a) (stateAtoms P) (skelVec P) P
+             (rowAt (valFrom Ats a) P)
              (λ X mX -> refl) (λ X Y mX -> refl) A m
 
   ----------------------------------------------------------------------
@@ -149,19 +152,43 @@ module _ (Ats : List Formula) (a : Val) where
   ... | false = cong ¬ᵇ_ e
 
   chiTrue : (P : Formula) -> valFrom Ats a (chi P (skelVec P)) ≡ true
-  chiTrue P = ⋀True (map (litOf P (skelVec P)) (subformulas P)) conj
+  chiTrue P = ⋀True (map (litOf P (skelVec P)) (stateAtoms P)) conj
     where
-      conj : ∀ⁱ[ C ∈ map (litOf P (skelVec P)) (subformulas P) ]
+      conj : ∀ⁱ[ C ∈ map (litOf P (skelVec P)) (stateAtoms P) ]
                valFrom Ats a C ≡ true
-      conj {C} m = fromSig (∈-map⁻ (litOf P (skelVec P)) (subformulas P) m)
+      conj {C} m = fromSig (∈-map⁻ (litOf P (skelVec P)) (stateAtoms P) m)
         where
-          fromSig : (∃[ A ∈ subformulas P ] C ≡ litOf P (skelVec P) A)
+          fromSig : (∃[ A ∈ stateAtoms P ] C ≡ litOf P (skelVec P) A)
                  -> valFrom Ats a C ≡ true
           fromSig (A , mA , eq) =
             subst (λ D -> valFrom Ats a D ≡ true) (sym eq)
                   (subst (λ b -> valFrom Ats a (lit A b) ≡ true)
-                         (sym (valOfSkelVec P A (nub-sub (sub P) mA)))
+                         (sym (valOfSkelVec P A (atomSub P mA)))
                          (litTrue A))
+
+  ----------------------------------------------------------------------
+  -- Conversely, a row that makes chi v true reads every subformula of P as v
+  -- does: the literals of chi v fix P's atoms (litBit), and skelEval does the
+  -- rest.  This holds for any v, state or not.
+
+  litBit : (A : Formula) (b : Bool) -> valFrom Ats a (lit A b) ≡ true
+        -> valFrom Ats a A ≡ b
+  litBit A true  e = e
+  litBit A false e = ¬ᵇ-true (valFrom Ats a A) e
+
+  chiReads : (P : Formula) (v : Val) -> valFrom Ats a (chi P v) ≡ true
+          -> ∀[ A ∈ sub P ] valOf P v A ≡ valFrom Ats a A
+  chiReads P v e =
+    skelEval (valFrom Ats a) (stateAtoms P) v P atAt
+             (λ X mX -> refl) (λ X Y mX -> refl)
+    where
+      atAt : ∀[ X ∈ sub P ]
+               (isAtom X ≡ true -> atomBit (stateAtoms P) v X ≡ valFrom Ats a X)
+      atAt X m eX =
+        trans (sym (valFrom-atom (stateAtoms P) v X eX))
+              (sym (litBit X (valOf P v X)
+                      (⋀ProjTrue (map (litOf P v) (stateAtoms P))
+                                 (∈-map⁺ (litOf P v) (∈-atoms⁺ P X m eX)) e)))
 
   ----------------------------------------------------------------------
   -- It is a state, given (S2) in row a at the eventualities.
@@ -218,35 +245,32 @@ taut⋁Elim Cs C =
                (⋁ElimTrue Ats a Cs C (λ mD -> g (∈-map⁺ (C ⇐_) mD)))
   where
     Ats : List Formula
-    Ats = atomsOf (⋁⇒Fml Cs C)
+    Ats = atoms (⋁⇒Fml Cs C)
 
 ------------------------------------------------------------------------
--- A state not containing ¬ Q, as one node.
---
--- For a state w of ¬ Q with the bit at ¬ Q false,  chi_w ⇒ Q  is a skeleton
--- tautology: chi_w has the conjunct  lit (¬ Q) false = ¬ ¬ Q , and valFrom is
--- ¬ᵇ at ¬.  So (PC) proves it in one node where projecting and cancelling the
--- double negation takes 67 constructors.
+-- Projecting chi, as one node.  chi v has a literal per atom only, but
+-- chi v ⇒ lit A (valOf v A) is a skeleton tautology for every A in sub P,
+-- atom or not: a row that makes chi v true reads A as v does (chiReads).
+
+tautProj : (P : Formula) (v : Val)
+        -> ∀ⁱ[ A ∈ sub P ] isTaut ((chi P v) ⇒ (litOf P v A)) ≡ true
+tautProj P v {A} m =
+  isTaut-intro F λ a ->
+    ⇒ᵇ-intro (valFrom (atoms F) a (chi P v)) (valFrom (atoms F) a (litOf P v A))
+             (λ e -> subst (λ b -> valFrom (atoms F) a (lit A b) ≡ true)
+                           (sym (chiReads (atoms F) a P v e A m))
+                           (litTrue (atoms F) a A))
+  where
+    F : Formula
+    F = (chi P v) ⇒ (litOf P v A)
+
+-- A state w of ¬ Q with the bit at ¬ Q false reads Q as true, so
+-- chi_w ⇒ Q  is tautProj at Q.
 
 tautChi : (Q : Formula) (w : Val)
        -> valOf (¬ Q) w (¬ Q) ≡ false
        -> isTaut ((chi (¬ Q) w) ⇒ Q) ≡ true
 tautChi Q w ev =
-  isTaut-intro F λ a ->
-    ⇒ᵇ-intro (valFrom Ats a (chi R w)) (valFrom Ats a Q)
-             (λ ec -> ¬ᵇ¬ᵇ-true (valFrom Ats a Q)
-                                (⋀ProjTrue Ats a (map (litOf R w) (subformulas R)) mneg ec))
-  where
-    R : Formula
-    R = ¬ Q
-
-    F : Formula
-    F = (chi R w) ⇒ Q
-
-    Ats : List Formula
-    Ats = atomsOf F
-
-    -- the conjunct  lit R false , i.e.  ¬ ¬ Q
-    mneg : ¬ R ∈ map (litOf R w) (subformulas R)
-    mneg = subst (λ b -> lit R b ∈ map (litOf R w) (subformulas R)) ev
-                 (∈-map⁺ (litOf R w) (∈-nub⁺ (sub R) (sub-self R)))
+  subst (λ b -> isTaut ((chi (¬ Q) w) ⇒ (lit Q b)) ≡ true)
+        (¬ᵇ-false (valOf (¬ Q) w Q) ev)
+        (tautProj (¬ Q) w (there (sub-self Q)))

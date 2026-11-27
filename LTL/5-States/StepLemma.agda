@@ -18,14 +18,16 @@ open import LTL.5-States.Common
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.CompletePC P
+open import LTL.5-States.Taut using (tautProj)
 
 ------------------------------------------------------------------------
--- Projection of a conjunct out of chi.  Every refutation of a state goes
--- through it: a Boolean condition fails, so chi carries two contradictory
--- literals.
+-- The literal of any subformula, out of chi.  Every refutation of a state
+-- goes through it: a Boolean condition fails, so chi implies two
+-- contradictory literals.  chi has a literal per atom only, so this is one
+-- pc node (tautProj) rather than a projection.
 
 chiProj : (v : Val) -> ∀ⁱ[ A ∈ sub P ] ⊢ (chi v) ⇒ (litOf v A)
-chiProj v m = ⋀Proj (map (litOf v) subformulas) (∈-map⁺ (litOf v) (∈-nub⁺ (sub P) m))
+chiProj v m = pcTaut (tautProj P v m)
 
 ------------------------------------------------------------------------
 -- Refuting a non-successor

@@ -9,7 +9,7 @@
 -- relation.
 --
 -- valFrom reads a formula from an assignment to atoms.  A state of
--- LTL.5-States.State is such an assignment to the atoms of sub P, and valOf is
+-- LTL.5-States.State is such an assignment to the atoms of P, and valOf is
 -- valFrom.  skelEval says valFrom agrees with any reading that is
 -- compositional on ¬ and ⇒; tautSound applies it at a lasso position for the
 -- soundness of (PC), and LTL.5-States.Taut at a row of a tautology's table.
@@ -42,60 +42,20 @@ allVals-complete (suc n) (false ∷ v)  e  =
          (map (λ bs -> false ∷ bs) (allVals n))
          (∈-map⁺ (λ bs -> false ∷ bs) (allVals-complete n v (suc-injective e)))
 
--- and every member of allVals n has length n
-
-consAll-len : {n : Nat} (b : Bool) (vs : List Val)
-           -> (∀[ w ∈ vs ] length w ≡ n)
-           -> ∀[ v ∈ map (λ bs -> b ∷ bs) vs ] length v ≡ suc n
-consAll-len b (w ∷ ws) h v here      = cong suc (h w here)
-consAll-len b (w ∷ ws) h v (there m) =
-  consAll-len b ws (λ u mu -> h u (there mu)) v m
+-- and every member of allVals n has length n: it is b ∷ w with w in
+-- allVals n.
 
 allVals-len : (n : Nat) -> ∀[ v ∈ allVals n ] length v ≡ n
 allVals-len zero    v here       = refl
 allVals-len zero    v (there ())
 allVals-len (suc n) v m =
-  [ consAll-len true  (allVals n) (allVals-len n) v
-  , consAll-len false (allVals n) (allVals-len n) v
-  ] (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVals n))
+  [ consLen true , consLen false ]
+    (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVals n))
            (map (λ bs -> false ∷ bs) (allVals n)) m)
-
-------------------------------------------------------------------------
--- Lookup by first occurrence.  A member's first index is in range and
--- carries it.
-
-indexOf : List Formula -> Formula -> Nat
-indexOf []       A = zero
-indexOf (B ∷ Bs) A = if B ≡ᶠ A then zero else suc (indexOf Bs A)
-
-indexOf-< : (xs : List Formula) -> ∀ⁱ[ X ∈ xs ] indexOf xs X < length xs
-indexOf-< []       ()
-indexOf-< (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
   where
-    aux : (b : Bool) -> b ≡ true -> (if b then zero else suc (indexOf Bs B)) < suc (length Bs)
-    aux true  e  = z<s
-    aux false ()
-indexOf-< (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X)
-  where
-    aux : (b : Bool) -> (if b then zero else suc (indexOf Bs X)) < suc (length Bs)
-    aux true  = z<s
-    aux false = s<s (indexOf-< Bs m)
-
-indexOf-nth : (xs : List Formula)
-           -> ∀ⁱ[ X ∈ xs ] nth xs (indexOf xs X) ⊥ ≡ X
-indexOf-nth []       ()
-indexOf-nth (B ∷ Bs) here     = aux (B ≡ᶠ B) (≡ᶠ-refl B)
-  where
-    aux : (b : Bool) -> b ≡ true
-       -> nth (B ∷ Bs) (if b then zero else suc (indexOf Bs B)) ⊥ ≡ B
-    aux true  e  = refl
-    aux false ()
-indexOf-nth (B ∷ Bs) {X} (there m) = aux (B ≡ᶠ X) (≡ᶠ-sound B X)
-  where
-    aux : (b : Bool) -> (b ≡ true -> B ≡ X)
-       -> nth (B ∷ Bs) (if b then zero else suc (indexOf Bs X)) ⊥ ≡ X
-    aux true  f = f refl
-    aux false f = indexOf-nth Bs m
+    consLen : (b : Bool) -> v ∈ map (λ bs -> b ∷ bs) (allVals n) -> length v ≡ suc n
+    consLen b k with ∈-map⁻ (λ bs -> b ∷ bs) (allVals n) k
+    ... | w , mw , refl = cong suc (allVals-len n w mw)
 
 ------------------------------------------------------------------------
 -- A list of formulas without repetition, keeping first occurrences.  sub P
@@ -120,32 +80,33 @@ nub-sub (A ∷ As) (there m) =
   there (nub-sub As (∈-filter⁻ (λ B -> ¬ᵇ (A ≡ᶠ B)) (nub As) m))
 
 ------------------------------------------------------------------------
--- The atoms of a list of formulas: its var, ○ and □ entries, each once (a
--- repeated atom would double the truth table).
+-- The atoms of a formula: the var, ○ and □ formulas in sub B, each once (a
+-- repeated atom would double the truth table).  They include the atoms
+-- nested under ○ and □, which a state of LTL.5-States.State needs, since it
+-- gives every subformula a bit.
 
-isAtomB : Formula -> Bool
-isAtomB (var n) = true
-isAtomB (¬ A)   = false
-isAtomB (A ⇒ B) = false
-isAtomB (○ A)   = true
-isAtomB (□ A)   = true
+isAtom : Formula -> Bool
+isAtom (var n) = true
+isAtom (¬ A)   = false
+isAtom (A ⇒ B) = false
+isAtom (○ A)   = true
+isAtom (□ A)   = true
 
-atoms : List Formula -> List Formula
-atoms As = filter isAtomB (nub As)
+atoms : Formula -> List Formula
+atoms B = filter isAtom (nub (sub B))
 
-∈-atoms⁺ : (As : List Formula) {A : Formula} -> A ∈ As -> isAtomB A ≡ true
-        -> A ∈ atoms As
-∈-atoms⁺ As m e = ∈-filter⁺ isAtomB (nub As) (∈-nub⁺ As m) e
+∈-atoms⁺ : (B : Formula) -> ∀[ A ∈ sub B ] (isAtom A ≡ true -> A ∈ atoms B)
+∈-atoms⁺ B A m e = ∈-filter⁺ isAtom (nub (sub B)) (∈-nub⁺ (sub B) m) e
 
-atomSub : (As : List Formula) -> ∀ⁱ[ A ∈ atoms As ] A ∈ As
-atomSub As m = nub-sub As (∈-filter⁻ isAtomB (nub As) m)
+atomSub : (B : Formula) -> ∀ⁱ[ A ∈ atoms B ] A ∈ sub B
+atomSub B m = nub-sub (sub B) (∈-filter⁻ isAtom (nub (sub B)) m)
 
 ------------------------------------------------------------------------
 -- The arguments of the box- and next-subformulas.
 --
 -- argsOf c As collects the A for which c A occurs in As.  At c = □_ these
 -- are the eventualities, at c = ○_ the arguments (T1) is imposed at;
--- LTL.5-States.State reads both at the atoms of sub P, so each is listed
+-- LTL.5-States.State reads both at the atoms of P, so each is listed
 -- once.  argsAt c X keeps the immediate subformulas A of X with c A = X, so
 -- the one equality test ≡ᶠ serves every connective.
 
@@ -180,65 +141,85 @@ argsOf c = concatMap (argsAt c)
 -- The skeleton evaluation.  valFrom Ats a A reads A with the bits a assigned
 -- to the atoms Ats: ¬ and ⇒ are interpreted, everything else is looked up.
 
+-- The bit of the atom X: the bit of a beside X's first occurrence in Ats, or
+-- false if X is not among them.
+
+atomBit : List Formula -> Val -> Formula -> Bool
+atomBit []       a        X = false
+atomBit (B ∷ Bs) []       X = false
+atomBit (B ∷ Bs) (b ∷ bs) X = if B ≡ᶠ X then b else atomBit Bs bs X
+
 module _ (Ats : List Formula) (a : Val) where
 
-  -- The bit of the atom X: the entry of a at X's index in Ats.
-
-  atomBit : Formula -> Bool
-  atomBit X = nth a (indexOf Ats X) false
-
   valFrom : Formula -> Bool
-  valFrom (var n) = atomBit (var n)
+  valFrom (var n) = atomBit Ats a (var n)
   valFrom (¬ A)   = ¬ᵇ valFrom A
   valFrom (A ⇒ B) = valFrom A ⇒ᵇ valFrom B
-  valFrom (○ A)   = atomBit (○ A)
-  valFrom (□ A)   = atomBit (□ A)
+  valFrom (○ A)   = atomBit Ats a (○ A)
+  valFrom (□ A)   = atomBit Ats a (□ A)
+
+-- At an atom, valFrom is the lookup itself.
+
+valFrom-atom : (Ats : List Formula) (a : Val) (X : Formula) -> isAtom X ≡ true
+            -> valFrom Ats a X ≡ atomBit Ats a X
+valFrom-atom Ats a (var n) e  = refl
+valFrom-atom Ats a (¬ A)   ()
+valFrom-atom Ats a (A ⇒ B) ()
+valFrom-atom Ats a (○ A)   e  = refl
+valFrom-atom Ats a (□ A)   e  = refl
 
 ------------------------------------------------------------------------
--- The skeleton evaluation agrees with any reading f that respects ¬ and ⇒ on
--- the subformulas of P.  Its instances, evalAt at a position (through
--- tautSound) and valFrom at another row (LTL.5-States.Taut), respect them by
--- definition.
+-- The skeleton evaluation in row a agrees with any reading f that respects ¬
+-- and ⇒ on the subformulas of P, once it agrees with f on P's atoms.  Its
+-- instances: evalAt at a position (tautSound), valFrom at another row
+-- (LTL.5-States.Taut), both at the row map f (atoms P) (rowAt); and a state
+-- read against a row that makes its chi true (LTL.5-States.Taut's chiReads).
 
-module _ (f : Formula -> Bool) (Ats : List Formula) where
+module _ (f : Formula -> Bool) (Ats : List Formula) (a : Val) (P : Formula)
+         (at : ∀[ X ∈ sub P ] (isAtom X ≡ true -> atomBit Ats a X ≡ f X))
+         (fn : (X : Formula) -> ¬ X ∈ sub P -> f (¬ X) ≡ ¬ᵇ f X)
+         (fi : (X Y : Formula) -> X ⇒ Y ∈ sub P -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
+         where
 
-  atomLook : ∀[ X ∈ Ats ] atomBit Ats (map f Ats) X ≡ f X
-  atomLook X mX =
-    trans (nth-map f Ats (indexOf Ats X) (indexOf-< Ats mX) ⊥ false)
-          (cong f (indexOf-nth Ats mX))
+  skelEval : ∀[ A ∈ sub P ] valFrom Ats a A ≡ f A
+  skelEval (var n) m = at (var n) m refl
+  skelEval (○ A)   m = at (○ A) m refl
+  skelEval (□ A)   m = at (□ A) m refl
+  skelEval (¬ A)   m =
+    trans (cong ¬ᵇ_ (skelEval A (sub-¬ P m))) (sym (fn A m))
+  skelEval (A ⇒ B) m =
+    trans (cong₂ _⇒ᵇ_ (skelEval A (sub-⇒L P m)) (skelEval B (sub-⇒R P m)))
+          (sym (fi A B m))
 
-  module _ (P : Formula)
-           (at : ∀[ X ∈ sub P ] (isAtomB X ≡ true -> X ∈ Ats))
-           (fn : (X : Formula) -> ¬ X ∈ sub P -> f (¬ X) ≡ ¬ᵇ f X)
-           (fi : (X Y : Formula) -> X ⇒ Y ∈ sub P -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
-           where
+-- Reading the row map f Ats gives f back at each atom.  The first B equal to
+-- X is X itself, by ≡ᶠ-sound.
 
-    skelEval : ∀[ A ∈ sub P ] valFrom Ats (map f Ats) A ≡ f A
-    skelEval (var n) m = atomLook (var n) (at (var n) m refl)
-    skelEval (○ A)   m = atomLook (○ A) (at (○ A) m refl)
-    skelEval (□ A)   m = atomLook (□ A) (at (□ A) m refl)
-    skelEval (¬ A)   m =
-      trans (cong ¬ᵇ_ (skelEval A (sub-¬ P m))) (sym (fn A m))
-    skelEval (A ⇒ B) m =
-      trans (cong₂ _⇒ᵇ_ (skelEval A (sub-⇒L P m)) (skelEval B (sub-⇒R P m)))
-            (sym (fi A B m))
+atomLook : (f : Formula -> Bool) (Ats : List Formula)
+        -> ∀[ X ∈ Ats ] atomBit Ats (map f Ats) X ≡ f X
+atomLook f (B ∷ Bs) X m with B ≡ᶠ X in e
+atomLook f (B ∷ Bs) X m         | true  = cong f (≡ᶠ-sound B X e)
+atomLook f (B ∷ Bs) X here      | false = emptyElim (true≢false (trans (sym (≡ᶠ-refl B)) e))
+atomLook f (B ∷ Bs) X (there m) | false = atomLook f Bs X m
+
+-- So the row map f (atoms P) meets skelEval's hypothesis at.
+
+rowAt : (f : Formula -> Bool) (P : Formula)
+     -> ∀[ X ∈ sub P ] (isAtom X ≡ true -> atomBit (atoms P) (map f (atoms P)) X ≡ f X)
+rowAt f P X m e = atomLook f (atoms P) X (∈-atoms⁺ P X m e)
 
 ------------------------------------------------------------------------
 -- (PC), as a decidable condition on A alone
 
-atomsOf : Formula -> List Formula
-atomsOf A = atoms (sub A)
-
 isTaut : Formula -> Bool
-isTaut A = all (λ a -> valFrom (atomsOf A) a A)
-               (allVals (length (atomsOf A)))
+isTaut A = all (λ a -> valFrom (atoms A) a A)
+               (allVals (length (atoms A)))
 
 -- A formula true in every row passes the test.
 
-isTaut-intro : (A : Formula) -> ((a : Val) -> valFrom (atomsOf A) a A ≡ true)
+isTaut-intro : (A : Formula) -> ((a : Val) -> valFrom (atoms A) a A ≡ true)
             -> isTaut A ≡ true
 isTaut-intro A h =
-  all-intro (λ a -> valFrom (atomsOf A) a A) (allVals (length (atomsOf A)))
+  all-intro (λ a -> valFrom (atoms A) a A) (allVals (length (atoms A)))
             (λ a m -> h a)
 
 -- and its soundness: any compositional reading of a skeleton tautology is true
@@ -250,10 +231,9 @@ tautSound : (f : Formula -> Bool) (A : Formula)
                -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
          -> isTaut A ≡ true -> f A ≡ true
 tautSound f A fn fi e =
-  trans (sym (skelEval f (atomsOf A) A
-                       (λ X mX aX -> ∈-atoms⁺ (sub A) mX aX) fn fi A
+  trans (sym (skelEval f (atoms A) (map f (atoms A)) A (rowAt f A) fn fi A
                        (sub-self A)))
-        (all-true (λ a -> valFrom (atomsOf A) a A)
-                  (allVals (length (atomsOf A))) e (map f (atomsOf A))
-                  (allVals-complete (length (atomsOf A)) (map f (atomsOf A))
-                                    (map-length f (atomsOf A))))
+        (all-true (λ a -> valFrom (atoms A) a A)
+                  (allVals (length (atoms A))) e (map f (atoms A))
+                  (allVals-complete (length (atoms A)) (map f (atoms A))
+                                    (map-length f (atoms A))))

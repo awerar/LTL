@@ -69,12 +69,6 @@ linBwd = mp ∧Snd lin
 ○∨2 = caseU (liftP (○Mono explode)) (⇒TransU ⇒Refl (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
--- Monotonicity of ∨ in its second argument
-
-∨MonoR : ⊢ A ⇒ B -> ⊢ C ∨ A ⇒ C ∨ B
-∨MonoR d = mp p2 (liftP d)
-
-------------------------------------------------------------------------
 -- (D4) for disjunction, over a list.  The step lemma uses ○⋁L1 to pass from
 -- ⊢ ○ (beta St) to ⊢ ⋁ (map ○_ (map chi St)), and ○⋁L2 to come back to
 -- ⊢ chi v ⇒ ○ (beta (succs v)).

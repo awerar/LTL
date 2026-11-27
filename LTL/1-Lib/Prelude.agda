@@ -249,10 +249,6 @@ refuteTrue false no = refl
 ¬ᵇ-false true  e = refl
 ¬ᵇ-false false ()
 
-¬ᵇ¬ᵇ-true : (x : Bool) -> ¬ᵇ ¬ᵇ x ≡ true -> x ≡ true
-¬ᵇ¬ᵇ-true true  e = refl
-¬ᵇ¬ᵇ-true false ()
-
 -- Implication
 
 ⇒ᵇ-refl : (b : Bool) -> b ⇒ᵇ b ≡ true
@@ -555,8 +551,7 @@ map-id (x ∷ xs) = cong (λ zs -> x ∷ zs) (map-id xs)
     (∈-++⁻ (f x) (concatMap f xs) m)
 
 ------------------------------------------------------------------------
--- Indexing.  nth xs i d is the i-th member of xs, or d out of range;
--- LTL.2-Syntax.Skel's indexOf is its inverse on formulas.
+-- Indexing.  nth xs i d is the i-th member of xs, or d out of range.
 
 nth : List A -> Nat -> A -> A
 nth []       n       d = d
@@ -567,12 +562,6 @@ map-length : (f : A -> B) (xs : List A)
           -> length (map f xs) ≡ length xs
 map-length f []       = refl
 map-length f (x ∷ xs) = cong suc (map-length f xs)
-
-nth-map : (f : A -> B) (xs : List A) (i : Nat) -> i < length xs
-       -> (d : A) (e : B) -> nth (map f xs) i e ≡ f (nth xs i d)
-nth-map f []       i       ()      d e
-nth-map f (x ∷ xs) zero    lt      d e = refl
-nth-map f (x ∷ xs) (suc i) (s<s l) d e = nth-map f xs i l d e
 
 ------------------------------------------------------------------------
 -- any and all against membership
