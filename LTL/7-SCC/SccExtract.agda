@@ -33,17 +33,6 @@ open import LTL.6-Countermodel.Walk P
 open import LTL.7-SCC.SccLasso P
 
 ------------------------------------------------------------------------
--- The property certAll establishes: Refuted with the "outside us" discharged
--- by the induction, leaving the Ust-membership as a hypothesis.
-
-UstRef : Val -> Set
-UstRef z = z ∈ Ust -> ⊢ ¬ (chi z)
-
-refutedOf : (ws : Subgraph)
-         -> HoldsOutside UstRef ws -> Refuted ws
-refutedOf ws ih u mu e = ih u e mu
-
-------------------------------------------------------------------------
 -- The block case: a component C, closed inside ws, with □ A pending and A
 -- holding at every state, is refuted by (Ind) with the invariant B = beta C:
 -- (i) B ⇒ A by (L2) and (L5); (ii) B ⇒ ○ B by the step lemma, dropping the
@@ -81,7 +70,7 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
             by∈ᵛ : ⊢ (chi w') ⇒ (beta C)
             by∈ᵛ with w' ∈ᵛ ws in eb
             ... | false =
-              mp ¬Elim (ih w' (ustClosed (cUst w m) (fst pr) (snd pr)) eb)
+              mp ¬Elim (ih w' eb (ustClosed (cUst w m) (fst pr) (snd pr)))
             ... | true  =
               betaIntro C (cCl m (∈-∩ˡ⁺ ws (fst pr) (∈ᵛ-sound ws w' eb)) (snd pr))
 
@@ -100,15 +89,14 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
                         (chiProj u mbox)
 
 ------------------------------------------------------------------------
--- certAll's two hypotheses.
+-- certAll's two hypotheses, at R = UstRef, so that its hypothesis
+-- HoldsOutside UstRef ws is Refuted ws.
 
 -- The sink.  Sink ws x, null (outs ws x) ≡ true, IS  r1 ws x ≡ true .
 
-sinkStep : (ws : Subgraph) (x : Val) -> x ∈ ws
-        -> Sink ws x
-        -> HoldsOutside UstRef ws
-        -> UstRef x
-sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
+sinkStep : (ws : Subgraph) (x : Val) -> Sink ws x
+        -> Refuted ws -> UstRef x
+sinkStep ws x e1 ih mu = extractR1 ws x mu ih e1
 
 -- The block.  The fairness predicate is read back as an eventuality
 -- (∈-evPreds⁻), its falsity on C gives the two hypotheses, and the
@@ -116,14 +104,13 @@ sinkStep ws x mx e1 ih mu = extractR1 ws x mu (refutedOf ws ih) e1
 
 blockStep : (ws : Subgraph) (C : List Val) (f : Pred) -> f ∈ evPreds
          -> Closed[ step ▷ ws ] C -> None f C
-         -> HoldsOutside UstRef ws
-         -> ∀[ z ∈ C ] UstRef z
+         -> Refuted ws -> ∀[ z ∈ C ] UstRef z
 blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
   where
     onA : (∃[ A ∈ eventualities ] f ≡ evPred A)
        -> ⊢ ¬ (chi z)
     onA (A , mA , ef) =
-      extractBlock ws D z mzU (refutedOf ws ih) A (evSub mA)
+      extractBlock ws D z mzU ih A (evSub mA)
                    (∩ˡ-snd C Ust) dCl dHold pend (∈-∩ˡ⁺ Ust mz mzU)
       where
         missA : ∀[ y ∈ C ] y ∉ᵖ evPred A
@@ -150,20 +137,12 @@ blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
         pend = ∨ᵇ-falseˡ (valOf z (□ A)) (¬ᵇ valOf z A) (missA z mz)
 
 ------------------------------------------------------------------------
--- A certificate refutes everything it covers.
-
-certRefuted : {ws : Subgraph}
-           -> Cert evPreds ws -> Refuted ws
-           -> ∀[ z ∈ Ust ] ⊢ ¬ (chi z)
-certRefuted {ws} c ih =
-  certAll evPreds UstRef sinkStep blockStep c
-          (λ z e mu -> ih z mu e)
-
--- Over Ust itself the seed is vacuous: nothing is outside.
+-- A certificate for Ust refutes all of it.  The induction starts from
+-- ustRefuted: nothing of Ust is outside Ust.
 
 ustCertRefuted : Cert evPreds Ust
               -> ∀[ z ∈ Ust ] ⊢ ¬ (chi z)
-ustCertRefuted c = certRefuted c ustRefuted
+ustCertRefuted c = certAll evPreds UstRef sinkStep blockStep c ustRefuted
 
 ------------------------------------------------------------------------
 -- The search, run on the whole state set.  fairOrCert rather than fairGraph:

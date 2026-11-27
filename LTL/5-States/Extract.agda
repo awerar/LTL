@@ -4,9 +4,10 @@
 --
 --   Refuted us = every state of Ust outside us is refutable.
 --
--- Refuted Ust holds trivially (ustRefuted).  betaElim and betaIntro
--- treat beta as a disjunction indexed by states, and extractR1 refutes a state
--- with no successor inside us.  The induction that uses them is certAll's,
+-- It is HoldsOutside UstRef us, the hypothesis certAll carries, so the
+-- induction hands it over unchanged.  Refuted Ust holds trivially
+-- (ustRefuted).  betaElim and betaIntro treat beta as a disjunction indexed
+-- by states, and extractR1 refutes a state with no successor inside us.  The induction that uses them is certAll's,
 -- run by LTL.7-SCC.SccExtract: extractR1 is its sink step, and extractBlock its
 -- block step.
 
@@ -48,11 +49,14 @@ betaIntro ws m = ⋁Intro (map chi ws) (∈-map⁺ chi m)
 -- It ranges over Ust P, not St P: a state outside Ust cannot contain the
 -- input and is disposed of by (S1).  ustClosed makes this work: the step
 -- lemma offers ALL state-successors of u, and each lies in Ust P, where the
--- hypothesis applies.
+-- hypothesis applies.  UstRef is the property, relativised to Ust because
+-- HoldsOutside covers every valuation outside us.
+
+UstRef : Val -> Set
+UstRef u = u ∈ Ust -> ⊢ ¬ (chi u)
 
 Refuted : Subgraph -> Set
-Refuted us =
-  ∀[ u ∈ Ust ] (u ∈ᵛ us ≡ false -> ⊢ ¬ (chi u))
+Refuted us = HoldsOutside UstRef us
 
 ------------------------------------------------------------------------
 -- (R1): u has no successor inside us.
@@ -77,12 +81,11 @@ extractR1 us u mu ih e1 =
       null-∈ (succs us u) e1 (succsIn us u mw (snd (∈-succs⁻ St u m)))
 
     each : ∀[ w ∈ succs St u ] ⊢ ¬ (chi w)
-    each w m = ih w (ustClosed mu (fst (∈-succs⁻ St u m))
-                               (snd (∈-succs⁻ St u m)))
-                 (outside w m)
+    each w m = ih w (outside w m)
+                    (ustClosed mu (fst (∈-succs⁻ St u m)) (snd (∈-succs⁻ St u m)))
 
 ------------------------------------------------------------------------
 -- The base of the induction: outside Ust there is nothing to refute.
 
 ustRefuted : Refuted Ust
-ustRefuted u mu e = emptyElim (∈ᵛ-false Ust u e mu)
+ustRefuted u e mu = emptyElim (∈ᵛ-false Ust u e mu)

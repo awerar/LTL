@@ -47,7 +47,7 @@ open import LTL.1-Lib.Graph eq G
 -- function (sccOf ws r).
 
 private variable
-  u v w x s z : Node
+  u v w x z   : Node
   ws vs       : Subgraph
   zs          : List Node
   Pool        : Pred
@@ -415,8 +415,7 @@ fairGraph vs fs v mv =
 -- refutation uses, a sink and a closed block, not for a component.
 
 module _ (fs : List Pred) (R : Node -> Set)
-         (sinkCase  : (ws : Subgraph) (x : Node) -> x ∈ ws
-                   -> Sink ws x
+         (sinkCase  : (ws : Subgraph) (x : Node) -> Sink ws x
                    -> HoldsOutside R ws -> R x)
          (blockCase : (ws : Subgraph) (C : List Node) (f : Pred) -> f ∈ fs
                    -> Closed[ G ▷ ws ] C -> None f C
@@ -440,8 +439,7 @@ module _ (fs : List Pred) (R : Node -> Set)
   removedHolds : (t : TerminalIn ws) -> Reason fs t -> HoldsOutside R ws
               -> ∀[ y ∈ component t ] R y
   removedHolds {ws} t (sink e) ih y my =
-    subst R (sym (sinkAlone t e y my)) (sinkCase ws r rIn e ih)
-    where open TerminalIn t using (r; rIn)
+    subst R (sym (sinkAlone t e y my)) (sinkCase ws (TerminalIn.r t) e ih)
   removedHolds {ws} t (unfair f mf mis) ih =
     blockCase ws (component t) f mf (componentClosed t) mis ih
 
@@ -450,17 +448,3 @@ module _ (fs : List Pred) (R : Node -> Set)
   certAll       cNil              ih z = ih z refl
   certAll {ws} (cRemove t why c) ih z =
     certAll c (dropOutside ws (component t) ih (removedHolds t why ih)) z
-
-------------------------------------------------------------------------
--- The prefix of a trail to any vertex it visits: LTL.7-SCC.SccLasso follows a
--- cycle's prefix to a fairness witness.
-
-reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
-reachesCons m e (reachesBy zs t subset) = reachesBy (_ ∷ zs) (tCons e t) (∷-⊆ m subset)
-
-trailTo : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
-trailTo tNil        subset ()
-trailTo (tCons e t) subset here      =
-  reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (subset _ here) (λ _ ()))
-trailTo (tCons e t) subset (there k) =
-  reachesCons (subset _ here) e (trailTo t (⊆-tail subset) k)

@@ -42,10 +42,10 @@ open import LTL.1-Lib.Nodes eq
 -- reachSet ws v.
 
 private variable
-  u v w : Node
-  ws    : Subgraph
-  xs zs : List Node
-  Pool     : Pred
+  u v w x s : Node
+  ws        : Subgraph
+  xs zs     : List Node
+  Pool      : Pred
 
 ------------------------------------------------------------------------
 -- Out-neighbours
@@ -93,6 +93,19 @@ record Reaches (ws : Subgraph) (v w : Node) : Set where
     via     : List Node
     trail   : Trail v via w
     staysIn : via ⊆ ws
+
+-- The prefix of a trail to any vertex it visits: LTL.7-SCC.SccLasso follows a
+-- cycle's prefix to a fairness witness.
+
+reachesCons : x ∈ ws -> G v x ≡ true -> Reaches ws x s -> Reaches ws v s
+reachesCons m e (reachesBy zs t subset) = reachesBy (_ ∷ zs) (tCons e t) (∷-⊆ m subset)
+
+trailTo : Trail v zs w -> zs ⊆ ws -> ∀ⁱ[ s ∈ zs ] Reaches ws v s
+trailTo tNil        subset ()
+trailTo (tCons e t) subset here      =
+  reachesBy (_ ∷ []) (tCons e tNil) (∷-⊆ (subset _ here) (λ _ ()))
+trailTo (tCons e t) subset (there k) =
+  reachesCons (subset _ here) e (trailTo t (⊆-tail subset) k)
 
 -- A set C closed under G inside ws keeps every trail inside ws that starts in
 -- it: the trail lies in C, and so does its endpoint.

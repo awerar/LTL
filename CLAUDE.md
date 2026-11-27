@@ -50,7 +50,7 @@ derivation or a certified finite lasso countermodel.
   at once by its membership and then one conclusion is always the notation
   (an inclusion is `xs ⊆ ys`, `E ⊆ᵖ F` or `All Pool xs`); inside a
   hypothesis or an abbreviation the body may be one parenthesised implication,
-  `∀[ x ∈ C ] (H -> B)` (as in `Closed`, `Refuted`, `Fair`); a definition's own
+  `∀[ x ∈ C ] (H -> B)` (as in `Closed`, `Fair`); a definition's own
   telescope with more premises stays written out. Elements that are private
   variables have no binder to replace. `x ∈ᵖ E`, `x ∉ᵖ E` and `∀[ x ∈ᵖ E ]` are
   for predicates that the code treats as sets: pools and their `∩ ∪ ⁻¹ ⊆ᵖ`,
