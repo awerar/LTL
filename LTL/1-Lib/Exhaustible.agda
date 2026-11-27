@@ -26,8 +26,8 @@
 -- under subsets, union, product and preimage.  Finite (LTL.1-Lib.DecEq) is
 -- Exhaustible with inequality as the apartness; the finite pools themselves
 -- are boolFinite (LTL.1-Lib.DecEq), listFinite (LTL.1-Lib.Nodes, from a list
--- in hand) and guardedVecFinite (LTL.5-States.VecFinite, the vectors of a
--- given length).
+-- in hand) and guardedRowFinite (LTL.5-States.RowFinite, the rows over a
+-- list of atoms).
 
 module LTL.1-Lib.Exhaustible where
 

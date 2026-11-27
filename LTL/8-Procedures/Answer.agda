@@ -16,6 +16,7 @@
 module LTL.8-Procedures.Answer where
 
 open import LTL.5-States.Common public
+open import LTL.5-States.Reach using (Val)
 open import LTL.6-Countermodel.Lasso
 
 ------------------------------------------------------------------------
@@ -24,7 +25,7 @@ open import LTL.6-Countermodel.Lasso
 record LassoCountermodel (Q : Formula) : Set where
   constructor countermodel
   field
-    start        : Val
+    start        : Val (¬ Q)
     lasso        : Lasso (¬ Q) start
     falseAtStart : eval (¬ Q) start lasso Q 0 ≡ false
 

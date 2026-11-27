@@ -25,6 +25,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.7-SCC.SccLasso (P : Formula) where
 
 open import LTL.5-States.Common
+open import LTL.5-States.Reach P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.Closure P

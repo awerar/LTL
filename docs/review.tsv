@@ -251,7 +251,7 @@ LTL.1-Lib.Sets.≤-trans	c1d394aa2606	2026-11-24
 LTL.2-Syntax.Deriv.isTaut-sound	cddba800d11c	2026-11-24	
 LTL.2-Syntax.Deriv.pcTaut	854e6eda64b3	2026-11-27	
 LTL.2-Syntax.Deriv.propValue-agree	2be2b84c4af1	2026-11-27	
-LTL.2-Syntax.Deriv.tautologyHolds	dc4e62850ee2	2026-11-27	
+LTL.2-Syntax.Deriv.tautologyHolds	ad5d123177b6	2026-11-27	
 LTL.2-Syntax.Formula._∨_	b079333f1cd6	2026-11-23	
 LTL.2-Syntax.Formula._≡ᶠ_	4c4ad113678b	2026-11-23	
 LTL.2-Syntax.Formula.lit	296ce413b7df	2026-11-27	
@@ -271,13 +271,15 @@ LTL.2-Syntax.Formula.⊥	752a4283393d	2026-11-23
 LTL.2-Syntax.Formula.⋀_	91b313cfe418	2026-11-27	
 LTL.2-Syntax.Formula.⋁_	c5266f72d447	2026-11-27	
 LTL.2-Syntax.Formula.◇_	b2f49c15cea6	2026-11-23	
+LTL.2-Syntax.Skel.Row	496d9c49ffdf	2026-11-27	
 LTL.2-Syntax.Skel.Val	043429e50203	2026-11-23	
 LTL.2-Syntax.Skel.allVals	bf216f668040	2026-11-24	
 LTL.2-Syntax.Skel.allVals-complete	bd49fc6ed62e	2026-11-24	
 LTL.2-Syntax.Skel.allVals-len	e9b68837e1a8	2026-11-27	
 LTL.2-Syntax.Skel.argsAt	3e5f4b4c5350	2026-11-24	
 LTL.2-Syntax.Skel.argsOf	0694bf32e789	2026-11-24	
-LTL.2-Syntax.Skel.atomBit	cebf83ea2066	2026-11-24	
+LTL.2-Syntax.Skel.atomBit	5f8d4c0de937	2026-11-27	
+LTL.2-Syntax.Skel.atomBit-rowOf	d2c5e5526d58	2026-11-27	
 LTL.2-Syntax.Skel.atomLook	6d627b65da26	2026-11-25	
 LTL.2-Syntax.Skel.atomSub	c06718b6d8c8	2026-11-27	
 LTL.2-Syntax.Skel.atoms	9718700495c8	2026-11-27	
@@ -292,6 +294,9 @@ LTL.2-Syntax.Skel.isTaut	02e3eccf9d18	2026-11-27
 LTL.2-Syntax.Skel.isTaut-intro	884a6c217bca	2026-11-27	
 LTL.2-Syntax.Skel.nub	2dbc1ef57f4f	2026-11-24	
 LTL.2-Syntax.Skel.nub-sub	a887a1060dd9	2026-11-24	
+LTL.2-Syntax.Skel.rowOf	e0cdf2defad4	2026-11-27	
+LTL.2-Syntax.Skel.rows	8e81ff04ad81	2026-11-27	
+LTL.2-Syntax.Skel.rows-complete	0986726bdf40	2026-11-27	
 LTL.2-Syntax.Skel.skelEval	56e51abb167f	2026-11-24	
 LTL.2-Syntax.Skel.tautSound	8ee6f898a90e	2026-11-27	
 LTL.2-Syntax.Skel.valFrom	b6fb3c00a0ee	2026-11-24	

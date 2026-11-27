@@ -1,49 +1,37 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.5-States.Reach -- valuations as a set.
+-- LTL.5-States.Reach -- the valuations of P as a set.
 --
--- Defines the equality test on valuations, proves it sound and reflexive,
--- bundles the three as valEq (LTL.1-Lib.DecEq), and instantiates
--- LTL.1-Lib.Nodes at it.  That instance supplies ≡ᵛ, ∈ᵛ, ≢ᵛ, the hypothesis
--- names (Closed, All, ...) and listFinite to the rest of the development;
--- LTL.6-Countermodel.Walk instantiates LTL.1-Lib.Graph at valEq too.  The test
--- itself is private (sameVal), so ≡ᵛ reaches importers once, as valEq's field.
+-- A valuation of P is a row over its atoms (LTL.2-Syntax.Skel), so its type
+-- names the formula its bits are about.  This module instantiates
+-- LTL.1-Lib.Nodes at their equality test valEq (rowEq of
+-- LTL.5-States.RowFinite), which supplies ≡ᵛ, ∈ᵛ, ≢ᵛ, the hypothesis names
+-- (Closed, All, ...) and listFinite, and LTL.4-Semantics.Orbit at Val, which
+-- supplies positions.  It is the one P-module the others open that
+-- re-exports: what it re-exports is the base they all share, and no other
+-- P-module re-exports Nodes or Orbit.
 
-module LTL.5-States.Reach where
+open import LTL.2-Syntax.Formula using (Formula)
 
-open import LTL.2-Syntax.Deriv public
-open import LTL.1-Lib.Sets public
-open import LTL.1-Lib.Exhaustible  public
+module LTL.5-States.Reach (P : Formula) where
+
+open import LTL.2-Syntax.Deriv
 open import LTL.1-Lib.DecEq using (DecEq)
+open import LTL.5-States.RowFinite using (rowEq)
 
 ------------------------------------------------------------------------
--- Valuations as a set
+-- Valuations: a bit for each atom of P (LTL.5-States.State's stateAtoms).
 
-private
-  sameVal : Val -> Val -> Bool
-  sameVal []      []      = true
-  sameVal []      (c ∷ w) = false
-  sameVal (b ∷ v) []      = false
-  sameVal (b ∷ v) (c ∷ w) = (b ⇔ᵇ c) ∧ᵇ sameVal v w
-
-  sameVal-refl : (v : Val) -> sameVal v v ≡ true
-  sameVal-refl []          = refl
-  sameVal-refl (true  ∷ v) = sameVal-refl v
-  sameVal-refl (false ∷ v) = sameVal-refl v
-
-  sameVal-sound : (v w : Val) -> sameVal v w ≡ true -> v ≡ w
-  sameVal-sound []      []      e = refl
-  sameVal-sound []      (c ∷ w) ()
-  sameVal-sound (b ∷ v) []      ()
-  sameVal-sound (b ∷ v) (c ∷ w) e =
-    cong₂ _∷_ (⇔ᵇ-sound b c (∧ᵇ-trueˡ (b ⇔ᵇ c) (sameVal v w) e))
-              (sameVal-sound v w (∧ᵇ-trueʳ (b ⇔ᵇ c) (sameVal v w) e))
+Val : Set
+Val = Row (atoms P)
 
 valEq : DecEq Val
-valEq = record { _≡ᵛ_    = sameVal
-               ; ≡ᵛ-sound = sameVal-sound
-               ; ≡ᵛ-refl  = sameVal-refl }
+valEq = rowEq (atoms P)
 
 -- The set layer, at Val.  ∈ᵛ comes from here:  v ∈ᵛ us = any (v ≡ᵛ_) us .
 
 open import LTL.1-Lib.Nodes valEq public
+
+-- Positions and orbits of LTL.4-Semantics.Orbit, at valuations.
+
+open import LTL.4-Semantics.Orbit Val public

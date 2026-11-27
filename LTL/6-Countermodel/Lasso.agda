@@ -22,6 +22,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.6-Countermodel.Lasso (P : Formula) where
 
 open import LTL.5-States.Common
+open import LTL.5-States.Reach P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.Closure P
@@ -115,8 +116,8 @@ stateAt v0 l i = posState (posIter loop (v0 , rest) i)
 -- The Boolean evaluation at a position
 --
 -- A variable is read off the state through valOf.  For a variable not in sub
--- P this gives false (atomBit finds no atom for it), so the
--- evaluation is total on all formulas, as soundness needs.
+-- P this gives false (atomBit finds no atom for it), so the evaluation is
+-- total on all formulas, as soundness needs.
 
 -- a valuation read as an assignment to the variables
 readVal : Val -> Nat -> Bool

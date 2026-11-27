@@ -1,61 +1,70 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.2-Syntax.Skel -- the propositional skeleton of a formula, and the
--- decidable tautology test isTaut that the (PC) rule of LTL.2-Syntax.Deriv uses.
+-- LTL.2-Syntax.Skel -- the propositional skeleton of a formula: its atoms,
+-- rows of bits over them, and the decidable tautology test isTaut that the
+-- (PC) rule of LTL.2-Syntax.Deriv uses.
 --
--- A formula is a tautology of its skeleton when it is true in every row of the
--- truth table that treats its var, ○ and □ subformulas as atoms.  This is a
--- Boolean condition on the formula alone, so (PC) needs no substitution
--- relation.
---
--- valFrom reads a formula from an assignment to atoms.  A state of
--- LTL.5-States.State is such an assignment to the atoms of P, and valOf is
--- valFrom.  skelEval says valFrom agrees with any reading that is
--- compositional on ¬ and ⇒; tautSound applies it at a lasso position for the
--- soundness of (PC), and LTL.5-States.Taut at a row of a tautology's table.
+-- There is one propositional evaluation, Statement's propValue: given a
+-- reading ρ of the atoms (the var, ○ and □ formulas), it interprets ¬ and ⇒.
+-- Everything else is a choice of ρ.  A row r : Row As holds one bit per atom
+-- of As, and atomBit r reads it; a state of LTL.5-States.State is a row over
+-- the atoms of P, and isTaut runs over the rows over the atoms of A.
+-- propValue-cong says two readings that agree on the atoms of P agree on all
+-- of sub P, and propValue-agree that a reading compositional on ¬ and ⇒ is
+-- its own propValue.
 
 module LTL.2-Syntax.Skel where
 
 open import LTL.2-Syntax.Formula public
+import LTL.Statement as S
+open S public using (propValue; Tautology)
 
 ------------------------------------------------------------------------
--- Valuations, as bit vectors, and their enumeration
+-- Rows: one bit per member of a list of formulas, so a row's type says what
+-- its bits are about.  The row of bits 1 0 over [ A , B ] is  true ▸ false ▸ ∅ .
 
-Val : Set
-Val = List Bool
+infixr 5 _▸_
 
-allVals : Nat -> List Val
-allVals zero    = [] ∷ []
-allVals (suc n) = map (λ bs -> true ∷  bs) (allVals n) ++
-                  map (λ bs -> false ∷ bs) (allVals n)
+data Row : List Formula -> Set where
+  ∅   : Row []
+  _▸_ : {X : Formula} {As : List Formula} -> Bool -> Row As -> Row (X ∷ As)
 
-allVals-complete : (n : Nat) (v : Val) -> length v ≡ n -> v ∈ allVals n
-allVals-complete zero    []           e  = here
-allVals-complete zero    (b ∷ v)      ()
-allVals-complete (suc n) []           ()
-allVals-complete (suc n) (true  ∷ v)  e  =
-  ∈-++⁺ˡ (map (λ bs -> true ∷ bs) (allVals n))
-         (map (λ bs -> false ∷ bs) (allVals n))
-         (∈-map⁺ (λ bs -> true ∷ bs) (allVals-complete n v (suc-injective e)))
-allVals-complete (suc n) (false ∷ v)  e  =
-  ∈-++⁺ʳ (map (λ bs -> true ∷ bs) (allVals n))
-         (map (λ bs -> false ∷ bs) (allVals n))
-         (∈-map⁺ (λ bs -> false ∷ bs) (allVals-complete n v (suc-injective e)))
+-- The bit of X: the one beside X's first occurrence in As, or false if X is
+-- not among them.
 
--- and every member of allVals n has length n: it is b ∷ w with w in
--- allVals n.
+atomBit : {As : List Formula} -> Row As -> Formula -> Bool
+atomBit {[]}     ∅        X = false
+atomBit {B ∷ Bs} (b ▸ bs) X = if B ≡ᶠ X then b else atomBit bs X
 
-allVals-len : (n : Nat) -> ∀[ v ∈ allVals n ] length v ≡ n
-allVals-len zero    v here       = refl
-allVals-len zero    v (there ())
-allVals-len (suc n) v m =
-  [ consLen true , consLen false ]
-    (∈-++⁻ (map (λ bs -> true  ∷ bs) (allVals n))
-           (map (λ bs -> false ∷ bs) (allVals n)) m)
-  where
-    consLen : (b : Bool) -> v ∈ map (λ bs -> b ∷ bs) (allVals n) -> length v ≡ suc n
-    consLen b k with ∈-map⁻ (λ bs -> b ∷ bs) (allVals n) k
-    ... | w , mw , refl = cong suc (allVals-len n w mw)
+-- The row that a reading ρ gives As, and atomBit reads ρ back from it.  The
+-- first B equal to X is X itself, by ≡ᶠ-sound.
+
+rowOf : (ρ : Formula -> Bool) (As : List Formula) -> Row As
+rowOf ρ []       = ∅
+rowOf ρ (X ∷ As) = ρ X ▸ rowOf ρ As
+
+atomBit-rowOf : (ρ : Formula -> Bool) (As : List Formula)
+             -> ∀[ X ∈ As ] atomBit (rowOf ρ As) X ≡ ρ X
+atomBit-rowOf ρ (B ∷ Bs) X m with B ≡ᶠ X in e
+atomBit-rowOf ρ (B ∷ Bs) X m         | true  = cong ρ (≡ᶠ-sound B X e)
+atomBit-rowOf ρ (B ∷ Bs) X here      | false =
+  emptyElim (true≢false (trans (sym (≡ᶠ-refl B)) e))
+atomBit-rowOf ρ (B ∷ Bs) X (there m) | false = atomBit-rowOf ρ Bs X m
+
+-- All the rows over As, the true-headed ones first: the truth table.
+
+rows : (As : List Formula) -> List (Row As)
+rows []       = ∅ ∷ []
+rows (X ∷ As) = map (λ r -> true ▸ r) (rows As) ++ map (λ r -> false ▸ r) (rows As)
+
+rows-complete : (As : List Formula) (r : Row As) -> r ∈ rows As
+rows-complete []       ∅           = here
+rows-complete (X ∷ As) (true  ▸ r) =
+  ∈-++⁺ˡ (map (λ r -> true ▸ r) (rows As)) (map (λ r -> false ▸ r) (rows As))
+         (∈-map⁺ (λ r -> true ▸ r) (rows-complete As r))
+rows-complete (X ∷ As) (false ▸ r) =
+  ∈-++⁺ʳ (map (λ r -> true ▸ r) (rows As)) (map (λ r -> false ▸ r) (rows As))
+         (∈-map⁺ (λ r -> false ▸ r) (rows-complete As r))
 
 ------------------------------------------------------------------------
 -- A list of formulas without repetition, keeping first occurrences.  sub P
@@ -138,102 +147,66 @@ argsOf c = concatMap (argsAt c)
         mX
 
 ------------------------------------------------------------------------
--- The skeleton evaluation.  valFrom Ats a A reads A with the bits a assigned
--- to the atoms Ats: ¬ and ⇒ are interpreted, everything else is looked up.
+-- The skeleton evaluation is propValue (LTL.Statement): ρ reads the atoms,
+-- and ¬ and ⇒ are ¬ᵇ and ⇒ᵇ.  At an atom it is ρ itself.
 
--- The bit of the atom X: the bit of a beside X's first occurrence in Ats, or
--- false if X is not among them.
+propValue-atom : (ρ : Formula -> Bool) (X : Formula) -> isAtom X ≡ true
+              -> propValue ρ X ≡ ρ X
+propValue-atom ρ (var n) e  = refl
+propValue-atom ρ (¬ A)   ()
+propValue-atom ρ (A ⇒ B) ()
+propValue-atom ρ (○ A)   e  = refl
+propValue-atom ρ (□ A)   e  = refl
 
-atomBit : List Formula -> Val -> Formula -> Bool
-atomBit []       a        X = false
-atomBit (B ∷ Bs) []       X = false
-atomBit (B ∷ Bs) (b ∷ bs) X = if B ≡ᶠ X then b else atomBit Bs bs X
+-- Two readings that agree on the atoms of P read every subformula of P alike.
 
-module _ (Ats : List Formula) (a : Val) where
+module _ (ρ ρ' : Formula -> Bool) (P : Formula)
+         (at : ∀[ X ∈ sub P ] (isAtom X ≡ true -> ρ X ≡ ρ' X)) where
 
-  valFrom : Formula -> Bool
-  valFrom (var n) = atomBit Ats a (var n)
-  valFrom (¬ A)   = ¬ᵇ valFrom A
-  valFrom (A ⇒ B) = valFrom A ⇒ᵇ valFrom B
-  valFrom (○ A)   = atomBit Ats a (○ A)
-  valFrom (□ A)   = atomBit Ats a (□ A)
+  propValue-cong : ∀[ A ∈ sub P ] propValue ρ A ≡ propValue ρ' A
+  propValue-cong (var n) m = at (var n) m refl
+  propValue-cong (○ A)   m = at (○ A) m refl
+  propValue-cong (□ A)   m = at (□ A) m refl
+  propValue-cong (¬ A)   m = cong ¬ᵇ_ (propValue-cong A (sub-¬ P m))
+  propValue-cong (A ⇒ B) m =
+    cong₂ _⇒ᵇ_ (propValue-cong A (sub-⇒L P m)) (propValue-cong B (sub-⇒R P m))
 
--- At an atom, valFrom is the lookup itself.
+-- So the row of ρ over P's atoms reads sub P as ρ does.
 
-valFrom-atom : (Ats : List Formula) (a : Val) (X : Formula) -> isAtom X ≡ true
-            -> valFrom Ats a X ≡ atomBit Ats a X
-valFrom-atom Ats a (var n) e  = refl
-valFrom-atom Ats a (¬ A)   ()
-valFrom-atom Ats a (A ⇒ B) ()
-valFrom-atom Ats a (○ A)   e  = refl
-valFrom-atom Ats a (□ A)   e  = refl
+rowOf-reads : (ρ : Formula -> Bool) (P : Formula)
+           -> ∀[ A ∈ sub P ] propValue (atomBit (rowOf ρ (atoms P))) A ≡ propValue ρ A
+rowOf-reads ρ P =
+  propValue-cong (atomBit (rowOf ρ (atoms P))) ρ P
+    (λ X m e -> atomBit-rowOf ρ (atoms P) X (∈-atoms⁺ P X m e))
 
-------------------------------------------------------------------------
--- The skeleton evaluation in row a agrees with any reading f that respects ¬
--- and ⇒ on the subformulas of P, once it agrees with f on P's atoms.  Its
--- instances: evalAt at a position (tautSound), valFrom at another row
--- (LTL.5-States.Taut), both at the row map f (atoms P) (rowAt); and a state
--- read against a row that makes its chi true (LTL.5-States.Taut's chiReads).
+-- A reading f that is compositional on ¬ and ⇒ is propValue of itself.
 
-module _ (f : Formula -> Bool) (Ats : List Formula) (a : Val) (P : Formula)
-         (at : ∀[ X ∈ sub P ] (isAtom X ≡ true -> atomBit Ats a X ≡ f X))
-         (fn : (X : Formula) -> ¬ X ∈ sub P -> f (¬ X) ≡ ¬ᵇ f X)
-         (fi : (X Y : Formula) -> X ⇒ Y ∈ sub P -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
-         where
+module _ (f : Formula -> Bool)
+         (fn : (X : Formula) -> f (¬ X) ≡ ¬ᵇ f X)
+         (fi : (X Y : Formula) -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y) where
 
-  skelEval : ∀[ A ∈ sub P ] valFrom Ats a A ≡ f A
-  skelEval (var n) m = at (var n) m refl
-  skelEval (○ A)   m = at (○ A) m refl
-  skelEval (□ A)   m = at (□ A) m refl
-  skelEval (¬ A)   m =
-    trans (cong ¬ᵇ_ (skelEval A (sub-¬ P m))) (sym (fn A m))
-  skelEval (A ⇒ B) m =
-    trans (cong₂ _⇒ᵇ_ (skelEval A (sub-⇒L P m)) (skelEval B (sub-⇒R P m)))
-          (sym (fi A B m))
-
--- Reading the row map f Ats gives f back at each atom.  The first B equal to
--- X is X itself, by ≡ᶠ-sound.
-
-atomLook : (f : Formula -> Bool) (Ats : List Formula)
-        -> ∀[ X ∈ Ats ] atomBit Ats (map f Ats) X ≡ f X
-atomLook f (B ∷ Bs) X m with B ≡ᶠ X in e
-atomLook f (B ∷ Bs) X m         | true  = cong f (≡ᶠ-sound B X e)
-atomLook f (B ∷ Bs) X here      | false = emptyElim (true≢false (trans (sym (≡ᶠ-refl B)) e))
-atomLook f (B ∷ Bs) X (there m) | false = atomLook f Bs X m
-
--- So the row map f (atoms P) meets skelEval's hypothesis at.
-
-rowAt : (f : Formula -> Bool) (P : Formula)
-     -> ∀[ X ∈ sub P ] (isAtom X ≡ true -> atomBit (atoms P) (map f (atoms P)) X ≡ f X)
-rowAt f P X m e = atomLook f (atoms P) X (∈-atoms⁺ P X m e)
+  propValue-agree : (A : Formula) -> propValue f A ≡ f A
+  propValue-agree (var x) = refl
+  propValue-agree (¬ A)   = trans (cong ¬ᵇ_ (propValue-agree A)) (sym (fn A))
+  propValue-agree (A ⇒ B) =
+    trans (cong₂ _⇒ᵇ_ (propValue-agree A) (propValue-agree B)) (sym (fi A B))
+  propValue-agree (○ A)   = refl
+  propValue-agree (□ A)   = refl
 
 ------------------------------------------------------------------------
--- (PC), as a decidable condition on A alone
+-- (PC), as a decidable condition on A alone: A is true in every row of the
+-- truth table over its atoms.  It is equivalent to Statement's Tautology:
+-- every reading ρ is, on sub A, the row of ρ (rowOf-reads).
 
 isTaut : Formula -> Bool
-isTaut A = all (λ a -> valFrom (atoms A) a A)
-               (allVals (length (atoms A)))
+isTaut A = all (λ r -> propValue (atomBit r) A) (rows (atoms A))
 
--- A formula true in every row passes the test.
+isTaut-sound : (A : Formula) -> isTaut A ≡ true -> Tautology A
+isTaut-sound A e ρ =
+  trans (sym (rowOf-reads ρ A A (sub-self A)))
+        (all-true (λ r -> propValue (atomBit r) A) (rows (atoms A)) e
+                  (rowOf ρ (atoms A)) (rows-complete (atoms A) (rowOf ρ (atoms A))))
 
-isTaut-intro : (A : Formula) -> ((a : Val) -> valFrom (atoms A) a A ≡ true)
-            -> isTaut A ≡ true
-isTaut-intro A h =
-  all-intro (λ a -> valFrom (atoms A) a A) (allVals (length (atoms A)))
-            (λ a m -> h a)
-
--- and its soundness: any compositional reading of a skeleton tautology is true
-
-tautSound : (f : Formula -> Bool) (A : Formula)
-         -> ((X : Formula) -> ¬ X ∈ sub A
-               -> f (¬ X) ≡ ¬ᵇ f X)
-         -> ((X Y : Formula) -> X ⇒ Y ∈ sub A
-               -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
-         -> isTaut A ≡ true -> f A ≡ true
-tautSound f A fn fi e =
-  trans (sym (skelEval f (atoms A) (map f (atoms A)) A (rowAt f A) fn fi A
-                       (sub-self A)))
-        (all-true (λ a -> valFrom (atoms A) a A)
-                  (allVals (length (atoms A))) e (map f (atoms A))
-                  (allVals-complete (length (atoms A)) (map f (atoms A))
-                                    (map-length f (atoms A))))
+isTaut-complete : (A : Formula) -> Tautology A -> isTaut A ≡ true
+isTaut-complete A t =
+  all-intro (λ r -> propValue (atomBit r) A) (rows (atoms A)) (λ r m -> t (atomBit r))

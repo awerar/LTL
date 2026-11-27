@@ -51,7 +51,7 @@ R = ¬ fab
 -- behind the three F's), so 32 rows and 17 states.  The closure is 8.
 
 lec-sizes : length (sub R) ∷ length (stateAtoms R)
-             ∷ length (allVals (length (stateAtoms R)))
+             ∷ length (rows (stateAtoms R))
              ∷ length (St R) ∷ length (Ust R)
              ∷ length (eventualities R) ∷ [] ≡
                21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 3 ∷ []
@@ -64,7 +64,7 @@ bitV : Bool -> Nat -> Nat
 bitV true  n = n
 bitV false n = 0
 
-num : Val -> Nat
+num : Val R -> Nat
 num v = bitV (valOf R v pa) 8 + bitV (valOf R v pb) 4
         + bitV (valOf R v (◇ pa)) 2 + bitV (valOf R v (◇ pb)) 1
 
@@ -106,7 +106,7 @@ lec-notValid = refl
 lec-cm : LassoCountermodel fab
 lec-cm = countermodelFrom (decide fab) refl
 
-lo : Val × List Val × List Val
+lo : Val R × List (Val R) × List (Val R)
 lo = LassoCountermodel.start lec-cm , cmRest fab lec-cm , cmCycle fab lec-cm
 
 -- Start, stem-and-cycle, cycle: s7, then s4 and the loop at s0.  One equation,
@@ -128,11 +128,11 @@ lec-run = refl
 -- pending at z or already fails there; for F b this is the lecture's own
 -- F_Fb = { v | v (Fb) = 0 or v (b) = 1 } .
 
-s7 : Val
+s7 : Val R
 s7 = fst lo
 
-s0 : Val
-s0 = nth (snd (snd lo)) zero []
+s0 : Val R
+s0 = nth (snd (snd lo)) zero (rowOf (λ A -> false) (stateAtoms R))
 
 -- s7 is outside F_Fb, so the lecture's loop at s7 cannot be fair;
 -- s0 is inside it, so the loop decide returns can be;

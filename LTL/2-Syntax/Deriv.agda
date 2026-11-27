@@ -23,34 +23,19 @@ import LTL.Statement as S
 -- connective, so  ⊢ □ A ⇒ A  is  ⊢ (□ A ⇒ A).
 
 open S public
-  using (⊢_; p1; p2; p3; k□; k○; exp; ind; lin; mp; gen; pc; Tautology)
+  using (⊢_; p1; p2; p3; k□; k○; exp; ind; lin; mp; gen; pc)
 
 ------------------------------------------------------------------------
--- (PC) from the decidable test.  S.propValue ρ is compositional by
--- definition, so tautSound applies to it with refl for both hypotheses.
-
-isTaut-sound : (A : Formula) -> isTaut A ≡ true -> Tautology A
-isTaut-sound A e ρ =
-  tautSound (S.propValue ρ) A (λ X m -> refl) (λ X Y m -> refl) e
+-- (PC) from the decidable test.
 
 pcTaut : {A : Formula} -> isTaut A ≡ true -> ⊢ A
 pcTaut {A} e = pc (isTaut-sound A e)
 
-------------------------------------------------------------------------
--- A Tautology is true under any reading f compositional on ¬ and ⇒: on
--- every formula, S.propValue f agrees with f.
+-- A Tautology is true under any reading f compositional on ¬ and ⇒, since
+-- f is its own propValue.
 
-module _ (f : Formula -> Bool)
-         (fn : (X : Formula) -> f (¬ X) ≡ ¬ᵇ f X)
-         (fi : (X Y : Formula) -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y) where
-
-  propValue-agree : (A : Formula) -> S.propValue f A ≡ f A
-  propValue-agree (var x) = refl
-  propValue-agree (¬ A)   = trans (cong ¬ᵇ_ (propValue-agree A)) (sym (fn A))
-  propValue-agree (A ⇒ B) =
-    trans (cong₂ _⇒ᵇ_ (propValue-agree A) (propValue-agree B)) (sym (fi A B))
-  propValue-agree (○ A)   = refl
-  propValue-agree (□ A)   = refl
-
-  tautologyHolds : (A : Formula) -> Tautology A -> f A ≡ true
-  tautologyHolds A t = trans (sym (propValue-agree A)) (t f)
+tautologyHolds : (f : Formula -> Bool)
+              -> ((X : Formula) -> f (¬ X) ≡ ¬ᵇ f X)
+              -> ((X Y : Formula) -> f (X ⇒ Y) ≡ f X ⇒ᵇ f Y)
+              -> (A : Formula) -> Tautology A -> f A ≡ true
+tautologyHolds f fn fi A t = trans (sym (propValue-agree f fn fi A)) (t f)

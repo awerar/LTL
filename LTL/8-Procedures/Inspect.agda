@@ -11,18 +11,19 @@
 module LTL.8-Procedures.Inspect where
 
 open import LTL.8-Procedures.Answer
+open import LTL.5-States.Reach using (Val; stretchStates)
 open import LTL.6-Countermodel.Lasso
 
 ------------------------------------------------------------------------
 -- The states of a countermodel
 
 -- The states after the start: the stem followed by the cycle (see cmShape).
-cmRest : (Q : Formula) -> LassoCountermodel Q -> List Val
+cmRest : (Q : Formula) -> LassoCountermodel Q -> List (Val (¬ Q))
 cmRest Q c = Lasso.rest (LassoCountermodel.lasso c)
 
 -- The states of the cycle, which the run repeats forever.
-cmCycle : (Q : Formula) -> LassoCountermodel Q -> List Val
-cmCycle Q c = stretchStates (Lasso.loop (LassoCountermodel.lasso c))
+cmCycle : (Q : Formula) -> LassoCountermodel Q -> List (Val (¬ Q))
+cmCycle Q c = stretchStates (¬ Q) (Lasso.loop (LassoCountermodel.lasso c))
 
 ------------------------------------------------------------------------
 -- Looking at a derivation.  One pass over the tree counts the nodes, and how

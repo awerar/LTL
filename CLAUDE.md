@@ -111,18 +111,19 @@ derivation or a certified finite lasso countermodel.
   it stays explicit where it only occurs under a function (`reachSet ws v`,
   `sccOf ws r`, `outs ws x`, so also `Sink ws x` and `IsTerminal ws r`), since
   Agda cannot infer it there.
-- P-modules: the modules that work over one formula P — `State`, `Step`,
+- P-modules: the modules that work over one formula P — `Reach`, `State`, `Step`,
   `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,
   `module LTL.5-States.Step (P : Formula) where` (with `Formula` imported above
   the header), so P is never written at a call site inside them. A P-module
-  opens `LTL.5-States.Common` and each P-module it uses at P
+  opens `LTL.5-States.Common`, `LTL.5-States.Reach P` and each P-module it uses at P
   (`open import LTL.5-States.State P`), privately, and re-exports nothing:
   applying a module copies its names, so two re-exported copies of `valOf`
-  would be ambiguous. The exceptions are `Walk`, which re-exports its
-  applications of `Graph` and `FairGraph` at `step`, and `Lasso`, which re-exports `OrbitEval`
+  would be ambiguous. The exceptions are `Reach`, the shared base, which
+  re-exports `Nodes` at `valEq` and `Orbit` at `Val`; `Walk`, which re-exports its
+  applications of `Graph` and `FairGraph` at `step`; and `Lasso`, which re-exports `OrbitEval`
   at `readVal`. Code that does not mention P goes in an unparameterised
-  module (`Common`, `Taut`, `VecFinite`, `Reach`), or an importer opening the
+  module (`Common`, `Taut`, `RowFinite`), or an importer opening the
   P-module unapplied would see a spurious P argument. `Decide` works the same
   way one level up: its parameter is the input Q, and it opens the P-modules
   at `¬ Q`. Everywhere else (`Answer`, `Inspect`, `Correct`, `Pretty`, the tests) these
@@ -205,8 +206,13 @@ module name). Folder names never equal a module name.
    inside the P-modules their names read `Reaches ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
-   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
-   `nub`, `atoms`, `atomBit`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
+   abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (the propositional skeleton: `Statement`'s
+   `propValue` is the one propositional evaluation, of a reading ρ of the atoms;
+   rows `Row As` (one bit per member of `As`, constructors `∅` and `_▸_`), `atomBit`,
+   `rowOf`, the truth table `rows`; `nub`, `atoms`, `argsOf` (the A with `c A` in a list);
+   `propValue-cong` (readings agreeing on the atoms agree on `sub P`),
+   `propValue-agree` (a compositional reading is its own `propValue`); `isTaut` for (PC),
+   equivalent to `Tautology` by `isTaut-sound`/`isTaut-complete`); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L1, L3, L7, ⊥ ⇒ C, via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem; only the rules the proof
    uses); `PropList` (`∧`, `caseU`, `∨MonoR`, `⋁Intro`, `⋁Elim`); `Temporal` (D1–D6, `expConv`, `indRule`).
@@ -216,18 +222,20 @@ module name). Folder names never equal a module name.
    □ over the forward orbit, and its soundness; any state type, read by `read`).
 5. **States and transitions (m4 §2)** (`5-States/`) — `Common`
    (the formula-independent base of the
-   P-modules: re-exports `Rules`, `Reach` and `Orbit` at `Val`; the `refute`
-   lemmas); P-modules `State` (a valuation is a row of bits over
-   `stateAtoms = atoms P`, read by the skeleton evaluation, so (S1) holds
+   P-modules: re-exports `Rules`, `Sets` and `Exhaustible`; the `refute`
+   lemmas); P-modules `Reach` (the valuations `Val = Row (atoms P)`, so a
+   valuation's type names its formula, `valEq`, and `Nodes` at `valEq` and
+   `Orbit` at `Val`, re-exported); `State` (a valuation is a row of bits over
+   `stateAtoms = atoms P`, and `valOf v = propValue (atomBit v)`, so (S1) holds
    by definition and `isState` is (S2) alone; `valOf`,
-   `eventualities`, `nexts`, `St`, `stLen`, `chi` (a literal per atom), `beta`); `Step` (`step` as
+   `eventualities`, `nexts`, `St`, `chi` (a literal per atom), `beta`); `Step` (`step` as
    T1–T3 over `nexts` and `eventualities`, `StepFails`, `succs`); `StepLemma` (`chiProj`, Lemmas
    2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness
-   and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), stated
-   for any P, `tautProj` and `tautChi`) is unparameterised.
-   The finite search infrastructure, in the same folder: `Reach` (`valEq`, the `DecEq` of
-   valuations, and the `Val` instance of `Nodes`); `VecFinite` (valuations of a given
-   length are inductively finite, `guardedVecFinite`); `Closure` (`Ust`, the
+   and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), under
+   any reading ρ and for any P, `tautProj` and `tautChi`) is unparameterised.
+   The finite search infrastructure, in the same folder: `RowFinite`
+   (unparameterised: `rowEq`, the `DecEq` of rows, and every set of rows is
+   inductively finite, `guardedRowFinite`); `Closure` (`Ust`, the
    explored state set: `Graph`'s growing `closure` at `step`, seeded by the
    states containing `P`; its members are states, `ustState`); `Extract`
    (`betaElim`, `Refuted`, (R1) and `extractR1`: the pieces of m4 Thm 4.1

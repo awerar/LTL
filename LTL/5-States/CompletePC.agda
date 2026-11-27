@@ -11,10 +11,10 @@
 -- (LTL.8-Procedures.Decide) use it.  betaElimPC does the same for the
 -- elimination of beta over its disjuncts, which closes provableSCC.
 --
--- The tautology is proved by BUILDING the witness state from the truth-table
--- row (skelVec, LTL.5-States.Taut), not by selecting it from the disjunction
--- over all valuations, which keeps the side condition small enough to check
--- by refl.
+-- The tautology is proved by BUILDING the witness state from the reading of
+-- the atoms (skelVec, LTL.5-States.Taut), not by selecting it from the
+-- disjunction over all valuations, which keeps the side condition small
+-- enough to check by refl.
 
 open import LTL.2-Syntax.Formula using (Formula)
 
@@ -22,6 +22,7 @@ module LTL.5-States.CompletePC (P : Formula) where
 
 open import LTL.5-States.Common
 open import LTL.5-States.Taut
+open import LTL.5-States.Reach P
 open import LTL.5-States.State P
 
 ------------------------------------------------------------------------
@@ -35,10 +36,10 @@ s2List : List Formula
 s2List = map s2Fml eventualities
 
 ------------------------------------------------------------------------
--- State completeness.  Fix the atom list of the implication and any row a of
--- its truth table.  The premises say □ B ⇒ B holds in row a for every □ B in
--- sub P (S2At), so skelVec is a state and its chi is a true disjunct of
--- beta St.  No valuation is enumerated: the row IS the state.
+-- State completeness.  Fix any reading ρ of the atoms.  The premises say
+-- □ B ⇒ B holds under ρ for every □ B in sub P (S2At), so skelVec is a state
+-- and its chi is a true disjunct of beta St.  No valuation is enumerated: the
+-- reading IS the state.
 
 -- The tautology: the (S2) premises of s2List imply beta St.
 
@@ -47,9 +48,8 @@ stateFml = ⇒List s2List (beta St)
 
 tautState : isTaut stateFml ≡ true
 tautState =
-  isTaut-intro stateFml λ a ->
-    □Chain (atoms stateFml) a eventualities (beta St)
-           (betaSkel (atoms stateFml) a P)
+  isTaut-complete stateFml λ ρ ->
+    □Chain ρ eventualities (beta St) (betaSkel ρ P)
 
 stateCompletePC : ⊢ beta St
 stateCompletePC = mpChain eventualities (pcTaut tautState)

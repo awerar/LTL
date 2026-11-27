@@ -14,6 +14,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.7-SCC.SccSeed (P : Formula) where
 
 open import LTL.5-States.Common
+open import LTL.5-States.Reach P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.Closure P
@@ -23,7 +24,7 @@ ustSeedTo : ∀[ w ∈ Ust ] Seeded containsP Ust w
 ustSeedTo w m =
   seededBy seed mu seedHolds (reachesInto ustClosed mu reaches)
   where
-    open Seeded (closureSeeded containsP St stHasLength stateFinite w m)
+    open Seeded (closureSeeded containsP St stInPool stateFinite w m)
 
     mu : seed ∈ Ust
     mu = ustSeed seedIn seedHolds

@@ -25,6 +25,7 @@ open import LTL.2-Syntax.Formula using (Formula; ¬_)
 module LTL.8-Procedures.Decide (Q : Formula) where
 
 open import LTL.5-States.Common
+open import LTL.5-States.Reach           (¬ Q)
 open import LTL.5-States.Taut using (tautChi)
 open import LTL.5-States.State           (¬ Q)
 open import LTL.5-States.Closure         (¬ Q)

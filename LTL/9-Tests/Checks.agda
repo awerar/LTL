@@ -44,8 +44,8 @@ subBenAri-dup = refl
 atomsBenAri : stateAtoms benAri ≡ □ var zero ∷ var zero ∷ ○ □ var zero ∷ []
 atomsBenAri = refl
 
-allVals-three : length (allVals 3) ≡ 8
-allVals-three = refl
+rows-BenAri : length (rows (stateAtoms benAri)) ≡ 8
+rows-BenAri = refl
 
 evBenAri : eventualities benAri ≡ var zero ∷ []
 evBenAri = refl
@@ -68,7 +68,7 @@ St-◇P = refl
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St-¬BenAri : length (allVals (length (stateAtoms ¬BenAri))) ≡ 8
+St-¬BenAri : length (rows (stateAtoms ¬BenAri)) ≡ 8
 St-¬BenAri = refl
 
 St-¬BenAri-count : length (St ¬BenAri) ≡ 6
@@ -90,7 +90,7 @@ St-¬BenAri-count = refl
                       1 ∷ 3 ∷ 2 ∷ []
 ◇P-succ-counts = refl
 
--- For ¬ benAri the six states are, in the order allVals produces them, writing
+-- For ¬ benAri the six states are, in the order rows produces them, writing
 -- the bits of the atoms  [ □ p , p , ○ □ p ] :
 --
 --   F = 1 1 1
@@ -190,8 +190,8 @@ axT-size = refl
 -- cycle is that state alone: the leg for the one eventuality is empty, since
 -- its witness is the base point.
 
-◇P-cmState : Val
-◇P-cmState = true ∷ false ∷ []
+◇P-cmState : Val (¬ ◇P)
+◇P-cmState = true ▸ false ▸ ∅
 
 decide-◇P : isProof (decide ◇P) ≡ false
 decide-◇P = refl
@@ -202,7 +202,8 @@ decide-◇P = refl
 ◇P-cm = countermodelFrom (decide ◇P) refl
 
 -- (start , rest , cycle) of a countermodel, so one refl checks the whole lasso.
-cmLasso : (Q : Formula) -> LassoCountermodel Q -> Val × List Val × List Val
+cmLasso : (Q : Formula) -> LassoCountermodel Q
+       -> Val (¬ Q) × List (Val (¬ Q)) × List (Val (¬ Q))
 cmLasso Q c = LassoCountermodel.start c , cmRest Q c , cmCycle Q c
 
 decide-◇P-lasso : cmLasso ◇P ◇P-cm ≡
@@ -252,16 +253,16 @@ c5 : Formula
 c5 = □ (cp ∨ cq) ⇒ □ cp ∨ □ cq
 
 -- q, not p
-c5q : Val
-c5q = true ∷ false ∷ true ∷ false ∷ false ∷ []
+c5q : Val (¬ c5)
+c5q = true ▸ false ▸ true ▸ false ▸ false ▸ ∅
 
 -- p, not q, and p forever
-c5p : Val
-c5p = true ∷ true ∷ false ∷ true ∷ false ∷ []
+c5p : Val (¬ c5)
+c5p = true ▸ true ▸ false ▸ true ▸ false ▸ ∅
 
 -- p and q, both forever
-c5pq : Val
-c5pq = true ∷ true ∷ true ∷ true ∷ true ∷ []
+c5pq : Val (¬ c5)
+c5pq = true ▸ true ▸ true ▸ true ▸ true ▸ ∅
 
 decide-c5 : isProof (decide c5) ≡ false
 decide-c5 = refl

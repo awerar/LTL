@@ -11,7 +11,8 @@
 module LTL.8-Procedures.Everything where
 
 open import LTL.5-States.Common           public
-open import LTL.5-States.VecFinite           public
+open import LTL.5-States.RowFinite        public
+open import LTL.5-States.Reach            public
 open import LTL.5-States.Taut             public
 open import LTL.5-States.State            public
 open import LTL.5-States.Step             public

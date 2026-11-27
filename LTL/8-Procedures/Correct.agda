@@ -144,7 +144,7 @@ toCountermodel Q c = S.counter L qFalse
     open LassoCountermodel c
     open Lasso lasso using (loop; rest)
 
-    read : Val -> S.Instant
+    read : Val (¬ Q) -> S.Instant
     read = readVal (¬ Q)
 
     L : S.Lasso

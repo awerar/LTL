@@ -274,35 +274,35 @@ justifStr (byAx s)   = s
 justifStr (byMP i j) = "MP " <> showNat i <> ", " <> showNat j
 justifStr (byGen i)  = "Gen " <> showNat i
 
--- one printed line of a proof; rowsRev lists them oldest first
-record Row : Set where
-  constructor row
+-- one printed line of a proof; printedRev lists them oldest first
+record Printed : Set where
+  constructor printed
   field
     number  : String
     justif  : String
     formula : String
 
-rowsRev : Nat -> List ProofLine -> List Row -> List Row
-rowsRev n       []                   acc = acc
-rowsRev zero    (proofLine A j ∷ ls) acc = acc
-rowsRev (suc n) (proofLine A j ∷ ls) acc =
-  rowsRev n ls (row (showNat (suc n)) (justifStr j) (showFormula A) ∷ acc)
+printedRev : Nat -> List ProofLine -> List Printed -> List Printed
+printedRev n       []                   acc = acc
+printedRev zero    (proofLine A j ∷ ls) acc = acc
+printedRev (suc n) (proofLine A j ∷ ls) acc =
+  printedRev n ls (printed (showNat (suc n)) (justifStr j) (showFormula A) ∷ acc)
 
-justWidth : List Row -> Nat
-justWidth []                 = zero
-justWidth (row _ j _ ∷ rs) = strLen j ⊔ justWidth rs
+justWidth : List Printed -> Nat
+justWidth []                   = zero
+justWidth (printed _ j _ ∷ rs) = strLen j ⊔ justWidth rs
 
-rowLines : Nat -> Nat -> List Row -> List String
-rowLines nw jw []                 = []
-rowLines nw jw (row k j f ∷ rs) =
-  (padL nw k <> "  " <> padR jw j <> "  " <> f) ∷ rowLines nw jw rs
+printedLines : Nat -> Nat -> List Printed -> List String
+printedLines nw jw []                   = []
+printedLines nw jw (printed k j f ∷ rs) =
+  (padL nw k <> "  " <> padR jw j <> "  " <> f) ∷ printedLines nw jw rs
 
 stateLines : Formula -> ProofState -> List String
 stateLines A (proofState n ls) =
-  ("⊢ " <> showFormula A) ∷ "" ∷ rowLines (strLen (showNat n)) (justWidth rows) rows
+  ("⊢ " <> showFormula A) ∷ "" ∷ printedLines (strLen (showNat n)) (justWidth table) table
   where
-    rows : List Row
-    rows = rowsRev n ls []
+    table : List Printed
+    table = printedRev n ls []
 
 proofLines : {A : Formula} -> ⊢ A -> List String
 proofLines {A} d = stateLines A (fst (linearise d (proofState zero [])))
@@ -359,12 +359,12 @@ isVar (A ⇒ B) = false
 isVar (○ A)   = false
 isVar (□ A)   = false
 
-stateStr : Formula -> Val -> String
+stateStr : (P : Formula) -> Val P -> String
 stateStr P v =
   "{" <> commaSep (map showFormula (filter (λ A -> valOf P v A)
                                            (nub (filter isVar (sub P))))) <> "}"
 
-statesLines : Formula -> Nat -> List Val -> List String
+statesLines : (P : Formula) -> Nat -> List (Val P) -> List String
 statesLines P i []       = []
 statesLines P i (v ∷ vs) =
   ("  " <> padL 3 (showNat i) <> "  " <> stateStr P v) ∷ statesLines P (suc i) vs
