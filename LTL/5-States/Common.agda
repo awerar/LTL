@@ -5,7 +5,7 @@
 -- The modules from LTL.5-States.State to LTL.7-SCC.SccSeed are parameterised by
 -- the formula P.  What they share that does not mention P lives here, so that
 -- an importer who opens them unapplied does not see a spurious P argument:
--- the refutation lemmas and a few list facts.  It re-exports the derived rules, valuations as a set
+-- the refutation lemmas.  It re-exports the derived rules, valuations as a set
 -- (LTL.5-States.Reach) and positions (LTL.4-Semantics.Orbit at Val), so a
 -- P-module opens this module and its P-modules.
 
@@ -31,11 +31,3 @@ refute○ : {R B : Formula} (c : Bool)
        -> ⊢ ¬ R
 refute○ true  f g = refute g f
 refute○ false f g = refute f (⇒Trans g linFwd)
-
-------------------------------------------------------------------------
--- AllInto for a mapped list, one derivation of  f w ⇒ C  per w.
-
-allIntoMap : {C : Formula} (f : Val -> Formula) (ws : List Val)
-          -> (∀[ w ∈ ws ] ⊢ (f w) ⇒ C) -> AllInto C (map f ws)
-allIntoMap f []       h = intoNil
-allIntoMap f (w ∷ ws) h = intoCons (h w here) (allIntoMap f ws (λ z m -> h z (there m)))

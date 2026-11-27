@@ -207,9 +207,9 @@ module name). Folder names never equal a module name.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (propositional skeleton, valuations `Val` and `allVals`,
    `indexOf`, `nub`, `atoms`, `argsOf` (the A with `c A` in a list), `valFrom`, `isTaut` for (PC)); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
-3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L0–L7 via
-   `⇒Refl`/`liftP`/`mpU`, no deduction theorem); `PropList` (`⋁Elim`,
-   `⋁Drop`, `splitD`); `Temporal` (D1–D6, `expConv`, `indRule`).
+3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L1, L3, L7, ⊥ ⇒ C, via
+   `⇒Refl`/`liftP`/`mpU`, no deduction theorem; only the rules the proof
+   uses); `PropList` (`∧`, `caseU`, `∨MonoR`, `⋀Proj`, `⋁Intro`, `⋁Elim`); `Temporal` (D1–D6, `expConv`, `indRule`).
 4. **Semantics on lassos** (`4-Semantics/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Statement`'s `Position`/`step`); `OrbitEval` (Boolean `evalAt` at positions,

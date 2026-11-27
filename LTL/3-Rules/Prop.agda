@@ -1,8 +1,8 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
 -- LTL.3-Rules.Prop -- the derived propositional rules that need no lists:
--- (L1) identity, (L0) ⊤ and ⊥, (L3) explosion, (L4) excluded middle, (L7)
--- ¬ A ⇒ A ⇒ B; also double negation.
+-- (L1) identity and transitivity, (L7) ¬ A ⇒ A ⇒ B, (L3) explosion, (L0)
+-- ⊥ ⇒ C, double negation and contraposition.
 --
 -- Everything comes from (P1)-(P3) by composition.  There is no deduction
 -- theorem; hypothetical reasoning works under a fixed antecedent P with
@@ -53,7 +53,7 @@ mpU f g = mp (mp p2 f) g
 ⇒Swap {A} {B} {C} f = mpU (liftP (mp p2 f)) (p1 {B} {A})
 
 ------------------------------------------------------------------------
--- (L7), then (L3), (L0), (L4)
+-- (L7), then (L3)
 
 -- (L7) first half; p1 is the second.  Non-states are refuted with it.
 ¬Elim : ⊢ ¬ A ⇒ A ⇒ B
@@ -79,22 +79,16 @@ dne {A} = mpU (⇒Trans (¬Elim {¬ A} {¬ ⊤}) (p3 {⊤} {A}))
 dni : {A : Formula} -> ⊢ A ⇒ ¬ ¬ A
 dni {A} = mp (p3 {A} {¬ ¬ A}) (dne {¬ A})
 
--- (L0)
-not⊥ : ⊢ ¬ ⊥
-not⊥ = mp dni deriv⊤
-
+-- (L0), second half: ⊥ is ¬ ⊤.
 exFalso : ⊢ ⊥ ⇒ C
 exFalso = mpU (¬Elim {⊤}) (liftP deriv⊤)
 
--- (L4).  Since  A ∨ B  is  ¬ A ⇒ B , excluded middle is reflexivity.
-lem : ⊢ A ∨ ¬ A
-lem = ⇒Refl
-
 ------------------------------------------------------------------------
--- Contraposition, used by the disjunction lemmas of LTL.3-Rules.PropList
-
-dnMono : ⊢ (A ⇒ B) ⇒ ¬ ¬ A ⇒ ¬ ¬ B
-dnMono = ⇒TransU (⇒TransU (liftP dne) ⇒Refl) (liftP dni)
+-- Contraposition, used by caseU and ⋁Elim (LTL.3-Rules.PropList): pass
+-- A ⇒ B  through double negation, then apply (P3).
 
 contra : {A B : Formula} -> ⊢ (A ⇒ B) ⇒ ¬ B ⇒ ¬ A
 contra {A} {B} = ⇒Trans dnMono (p3 {¬ B} {¬ A})
+  where
+    dnMono : ⊢ (A ⇒ B) ⇒ ¬ ¬ A ⇒ ¬ ¬ B
+    dnMono = ⇒TransU (⇒TransU (liftP dne) ⇒Refl) (liftP dni)

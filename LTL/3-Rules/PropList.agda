@@ -1,12 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.3-Rules.PropList -- the list-indexed propositional rules: (L2) a formula
--- implying each member implies ⋀, (L5) ⋁ elimination, and (L6) splitting a
--- disjunction on a formula.
+-- LTL.3-Rules.PropList -- binary conjunction, case analysis, monotonicity
+-- of ∨, and the list-indexed rules: (L2) projection out of ⋀, (L5) ⋁
+-- introduction and elimination.
 --
--- ⋀ and ⋁ are from LTL.2-Syntax.Formula, with ⋀ [] = ⊤ and ⋁ [] = ⊥.  ⋁Elim is the
--- workhorse of the refutations: dropping refuted disjuncts and eliminating
--- beta over a set of states are both instances of it.
+-- ⋀ and ⋁ are from LTL.2-Syntax.Formula, with ⋀ [] = ⊤ and ⋁ [] = ⊥.  ⋁Elim
+-- eliminates beta over a set of states (betaElim, LTL.5-States.Extract); its
+-- step is caseU on the head disjunct.
 
 module LTL.3-Rules.PropList where
 
@@ -16,6 +16,7 @@ open import LTL.3-Rules.Prop public
 
 private variable
   P Q A B C : Formula
+  X : Set
 
 ------------------------------------------------------------------------
 -- Negation introduction under an antecedent: from  P ⇒ (C ⇒ B)  and
@@ -50,7 +51,8 @@ mpU2 f g = mpU (mpU (liftP p2) f) g
 ∧Pair f g = mp p3 (¬IntroU (liftP g) (⇒TransU (liftP f) dne))
 
 -- Case analysis under an antecedent: from P ⇒ (X ⇒ Z) and P ⇒ (¬ X ⇒ Z)
--- conclude P ⇒ Z.  The (D4) disjunction lemmas of LTL.3-Rules.Temporal use it.
+-- conclude P ⇒ Z.  ⋁Elim and the (D4) disjunction lemmas of
+-- LTL.3-Rules.Temporal use it.
 
 caseU : {P X Z : Formula}
      -> ⊢ P ⇒ X ⇒ Z -> ⊢ P ⇒ ¬ X ⇒ Z
@@ -64,30 +66,20 @@ caseU {P} {X} {Z} f g = ⇒Trans (¬IntroU h1 h2) dne
     h2 = mpU (liftP (contra {X} {Z})) f
 
 ------------------------------------------------------------------------
+-- Binary disjunction.  C ∨ A is ¬ C ⇒ A, so monotonicity in the second
+-- disjunct is (P2) on a lifted derivation.
+
+∨MonoR : ⊢ A ⇒ B -> ⊢ C ∨ A ⇒ C ∨ B
+∨MonoR d = mp p2 (liftP d)
+
+------------------------------------------------------------------------
 -- (L2)
-
--- AllFrom C As: every A in As follows from C (⊢ C ⇒ A for each).
-
-data AllFrom (C : Formula) : List Formula -> Set where
-  fromNil  : AllFrom C []
-  fromCons : {A : Formula} {As : List Formula}
-          -> ⊢ C ⇒ A -> AllFrom C As -> AllFrom C (A ∷ As)
-
-allFrom-map : (As : List Formula)
-           -> (∀ⁱ[ A ∈ As ] ⊢ C ⇒ A) -> AllFrom C As
-allFrom-map []       f = fromNil
-allFrom-map (A ∷ As) f = fromCons (f here) (allFrom-map As (λ m -> f (there m)))
 
 ⋀Proj : (As : List Formula)
      -> A ∈ As -> ⊢ ⋀ As ⇒ A
 ⋀Proj []       ()
 ⋀Proj (B ∷ Bs) here      = ∧Fst
 ⋀Proj (B ∷ Bs) (there h) = ⇒Trans ∧Snd (⋀Proj Bs h)
-
-⋀Intro : (As : List Formula)
-      -> AllFrom C As -> ⊢ C ⇒ ⋀ As
-⋀Intro []       fromNil         = liftP deriv⊤
-⋀Intro (A ∷ As) (fromCons d ds) = ∧Pair d (⋀Intro As ds)
 
 ------------------------------------------------------------------------
 -- (L5)
@@ -99,10 +91,13 @@ data AllInto (C : Formula) : List Formula -> Set where
   intoCons : {A : Formula} {As : List Formula}
           -> ⊢ A ⇒ C -> AllInto C As -> AllInto C (A ∷ As)
 
-allInto-map : (As : List Formula)
-           -> (∀ⁱ[ A ∈ As ] ⊢ A ⇒ C) -> AllInto C As
-allInto-map []       f = intoNil
-allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m)))
+-- AllInto for a mapped list, one derivation of  f x ⇒ C  per x.  It walks
+-- xs, so no inversion of  map f  is needed.
+
+allInto-map : (f : X -> Formula) (xs : List X)
+           -> (∀[ x ∈ xs ] ⊢ (f x) ⇒ C) -> AllInto C (map f xs)
+allInto-map f []       h = intoNil
+allInto-map f (x ∷ xs) h = intoCons (h x here) (allInto-map f xs (λ z m -> h z (there m)))
 
 ⋁Intro : (As : List Formula)
       -> A ∈ As -> ⊢ A ⇒ ⋁ As
@@ -110,84 +105,12 @@ allInto-map (A ∷ As) f = intoCons (f here) (allInto-map As (λ m -> f (there m
 ⋁Intro (B ∷ Bs) here      = explode
 ⋁Intro (B ∷ Bs) (there h) = ⇒Trans (⋁Intro Bs h) p1
 
--- The cons case is the classical one: under the antecedent
--- H = ¬ A ⇒ ⋁ As, contraposing the two hypotheses gives
--- ¬ C ⇒ A and ¬ C ⇒ ¬ A, hence ¬ ¬ C, hence C.
+-- ⋁ (A ∷ As) is  ¬ A ⇒ ⋁ As , so the cons case is caseU on A under that
+-- antecedent: A gives C by the hypothesis, and ¬ A gives ⋁ As by ⇒Refl,
+-- hence C by induction.
 
-⋁Elim : {C : Formula} (As : List Formula)
+⋁Elim : (As : List Formula)
      -> AllInto C As -> ⊢ ⋁ As ⇒ C
 ⋁Elim []       intoNil         = exFalso
-⋁Elim {C} (A ∷ As) (intoCons d ds) = ⇒Trans (¬IntroU h1 h2) dne
-  where
-    H : Formula
-    H = ¬ A ⇒ ⋁ As
-
-    hIH : ⊢ ⋁ As ⇒ C
-    hIH = ⋁Elim As ds
-
-    hNA : ⊢ H ⇒ ¬ A ⇒ C
-    hNA = ⇒TransU ⇒Refl (liftP hIH)
-
-    h1 : ⊢ H ⇒ ¬ C ⇒ A
-    h1 = ⇒TransU (mpU (liftP (contra {¬ A} {C})) hNA) (liftP dne)
-
-    h2 : ⊢ H ⇒ ¬ C ⇒ ¬ A
-    h2 = mpU (liftP (contra {A} {C})) (liftP d)
-
-------------------------------------------------------------------------
--- Dropping a refuted disjunct.  State completeness discharges the non-states
--- this way, and the step lemma the non-successors.
-
-⋁Drop : {A : Formula} (As : List Formula)
-     -> ⊢ ¬ A -> ⊢ ⋁ (A ∷ As) ⇒ ⋁ As
-⋁Drop {A} As d =
-  ⋁Elim (A ∷ As)
-           (intoCons (mp ¬Elim d) (allInto-map As (λ m -> ⋁Intro As m)))
-
-------------------------------------------------------------------------
--- (L6)
---
--- If  ⊢ ⋁ Cs  then  ⊢ ⋁ (splitOn A Cs) , where splitOn A Cs conjoins each
--- disjunct with A and, separately, with ¬ A.  This is the step of the
--- induction along sub P in state completeness (LTL.5-States.Complete).
-
-splitOn : Formula -> List Formula -> List Formula
-splitOn A Cs = map (A ∧_) Cs ++ map (¬ A ∧_) Cs
-
--- From  ¬ (U ∧ C)  and C, conclude  ¬ U.  Both halves of splitD use it,
--- once at U := A and once at U := ¬ A.
-
-∧¬L : {U C : Formula} -> ⊢ ¬ (U ∧ C) ⇒ C ⇒ ¬ U
-∧¬L {U} {C} = ⇒TransU (liftP dni) (mpU (liftP (contra {U} {¬ C})) dne)
-
-splitD : {A : Formula} (Cs : List Formula)
-      -> ⊢ ⋁ Cs -> ⊢ ⋁ (splitOn A Cs)
-splitD {A} Cs d = mp (⋁Elim Cs (allInto-map Cs each)) d
-  where
-    Z : Formula
-    Z = ⋁ (splitOn A Cs)
-
-    each : ∀ⁱ[ C ∈ Cs ] ⊢ C ⇒ Z
-    each {C} m = ⇒Trans (¬IntroU h1 h2) dne
-      where
-        j1 : ⊢ A ∧ C ⇒ Z
-        j1 = ⋁Intro (splitOn A Cs)
-               (∈-++⁺ˡ (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
-                       (∈-map⁺ (A ∧_) m))
-
-        j2 : ⊢ ¬ A ∧ C ⇒ Z
-        j2 = ⋁Intro (splitOn A Cs)
-               (∈-++⁺ʳ (map (A ∧_) Cs) (map (¬ A ∧_) Cs)
-                       (∈-map⁺ (¬ A ∧_) m))
-
-        -- ¬ Z gives ¬ (¬ A ∧ C), which with C gives ¬ ¬ A,
-        -- hence A.
-        h1 : ⊢ C ⇒ ¬ Z ⇒ A
-        h1 = ⇒TransU (⇒TransU (liftP (mp contra j2))
-                                  (⇒Swap (∧¬L {¬ A} {C})))
-                       (liftP dne)
-
-        -- ¬ Z gives ¬ (A ∧ C), which with C gives ¬ A.
-        h2 : ⊢ C ⇒ ¬ Z ⇒ ¬ A
-        h2 = ⇒TransU (liftP (mp contra j1))
-                       (⇒Swap (∧¬L {A} {C}))
+⋁Elim (A ∷ As) (intoCons d ds) =
+  caseU (liftP d) (⇒TransU ⇒Refl (liftP (⋁Elim As ds)))

@@ -29,7 +29,7 @@ open import LTL.5-States.Closure P
 betaElim : {C : Formula} (ws : List Val)
         -> (∀[ w ∈ ws ] ⊢ (chi w) ⇒ C)
         -> ⊢ (beta ws) ⇒ C
-betaElim ws h = ⋁Elim (map chi ws) (allIntoMap chi ws h)
+betaElim ws h = ⋁Elim (map chi ws) (allInto-map chi ws h)
 
 betaIntro : (ws : List Val)
          -> ∀ⁱ[ w ∈ ws ] ⊢ (chi w) ⇒ (beta ws)
