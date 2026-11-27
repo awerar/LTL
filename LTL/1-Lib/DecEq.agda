@@ -4,8 +4,8 @@
 -- lists as sets decided by it, and finiteness.
 --
 -- DecEq A bundles the test with its two lemmas, so the graph layer takes one
--- argument for it; boolEq is the instance at Bool, LTL.5-States.Reach builds
--- the one at Val, and LTL.9-Tests.GraphExamples one at Nat.  Membership eq
+-- argument for it; boolEq is the instance at Bool, LTL.5-States.Valuation
+-- builds the one at Val, and LTL.9-Tests.GraphExamples one at Nat.  Membership eq
 -- opens the record and adds membership ∈ᵛ, inequality ≢ᵛ, list difference
 -- ∖ and ∖ᵛ, and list intersection ∩ˡ.  It is a module rather than
 -- definitions inside the record, so each lemma stays a definition of its own.

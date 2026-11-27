@@ -7,8 +7,8 @@
 -- an importer who opens them unapplied does not see a spurious P argument:
 -- the refutation lemmas.  It re-exports the derived rules and the set layer
 -- (LTL.1-Lib.Sets, LTL.1-Lib.Exhaustible).  The valuations of P, with
--- positions over them, are LTL.5-States.Reach, a P-module, so a P-module
--- opens this module, Reach at P, and its other P-modules.
+-- positions over them, are LTL.5-States.Valuation, a P-module, so a P-module
+-- opens this module, Valuation at P, and its other P-modules.
 
 module LTL.5-States.Common where
 

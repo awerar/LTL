@@ -24,7 +24,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.7-SCC.SccExtract (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach P
+open import LTL.5-States.Valuation P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.StepLemma P
@@ -45,8 +45,8 @@ extractBlock : (ws : Subgraph) (C : List Val) (u : Val)
             -> (A : Formula) -> □ A ∈ sub P
             -> C ⊆ Ust
             -> Closed[ step ▷ St ∩ˡ ws ] C
-            -> (∀[ z ∈ C ] valOf z A ≡ true)
-            -> valOf u (□ A) ≡ false -> u ∈ C
+            -> (∀[ z ∈ C ] holdsIn z A ≡ true)
+            -> holdsIn u (□ A) ≡ false -> u ∈ C
             -> ⊢ ¬ (chi u)
 extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
   where
@@ -128,14 +128,14 @@ blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
           ∈-∩ˡ⁺ Ust (cl (∩ˡ-fst C Ust _ my) (∩ˡ-snd St ws _ my') st)
                     (ustClosed (∩ˡ-snd C Ust _ my) (∩ˡ-fst St ws _ my') st)
 
-        dHold : ∀[ y ∈ D ] valOf y A ≡ true
+        dHold : ∀[ y ∈ D ] holdsIn y A ≡ true
         dHold y my =
-          ¬ᵇ-false (valOf y A)
-                   (∨ᵇ-falseʳ (valOf y (□ A)) (¬ᵇ valOf y A)
+          ¬ᵇ-false (holdsIn y A)
+                   (∨ᵇ-falseʳ (holdsIn y (□ A)) (¬ᵇ holdsIn y A)
                               (missA y (∩ˡ-fst C Ust y my)))
 
-        pend : valOf z (□ A) ≡ false
-        pend = ∨ᵇ-falseˡ (valOf z (□ A)) (¬ᵇ valOf z A) (missA z mz)
+        pend : holdsIn z (□ A) ≡ false
+        pend = ∨ᵇ-falseˡ (holdsIn z (□ A)) (¬ᵇ holdsIn z A) (missA z mz)
 
 ------------------------------------------------------------------------
 -- A certificate for Ust refutes all of it.  The induction starts from

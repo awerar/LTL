@@ -50,8 +50,8 @@ R = ¬ fab
 -- The state space: 21 positions of sub, but only 5 atoms (a, b and the boxes
 -- behind the three F's), so 32 rows and 17 states.  The closure is 8.
 
-lec-sizes : length (sub R) ∷ length (stateAtoms R)
-             ∷ length (rows (stateAtoms R))
+lec-sizes : length (sub R) ∷ length (atoms R)
+             ∷ length (rows (atoms R))
              ∷ length (St R) ∷ length (Ust R)
              ∷ length (eventualities R) ∷ [] ≡
                21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 3 ∷ []
@@ -65,8 +65,8 @@ bitV true  n = n
 bitV false n = 0
 
 num : Val R -> Nat
-num v = bitV (valOf R v pa) 8 + bitV (valOf R v pb) 4
-        + bitV (valOf R v (◇ pa)) 2 + bitV (valOf R v (◇ pb)) 1
+num v = bitV (holdsIn R v pa) 8 + bitV (holdsIn R v pb) 4
+        + bitV (holdsIn R v (◇ pa)) 2 + bitV (holdsIn R v (◇ pb)) 1
 
 -- s0 = 0, s1 = 1, s2 = 2, s3 = 3, s4 = 5, s5 = 7, s6 = 10, s7 = 11, in the
 -- order the closure produces them.
@@ -77,11 +77,11 @@ lec-states = refl
 -- and the same profile: a and b true at two states each, Fa and Fb at five
 -- each, F(a and b) at none.
 
-lec-profile : length (filter (λ v -> valOf R v pa) (Ust R))
-               ∷ length (filter (λ v -> valOf R v pb) (Ust R))
-               ∷ length (filter (λ v -> valOf R v (◇ pa)) (Ust R))
-               ∷ length (filter (λ v -> valOf R v (◇ pb)) (Ust R))
-               ∷ length (filter (λ v -> valOf R v (◇ (pa ∧ pb))) (Ust R))
+lec-profile : length (filter (λ v -> holdsIn R v pa) (Ust R))
+               ∷ length (filter (λ v -> holdsIn R v pb) (Ust R))
+               ∷ length (filter (λ v -> holdsIn R v (◇ pa)) (Ust R))
+               ∷ length (filter (λ v -> holdsIn R v (◇ pb)) (Ust R))
+               ∷ length (filter (λ v -> holdsIn R v (◇ (pa ∧ pb))) (Ust R))
                ∷ [] ≡ 2 ∷ 2 ∷ 5 ∷ 5 ∷ 0 ∷ []
 lec-profile = refl
 
@@ -132,7 +132,7 @@ s7 : Val R
 s7 = fst lo
 
 s0 : Val R
-s0 = nth (snd (snd lo)) zero (rowOf (λ A -> false) (stateAtoms R))
+s0 = nth (snd (snd lo)) zero (rowOf (λ A -> false) (atoms R))
 
 -- s7 is outside F_Fb, so the lecture's loop at s7 cannot be fair;
 -- s0 is inside it, so the loop decide returns can be;

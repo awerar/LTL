@@ -9,8 +9,8 @@
 -- sets on their own (∈ᵛ, ∖, ∩ˡ) are Membership's, in LTL.1-Lib.DecEq.
 --
 -- The graph layer (LTL.1-Lib.Graph, LTL.1-Lib.FairGraph) uses it at any node
--- type; LTL.5-States.Reach instantiates it at Val, and that instance is the one
--- the rest of the development sees.  It re-exports Membership eq, so an
+-- type; LTL.5-States.Valuation instantiates it at Val, and that instance is
+-- the one the rest of the development sees.  It re-exports Membership eq, so an
 -- importer gets ≡ᵛ, ∈ᵛ, ≢ᵛ and their lemmas from the same application.
 --
 -- LTL.1-Lib.Sets and LTL.1-Lib.Exhaustible are imported but not re-exported,

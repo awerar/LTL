@@ -256,10 +256,10 @@ axK5fwd = □ ◇ (pv ∨ qv) ⇒ □ ◇ pv ∨ □ ◇ qv
 K5fwd-sub : length (sub (¬ axK5fwd)) ≡ 22
 K5fwd-sub = refl
 
-K5fwd-atoms : length (stateAtoms (¬ axK5fwd)) ≡ 8
+K5fwd-atoms : length (atoms (¬ axK5fwd)) ≡ 8
 K5fwd-atoms = refl
 
-K5fwd-rows : length (rows (stateAtoms (¬ axK5fwd))) ≡ 256
+K5fwd-rows : length (rows (atoms (¬ axK5fwd))) ≡ 256
 K5fwd-rows = refl
 
 K5fwd-states : length (St (¬ axK5fwd)) ≡ 59

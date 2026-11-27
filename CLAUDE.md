@@ -62,7 +62,7 @@ derivation or a certified finite lasso countermodel.
   connectives `∧ᵇ ∨ᵇ ¬ᵇ ⇒ᵇ ⇔ᵇ ≢ᵇ` on Bool (the plain symbols are the LTL
   connectives); tests `n ≡ⁿ m`, `n ≤ⁿ m` on Nat, `v ≡ᵛ w`, `v ≢ᵛ w`,
   `v ∈ᵛ us` on nodes (`LTL/1-Lib/DecEq.agda`, re-exported by `Nodes`; valuations
-  at the instance `valEq` made in `LTL/5-States/Reach.agda`), `A ≡ᶠ B` on formulas (all `infix 4.5`,
+  at the instance `valEq` made in `LTL/5-States/Valuation.agda`), `A ≡ᶠ B` on formulas (all `infix 4.5`,
   so `v ∈ᵛ us ≡ true` needs no parentheses). Lemmas about a symbol use the
   stdlib hyphen style (`∈ᵛ-sound`, `≡ᶠ-refl`); never `foo_bar`, which Agda
   reads as a mixfix operator. The Boolean lemmas, all in the "Boolean lemmas"
@@ -111,15 +111,15 @@ derivation or a certified finite lasso countermodel.
   it stays explicit where it only occurs under a function (`reachSet ws v`,
   `sccOf ws r`, `outs ws x`, so also `Sink ws x` and `IsTerminal ws r`), since
   Agda cannot infer it there.
-- P-modules: the modules that work over one formula P — `Reach`, `State`, `Step`,
+- P-modules: the modules that work over one formula P — `Valuation`, `State`, `Step`,
   `StepLemma`, `Closure`, `Extract`, `CompletePC`,
   `Walk`, `Lasso`, `Hintikka`, `SccLasso`, `SccExtract`, `SccSeed` — take it as a module parameter,
   `module LTL.5-States.Step (P : Formula) where` (with `Formula` imported above
   the header), so P is never written at a call site inside them. A P-module
-  opens `LTL.5-States.Common`, `LTL.5-States.Reach P` and each P-module it uses at P
+  opens `LTL.5-States.Common`, `LTL.5-States.Valuation P` and each P-module it uses at P
   (`open import LTL.5-States.State P`), privately, and re-exports nothing:
-  applying a module copies its names, so two re-exported copies of `valOf`
-  would be ambiguous. The exceptions are `Reach`, the shared base, which
+  applying a module copies its names, so two re-exported copies of `chi`
+  would be ambiguous. The exceptions are `Valuation`, the shared base, which
   re-exports `Nodes` at `valEq` and `Orbit` at `Val`; `Walk`, which re-exports its
   applications of `Graph` and `FairGraph` at `step`; and `Lasso`, which re-exports `OrbitEval`
   at `readVal`. Code that does not mention P goes in an unparameterised
@@ -208,8 +208,8 @@ module name). Folder names never equal a module name.
 2. **Syntax and proof system** (`2-Syntax/`) — `Formula` (`Statement`'s datatype,
    abbreviations (with `lit`, `⋀`/`⋁`), decidable `≡ᶠ`, the subformula list `sub`); `Skel` (the propositional skeleton: `Statement`'s
    `propValue` is the one propositional evaluation, of a reading ρ of the atoms;
-   rows `Row As` (one bit per member of `As`, constructors `∅` and `_▸_`), `atomBit`,
-   `rowOf`, the truth table `rows`; `nub`, `atoms`, `□Arg`/`○Arg` (the A with X = □ A, resp. ○ A, by pattern matching);
+   rows `Row As` (one bit per member of `As`, constructors `∅` and `_▸_`), `readingOf`,
+   `rowOf`, `lits` (each atom signed by its bit; `chi` is their `⋀`), the truth table `rows`; `nub`, `atoms`, `□Arg`/`○Arg` (the A with X = □ A, resp. ○ A, by pattern matching);
    `propValue-cong` (readings agreeing on the atoms agree on `sub P`),
    `propValue-agree` (a compositional reading is its own `propValue`); `isTaut` for (PC),
    equivalent to `Tautology` by `isTaut-sound`/`isTaut-complete`); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
@@ -223,11 +223,12 @@ module name). Folder names never equal a module name.
 5. **States and transitions (m4 §2)** (`5-States/`) — `Common`
    (the formula-independent base of the
    P-modules: re-exports `Rules`, `Sets` and `Exhaustible`; the `refute`
-   lemmas); P-modules `Reach` (the valuations `Val = Row (atoms P)`, so a
-   valuation's type names its formula, `valEq`, and `Nodes` at `valEq` and
+   lemmas); P-modules `Valuation` (the valuations `Val = Row (atoms P)`, so a
+   valuation's type names its formula; `holdsIn v = propValue (readingOf v)`,
+   what v makes true; `valEq`, and `Nodes` at `valEq` and
    `Orbit` at `Val`, re-exported); `State` (a valuation is a row of bits over
-   `stateAtoms = atoms P`, and `valOf v = propValue (atomBit v)`, so (S1) holds
-   by definition and `isState` is (S2) alone; `valOf`,
+   `atoms P`, read by `holdsIn`, so (S1) holds
+   by definition and `isState` is (S2) alone;
    `eventualities`, `nexts`, `St`, `chi` (a literal per atom), `beta`); `Step` (`step` as
    T1–T3 over `nexts` and `eventualities`, `StepFails`, `succs`); `StepLemma` (`chiProj`, Lemmas
    2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness

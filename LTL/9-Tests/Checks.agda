@@ -41,10 +41,10 @@ subBenAri-dup = refl
 -- its states: 8 rows, not the 64 vectors over sub benAri.  Its one
 -- eventuality p is listed once, though □ p occurs twice.
 
-atomsBenAri : stateAtoms benAri ≡ □ var zero ∷ var zero ∷ ○ □ var zero ∷ []
+atomsBenAri : atoms benAri ≡ □ var zero ∷ var zero ∷ ○ □ var zero ∷ []
 atomsBenAri = refl
 
-rows-BenAri : length (rows (stateAtoms benAri)) ≡ 8
+rows-BenAri : length (rows (atoms benAri)) ≡ 8
 rows-BenAri = refl
 
 evBenAri : eventualities benAri ≡ var zero ∷ []
@@ -68,7 +68,7 @@ St-◇P = refl
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St-¬BenAri : length (rows (stateAtoms ¬BenAri)) ≡ 8
+St-¬BenAri : length (rows (atoms ¬BenAri)) ≡ 8
 St-¬BenAri = refl
 
 St-¬BenAri-count : length (St ¬BenAri) ≡ 6

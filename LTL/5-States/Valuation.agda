@@ -1,10 +1,12 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.5-States.Reach -- the valuations of P as a set.
+-- LTL.5-States.Valuation -- the valuations of P, what they make true, and
+-- the valuations as a set.
 --
 -- A valuation of P is a row over its atoms (LTL.2-Syntax.Skel), so its type
--- names the formula its bits are about.  This module instantiates
--- LTL.1-Lib.Nodes at their equality test valEq (rowEq of
+-- names the formula its bits are about.  holdsIn v reads any formula off v:
+-- its bit at an atom, and the truth tables of ¬ and ⇒ above.  This module
+-- instantiates LTL.1-Lib.Nodes at their equality test valEq (rowEq of
 -- LTL.5-States.RowFinite), which supplies ≡ᵛ, ∈ᵛ, ≢ᵛ, the hypothesis names
 -- (Closed, All, ...) and listFinite, and LTL.4-Semantics.Orbit at Val, which
 -- supplies positions.  It is the one P-module the others open that
@@ -13,17 +15,21 @@
 
 open import LTL.2-Syntax.Formula using (Formula)
 
-module LTL.5-States.Reach (P : Formula) where
+module LTL.5-States.Valuation (P : Formula) where
 
 open import LTL.2-Syntax.Deriv
 open import LTL.1-Lib.DecEq using (DecEq)
 open import LTL.5-States.RowFinite using (rowEq)
 
 ------------------------------------------------------------------------
--- Valuations: a bit for each atom of P (LTL.5-States.State's stateAtoms).
+-- Valuations: a bit for each atom of P.
 
 Val : Set
 Val = Row (atoms P)
+
+-- Whether v makes A true: propValue at the reading of v.
+holdsIn : Val -> Formula -> Bool
+holdsIn v = propValue (readingOf v)
 
 valEq : DecEq Val
 valEq = rowEq (atoms P)

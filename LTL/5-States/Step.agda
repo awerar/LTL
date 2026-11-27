@@ -17,7 +17,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.Step (P : Formula) where
 
 open import LTL.2-Syntax.Deriv
-open import LTL.5-States.Reach P using (Val; Subgraph)
+open import LTL.5-States.Valuation P using (Val; holdsIn; Subgraph)
 open import LTL.5-States.State P
 
 ------------------------------------------------------------------------
@@ -25,13 +25,13 @@ open import LTL.5-States.State P
 -- of ○, (T2) and (T3) at the eventualities.
 
 t1At : Val -> Val -> Formula -> Bool
-t1At v w B = valOf v (○ B) ⇔ᵇ valOf w B
+t1At v w B = holdsIn v (○ B) ⇔ᵇ holdsIn w B
 
 t2At : Val -> Val -> Formula -> Bool
-t2At v w A = valOf v (□ A) ⇒ᵇ valOf w (□ A)
+t2At v w A = holdsIn v (□ A) ⇒ᵇ holdsIn w (□ A)
 
 t3At : Val -> Val -> Formula -> Bool
-t3At v w A = ¬ᵇ valOf v (□ A) ∧ᵇ valOf v A ⇒ᵇ ¬ᵇ valOf w (□ A)
+t3At v w A = ¬ᵇ holdsIn v (□ A) ∧ᵇ holdsIn v A ⇒ᵇ ¬ᵇ holdsIn w (□ A)
 
 t1All t2All t3All : Val -> Val -> Bool
 t1All v w = all (t1At v w) nexts
@@ -111,14 +111,14 @@ succsIn us v mw st = ∈-filter⁺ (step v) us mw st
 persist : (v w : Val) (A : Formula)
        -> A ∈ eventualities
        -> step v w ≡ true
-       -> valOf v (□ A) ≡ false
-       -> valOf v A ≡ true
-       -> valOf w (□ A) ≡ false
+       -> holdsIn v (□ A) ≡ false
+       -> holdsIn v A ≡ true
+       -> holdsIn w (□ A) ≡ false
 persist v w A h st bx a =
-  ¬ᵇ-true (valOf w (□ A))
-          (⇒ᵇ-mp (¬ᵇ valOf v (□ A) ∧ᵇ valOf v A) (¬ᵇ valOf w (□ A))
+  ¬ᵇ-true (holdsIn w (□ A))
+          (⇒ᵇ-mp (¬ᵇ holdsIn v (□ A) ∧ᵇ holdsIn v A) (¬ᵇ holdsIn w (□ A))
                  (stepT3 v w st h)
-                 (∧ᵇ-intro (¬ᵇ valOf v (□ A)) (valOf v A) (cong ¬ᵇ_ bx) a))
+                 (∧ᵇ-intro (¬ᵇ holdsIn v (□ A)) (holdsIn v A) (cong ¬ᵇ_ bx) a))
 
 ------------------------------------------------------------------------
 -- (T2), read off the same way.  The step lemma uses it to refute a
@@ -127,7 +127,7 @@ persist v w A h st bx a =
 carry : (v w : Val) (A : Formula)
      -> A ∈ eventualities
      -> step v w ≡ true
-     -> valOf v (□ A) ≡ true
-     -> valOf w (□ A) ≡ true
+     -> holdsIn v (□ A) ≡ true
+     -> holdsIn w (□ A) ≡ true
 carry v w A h st bx =
-  ⇒ᵇ-mp (valOf v (□ A)) (valOf w (□ A)) (stepT2 v w st h) bx
+  ⇒ᵇ-mp (holdsIn v (□ A)) (holdsIn w (□ A)) (stepT2 v w st h) bx

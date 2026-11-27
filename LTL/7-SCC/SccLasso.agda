@@ -9,7 +9,7 @@
 --
 -- The fairness predicate for the eventuality □ A is
 --
---     evPred A z  =  valOf z (□ A)  or  not (valOf z A)
+--     evPred A z  =  holdsIn z (□ A)  or  not (holdsIn z A)
 --
 -- "□ A is not pending at z, or A fails at z".  A cycle meeting it either
 -- visits a state where the eventuality is not pending (and then, by
@@ -25,7 +25,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.7-SCC.SccLasso (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach P
+open import LTL.5-States.Valuation P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.Closure P
@@ -37,7 +37,7 @@ open import LTL.6-Countermodel.Lasso P
 -- their truth at a witness is used.
 
 evPred : Formula -> Val -> Bool
-evPred A z = valOf z (□ A) ∨ᵇ ¬ᵇ valOf z A
+evPred A z = holdsIn z (□ A) ∨ᵇ ¬ᵇ holdsIn z A
 
 evPreds : List Pred
 evPreds = map evPred (eventualities)
@@ -52,12 +52,12 @@ evPreds = map evPred (eventualities)
 -- pending there, so the first disjunct is out and the second says A fails.
 
 evWitness : (A : Formula) (z : Val)
-         -> evPred A z ≡ true -> valOf z (□ A) ≡ false
-         -> valOf z A ≡ false
+         -> evPred A z ≡ true -> holdsIn z (□ A) ≡ false
+         -> holdsIn z A ≡ false
 evWitness A z ez pd =
   [ (λ e1 -> emptyElim (true≢false (trans (sym e1) pd)))
-  , ¬ᵇ-true (valOf z A)
-  ] (∨ᵇ-true (valOf z (□ A)) (¬ᵇ valOf z A) ez)
+  , ¬ᵇ-true (holdsIn z A)
+  ] (∨ᵇ-true (holdsIn z (□ A)) (¬ᵇ holdsIn z A) ez)
 
 ------------------------------------------------------------------------
 -- A FairLoop in Ust is a Lasso.  The loop's cycle is q ∷ qs, and the first

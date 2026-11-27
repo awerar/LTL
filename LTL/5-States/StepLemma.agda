@@ -15,7 +15,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.StepLemma (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach P
+open import LTL.5-States.Valuation P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.CompletePC P
@@ -41,17 +41,17 @@ notSucc v w e = byCondition (stepFails v w e)
     R : Formula
     R = (chi v) ∧ ○ (chi w)
 
-    pv : ∀ⁱ[ A ∈ sub P ] ⊢ R ⇒ (lit A (valOf v A))
+    pv : ∀ⁱ[ A ∈ sub P ] ⊢ R ⇒ (lit A (holdsIn v A))
     pv m = ⇒Trans ∧Fst (chiProj v m)
 
-    pw : ∀ⁱ[ A ∈ sub P ] ⊢ R ⇒ ○ (lit A (valOf w A))
+    pw : ∀ⁱ[ A ∈ sub P ] ⊢ R ⇒ ○ (lit A (holdsIn w A))
     pw m = ⇒Trans ∧Snd (○Mono (chiProj w m))
 
-    pvAt : {A : Formula} -> A ∈ sub P -> (c : Bool) -> valOf v A ≡ c
+    pvAt : {A : Formula} -> A ∈ sub P -> (c : Bool) -> holdsIn v A ≡ c
         -> ⊢ R ⇒ (lit A c)
     pvAt m c eq = subst (λ d -> ⊢ R ⇒ (lit _ d)) eq (pv m)
 
-    pwAt : {A : Formula} -> A ∈ sub P -> (c : Bool) -> valOf w A ≡ c
+    pwAt : {A : Formula} -> A ∈ sub P -> (c : Bool) -> holdsIn w A ≡ c
         -> ⊢ R ⇒ ○ (lit A c)
     pwAt m c eq = subst (λ d -> ⊢ R ⇒ ○ (lit _ d)) eq (pw m)
 
@@ -60,10 +60,10 @@ notSucc v w e = byCondition (stepFails v w e)
 
     case○ : {B : Formula} -> ○ B ∈ sub P -> t1At v w B ≡ false -> ⊢ ¬ R
     case○ {B} m q =
-      refute○ (valOf w B)
-                (pvAt m (¬ᵇ valOf w B)
-                      (⇔ᵇ-false (valOf v (○ B)) (valOf w B) q))
-                (pwAt (sub-○ P m) (valOf w B) refl)
+      refute○ (holdsIn w B)
+                (pvAt m (¬ᵇ holdsIn w B)
+                      (⇔ᵇ-false (holdsIn v (○ B)) (holdsIn w B) q))
+                (pwAt (sub-○ P m) (holdsIn w B) refl)
 
     ----------------------------------------------------------------
     -- (T2): □ B holds at v, so it must hold at w; it does not.
@@ -72,8 +72,8 @@ notSucc v w e = byCondition (stepFails v w e)
     case□T2 {B} m q = refute (⇒Trans (pvAt m true (fst pr)) □○□)
                               (⇒Trans (pwAt m false (snd pr)) linFwd)
       where
-        pr : valOf v (□ B) ≡ true × valOf w (□ B) ≡ false
-        pr = ⇒ᵇ-false (valOf v (□ B)) (valOf w (□ B)) q
+        pr : holdsIn v (□ B) ≡ true × holdsIn w (□ B) ≡ false
+        pr = ⇒ᵇ-false (holdsIn v (□ B)) (holdsIn w (□ B)) q
 
     ----------------------------------------------------------------
     -- (T3): □ B fails at v while B holds, so □ B must fail at w; it holds,
@@ -85,19 +85,19 @@ notSucc v w e = byCondition (stepFails v w e)
                                        expConv)
                               (pvAt m false eV)
       where
-        pr : ¬ᵇ valOf v (□ B) ∧ᵇ valOf v B ≡ true ×
-             ¬ᵇ valOf w (□ B) ≡ false
-        pr = ⇒ᵇ-false (¬ᵇ valOf v (□ B) ∧ᵇ valOf v B) (¬ᵇ valOf w (□ B)) q
+        pr : ¬ᵇ holdsIn v (□ B) ∧ᵇ holdsIn v B ≡ true ×
+             ¬ᵇ holdsIn w (□ B) ≡ false
+        pr = ⇒ᵇ-false (¬ᵇ holdsIn v (□ B) ∧ᵇ holdsIn v B) (¬ᵇ holdsIn w (□ B)) q
 
-        eV : valOf v (□ B) ≡ false
-        eV = ¬ᵇ-true (valOf v (□ B))
-                     (∧ᵇ-trueˡ (¬ᵇ valOf v (□ B)) (valOf v B) (fst pr))
+        eV : holdsIn v (□ B) ≡ false
+        eV = ¬ᵇ-true (holdsIn v (□ B))
+                     (∧ᵇ-trueˡ (¬ᵇ holdsIn v (□ B)) (holdsIn v B) (fst pr))
 
-        eB : valOf v B ≡ true
-        eB = ∧ᵇ-trueʳ (¬ᵇ valOf v (□ B)) (valOf v B) (fst pr)
+        eB : holdsIn v B ≡ true
+        eB = ∧ᵇ-trueʳ (¬ᵇ holdsIn v (□ B)) (holdsIn v B) (fst pr)
 
-        eW : valOf w (□ B) ≡ true
-        eW = ¬ᵇ-false (valOf w (□ B)) (snd pr)
+        eW : holdsIn w (□ B) ≡ true
+        eW = ¬ᵇ-false (holdsIn w (□ B)) (snd pr)
 
     ----------------------------------------------------------------
 

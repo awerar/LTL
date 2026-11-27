@@ -23,7 +23,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.Closure (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach P
+open import LTL.5-States.Valuation P
 open import LTL.5-States.RowFinite using (guardedRowFinite)
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
@@ -43,10 +43,10 @@ anyVal : Pred
 anyVal v = true
 
 stateFinite : Finiteᵛ anyVal
-stateFinite = guardedRowFinite stateAtoms anyVal
+stateFinite = guardedRowFinite (atoms P) anyVal
 
 containsP : Val -> Bool
-containsP v = valOf v P
+containsP v = holdsIn v P
 
 stInPool : All anyVal St
 stInPool x m = refl
@@ -64,7 +64,7 @@ ustSt {v} m = closureIn containsP St stInPool stateFinite v m
 -- against the folded  St  keeps the elaborator from unfolding Ust.
 
 stIsState : ∀ⁱ[ v ∈ St ] isState v ≡ true
-stIsState {v} m = filter-prop isState (rows stateAtoms) v m
+stIsState {v} m = filter-prop isState (rows (atoms P)) v m
 
 -- Every member is a state, so (S2) can be read off it.
 
@@ -72,7 +72,7 @@ ustState : ∀ⁱ[ v ∈ Ust ] isState v ≡ true
 ustState m = stIsState (ustSt m)
 
 ustSeed : {v : Val}
-       -> v ∈ St -> valOf v P ≡ true -> v ∈ Ust
+       -> v ∈ St -> holdsIn v P ≡ true -> v ∈ Ust
 ustSeed m e = closureSeed containsP St stInPool stateFinite m e
 
 ustClosed : Closed[ step ▷ St ] Ust

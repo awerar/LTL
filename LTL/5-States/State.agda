@@ -4,8 +4,8 @@
 -- states, and the characteristic formulas chi and beta.
 --
 -- A valuation v is a row of bits over the ATOMS of P (its var, ○ and □
--- subformulas, without repetition; LTL.5-States.Reach), and valOf v reads
--- any formula as propValue at the reading atomBit v -- the skeleton
+-- subformulas, without repetition), and holdsIn v reads any formula as
+-- propValue at readingOf v (LTL.5-States.Valuation) -- the skeleton
 -- evaluation of LTL.2-Syntax.Skel, the one LTL.Statement's (PC) uses.  So
 -- (S1), that a state respects ¬ and ⇒, holds by definition, and the one
 -- remaining condition is (S2): □ A in v implies A in v.  chi v has one
@@ -24,42 +24,31 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.5-States.State (P : Formula) where
 
 open import LTL.2-Syntax.Deriv
-open import LTL.5-States.Reach P using (Val)
-
-------------------------------------------------------------------------
--- Reading a valuation
-
--- The positions of a valuation: Val is Row stateAtoms.
-stateAtoms : List Formula
-stateAtoms = atoms P
-
--- What v says of a formula: its bit at an atom, and ¬ᵇ and ⇒ᵇ above.
-valOf : Val -> Formula -> Bool
-valOf v = propValue (atomBit v)
+open import LTL.5-States.Valuation P using (Val; holdsIn)
 
 ------------------------------------------------------------------------
 -- The eventualities (the A with □ A in sub P) and the arguments of ○, each
 -- once, with their round trips to sub P.
 
 eventualities : List Formula
-eventualities = concatMap □Arg stateAtoms
+eventualities = concatMap □Arg (atoms P)
 
 nexts : List Formula
-nexts = concatMap ○Arg stateAtoms
+nexts = concatMap ○Arg (atoms P)
 
 evIn : {A : Formula} -> □ A ∈ sub P -> A ∈ eventualities
 evIn m = ∈-concatMap⁺ □Arg (∈-atoms⁺ P _ m refl) here
 
 evSub : ∀ⁱ[ A ∈ eventualities ] □ A ∈ sub P
-evSub {A} m with ∈-concatMap⁻ □Arg stateAtoms m
-... | X , mX , k = atomSub P (subst (λ Y -> Y ∈ stateAtoms) (□Arg-inv X k) mX)
+evSub {A} m with ∈-concatMap⁻ □Arg (atoms P) m
+... | X , mX , k = atomSub P (subst (λ Y -> Y ∈ atoms P) (□Arg-inv X k) mX)
 
 nextIn : {A : Formula} -> ○ A ∈ sub P -> A ∈ nexts
 nextIn m = ∈-concatMap⁺ ○Arg (∈-atoms⁺ P _ m refl) here
 
 nextSub : ∀ⁱ[ A ∈ nexts ] ○ A ∈ sub P
-nextSub {A} m with ∈-concatMap⁻ ○Arg stateAtoms m
-... | X , mX , k = atomSub P (subst (λ Y -> Y ∈ stateAtoms) (○Arg-inv X k) mX)
+nextSub {A} m with ∈-concatMap⁻ ○Arg (atoms P) m
+... | X , mX , k = atomSub P (subst (λ Y -> Y ∈ atoms P) (○Arg-inv X k) mX)
 
 ------------------------------------------------------------------------
 -- The characteristic formula chi v of a valuation, and beta vs, the
@@ -67,10 +56,11 @@ nextSub {A} m with ∈-concatMap⁻ ○Arg stateAtoms m
 
 -- The literal of A that v makes true.
 litOf : Val -> Formula -> Formula
-litOf v A = lit A (valOf v A)
+litOf v A = lit A (holdsIn v A)
 
+-- The atoms of P, each signed by its bit in v (lits, LTL.2-Syntax.Skel).
 chi : Val -> Formula
-chi v = ⋀ (map (litOf v) stateAtoms)
+chi v = ⋀ (lits v)
 
 beta : List Val -> Formula
 beta vs = ⋁ (map chi vs)
@@ -80,10 +70,10 @@ beta vs = ⋁ (map chi vs)
 -- ○ is handled by the transition relation (LTL.5-States.Step).
 
 s2At : Val -> Formula -> Bool
-s2At v A = valOf v (□ A) ⇒ᵇ valOf v A
+s2At v A = holdsIn v (□ A) ⇒ᵇ holdsIn v A
 
 isState : Val -> Bool
 isState v = all (s2At v) eventualities
 
 St : List Val
-St = filter isState (rows stateAtoms)
+St = filter isState (rows (atoms P))

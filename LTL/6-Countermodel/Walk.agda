@@ -22,7 +22,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.6-Countermodel.Walk (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach P
+open import LTL.5-States.Valuation P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.Closure P
@@ -42,7 +42,7 @@ record Fulfil (A : Formula) (v : Val) (zs : List Val) : Set where
   field
     at      : Val
     visited : at ∈ v ∷ zs
-    fails   : valOf at A ≡ false
+    fails   : holdsIn at A ≡ false
 
 -- A Fulfil proof carries over to a walk with one more state in front.
 
@@ -64,10 +64,10 @@ fulfilWiden subset (ful z (there m) q) = ful z (there (subset z m)) q
 
 trailPersist : (A : Formula) -> A ∈ eventualities
             -> {v : Val} {zs : List Val} {x : Val} -> Trail v zs x
-            -> valOf v (□ A) ≡ false
-            -> Fulfil A v zs ⊎ valOf x (□ A) ≡ false
+            -> holdsIn v (□ A) ≡ false
+            -> Fulfil A v zs ⊎ holdsIn x (□ A) ≡ false
 trailPersist A mb tNil e = inr e
-trailPersist A mb (tCons {v} {w} {zs} {x} st wk) e with valOf v A in ea
+trailPersist A mb (tCons {v} {w} {zs} {x} st wk) e with holdsIn v A in ea
 ... | false = inl (ful v here ea)
 ... | true  =
   [ (λ f -> inl (fulfilCons f)) , inr ]

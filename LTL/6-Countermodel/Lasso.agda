@@ -22,7 +22,7 @@ open import LTL.2-Syntax.Formula using (Formula)
 module LTL.6-Countermodel.Lasso (P : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach P
+open import LTL.5-States.Valuation P
 open import LTL.5-States.State P
 open import LTL.5-States.Step P
 open import LTL.5-States.Closure P
@@ -56,7 +56,7 @@ record Cycle : Set where
 
 Fair : Cycle -> Set
 Fair cy =
-  ∀[ A ∈ eventualities ] (valOf b (□ A) ≡ false -> Fulfil A b (stretchStates loop))
+  ∀[ A ∈ eventualities ] (holdsIn b (□ A) ≡ false -> Fulfil A b (stretchStates loop))
   where open Cycle cy
 
 -- b is a state of the cycle.
@@ -115,13 +115,13 @@ stateAt v0 l i = posState (posIter loop (v0 , rest) i)
 ------------------------------------------------------------------------
 -- The Boolean evaluation at a position
 --
--- A variable is read off the state through valOf.  For a variable not in sub
--- P this gives false (atomBit finds no atom for it), so the evaluation is
+-- A variable is read off the state through holdsIn.  For a variable not in sub
+-- P this gives false (readingOf finds no atom for it), so the evaluation is
 -- total on all formulas, as soundness needs.
 
 -- a valuation read as an assignment to the variables
 readVal : Val -> Nat -> Bool
-readVal v n = valOf v (var n)
+readVal v n = holdsIn v (var n)
 
 open LTL.4-Semantics.OrbitEval Val readVal public
   using (evalAt; eval□-true; eval□-intro; eval□-false-intro)

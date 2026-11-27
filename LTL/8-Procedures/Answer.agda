@@ -16,7 +16,7 @@
 module LTL.8-Procedures.Answer where
 
 open import LTL.5-States.Common public
-open import LTL.5-States.Reach using (Val)
+open import LTL.5-States.Valuation using (Val)
 open import LTL.6-Countermodel.Lasso
 
 ------------------------------------------------------------------------

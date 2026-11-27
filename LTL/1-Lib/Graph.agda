@@ -24,7 +24,8 @@ module LTL.1-Lib.Graph {Node : Set} (eq : DecEq Node)
                        (G : Node -> Node -> Bool) where
 
 -- Not re-exported: an importer gets this module's own names only, and takes
--- the set layer from wherever it already has it (LTL.5-States.Reach, at Val).
+-- the set layer from wherever it already has it (LTL.5-States.Valuation, at
+-- Val).
 
 open import LTL.1-Lib.Sets
 open import LTL.1-Lib.Exhaustible

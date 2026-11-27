@@ -25,7 +25,7 @@ open import LTL.2-Syntax.Formula using (Formula; ¬_)
 module LTL.8-Procedures.Decide (Q : Formula) where
 
 open import LTL.5-States.Common
-open import LTL.5-States.Reach           (¬ Q)
+open import LTL.5-States.Valuation       (¬ Q)
 open import LTL.5-States.Taut using (tautChi)
 open import LTL.5-States.State           (¬ Q)
 open import LTL.5-States.Closure         (¬ Q)
@@ -50,13 +50,13 @@ provableEachSCC : Cert evPreds Ust
 provableEachSCC c w m = byPosition
   where
     -- w does not contain ¬ Q, so chi_w ⇒ Q is a tautology: one pc node
-    fromR : valOf w (¬ Q) ≡ false -> ⊢ (chi w) ⇒ Q
+    fromR : holdsIn w (¬ Q) ≡ false -> ⊢ (chi w) ⇒ Q
     fromR ev = pcTaut (tautChi Q w ev)
 
     byPosition : ⊢ (chi w) ⇒ Q
     byPosition with w ∈ᵛ Ust in ec
     ... | false =
-      fromR (refuteTrue (valOf w (¬ Q)) λ ed ->
+      fromR (refuteTrue (holdsIn w (¬ Q)) λ ed ->
                ∈ᵛ-false Ust w ec (ustSeed m ed))
     ... | true = mp ¬Elim (ustCertRefuted c w (∈ᵛ-sound Ust w ec))
 
@@ -67,16 +67,16 @@ provableSCC c =
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.
 --
--- v0 contains ¬ Q, so it does not contain Q (valOf reads ¬ as ¬ᵇ); Hintikka's
+-- v0 contains ¬ Q, so it does not contain Q (holdsIn reads ¬ as ¬ᵇ); Hintikka's
 -- lemma at stage 0 transfers that to the evaluation.
 
-buildCM : (v0 : Val) -> Lasso v0 -> valOf v0 (¬ Q) ≡ true
+buildCM : (v0 : Val) -> Lasso v0 -> holdsIn v0 (¬ Q) ≡ true
        -> LassoCountermodel Q
 buildCM v0 l ev = countermodel v0 l evalFalse
   where
     evalFalse : eval v0 l Q 0 ≡ false
     evalFalse = trans (sym (hintStart v0 l Q (there (sub-self Q))))
-                      (¬ᵇ-true (valOf v0 Q) ev)
+                      (¬ᵇ-true (holdsIn v0 Q) ev)
 
 -- A fair circuit through r, reached from a state s containing ¬ Q, is a fair
 -- loop from s, and so a countermodel.

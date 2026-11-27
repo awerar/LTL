@@ -24,7 +24,7 @@ open import LTL.5-States.Common
 -- Taut states its lemmas for any formula P, so it opens State unapplied, and
 -- privately: a P-module that opens Taut has State at its own P.
 open import LTL.5-States.State
-open import LTL.5-States.Reach using (Val)
+open import LTL.5-States.Valuation using (Val; holdsIn)
 
 ------------------------------------------------------------------------
 -- The formulas the pc nodes prove are built from these.
@@ -135,11 +135,11 @@ module _ (ρ : Formula -> Bool) where
   -- every subformula of P as ρ does (rowOf-reads).
 
   skelVec : (P : Formula) -> Val P
-  skelVec P = rowOf ρ (stateAtoms P)
+  skelVec P = rowOf ρ (atoms P)
 
-  valOfSkelVec : (P : Formula)
-              -> ∀[ A ∈ sub P ] valOf P (skelVec P) A ≡ propValue ρ A
-  valOfSkelVec P = rowOf-reads ρ P
+  holdsInSkelVec : (P : Formula)
+              -> ∀[ A ∈ sub P ] holdsIn P (skelVec P) A ≡ propValue ρ A
+  holdsInSkelVec P = rowOf-reads ρ P
 
   ----------------------------------------------------------------------
   -- Its chi is true under ρ: every literal is.
@@ -149,20 +149,19 @@ module _ (ρ : Formula -> Bool) where
   ... | true  = e
   ... | false = cong ¬ᵇ_ e
 
+  -- The literals of the row of ρ over atoms are true under ρ, since at an
+  -- atom propValue ρ is ρ.
+
+  litsRowOfTrue : (As : List Formula) -> (∀ⁱ[ X ∈ As ] isAtom X ≡ true)
+               -> ∀ⁱ[ C ∈ lits (rowOf ρ As) ] propValue ρ C ≡ true
+  litsRowOfTrue []       at ()
+  litsRowOfTrue (X ∷ As) at here      =
+    subst (λ b -> propValue ρ (lit X b) ≡ true) (propValue-atom ρ X (at here))
+          (litTrue X)
+  litsRowOfTrue (X ∷ As) at (there m) = litsRowOfTrue As (λ k -> at (there k)) m
+
   chiTrue : (P : Formula) -> propValue ρ (chi P (skelVec P)) ≡ true
-  chiTrue P = ⋀True (map (litOf P (skelVec P)) (stateAtoms P)) conj
-    where
-      conj : ∀ⁱ[ C ∈ map (litOf P (skelVec P)) (stateAtoms P) ]
-               propValue ρ C ≡ true
-      conj {C} m = fromSig (∈-map⁻ (litOf P (skelVec P)) (stateAtoms P) m)
-        where
-          fromSig : (∃[ A ∈ stateAtoms P ] C ≡ litOf P (skelVec P) A)
-                 -> propValue ρ C ≡ true
-          fromSig (A , mA , eq) =
-            subst (λ D -> propValue ρ D ≡ true) (sym eq)
-                  (subst (λ b -> propValue ρ (lit A b) ≡ true)
-                         (sym (valOfSkelVec P A (atomSub P mA)))
-                         (litTrue A))
+  chiTrue P = ⋀True (lits (skelVec P)) (litsRowOfTrue (atoms P) (atomIsAtom P))
 
   ----------------------------------------------------------------------
   -- Conversely, a reading that makes chi v true reads every subformula of P
@@ -174,17 +173,26 @@ module _ (ρ : Formula -> Bool) where
   litBit A true  e = e
   litBit A false e = ¬ᵇ-true (propValue ρ A) e
 
+  -- If every literal of r is true under ρ, r and ρ agree on the atoms As:
+  -- readingOf takes the first occurrence of X, whose literal fixes ρ X.
+
+  litsRead : {As : List Formula} (r : Row As) -> (∀ⁱ[ X ∈ As ] isAtom X ≡ true)
+          -> (∀ⁱ[ C ∈ lits r ] propValue ρ C ≡ true)
+          -> ∀[ X ∈ As ] readingOf r X ≡ ρ X
+  litsRead {B ∷ Bs} (b ▸ r) at h X m with B ≡ᶠ X in eq
+  litsRead {B ∷ Bs} (b ▸ r) at h X m         | true  =
+    subst (λ Y -> b ≡ ρ Y) (≡ᶠ-sound B X eq)
+          (trans (sym (litBit B b (h here))) (propValue-atom ρ B (at here)))
+  litsRead {B ∷ Bs} (b ▸ r) at h X here      | false =
+    emptyElim (true≢false (trans (sym (≡ᶠ-refl B)) eq))
+  litsRead {B ∷ Bs} (b ▸ r) at h X (there m) | false =
+    litsRead r (λ k -> at (there k)) (λ k -> h (there k)) X m
+
   chiReads : (P : Formula) (v : Val P) -> propValue ρ (chi P v) ≡ true
-          -> ∀[ A ∈ sub P ] valOf P v A ≡ propValue ρ A
-  chiReads P v e = propValue-cong (atomBit v) ρ P atAt
-    where
-      atAt : ∀[ X ∈ atoms P ] atomBit v X ≡ ρ X
-      atAt X m =
-        trans (sym (propValue-atom (atomBit v) X (atomIsAtom P m)))
-              (trans (sym (litBit X (valOf P v X)
-                             (⋀ProjTrue (map (litOf P v) (stateAtoms P))
-                                        (∈-map⁺ (litOf P v) m) e)))
-                     (propValue-atom ρ X (atomIsAtom P m)))
+          -> ∀[ A ∈ sub P ] holdsIn P v A ≡ propValue ρ A
+  chiReads P v e =
+    propValue-cong (readingOf v) ρ P
+      (litsRead v (atomIsAtom P) (λ k -> ⋀ProjTrue (lits v) k e))
 
   ----------------------------------------------------------------------
   -- It is a state, given (S2) under ρ at the eventualities.
@@ -192,8 +200,8 @@ module _ (ρ : Formula -> Bool) where
   s2Skel : (P : Formula) -> S2At (eventualities P)
         -> ∀[ B ∈ eventualities P ] s2At P (skelVec P) B ≡ true
   s2Skel P s2 B mB =
-    trans (cong₂ _⇒ᵇ_ (valOfSkelVec P (□ B) m□)
-                      (valOfSkelVec P B (sub-□ P m□)))
+    trans (cong₂ _⇒ᵇ_ (holdsInSkelVec P (□ B) m□)
+                      (holdsInSkelVec P B (sub-□ P m□)))
           (s2 B mB)
     where
       m□ : □ B ∈ sub P
@@ -201,8 +209,8 @@ module _ (ρ : Formula -> Bool) where
 
   skelVec∈St : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
   skelVec∈St P s2 =
-    ∈-filter⁺ (isState P) (rows (stateAtoms P))
-              (rows-complete (stateAtoms P) (skelVec P))
+    ∈-filter⁺ (isState P) (rows (atoms P))
+              (rows-complete (atoms P) (skelVec P))
                 (all-intro (s2At P (skelVec P)) (eventualities P)
                            (s2Skel P s2))
 
@@ -241,7 +249,7 @@ taut⋁Elim Cs C =
 
 ------------------------------------------------------------------------
 -- Projecting chi, as one node.  chi v has a literal per atom only, but
--- chi v ⇒ lit A (valOf v A) is a skeleton tautology for every A in sub P,
+-- chi v ⇒ lit A (holdsIn v A) is a skeleton tautology for every A in sub P,
 -- atom or not: a reading that makes chi v true reads A as v does (chiReads).
 
 tautProj : (P : Formula) (v : Val P)
@@ -257,9 +265,9 @@ tautProj P v {A} m =
 -- chi_w ⇒ Q  is tautProj at Q.
 
 tautChi : (Q : Formula) (w : Val (¬ Q))
-       -> valOf (¬ Q) w (¬ Q) ≡ false
+       -> holdsIn (¬ Q) w (¬ Q) ≡ false
        -> isTaut ((chi (¬ Q) w) ⇒ Q) ≡ true
 tautChi Q w ev =
   subst (λ b -> isTaut ((chi (¬ Q) w) ⇒ (lit Q b)) ≡ true)
-        (¬ᵇ-false (valOf (¬ Q) w Q) ev)
+        (¬ᵇ-false (holdsIn (¬ Q) w Q) ev)
         (tautProj (¬ Q) w (there (sub-self Q)))

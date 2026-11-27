@@ -361,7 +361,7 @@ isVar (□ A)   = false
 
 stateStr : (P : Formula) -> Val P -> String
 stateStr P v =
-  "{" <> commaSep (map showFormula (filter (λ A -> valOf P v A)
+  "{" <> commaSep (map showFormula (filter (λ A -> holdsIn P v A)
                                            (filter isVar (atoms P)))) <> "}"
 
 statesLines : (P : Formula) -> Nat -> List (Val P) -> List String

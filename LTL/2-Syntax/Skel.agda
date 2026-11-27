@@ -7,8 +7,9 @@
 -- There is one propositional evaluation, Statement's propValue: given a
 -- reading ρ of the atoms (the var, ○ and □ formulas), it interprets ¬ and ⇒.
 -- Everything else is a choice of ρ.  A row r : Row As holds one bit per atom
--- of As, and atomBit r reads it; a state of LTL.5-States.State is a row over
--- the atoms of P, and isTaut runs over the rows over the atoms of A.
+-- of As, and readingOf r is the reading it gives; a valuation of
+-- LTL.5-States.Valuation is a row over the atoms of P, and isTaut runs over
+-- the rows over the atoms of A.
 -- propValue-cong says two readings that agree on the atoms of P agree on all
 -- of sub P, and propValue-agree that a reading compositional on ¬ and ⇒ is
 -- its own propValue.
@@ -29,27 +30,38 @@ data Row : List Formula -> Set where
   ∅   : Row []
   _▸_ : {X : Formula} {As : List Formula} -> Bool -> Row As -> Row (X ∷ As)
 
--- The bit of X: the one beside X's first occurrence in As, or false if X is
--- not among them.
+-- The reading a row gives: X's bit is the one beside its first occurrence
+-- in As, or false if X is not among them.  The false case is reached only by
+-- readVal (LTL.6-Countermodel.Lasso), at a variable outside P:
+-- LTL.Statement's instants and propValue's readings are total, so this
+-- reading is too.
 
-atomBit : {As : List Formula} -> Row As -> Formula -> Bool
-atomBit {[]}     ∅        X = false
-atomBit {B ∷ Bs} (b ▸ bs) X = if B ≡ᶠ X then b else atomBit bs X
+readingOf : {As : List Formula} -> Row As -> Formula -> Bool
+readingOf {[]}     ∅        X = false
+readingOf {B ∷ Bs} (b ▸ bs) X = if B ≡ᶠ X then b else readingOf bs X
 
--- The row that a reading ρ gives As, and atomBit reads ρ back from it.  The
--- first B equal to X is X itself, by ≡ᶠ-sound.
+-- The row that a reading ρ gives As, and readingOf gives ρ back on As.
+-- The first B equal to X is X itself, by ≡ᶠ-sound.
 
 rowOf : (ρ : Formula -> Bool) (As : List Formula) -> Row As
 rowOf ρ []       = ∅
 rowOf ρ (X ∷ As) = ρ X ▸ rowOf ρ As
 
-atomBit-rowOf : (ρ : Formula -> Bool) (As : List Formula)
-             -> ∀[ X ∈ As ] atomBit (rowOf ρ As) X ≡ ρ X
-atomBit-rowOf ρ (B ∷ Bs) X m with B ≡ᶠ X in e
-atomBit-rowOf ρ (B ∷ Bs) X m         | true  = cong ρ (≡ᶠ-sound B X e)
-atomBit-rowOf ρ (B ∷ Bs) X here      | false =
+readingOf-rowOf : (ρ : Formula -> Bool) (As : List Formula)
+             -> ∀[ X ∈ As ] readingOf (rowOf ρ As) X ≡ ρ X
+readingOf-rowOf ρ (B ∷ Bs) X m with B ≡ᶠ X in e
+readingOf-rowOf ρ (B ∷ Bs) X m         | true  = cong ρ (≡ᶠ-sound B X e)
+readingOf-rowOf ρ (B ∷ Bs) X here      | false =
   emptyElim (true≢false (trans (sym (≡ᶠ-refl B)) e))
-atomBit-rowOf ρ (B ∷ Bs) X (there m) | false = atomBit-rowOf ρ Bs X m
+readingOf-rowOf ρ (B ∷ Bs) X (there m) | false = readingOf-rowOf ρ Bs X m
+
+-- The literals of a row: each member of As, signed by its own bit.  A
+-- valuation's characteristic formula (LTL.5-States.State's chi) is their
+-- conjunction, so its literals are read off the row, not looked up.
+
+lits : {As : List Formula} -> Row As -> List Formula
+lits {[]}     ∅       = []
+lits {X ∷ As} (b ▸ r) = lit X b ∷ lits r
 
 -- All the rows over As, the true-headed ones first: the truth table.
 
@@ -178,9 +190,9 @@ module _ (ρ ρ' : Formula -> Bool) (P : Formula)
 -- So the row of ρ over P's atoms reads sub P as ρ does.
 
 rowOf-reads : (ρ : Formula -> Bool) (P : Formula)
-           -> ∀[ A ∈ sub P ] propValue (atomBit (rowOf ρ (atoms P))) A ≡ propValue ρ A
+           -> ∀[ A ∈ sub P ] propValue (readingOf (rowOf ρ (atoms P))) A ≡ propValue ρ A
 rowOf-reads ρ P =
-  propValue-cong (atomBit (rowOf ρ (atoms P))) ρ P (atomBit-rowOf ρ (atoms P))
+  propValue-cong (readingOf (rowOf ρ (atoms P))) ρ P (readingOf-rowOf ρ (atoms P))
 
 -- A reading f that is compositional on ¬ and ⇒ is propValue of itself.
 
@@ -202,14 +214,14 @@ module _ (f : Formula -> Bool)
 -- every reading ρ is, on sub A, the row of ρ (rowOf-reads).
 
 isTaut : Formula -> Bool
-isTaut A = all (λ r -> propValue (atomBit r) A) (rows (atoms A))
+isTaut A = all (λ r -> propValue (readingOf r) A) (rows (atoms A))
 
 isTaut-sound : (A : Formula) -> isTaut A ≡ true -> Tautology A
 isTaut-sound A e ρ =
   trans (sym (rowOf-reads ρ A A (sub-self A)))
-        (all-true (λ r -> propValue (atomBit r) A) (rows (atoms A)) e
+        (all-true (λ r -> propValue (readingOf r) A) (rows (atoms A)) e
                   (rowOf ρ (atoms A)) (rows-complete (atoms A) (rowOf ρ (atoms A))))
 
 isTaut-complete : (A : Formula) -> Tautology A -> isTaut A ≡ true
 isTaut-complete A t =
-  all-intro (λ r -> propValue (atomBit r) A) (rows (atoms A)) (λ r m -> t (atomBit r))
+  all-intro (λ r -> propValue (readingOf r) A) (rows (atoms A)) (λ r m -> t (readingOf r))
