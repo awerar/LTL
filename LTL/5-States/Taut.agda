@@ -178,13 +178,13 @@ module _ (ρ : Formula -> Bool) where
           -> ∀[ A ∈ sub P ] valOf P v A ≡ propValue ρ A
   chiReads P v e = propValue-cong (atomBit v) ρ P atAt
     where
-      atAt : ∀[ X ∈ sub P ] (isAtom X ≡ true -> atomBit v X ≡ ρ X)
-      atAt X m eX =
-        trans (sym (propValue-atom (atomBit v) X eX))
+      atAt : ∀[ X ∈ atoms P ] atomBit v X ≡ ρ X
+      atAt X m =
+        trans (sym (propValue-atom (atomBit v) X (atomIsAtom P m)))
               (trans (sym (litBit X (valOf P v X)
                              (⋀ProjTrue (map (litOf P v) (stateAtoms P))
-                                        (∈-map⁺ (litOf P v) (∈-atoms⁺ P X m eX)) e)))
-                     (propValue-atom ρ X eX))
+                                        (∈-map⁺ (litOf P v) m) e)))
+                     (propValue-atom ρ X (atomIsAtom P m)))
 
   ----------------------------------------------------------------------
   -- It is a state, given (S2) under ρ at the eventualities.

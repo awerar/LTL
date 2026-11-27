@@ -62,7 +62,7 @@ fulfilWiden subset (ful z (there m) q) = ful z (there (subset z m)) q
 -- either A fails somewhere on the way (the eventuality is fulfilled) or □ A
 -- is still pending at x.  Each step is `persist`, i.e. (T3).
 
-trailPersist : (A : Formula) -> □ A ∈ sub P
+trailPersist : (A : Formula) -> A ∈ eventualities
             -> {v : Val} {zs : List Val} {x : Val} -> Trail v zs x
             -> valOf v (□ A) ≡ false
             -> Fulfil A v zs ⊎ valOf x (□ A) ≡ false

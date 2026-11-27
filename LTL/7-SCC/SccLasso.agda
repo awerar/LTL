@@ -93,4 +93,4 @@ sccLasso v0 mv0 (fairLoop r (reachesBy st ts sst)
             onPrefix (reachesBy pre tp spre) =
               [ fulfilWiden spre
               , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]
-                (trailPersist A (evSub mA) tp pr)
+                (trailPersist A mA tp pr)

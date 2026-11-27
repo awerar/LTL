@@ -49,7 +49,7 @@ module _ (cy : Cycle) (fair : Fair cy) where
               -> valOf (posState pos) (□ A) ≡ false
               -> ∃[ q ∈ orbit loop pos ] valOf (posState q) A ≡ false
   globalFulfil (vpos s rest wk subset) A mA pend =
-    [ onStem , onCycle ] (trailPersist A (evSub mA) wk pend)
+    [ onStem , onCycle ] (trailPersist A mA wk pend)
     where
       place : (q : Pos) -> q ∈ orbit loop (s , rest) -> {z : Val}
            -> posState q ≡ z -> valOf z A ≡ false
@@ -87,10 +87,10 @@ module _ (cy : Cycle) (fair : Fair cy) where
 -- Reading (S2) off a state of Ust
 
 □S2 : (s : Val) -> s ∈ Ust -> (B : Formula)
-   -> □ B ∈ sub P -> valOf s (□ B) ≡ true -> valOf s B ≡ true
+   -> B ∈ eventualities -> valOf s (□ B) ≡ true -> valOf s B ≡ true
 □S2 s m B mb e =
   ⇒ᵇ-mp (valOf s (□ B)) (valOf s B)
-        (all-true (s2At s) eventualities (ustState m) B (evIn mb)) e
+        (all-true (s2At s) eventualities (ustState m) B mb) e
 
 ------------------------------------------------------------------------
 -- (T2) along the run, and its consequence at every position of an orbit
@@ -101,7 +101,7 @@ module _ (cy : Cycle) where
 
   open Cycle cy
 
-  □Along : (B : Formula) -> □ B ∈ sub P
+  □Along : (B : Formula) -> B ∈ eventualities
         -> (pos : Pos) (t : Nat) -> ValidPos b pos
         -> valOf (posState pos) (□ B) ≡ true
         -> valOf (posState (posIter loop pos t)) (□ B) ≡ true
@@ -111,7 +111,7 @@ module _ (cy : Cycle) where
           B mb (snd (posStep cy (posIterValid cy pos t vp)))
           (□Along B mb pos t vp e)
 
-  □True : (B : Formula) -> □ B ∈ sub P
+  □True : (B : Formula) -> B ∈ eventualities
        -> (pos q : Pos) -> ValidPos b pos -> q ∈ orbit loop pos
        -> valOf (posState pos) (□ B) ≡ true
        -> valOf (posState q) B ≡ true
@@ -142,7 +142,7 @@ module _ (cy : Cycle) where
     trans (⇔ᵇ-sound (valOf (posState pos) (○ B))
                     (valOf (posState (nextPos loop pos)) B)
                     (stepT1 (posState pos) (posState (nextPos loop pos))
-                            (snd (posStep cy vp)) mA))
+                            (snd (posStep cy vp)) (nextIn mA)))
           (hintikka fair B (sub-○ P mA)
                     (nextPos loop pos) (fst (posStep cy vp)))
 
@@ -161,7 +161,7 @@ module _ (cy : Cycle) where
           atQ : ∀[ q ∈ orbit loop pos ] evalAt loop B q ≡ true
           atQ q m =
             trans (sym (ih q (orbitValid cy pos q vp m)))
-                  (□True B mA pos q vp m e)
+                  (□True B (evIn mA) pos q vp m e)
 
       -- □ B fails: globalFulfil supplies the false conjunct
       allFalse : valOf (posState pos) (□ B) ≡ false

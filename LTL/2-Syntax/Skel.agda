@@ -110,6 +110,9 @@ atoms B = filter isAtom (nub (sub B))
 atomSub : (B : Formula) -> ∀ⁱ[ A ∈ atoms B ] A ∈ sub B
 atomSub B m = nub-sub (sub B) (∈-filter⁻ isAtom (nub (sub B)) m)
 
+atomIsAtom : (B : Formula) -> ∀ⁱ[ A ∈ atoms B ] isAtom A ≡ true
+atomIsAtom B {A} m = filter-prop isAtom (nub (sub B)) A m
+
 ------------------------------------------------------------------------
 -- The arguments of the box- and next-subformulas.
 --
@@ -161,12 +164,12 @@ propValue-atom ρ (□ A)   e  = refl
 -- Two readings that agree on the atoms of P read every subformula of P alike.
 
 module _ (ρ ρ' : Formula -> Bool) (P : Formula)
-         (at : ∀[ X ∈ sub P ] (isAtom X ≡ true -> ρ X ≡ ρ' X)) where
+         (at : ∀[ X ∈ atoms P ] ρ X ≡ ρ' X) where
 
   propValue-cong : ∀[ A ∈ sub P ] propValue ρ A ≡ propValue ρ' A
-  propValue-cong (var n) m = at (var n) m refl
-  propValue-cong (○ A)   m = at (○ A) m refl
-  propValue-cong (□ A)   m = at (□ A) m refl
+  propValue-cong (var n) m = at (var n) (∈-atoms⁺ P (var n) m refl)
+  propValue-cong (○ A)   m = at (○ A) (∈-atoms⁺ P (○ A) m refl)
+  propValue-cong (□ A)   m = at (□ A) (∈-atoms⁺ P (□ A) m refl)
   propValue-cong (¬ A)   m = cong ¬ᵇ_ (propValue-cong A (sub-¬ P m))
   propValue-cong (A ⇒ B) m =
     cong₂ _⇒ᵇ_ (propValue-cong A (sub-⇒L P m)) (propValue-cong B (sub-⇒R P m))
@@ -176,8 +179,7 @@ module _ (ρ ρ' : Formula -> Bool) (P : Formula)
 rowOf-reads : (ρ : Formula -> Bool) (P : Formula)
            -> ∀[ A ∈ sub P ] propValue (atomBit (rowOf ρ (atoms P))) A ≡ propValue ρ A
 rowOf-reads ρ P =
-  propValue-cong (atomBit (rowOf ρ (atoms P))) ρ P
-    (λ X m e -> atomBit-rowOf ρ (atoms P) X (∈-atoms⁺ P X m e))
+  propValue-cong (atomBit (rowOf ρ (atoms P))) ρ P (atomBit-rowOf ρ (atoms P))
 
 -- A reading f that is compositional on ¬ and ⇒ is propValue of itself.
 

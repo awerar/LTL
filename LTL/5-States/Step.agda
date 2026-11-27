@@ -41,28 +41,29 @@ t3All v w = all (t3At v w) eventualities
 step : Val -> Val -> Bool
 step v w = t1All v w ∧ᵇ t2All v w ∧ᵇ t3All v w
 
--- Reading each condition off a step, at a member of sub P.
+-- Reading each condition off a step, at an argument of ○ (T1) or an
+-- eventuality (T2, T3), the lists step itself runs over.
 
 rest23 : (v w : Val) -> step v w ≡ true -> t2All v w ∧ᵇ t3All v w ≡ true
 rest23 v w st = snd (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)
 
-stepT1 : (v w : Val) {B : Formula} -> step v w ≡ true -> ○ B ∈ sub P
+stepT1 : (v w : Val) {B : Formula} -> step v w ≡ true -> B ∈ nexts
       -> t1At v w B ≡ true
 stepT1 v w {B} st m =
   all-true (t1At v w) nexts
-           (fst (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)) B (nextIn m)
+           (fst (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)) B m
 
-stepT2 : (v w : Val) {A : Formula} -> step v w ≡ true -> □ A ∈ sub P
+stepT2 : (v w : Val) {A : Formula} -> step v w ≡ true -> A ∈ eventualities
       -> t2At v w A ≡ true
 stepT2 v w {A} st m =
   all-true (t2At v w) eventualities
-           (fst (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A (evIn m)
+           (fst (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A m
 
-stepT3 : (v w : Val) {A : Formula} -> step v w ≡ true -> □ A ∈ sub P
+stepT3 : (v w : Val) {A : Formula} -> step v w ≡ true -> A ∈ eventualities
       -> t3At v w A ≡ true
 stepT3 v w {A} st m =
   all-true (t3At v w) eventualities
-           (snd (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A (evIn m)
+           (snd (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A m
 
 -- A failed step fails one condition at one formula.
 
@@ -108,7 +109,7 @@ succsIn us v mw st = ∈-filter⁺ (step v) us mw st
 -- (T3), read off.
 
 persist : (v w : Val) (A : Formula)
-       -> □ A ∈ sub P
+       -> A ∈ eventualities
        -> step v w ≡ true
        -> valOf v (□ A) ≡ false
        -> valOf v A ≡ true
@@ -124,7 +125,7 @@ persist v w A h st bx a =
 -- successor dropping a box, and Hintikka's lemma to carry  □ A  along a run.
 
 carry : (v w : Val) (A : Formula)
-     -> □ A ∈ sub P
+     -> A ∈ eventualities
      -> step v w ≡ true
      -> valOf v (□ A) ≡ true
      -> valOf w (□ A) ≡ true
