@@ -122,20 +122,20 @@ derivation or a certified finite lasso countermodel.
   would be ambiguous. The exceptions are `Valuation`, the shared base, which
   re-exports `Nodes` at `valEq` and `Orbit` at `Val`; `Walk`, which re-exports its
   applications of `Graph` and `FairGraph` at `step`; and `Lasso`, which re-exports `OrbitEval`
-  at `readVal`. Code that does not mention P goes in an unparameterised
+  at `assignment`. Code that does not mention P goes in an unparameterised
   module (`Common`, `Taut`, `RowFinite`), or an importer opening the
   P-module unapplied would see a spurious P argument. `Decide` works the same
   way one level up: its parameter is the input Q, and it opens the P-modules
   at `¬ Q`. Everywhere else (`Answer`, `Inspect`, `Correct`, `Pretty`, the tests) these
   modules are opened unapplied, so every name takes its formula first
-  (`St benAri`, `Lasso (¬ Q) v0`, `decide Q`). `LTL.8-Procedures.Everything`
+  (`allStates benAri`, `Lasso (¬ Q) v0`, `decide Q`). `LTL.8-Procedures.Everything`
   re-exports all of them unapplied, and those importers import it.
 - An unparameterised module that has a P-module in scope unapplied must not
   also open one applied, since the two copies of each name clash. A
   parameterised module opens the unparameterised ones it needs, never
   `Everything`.
 - Names: prefer a readable name to an abbreviation. Names that follow the notes
-  (`St`, `Ust`, `r1`, `chi`, `beta`) stay, with a
+  (`Ust`, `r1`, `chi`, `beta`) stay, with a
   comment at the definition. The search conventions (one recursive function
   with a `with`, named for what it does or returns, not with a `Go` suffix; the
   `subset`/`fin`/`avail`/`next` binders, `x∈` for "x is in the pool") are
@@ -215,21 +215,21 @@ module name). Folder names never equal a module name.
    equivalent to `Tautology` by `isTaut-sound`/`isTaut-complete`); `Deriv` (re-exports `Statement`'s `data ⊢_`: 10 constructors + optional `pc`, whose side condition `Tautology` `pcTaut` meets via `isTaut` and `tautologyHolds` reads back).
 3. **Derived rules (m4 Lemmas 1.1–1.2)** (`3-Rules/`) — `Prop` (L1, L3, L7, ⊥ ⇒ C, via
    `⇒Refl`/`liftP`/`mpU`, no deduction theorem; only the rules the proof
-   uses); `PropList` (`∧`, `caseU`, `∨MonoR`, `⋁Intro`, `⋁Elim`); `Temporal` (D1–D6, `expConv`, `indRule`).
+   uses); `PropList` (`∧`, `caseU`, `refute`, `∨MonoR`, `⋁Intro`, `⋁Elim`); `Temporal` (D1–D6, `expConv`, `indRule`,
+   `refute○` for the (T1) case of the step lemma).
 4. **Semantics on lassos** (`4-Semantics/`) — `Orbit` (positions `(s , rest)`,
    `nextPos`, forward orbits; parameterised by the state type, mirroring
    `Statement`'s `Position`/`step`); `OrbitEval` (Boolean `evalAt` at positions,
    □ over the forward orbit, and its soundness; any state type, read by `read`).
 5. **States and transitions (m4 §2)** (`5-States/`) — `Common`
    (the formula-independent base of the
-   P-modules: re-exports `Rules`, `Sets` and `Exhaustible`; the `refute`
-   lemmas); P-modules `Valuation` (the valuations `Val = Row (atoms P)`, so a
+   P-modules: only re-exports `Rules`, `Sets` and `Exhaustible`); P-modules `Valuation` (the valuations `Val = Row (atoms P)`, so a
    valuation's type names its formula; `holdsIn v = propValue (readingOf v)`,
    what v makes true; `valEq`, and `Nodes` at `valEq` and
    `Orbit` at `Val`, re-exported); `State` (a valuation is a row of bits over
    `atoms P`, read by `holdsIn`, so (S1) holds
    by definition and `isState` is (S2) alone;
-   `eventualities`, `nexts`, `St`, `chi` (a literal per atom), `beta`); `Step` (`step` as
+   `eventualities`, `nexts`, `allStates`, `chi` (a literal per atom), `beta`); `Step` (`step` as
    T1–T3 over `nexts` and `eventualities`, `StepFails`, `succs`); `StepLemma` (`chiProj`, Lemmas
    2.7–2.8); `CompletePC` (`stateCompletePC`, `betaElimPC`: state completeness
    and (L5) via (PC)). `Taut` (Boolean facts about chi/beta for (PC), under

@@ -32,7 +32,7 @@ data Row : List Formula -> Set where
 
 -- The reading a row gives: X's bit is the one beside its first occurrence
 -- in As, or false if X is not among them.  The false case is reached only by
--- readVal (LTL.6-Countermodel.Lasso), at a variable outside P:
+-- assignment (LTL.6-Countermodel.Lasso), at a variable outside P:
 -- LTL.Statement's instants and propValue's readings are total, so this
 -- reading is too.
 

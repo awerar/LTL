@@ -52,7 +52,7 @@ R = ¬ fab
 
 lec-sizes : length (sub R) ∷ length (atoms R)
              ∷ length (rows (atoms R))
-             ∷ length (St R) ∷ length (Ust R)
+             ∷ length (allStates R) ∷ length (Ust R)
              ∷ length (eventualities R) ∷ [] ≡
                21 ∷ 5 ∷ 32 ∷ 17 ∷ 8 ∷ 3 ∷ []
 lec-sizes = refl

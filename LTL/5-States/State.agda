@@ -1,7 +1,7 @@
 {-# OPTIONS --safe --without-K --exact-split #-}
 
--- LTL.5-States.State -- which valuations are states, St, the list of all
--- states, and the characteristic formulas chi and beta.
+-- LTL.5-States.State -- which valuations are states, the list allStates of
+-- them, and the characteristic formulas chi and beta.
 --
 -- A valuation v is a row of bits over the ATOMS of P (its var, ○ and □
 -- subformulas, without repetition), and holdsIn v reads any formula as
@@ -75,5 +75,6 @@ s2At v A = holdsIn v (□ A) ⇒ᵇ holdsIn v A
 isState : Val -> Bool
 isState v = all (s2At v) eventualities
 
-St : List Val
-St = filter isState (rows (atoms P))
+-- All the states: the valuations meeting (S2).  St in m4.
+allStates : List Val
+allStates = filter isState (rows (atoms P))

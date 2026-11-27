@@ -4,7 +4,7 @@
 --
 -- The P-modules are parameterised by the formula P, and Decide by the input
 -- Q.  This module opens all of them unapplied and re-exports them, so every
--- name takes its formula first: St P, Lasso P v0, Cert P fs ws, decide Q.
+-- name takes its formula first: allStates P, Lasso P v0, Cert P fs ws, decide Q.
 -- LTL.8-Procedures.Correct, LTL.Pretty, the tests and the benchmarks import
 -- this module.
 

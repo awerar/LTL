@@ -133,9 +133,9 @@ module _ {S : Set} (read : S -> S.Instant) where
     pos0 = S.Position.now (S.initial l) , S.Position.rest (S.initial l)
 
 ------------------------------------------------------------------------
--- A countermodel is a Statement countermodel.  Its lasso, read through readVal
--- (¬ Q), is a Statement lasso: start followed by rest, then the cycle from loop
--- for ever.  Q is false at stage 0 (falseAtStart), so it is not true at
+-- A countermodel is a Statement countermodel.  Its lasso, read through
+-- assignment (¬ Q), is a Statement lasso: start followed by rest, then the
+-- cycle from loop for ever.  Q is false at stage 0 (falseAtStart), so it is not true at
 -- time 0.
 
 toCountermodel : (Q : Formula) -> LassoCountermodel Q -> S.LassoCountermodel Q
@@ -145,7 +145,7 @@ toCountermodel Q c = S.counter L qFalse
     open Lasso lasso using (loop; rest)
 
     read : Val (¬ Q) -> S.Instant
-    read = readVal (¬ Q)
+    read = assignment (¬ Q)
 
     L : S.Lasso
     L = record { start = map read (start ∷ rest)

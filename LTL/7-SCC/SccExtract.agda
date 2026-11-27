@@ -44,29 +44,29 @@ extractBlock : (ws : Subgraph) (C : List Val) (u : Val)
             -> u ∈ Ust -> Refuted ws
             -> (A : Formula) -> □ A ∈ sub P
             -> C ⊆ Ust
-            -> Closed[ step ▷ St ∩ˡ ws ] C
+            -> Closed[ step ▷ allStates ∩ˡ ws ] C
             -> (∀[ z ∈ C ] holdsIn z A ≡ true)
             -> holdsIn u (□ A) ≡ false -> u ∈ C
             -> ⊢ ¬ (chi u)
 extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
   where
     -- (i)
-    bA : ⊢ (beta C) ⇒ A
-    bA = betaElim C eachA
+    betaA : ⊢ (beta C) ⇒ A
+    betaA = betaElim C eachA
       where
         eachA : ∀[ w ∈ C ] ⊢ (chi w) ⇒ A
         eachA w m = subst (λ b -> ⊢ (chi w) ⇒ (lit A b)) (cHold w m)
                           (chiProj w (sub-□ P mbox))
 
     -- (ii)
-    toC : ∀[ w ∈ C ] ⊢ (beta (succs St w)) ⇒ (beta C)
-    toC w m = betaElim (succs St w) eachS
+    intoC : ∀[ w ∈ C ] ⊢ (beta (succs allStates w)) ⇒ (beta C)
+    intoC w m = betaElim (succs allStates w) eachS
       where
-        eachS : ∀[ w' ∈ succs St w ] ⊢ (chi w') ⇒ (beta C)
+        eachS : ∀[ w' ∈ succs allStates w ] ⊢ (chi w') ⇒ (beta C)
         eachS w' m' = by∈ᵛ
           where
-            pr : w' ∈ St × step w w' ≡ true
-            pr = ∈-succs⁻ St w m'
+            pr : w' ∈ allStates × step w w' ≡ true
+            pr = ∈-succs⁻ allStates w m'
 
             by∈ᵛ : ⊢ (chi w') ⇒ (beta C)
             by∈ᵛ with w' ∈ᵛ ws in eb
@@ -75,15 +75,15 @@ extractBlock ws C u mu ih A mbox cUst cCl cHold pend mc = refute chi□ chi¬□
             ... | true  =
               betaIntro C (cCl m (∈-∩ˡ⁺ ws (fst pr) (∈ᵛ-sound ws w' eb)) (snd pr))
 
-    bNext : ⊢ (beta C) ⇒ ○ (beta C)
-    bNext = betaElim C eachN
+    betaNext : ⊢ (beta C) ⇒ ○ (beta C)
+    betaNext = betaElim C eachN
       where
         eachN : ∀[ w ∈ C ] ⊢ (chi w) ⇒ ○ (beta C)
-        eachN w m = ⇒Trans (stepLemma w) (○Mono (toC w m))
+        eachN w m = ⇒Trans (stepLemma w) (○Mono (intoC w m))
 
     -- (iii)
     chi□ : ⊢ (chi u) ⇒ □ A
-    chi□ = ⇒Trans (betaIntro C mc) (⇒Trans (indRule bNext) (□Mono bA))
+    chi□ = ⇒Trans (betaIntro C mc) (⇒Trans (indRule betaNext) (□Mono betaA))
 
     chi¬□ : ⊢ (chi u) ⇒ ¬ □ A
     chi¬□ = subst (λ b -> ⊢ (chi u) ⇒ (lit (□ A) b)) pend
@@ -106,11 +106,11 @@ sinkStep ws x e1 ih mu = extractR1 ws x mu ih e1
 blockStep : (ws : Subgraph) (C : List Val) (f : Pred) -> f ∈ evPreds
          -> Closed[ step ▷ ws ] C -> None f C
          -> Refuted ws -> ∀[ z ∈ C ] UstRef z
-blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
+blockStep ws C f mf cl mis ih z mz mzU = isEvPred (∈-evPreds⁻ mf)
   where
-    onA : (∃[ A ∈ eventualities ] f ≡ evPred A)
+    isEvPred : (∃[ A ∈ eventualities ] f ≡ evPred A)
        -> ⊢ ¬ (chi z)
-    onA (A , mA , ef) =
+    isEvPred (A , mA , ef) =
       extractBlock ws D z mzU ih A (evSub mA)
                    (∩ˡ-snd C Ust) dCl dHold pend (∈-∩ˡ⁺ Ust mz mzU)
       where
@@ -123,10 +123,10 @@ blockStep ws C f mf cl mis ih z mz mzU = onA (∈-evPreds⁻ mf)
 
         -- still closed: C's closure puts the successor in C, ustClosed puts
         -- it in Ust P, and D is the intersection
-        dCl : Closed[ step ▷ St ∩ˡ ws ] D
+        dCl : Closed[ step ▷ allStates ∩ˡ ws ] D
         dCl my my' st =
-          ∈-∩ˡ⁺ Ust (cl (∩ˡ-fst C Ust _ my) (∩ˡ-snd St ws _ my') st)
-                    (ustClosed (∩ˡ-snd C Ust _ my) (∩ˡ-fst St ws _ my') st)
+          ∈-∩ˡ⁺ Ust (cl (∩ˡ-fst C Ust _ my) (∩ˡ-snd allStates ws _ my') st)
+                    (ustClosed (∩ˡ-snd C Ust _ my) (∩ˡ-fst allStates ws _ my') st)
 
         dHold : ∀[ y ∈ D ] holdsIn y A ≡ true
         dHold y my =

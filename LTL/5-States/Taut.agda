@@ -10,12 +10,13 @@
 -- each holds under every ρ, which is what Statement's Tautology asks; the
 -- callers turn that into isTaut by isTaut-complete.
 --
--- The central fact: ρ gives a valuation of P, skelVec P, that reads every
+-- The central fact: ρ gives a valuation of P, skelRow P, that reads every
 -- subformula of P as ρ does, and it is a state as soon as the (S2) instances
--- hold under ρ.  So beta P (St P) is true under every reading satisfying
--- (S2), which is state completeness as a Boolean fact.  Conversely, a reading
--- that makes chi v true reads every subformula of P as v does (chiReads), so
--- chi v implies the literal of any subformula (tautProj).
+-- hold under ρ.  So beta P (allStates P) is true under every reading
+-- satisfying (S2), which is state completeness as a Boolean fact.
+-- Conversely, a reading that makes chi v true reads every subformula of P as
+-- v does (chiReads), so chi v implies the literal of any subformula
+-- (tautProj).
 
 module LTL.5-States.Taut where
 
@@ -35,8 +36,8 @@ open import LTL.5-States.Valuation using (Val; holdsIn)
 ⇒List (A ∷ As) C = A ⇒ (⇒List As C)
 
 -- The instance □ A ⇒ A of (S2).
-s2Fml : Formula -> Formula
-s2Fml A = □ A ⇒ A
+s2Formula : Formula -> Formula
+s2Formula A = □ A ⇒ A
 
 infixl 20 _⇐_
 
@@ -46,8 +47,8 @@ C ⇐ D = D ⇒ C
 -- The implication behind (L5),
 --
 --     (C1 ⇒ C) ⇒ ... ⇒ (Cn ⇒ C) ⇒ ((C1 ∨ ... ∨ Cn) ⇒ C).
-⋁⇒Fml : List Formula -> Formula -> Formula
-⋁⇒Fml Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
+⋁⇒Formula : List Formula -> Formula -> Formula
+⋁⇒Formula Cs C = ⇒List (map (C ⇐_) Cs) (⋁ Cs ⇒ C)
 
 ------------------------------------------------------------------------
 -- Readings under one reading ρ of the atoms.
@@ -126,20 +127,20 @@ module _ (ρ : Formula -> Bool) where
 
   □Chain : (As : List Formula) (C : Formula)
         -> (S2At As -> propValue ρ C ≡ true)
-        -> propValue ρ (⇒List (map s2Fml As) C) ≡ true
+        -> propValue ρ (⇒List (map s2Formula As) C) ≡ true
   □Chain As C h =
-    ⇒Chain (map s2Fml As) C (λ g -> h (λ B mB -> g (∈-map⁺ s2Fml mB)))
+    ⇒Chain (map s2Formula As) C (λ g -> h (λ B mB -> g (∈-map⁺ s2Formula mB)))
 
   ----------------------------------------------------------------------
   -- The valuation of P that ρ gives: P's own atoms read by ρ.  It reads
   -- every subformula of P as ρ does (rowOf-reads).
 
-  skelVec : (P : Formula) -> Val P
-  skelVec P = rowOf ρ (atoms P)
+  skelRow : (P : Formula) -> Val P
+  skelRow P = rowOf ρ (atoms P)
 
-  holdsInSkelVec : (P : Formula)
-              -> ∀[ A ∈ sub P ] holdsIn P (skelVec P) A ≡ propValue ρ A
-  holdsInSkelVec P = rowOf-reads ρ P
+  holdsInSkelRow : (P : Formula)
+              -> ∀[ A ∈ sub P ] holdsIn P (skelRow P) A ≡ propValue ρ A
+  holdsInSkelRow P = rowOf-reads ρ P
 
   ----------------------------------------------------------------------
   -- Its chi is true under ρ: every literal is.
@@ -160,8 +161,8 @@ module _ (ρ : Formula -> Bool) where
           (litTrue X)
   litsRowOfTrue (X ∷ As) at (there m) = litsRowOfTrue As (λ k -> at (there k)) m
 
-  chiTrue : (P : Formula) -> propValue ρ (chi P (skelVec P)) ≡ true
-  chiTrue P = ⋀True (lits (skelVec P)) (litsRowOfTrue (atoms P) (atomIsAtom P))
+  chiTrue : (P : Formula) -> propValue ρ (chi P (skelRow P)) ≡ true
+  chiTrue P = ⋀True (lits (skelRow P)) (litsRowOfTrue (atoms P) (atomIsAtom P))
 
   ----------------------------------------------------------------------
   -- Conversely, a reading that makes chi v true reads every subformula of P
@@ -198,29 +199,30 @@ module _ (ρ : Formula -> Bool) where
   -- It is a state, given (S2) under ρ at the eventualities.
 
   s2Skel : (P : Formula) -> S2At (eventualities P)
-        -> ∀[ B ∈ eventualities P ] s2At P (skelVec P) B ≡ true
+        -> ∀[ B ∈ eventualities P ] s2At P (skelRow P) B ≡ true
   s2Skel P s2 B mB =
-    trans (cong₂ _⇒ᵇ_ (holdsInSkelVec P (□ B) m□)
-                      (holdsInSkelVec P B (sub-□ P m□)))
+    trans (cong₂ _⇒ᵇ_ (holdsInSkelRow P (□ B) m□)
+                      (holdsInSkelRow P B (sub-□ P m□)))
           (s2 B mB)
     where
       m□ : □ B ∈ sub P
       m□ = evSub P mB
 
-  skelVec∈St : (P : Formula) -> S2At (eventualities P) -> skelVec P ∈ St P
-  skelVec∈St P s2 =
+  skelRow∈allStates : (P : Formula) -> S2At (eventualities P) -> skelRow P ∈ allStates P
+  skelRow∈allStates P s2 =
     ∈-filter⁺ (isState P) (rows (atoms P))
-              (rows-complete (atoms P) (skelVec P))
-                (all-intro (s2At P (skelVec P)) (eventualities P)
+              (rows-complete (atoms P) (skelRow P))
+                (all-intro (s2At P (skelRow P)) (eventualities P)
                            (s2Skel P s2))
 
-  -- Hence beta P (St P) is true under any reading satisfying (S2): chi P (skelVec
-  -- P) is a disjunct (skelVec∈St) and is true (chiTrue).
+  -- Hence beta P (allStates P) is true under any reading satisfying (S2):
+  -- chi P (skelRow P) is a disjunct (skelRow∈allStates) and is true
+  -- (chiTrue).
 
   betaSkel : (P : Formula) -> S2At (eventualities P)
-          -> propValue ρ (beta P (St P)) ≡ true
+          -> propValue ρ (beta P (allStates P)) ≡ true
   betaSkel P s2 =
-    ⋁True (map (chi P) (St P)) (∈-map⁺ (chi P) (skelVec∈St P s2)) (chiTrue P)
+    ⋁True (map (chi P) (allStates P)) (∈-map⁺ (chi P) (skelRow∈allStates P s2)) (chiTrue P)
 
 ------------------------------------------------------------------------
 -- The derivation half of □Chain: one modus ponens against one instance of
@@ -230,19 +232,19 @@ module _ (ρ : Formula -> Bool) where
 -- ponens.
 
 mpChain : (As : List Formula) {C : Formula}
-       -> ⊢ ⇒List (map s2Fml As) C -> ⊢ C
+       -> ⊢ ⇒List (map s2Formula As) C -> ⊢ C
 mpChain []       d = d
 mpChain (A ∷ As) d = mpChain As (mp d □Elim)
 
 ------------------------------------------------------------------------
 -- (L5) as one pc node.  ⋁Elim (LTL.3-Rules.PropList) derives
 -- (C1 ∨ ... ∨ Cn) ⇒ C  at about 426 constructors per disjunct; its implication
--- ⋁⇒Fml is a tautology of its skeleton, so betaElimPC is one pc node with the
--- n branches discharged by modus ponens.
+-- ⋁⇒Formula is a tautology of its skeleton, so betaElimPC is one pc node with
+-- the n branches discharged by modus ponens.
 
-taut⋁Elim : (Cs : List Formula) (C : Formula) -> isTaut (⋁⇒Fml Cs C) ≡ true
+taut⋁Elim : (Cs : List Formula) (C : Formula) -> isTaut (⋁⇒Formula Cs C) ≡ true
 taut⋁Elim Cs C =
-  isTaut-complete (⋁⇒Fml Cs C) λ ρ ->
+  isTaut-complete (⋁⇒Formula Cs C) λ ρ ->
     ⇒Chain ρ (map (C ⇐_) Cs) (⋁ Cs ⇒ C) λ g ->
       ⇒ᵇ-intro (propValue ρ (⋁ Cs)) (propValue ρ C)
                (⋁ElimTrue ρ Cs C (λ mD -> g (∈-map⁺ (C ⇐_) mD)))

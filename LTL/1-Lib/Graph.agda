@@ -77,9 +77,9 @@ data Trail : Node -> List Node -> Node -> Set where
   tCons : {v x : Node} {zs : List Node} {w : Node}
        -> G v x ≡ true -> Trail x zs w -> Trail v (x ∷ zs) w
 
-trailApp : Trail u xs v -> Trail v zs w -> Trail u (xs ++ zs) w
-trailApp tNil         t2 = t2
-trailApp (tCons e t1) t2 = tCons e (trailApp t1 t2)
+trail++ : Trail u xs v -> Trail v zs w -> Trail u (xs ++ zs) w
+trail++ tNil         t2 = t2
+trail++ (tCons e t1) t2 = tCons e (trail++ t1 t2)
 
 trailEnd : Trail v zs w -> w ∈ v ∷ zs
 trailEnd tNil        = here
@@ -228,7 +228,7 @@ roundSeeded Seed ws acc sd z m =
             pick (y , my , gy) =
               seededBy seed seedIn seedHolds
                        (reachesBy (via ++ z ∷ [])
-                                  (trailApp trail (tCons gy tNil))
+                                  (trail++ trail (tCons gy tNil))
                                   (++-⊆ via staysIn (∷-⊆ z∈ws (λ _ ()))))
               where
                 open Seeded (sd y my)

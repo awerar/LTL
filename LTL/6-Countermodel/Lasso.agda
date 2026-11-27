@@ -120,10 +120,10 @@ stateAt v0 l i = posState (posIter loop (v0 , rest) i)
 -- total on all formulas, as soundness needs.
 
 -- a valuation read as an assignment to the variables
-readVal : Val -> Nat -> Bool
-readVal v n = holdsIn v (var n)
+assignment : Val -> Nat -> Bool
+assignment v n = holdsIn v (var n)
 
-open LTL.4-Semantics.OrbitEval Val readVal public
+open LTL.4-Semantics.OrbitEval Val assignment public
   using (evalAt; eval□-true; eval□-intro; eval□-false-intro)
 
 ------------------------------------------------------------------------

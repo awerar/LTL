@@ -262,7 +262,7 @@ K5fwd-atoms = refl
 K5fwd-rows : length (rows (atoms (¬ axK5fwd))) ≡ 256
 K5fwd-rows = refl
 
-K5fwd-states : length (St (¬ axK5fwd)) ≡ 59
+K5fwd-states : length (allStates (¬ axK5fwd)) ≡ 59
 K5fwd-states = refl
 
 K5fwd-closure : length (Ust (¬ axK5fwd)) ≡ 9

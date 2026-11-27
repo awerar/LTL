@@ -2,11 +2,11 @@
 
 -- LTL.5-States.Closure -- Ust P, the set of states the searches explore.
 --
--- St (all states) is what the derivations quantify over: ⊢ beta St is state
--- completeness.  The searches are computed, so they run on a smaller set Ust
--- with three properties:
+-- allStates is what the derivations quantify over: ⊢ beta allStates is
+-- state completeness.  The searches are computed, so they run on a smaller
+-- set Ust with three properties:
 --
---   ustSt      every member is a state;
+--   ustInAllStates      every member is a state;
 --   ustSeed    every state containing P is a member;
 --   ustClosed  the successors of a member are members.
 --
@@ -15,8 +15,9 @@
 -- contain P.
 --
 -- Ust is the successor closure of the states containing P, by the growing
--- search of LTL.1-Lib.Graph over St.  That search GROWS its accumulator, so it
--- recurses on a Finiteᵛ proof (stateFinite) rather than a length.
+-- search of LTL.1-Lib.Graph over allStates.  That search GROWS its
+-- accumulator, so it recurses on a Finiteᵛ proof (stateFinite) rather than
+-- a length.
 
 open import LTL.2-Syntax.Formula using (Formula)
 
@@ -35,9 +36,10 @@ open import LTL.1-Lib.Graph valEq step
 
 ------------------------------------------------------------------------
 -- The successor closure of the states containing P: the growing search
--- closure of LTL.1-Lib.Graph, seeded by "contains P", over St.  Each round
--- adds a new valuation, and stateFinite says that cannot go on forever.  Its
--- pool is every valuation, so St lies in it trivially (stInPool).
+-- closure of LTL.1-Lib.Graph, seeded by "contains P", over allStates.  Each
+-- round adds a new valuation, and stateFinite says that cannot go on
+-- forever.  Its pool is every valuation, so allStates lies in it trivially
+-- (allStatesInPool).
 
 anyVal : Pred
 anyVal v = true
@@ -48,33 +50,33 @@ stateFinite = guardedRowFinite (atoms P) anyVal
 containsP : Val -> Bool
 containsP v = holdsIn v P
 
-stInPool : All anyVal St
-stInPool x m = refl
+allStatesInPool : All anyVal allStates
+allStatesInPool x m = refl
 
 -- Ust P: the successor closure of the states that contain P.  Every search
 -- runs on it.
 
 Ust : Subgraph
-Ust = closure containsP St stInPool stateFinite
+Ust = closure containsP allStates allStatesInPool stateFinite
 
-ustSt : ∀ⁱ[ v ∈ Ust ] v ∈ St
-ustSt {v} m = closureIn containsP St stInPool stateFinite v m
+ustInAllStates : ∀ⁱ[ v ∈ Ust ] v ∈ allStates
+ustInAllStates {v} m = closureIn containsP allStates allStatesInPool stateFinite v m
 
 -- Named rather than applied inline: giving filter-prop its list argument
--- against the folded  St  keeps the elaborator from unfolding Ust.
+-- against the folded  allStates  keeps the elaborator from unfolding Ust.
 
-stIsState : ∀ⁱ[ v ∈ St ] isState v ≡ true
-stIsState {v} m = filter-prop isState (rows (atoms P)) v m
+allStatesAreStates : ∀ⁱ[ v ∈ allStates ] isState v ≡ true
+allStatesAreStates {v} m = filter-prop isState (rows (atoms P)) v m
 
 -- Every member is a state, so (S2) can be read off it.
 
 ustState : ∀ⁱ[ v ∈ Ust ] isState v ≡ true
-ustState m = stIsState (ustSt m)
+ustState m = allStatesAreStates (ustInAllStates m)
 
 ustSeed : {v : Val}
-       -> v ∈ St -> holdsIn v P ≡ true -> v ∈ Ust
-ustSeed m e = closureSeed containsP St stInPool stateFinite m e
+       -> v ∈ allStates -> holdsIn v P ≡ true -> v ∈ Ust
+ustSeed m e = closureSeed containsP allStates allStatesInPool stateFinite m e
 
-ustClosed : Closed[ step ▷ St ] Ust
+ustClosed : Closed[ step ▷ allStates ] Ust
 ustClosed mv mw st =
-  closureClosed containsP St stInPool stateFinite mv mw st
+  closureClosed containsP allStates allStatesInPool stateFinite mv mw st

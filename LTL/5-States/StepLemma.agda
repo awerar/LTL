@@ -2,10 +2,10 @@
 
 -- LTL.5-States.StepLemma -- the step lemma:
 --
---   stepLemma : ⊢ (chi v) ⇒ ○ (beta (succs St v))
+--   stepLemma : ⊢ (chi v) ⇒ ○ (beta (succs allStates v))
 --
--- State completeness and (D1) give ⊢ ○ (beta St), hence a disjunction of
--- ○ chi_w by (D4); the w that are not successors of v are refuted and
+-- State completeness and (D1) give ⊢ ○ (beta allStates), hence a disjunction
+-- of ○ chi_w by (D4); the w that are not successors of v are refuted and
 -- dropped; (D4) carries the rest back under a single ○.  The refutations use
 -- the conjunction  (chi v) ∧ ○ (chi w)  as antecedent, so every case sits
 -- at one level where ∧Fst and ∧Snd give both halves.
@@ -132,12 +132,12 @@ filter⇒ v Q (w ∷ ws) bad with step v w in e
 ------------------------------------------------------------------------
 -- The step lemma
 
-stepLemma : (v : Val) -> ⊢ (chi v) ⇒ ○ (beta (succs St v))
+stepLemma : (v : Val) -> ⊢ (chi v) ⇒ ○ (beta (succs allStates v))
 stepLemma v =
-  ⇒Trans (mpU (filter⇒ v (chi v) St (badSucc v)) start)
-           (○⋁L2 (map chi (succs St v)))
+  ⇒Trans (mpU (filter⇒ v (chi v) allStates (badSucc v)) start)
+           (○⋁Join (map chi (succs allStates v)))
   where
 
-    start : ⊢ (chi v) ⇒ ⋁ (map ○_ (map chi St))
-    start = liftP (mp (○⋁L1 (map chi St))
+    start : ⊢ (chi v) ⇒ ⋁ (map ○_ (map chi allStates))
+    start = liftP (mp (○⋁Split (map chi allStates))
                       (○Gen stateCompletePC))

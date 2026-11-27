@@ -26,6 +26,17 @@ linFwd = mp ∧Fst lin
 linBwd : ⊢ ¬ ○ A ⇒ ○ ¬ A
 linBwd = mp ∧Snd lin
 
+-- Refuting a formula that implies a literal of ○ A and ○ of the opposite
+-- literal of A, uniformly in the bit c.  It closes the (T1) case of the step
+-- lemma.
+
+refute○ : (c : Bool)
+       -> ⊢ C ⇒ lit (○ A) (¬ᵇ c)
+       -> ⊢ C ⇒ ○ (lit A c)
+       -> ⊢ ¬ C
+refute○ true  f g = refute g f
+refute○ false f g = refute f (⇒Trans g linFwd)
+
 □Elim : ⊢ □ A ⇒ A
 □Elim = ⇒Trans exp ∧Fst
 
@@ -62,26 +73,26 @@ linBwd = mp ∧Snd lin
 -- A ∨ B is ¬ A ⇒ B, so the first direction is (K ○) composed with
 -- the backward half of (Lin); the second is a case analysis on ○ A.
 
-○∨1 : ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
-○∨1 = ⇒TransU (liftP linBwd) k○
+○∨Split : ⊢ ○ (A ∨ B) ⇒ ○ A ∨ ○ B
+○∨Split = ⇒TransU (liftP linBwd) k○
 
-○∨2 : ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
-○∨2 = caseU (liftP (○Mono explode)) (⇒TransU ⇒Refl (liftP (○Mono p1)))
+○∨Join : ⊢ ○ A ∨ ○ B ⇒ ○ (A ∨ B)
+○∨Join = caseU (liftP (○Mono explode)) (⇒TransU ⇒Refl (liftP (○Mono p1)))
 
 ------------------------------------------------------------------------
--- (D4) for disjunction, over a list.  The step lemma uses ○⋁L1 to pass from
--- ⊢ ○ (beta St) to ⊢ ⋁ (map ○_ (map chi St)), and ○⋁L2 to come back to
--- ⊢ chi v ⇒ ○ (beta (succs v)).
+-- (D4) for disjunction, over a list.  The step lemma uses ○⋁Split to pass from
+-- ⊢ ○ (beta allStates) to ⊢ ⋁ (map ○_ (map chi allStates)), and ○⋁Join to
+-- come back to ⊢ chi v ⇒ ○ (beta (succs v)).
 
-○⋁L1 : (As : List Formula)
+○⋁Split : (As : List Formula)
     -> ⊢ ○ ⋁ As ⇒ ⋁ (map ○_ As)
-○⋁L1 []       = ○⊥
-○⋁L1 (A ∷ As) = ⇒Trans ○∨1 (∨MonoR (○⋁L1 As))
+○⋁Split []       = ○⊥
+○⋁Split (A ∷ As) = ⇒Trans ○∨Split (∨MonoR (○⋁Split As))
 
-○⋁L2 : (As : List Formula)
+○⋁Join : (As : List Formula)
     -> ⊢ ⋁ (map ○_ As) ⇒ ○ ⋁ As
-○⋁L2 []       = exFalso
-○⋁L2 (A ∷ As) = ⇒Trans (∨MonoR (○⋁L2 As)) ○∨2
+○⋁Join []       = exFalso
+○⋁Join (A ∷ As) = ⇒Trans (∨MonoR (○⋁Join As)) ○∨Join
 
 ------------------------------------------------------------------------
 -- (D4) for conjunction, the direction (D6) needs.  ○ (A ∧ B) is ○ ¬ X with

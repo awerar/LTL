@@ -67,29 +67,29 @@ sccLasso : (v0 : Val) -> v0 ∈ Ust
         -> FairLoop Ust evPreds v0 -> Lasso v0
 sccLasso v0 mv0 (fairLoop r (reachesBy st ts sst)
                           (circuit (loopBy q qs (tCons e tqs) scy) wit)) =
-  mkLasso cyc fair (st ++ cy)
-          (vpos v0 (st ++ cy) (trailApp ts tcy) (∷-⊆ mv0 (++-⊆ st sst scy)))
+  mkLasso theCycle fair (st ++ cycleVertices)
+          (vpos v0 (st ++ cycleVertices) (trail++ ts cycleTrail) (∷-⊆ mv0 (++-⊆ st sst scy)))
   where
-    cy : List Val
-    cy = q ∷ qs
+    cycleVertices : List Val
+    cycleVertices = q ∷ qs
 
-    tcy : Trail r cy r
-    tcy = tCons e tqs
+    cycleTrail : Trail r cycleVertices r
+    cycleTrail = tCons e tqs
 
-    cyc : Cycle
-    cyc = mkCycle r (q , qs) (vpos q qs tqs scy) e
+    theCycle : Cycle
+    theCycle = mkCycle r (q , qs) (vpos q qs tqs scy) e
 
     -- Pending at the base point: go out to the witness the graph layer
     -- chose for evPred A.
-    fair : Fair cyc
+    fair : Fair theCycle
     fair A mA pr = onW (wit (evPred A) (∈-evPreds⁺ mA))
       where
-        onW : (∃[ z ∈ cy ] z ∈ᵖ evPred A)
-           -> Fulfil A r cy
-        onW (z , mz , ez) = onPrefix (trailTo tcy ⊆-refl mz)
+        onW : (∃[ z ∈ cycleVertices ] z ∈ᵖ evPred A)
+           -> Fulfil A r cycleVertices
+        onW (z , mz , ez) = onPrefix (trailTo cycleTrail ⊆-refl mz)
           where
             -- trailPersist along the prefix of the cycle that ends at z
-            onPrefix : Reaches cy r z -> Fulfil A r cy
+            onPrefix : Reaches cycleVertices r z -> Fulfil A r cycleVertices
             onPrefix (reachesBy pre tp spre) =
               [ fulfilWiden spre
               , (λ pz -> ful z (there mz) (evWitness A z ez pz)) ]

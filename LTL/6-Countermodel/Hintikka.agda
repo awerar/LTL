@@ -183,13 +183,13 @@ module _ (cy : Cycle) where
 ------------------------------------------------------------------------
 -- Hintikka's lemma on a lasso, at every stage and at the start
 
-hintLasso : (v0 : Val) (l : Lasso v0) (A : Formula) -> A ∈ sub P
+hintikkaLasso : (v0 : Val) (l : Lasso v0) (A : Formula) -> A ∈ sub P
        -> (i : Nat) -> holdsIn (stateAt v0 l i) A ≡ eval v0 l A i
-hintLasso v0 (mkLasso cy fair rest sv) A mA i =
+hintikkaLasso v0 (mkLasso cy fair rest sv) A mA i =
   hintikka cy fair A mA (posIter (Cycle.loop cy) (v0 , rest) i)
            (posIterValid cy (v0 , rest) i sv)
 
-hintStart : (v0 : Val) (l : Lasso v0) -> ∀[ A ∈ sub P ]
+hintikkaStart : (v0 : Val) (l : Lasso v0) -> ∀[ A ∈ sub P ]
             holdsIn v0 A ≡ eval v0 l A 0
-hintStart v0 (mkLasso cy fair rest sv) A mA =
+hintikkaStart v0 (mkLasso cy fair rest sv) A mA =
   hintikka cy fair A mA (v0 , rest) sv

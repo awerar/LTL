@@ -7,7 +7,7 @@
 -- in it; this lemma gives the countermodel a start that contains P, with a
 -- stem from there to the component.  Ust is a growing search seeded by
 -- containsP, so closureSeeded (LTL.1-Lib.Graph) gives a seed and a trail
--- inside St P, and reachesInto moves it into Ust using ustClosed.
+-- inside allStates P, and reachesInto moves it into Ust using ustClosed.
 
 open import LTL.2-Syntax.Formula using (Formula)
 
@@ -24,7 +24,7 @@ ustSeedTo : ∀[ w ∈ Ust ] Seeded containsP Ust w
 ustSeedTo w m =
   seededBy seed mu seedHolds (reachesInto ustClosed mu reaches)
   where
-    open Seeded (closureSeeded containsP St stInPool stateFinite w m)
+    open Seeded (closureSeeded containsP allStates allStatesInPool stateFinite w m)
 
     mu : seed ∈ Ust
     mu = ustSeed seedIn seedHolds

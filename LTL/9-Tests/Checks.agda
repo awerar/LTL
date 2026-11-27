@@ -59,8 +59,8 @@ evBenAri = refl
 ◇P : Formula
 ◇P = ◇ (var zero)
 
-St-◇P : length (St ◇P) ≡ 3
-St-◇P = refl
+allStates-◇P : length (allStates ◇P) ≡ 3
+allStates-◇P = refl
 
 -- The negation of Ben-Ari's formula, the input the procedure runs on: its 3
 -- atoms give 8 rows, and (S2) filters them to 6 states.
@@ -68,17 +68,17 @@ St-◇P = refl
 ¬BenAri : Formula
 ¬BenAri = ¬ benAri
 
-St-¬BenAri : length (rows (atoms ¬BenAri)) ≡ 8
-St-¬BenAri = refl
+allStates-¬BenAri : length (rows (atoms ¬BenAri)) ≡ 8
+allStates-¬BenAri = refl
 
-St-¬BenAri-count : length (St ¬BenAri) ≡ 6
-St-¬BenAri-count = refl
+allStates-¬BenAri-count : length (allStates ¬BenAri) ≡ 6
+allStates-¬BenAri-count = refl
 
 ------------------------------------------------------------------------
 -- LTL.5-States.Step
 
 -- For ◇ p the three states, writing the bits of  [ □ ¬ p , p ] , are, in the
--- order of St ◇P:
+-- order of allStates ◇P:
 --
 --   1 0   ◇ p false, so p fails forever
 --   0 1   p holds now
@@ -86,7 +86,7 @@ St-¬BenAri-count = refl
 --
 -- Every state has a successor.
 
-◇P-succ-counts : map (λ v -> length (succs ◇P (St ◇P) v)) (St ◇P) ≡
+◇P-succ-counts : map (λ v -> length (succs ◇P (allStates ◇P) v)) (allStates ◇P) ≡
                       1 ∷ 3 ∷ 2 ∷ []
 ◇P-succ-counts = refl
 
@@ -103,7 +103,7 @@ St-¬BenAri-count = refl
 -- E and D have no successor.
 
 ¬BenAri-succ-counts
-  : map (λ v -> length (succs ¬BenAri (St ¬BenAri) v)) (St ¬BenAri) ≡
+  : map (λ v -> length (succs ¬BenAri (allStates ¬BenAri) v)) (allStates ¬BenAri) ≡
     2 ∷ 0 ∷ 0 ∷ 4 ∷ 2 ∷ 4 ∷ []
 ¬BenAri-succ-counts = refl
 

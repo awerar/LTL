@@ -264,7 +264,7 @@ and all of `6-Countermodel/` and `7-SCC/`) take it as a module parameter,
 so P is not passed around inside them. `Decide` is parameterised the same way
 by the input Q, and opens them at `¬ Q`. `LTL/8-Procedures/Everything.agda`
 opens all of these modules without arguments for everyone else, so there
-every name takes its formula first: `St P`, `Lasso (¬ Q) v0`, `decide Q`.
+every name takes its formula first: `allStates P`, `Lasso (¬ Q) v0`, `decide Q`.
 
 The textbook and external papers used during the original development are not
 included in this repository; bibliographic links are provided in the proposal.

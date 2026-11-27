@@ -37,6 +37,11 @@ mpU2 f g = mpU (mpU (liftP p2) f) g
                  (⇒TransU (liftP dne) g)))
       (liftP deriv⊤)
 
+-- Refutation: a formula that implies both B and ¬ B is refuted.
+
+refute : ⊢ C ⇒ B -> ⊢ C ⇒ ¬ B -> ⊢ ¬ C
+refute f g = mp (¬IntroU (liftP f) (liftP g)) deriv⊤
+
 ------------------------------------------------------------------------
 -- Binary conjunction.  A ∧ B is ¬ (A ⇒ ¬ B).
 

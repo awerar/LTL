@@ -11,7 +11,7 @@
 --   1. ustSeedTo: the component's representative is reached from a state s
 --      containing ¬ Q.  Stem and circuit form a FairLoop from s.
 --   2. sccLasso: a fair loop in Ust (¬ Q) is a Lasso.
---   3. buildCM: Hintikka's lemma at stage 0.
+--   3. buildCountermodel: Hintikka's lemma at stage 0.
 --
 -- The search runs on all of Ust (¬ Q), not from one vertex, because the
 -- certificate has to cover every state.
@@ -40,13 +40,13 @@ open import LTL.7-SCC.SccSeed            (¬ Q)
 open import LTL.8-Procedures.Answer using (LassoCountermodel; countermodel)
 
 ------------------------------------------------------------------------
--- The derivation of Q.  A state of St outside Ust cannot contain ¬ Q (by
+-- The derivation of Q.  A state outside Ust cannot contain ¬ Q (by
 -- ustSeed), so chi_w ⇒ Q is a tautology and one pc node.  A state inside is
--- refuted by the certificate.  State completeness, over all of St, then
--- gives Q.
+-- refuted by the certificate.  State completeness, over allStates, then gives
+-- Q.
 
 provableEachSCC : Cert evPreds Ust
-               -> ∀[ w ∈ St ] ⊢ (chi w) ⇒ Q
+               -> ∀[ w ∈ allStates ] ⊢ (chi w) ⇒ Q
 provableEachSCC c w m = byPosition
   where
     -- w does not contain ¬ Q, so chi_w ⇒ Q is a tautology: one pc node
@@ -62,7 +62,7 @@ provableEachSCC c w m = byPosition
 
 provableSCC : Cert evPreds Ust -> ⊢ Q
 provableSCC c =
-  mp (betaElimPC St (provableEachSCC c)) stateCompletePC
+  mp (betaElimPC allStates (provableEachSCC c)) stateCompletePC
 
 ------------------------------------------------------------------------
 -- A countermodel from a lasso.
@@ -70,12 +70,12 @@ provableSCC c =
 -- v0 contains ¬ Q, so it does not contain Q (holdsIn reads ¬ as ¬ᵇ); Hintikka's
 -- lemma at stage 0 transfers that to the evaluation.
 
-buildCM : (v0 : Val) -> Lasso v0 -> holdsIn v0 (¬ Q) ≡ true
+buildCountermodel : (v0 : Val) -> Lasso v0 -> holdsIn v0 (¬ Q) ≡ true
        -> LassoCountermodel Q
-buildCM v0 l ev = countermodel v0 l evalFalse
+buildCountermodel v0 l ev = countermodel v0 l evalFalse
   where
     evalFalse : eval v0 l Q 0 ≡ false
-    evalFalse = trans (sym (hintStart v0 l Q (there (sub-self Q))))
+    evalFalse = trans (sym (hintikkaStart v0 l Q (there (sub-self Q))))
                       (¬ᵇ-true (holdsIn v0 Q) ev)
 
 -- A fair circuit through r, reached from a state s containing ¬ Q, is a fair
@@ -83,7 +83,7 @@ buildCM v0 l ev = countermodel v0 l evalFalse
 
 fairCountermodel : FairIn Ust evPreds -> LassoCountermodel Q
 fairCountermodel (fairIn r c) =
-  buildCM seed (sccLasso seed seedIn (fairLoop r reaches c)) seedHolds
+  buildCountermodel seed (sccLasso seed seedIn (fairLoop r reaches c)) seedHolds
   where open Seeded (ustSeedTo r (loopBase (Circuit.loop c)))
 
 ------------------------------------------------------------------------

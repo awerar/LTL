@@ -72,8 +72,8 @@ sccFrom ws r w m =
     (∈ᵛ-sound (reachSet ws w) r
       (filter-prop (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r) w m))
 
-sccRep : ∀[ r ∈ ws ] r ∈ sccOf ws r
-sccRep {ws} r mr =
+sccOf-self : ∀[ r ∈ ws ] r ∈ sccOf ws r
+sccOf-self {ws} r mr =
   ∈-filter⁺ (λ z -> r ∈ᵛ reachSet ws z) (reachSet ws r)
             (reachSeed r mr)
             (∈ᵛ-complete (reachSet ws r) r (reachSeed r mr))
@@ -128,7 +128,7 @@ record TerminalIn (ws : Subgraph) : Set where
   component = sccOf ws r
 
   rInComponent : r ∈ component
-  rInComponent = sccRep r rIn
+  rInComponent = sccOf-self r rIn
 
   componentClosed : Closed[ G ▷ ws ] component
   componentClosed = terminalClosed ws r terminal
@@ -221,8 +221,8 @@ loopBase (loopBy q qs (tCons e t) h) = h _ (trailEnd t)
 
 module _ {ws vs : Subgraph} {r : Node} where
 
-  circMono : {fs : List Pred} -> ws ⊆ vs -> Circuit ws fs r -> Circuit vs fs r
-  circMono subset (circuit (loopBy q qs t h) wit) =
+  circuitMono : {fs : List Pred} -> ws ⊆ vs -> Circuit ws fs r -> Circuit vs fs r
+  circuitMono subset (circuit (loopBy q qs t h) wit) =
     circuit (loopBy q qs t (λ z mz -> subset z (h z mz))) wit
 
 -- A terminal component of a vertex that has a successor is non-trivial: the
@@ -252,16 +252,16 @@ module _ {ws : Subgraph} {r : Node} where
 
   -- One fairness predicate added to a circuit: the cycle, then a trail out
   -- to the witness w and one back to r.  The trail out starts at the cycle's
-  -- first vertex q, so w is a vertex the new cycle VISITS.  trailApp is
+  -- first vertex q, so w is a vertex the new cycle VISITS.  trail++ is
   -- left-nested so that associativity never appears.
 
-  consCirc : (f : Pred) (w : Node) -> f w ≡ true
+  circuitCons : (f : Pred) (w : Node) -> f w ≡ true
           -> Reaches ws r w -> Reaches ws w r
           -> (fs : List Pred) -> Circuit ws fs r
           -> Circuit ws (f ∷ fs) r
-  consCirc f w fw (reachesBy as ta sa) (reachesBy bs tb sb) fs
+  circuitCons f w fw (reachesBy as ta sa) (reachesBy bs tb sb) fs
            (circuit (loopBy q qs t@(tCons e tq) scy) wit) =
-    circuit (loopBy q ((qs ++ as) ++ bs) (trailApp (trailApp t ta) tb)
+    circuit (loopBy q ((qs ++ as) ++ bs) (trail++ (trail++ t ta) tb)
                     (++-⊆ out (++-⊆ cy scy sa) sb))
             each
     where
@@ -270,7 +270,7 @@ module _ {ws : Subgraph} {r : Node} where
       out = cy ++ as
 
       each : ∀[ g ∈ f ∷ fs ] ∃[ z ∈ out ++ bs ] z ∈ᵖ g
-      each g here      = w , ∈-++⁺ˡ out bs (trailEnd (trailApp tq ta)) , fw
+      each g here      = w , ∈-++⁺ˡ out bs (trailEnd (trail++ tq ta)) , fw
       each g (there m) = shift (wit g m)
         where
           shift : (∃[ z ∈ cy ] z ∈ᵖ g) -> ∃[ z ∈ out ++ bs ] z ∈ᵖ g
@@ -279,26 +279,26 @@ module _ {ws : Subgraph} {r : Node} where
   -- The circuit for fs: the loop l0, then one leg for each predicate, out
   -- to a witness in C and back.
 
-  mkCirc : Loop ws r
+  makeCircuit : Loop ws r
         -> (C : List Node)
         -> (∀[ u ∈ C ] Reaches ws r u)
         -> (∀[ u ∈ C ] Reaches ws u r)
         -> (fs : List Pred) -> (∀ⁱ[ g ∈ fs ] any g C ≡ true)
         -> Circuit ws fs r
-  mkCirc l0 C to from []        e = circuit l0 noF
+  makeCircuit l0 C to from []        e = circuit l0 noF
     where
       noF : ∀[ f ∈ [] ] ∃[ z ∈ Loop.cycle l0 ] z ∈ᵖ f
       noF f ()
-  mkCirc l0 C to from (f ∷ fs) e =
+  makeCircuit l0 C to from (f ∷ fs) e =
     pick (any-true f C (e here))
     where
       rest : Circuit ws fs r
-      rest = mkCirc l0 C to from fs (λ m -> e (there m))
+      rest = makeCircuit l0 C to from fs (λ m -> e (there m))
 
       pick : (∃[ w ∈ C ] w ∈ᵖ f)
           -> Circuit ws (f ∷ fs) r
       pick (w , mw , fw) =
-        consCirc f w fw (to w mw) (from w mw) fs rest
+        circuitCons f w fw (to w mw) (from w mw) fs rest
 
 ------------------------------------------------------------------------
 -- The negative certificate: a well-founded record of the removal order,
@@ -340,7 +340,7 @@ decideTerminal {ws} fs t@(terminalAt r mr et) with hasOut ws r in eo
 ... | false = inr (sink (¬ᵇ-false (null (outs ws r)) eo))
 ... | true with decideAll (λ g -> any g (component t)) fs
 ...   | allTrue e =
-  inl (fairIn r (mkCirc (loopAt mr et eo) (component t)
+  inl (fairIn r (makeCircuit (loopAt mr et eo) (component t)
                         (repReaches t) (reachesRep t) fs e))
 ...   | counterexample g mg eg = inr (unfair g mg miss)
   where
@@ -352,7 +352,7 @@ decideTerminal {ws} fs t@(terminalAt r mr et) with hasOut ws r in eo
 
 fairInMono : {fs : List Pred}
           -> ws ⊆ vs -> FairIn ws fs -> FairIn vs fs
-fairInMono subset (fairIn r c) = fairIn r (circMono subset c)
+fairInMono subset (fairIn r c) = fairIn r (circuitMono subset c)
 
 -- Terminal-component removal, a REMOVING iteration: while ws is non-empty,
 -- find a terminal component and decide it; if it is not fair, its
@@ -405,7 +405,7 @@ fairGraph vs fs v mv =
     toLoop : FairIn (reachSet vs v) fs -> FairLoop vs fs v
     toLoop (fairIn r c) =
       fairLoop r (reachTrail vs v (loopBase (Circuit.loop c)))
-                 (circMono into c)
+                 (circuitMono into c)
 
 ------------------------------------------------------------------------
 -- What a certificate is for: an induction over the removal order.  R is the

@@ -44,8 +44,8 @@ step v w = t1All v w ∧ᵇ t2All v w ∧ᵇ t3All v w
 -- Reading each condition off a step, at an argument of ○ (T1) or an
 -- eventuality (T2, T3), the lists step itself runs over.
 
-rest23 : (v w : Val) -> step v w ≡ true -> t2All v w ∧ᵇ t3All v w ≡ true
-rest23 v w st = snd (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)
+stepT23 : (v w : Val) -> step v w ≡ true -> t2All v w ∧ᵇ t3All v w ≡ true
+stepT23 v w st = snd (∧ᵇ-split (t1All v w) (t2All v w ∧ᵇ t3All v w) st)
 
 stepT1 : (v w : Val) {B : Formula} -> step v w ≡ true -> B ∈ nexts
       -> t1At v w B ≡ true
@@ -57,13 +57,13 @@ stepT2 : (v w : Val) {A : Formula} -> step v w ≡ true -> A ∈ eventualities
       -> t2At v w A ≡ true
 stepT2 v w {A} st m =
   all-true (t2At v w) eventualities
-           (fst (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A m
+           (fst (∧ᵇ-split (t2All v w) (t3All v w) (stepT23 v w st))) A m
 
 stepT3 : (v w : Val) {A : Formula} -> step v w ≡ true -> A ∈ eventualities
       -> t3At v w A ≡ true
 stepT3 v w {A} st m =
   all-true (t3At v w) eventualities
-           (snd (∧ᵇ-split (t2All v w) (t3All v w) (rest23 v w st))) A m
+           (snd (∧ᵇ-split (t2All v w) (t3All v w) (stepT23 v w st))) A m
 
 -- A failed step fails one condition at one formula.
 

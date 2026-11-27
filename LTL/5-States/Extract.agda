@@ -47,8 +47,8 @@ betaIntro ws m = ⋁Intro (map chi ws) (∈-map⁺ chi m)
 ------------------------------------------------------------------------
 -- The induction hypothesis
 
--- It ranges over Ust P, not St P: a state outside Ust cannot contain the
--- input and is disposed of by (S1).  ustClosed makes this work: the step
+-- It ranges over Ust P, not allStates P: a state outside Ust cannot contain
+-- the input and is disposed of by (S1).  ustClosed makes this work: the step
 -- lemma offers ALL state-successors of u, and each lies in Ust P, where the
 -- hypothesis applies.  UstRef is the property, relativised to Ust because
 -- HoldsOutside covers every valuation outside us.
@@ -66,7 +66,7 @@ r1 : Subgraph -> Val -> Bool
 r1 us u = null (succs us u)
 
 -- A state to which (R1) applies.  stepLemma gives the successors of u
--- inside St; one inside us would be in succs us u, which (R1) says is
+-- inside allStates; one inside us would be in succs us u, which (R1) says is
 -- empty.  So every disjunct of beta is refuted by the hypothesis, (D1) puts
 -- the refutation under ○, and (Lin) brings the negation out.
 
@@ -75,15 +75,15 @@ extractR1 : (us : Subgraph) (u : Val)
          -> ⊢ ¬ (chi u)
 extractR1 us u mu ih e1 =
   refute (stepLemma u)
-         (liftP (mp linFwd (○Gen (¬Beta (succs St u) each))))
+         (liftP (mp linFwd (○Gen (¬Beta (succs allStates u) each))))
   where
-    outside : ∀[ w ∈ succs St u ] w ∈ᵛ us ≡ false
+    outside : ∀[ w ∈ succs allStates u ] w ∈ᵛ us ≡ false
     outside w m = ∉ᵛ-intro us w λ mw ->
-      null-∈ (succs us u) e1 (succsIn us u mw (snd (∈-succs⁻ St u m)))
+      null-∈ (succs us u) e1 (succsIn us u mw (snd (∈-succs⁻ allStates u m)))
 
-    each : ∀[ w ∈ succs St u ] ⊢ ¬ (chi w)
+    each : ∀[ w ∈ succs allStates u ] ⊢ ¬ (chi w)
     each w m = ih w (outside w m)
-                    (ustClosed mu (fst (∈-succs⁻ St u m)) (snd (∈-succs⁻ St u m)))
+                    (ustClosed mu (fst (∈-succs⁻ allStates u m)) (snd (∈-succs⁻ allStates u m)))
 
 ------------------------------------------------------------------------
 -- The base of the induction: outside Ust there is nothing to refute.
