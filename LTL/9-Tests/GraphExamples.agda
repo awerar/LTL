@@ -19,7 +19,7 @@ natEq = record { _≡ᵛ_ = _≡ⁿ_ ; ≡ᵛ-sound = ≡ⁿ-sound ; ≡ᵛ-refl
 open import LTL.1-Lib.Graph natEq
 open import LTL.1-Lib.FairGraph natEq
 open import LTL.1-Lib.Nodes natEq using (_∈ᵛ_; Edges; Pred)
-open import LTL.1-Lib.CertShape
+open import LTL.9-Tests.CertShape using (CertStep; removedSink; removedUnfair; emptied; certShape)
 
 ------------------------------------------------------------------------
 -- The first graph: a = 0 and b = 1, with a -> b and b -> b.  b's component

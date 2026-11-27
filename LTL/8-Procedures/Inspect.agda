@@ -2,8 +2,7 @@
 
 -- LTL.8-Procedures.Inspect -- looking inside an answer of the decision
 -- procedure: the shape of a lasso countermodel, the truth values of a formula
--- along its run, the size of a derivation, and the steps of the certificate
--- behind it.
+-- along its run, and the size of a derivation.
 --
 -- None of this is on the proof of decideCorrect; LTL.Pretty, the tests and
 -- the benchmarks use it.  Names starting with cm (cmRest, cmTrace, ...) are
@@ -13,8 +12,6 @@ module LTL.8-Procedures.Inspect where
 
 open import LTL.8-Procedures.Answer
 open import LTL.6-Countermodel.Lasso
-open import LTL.7-SCC.SccExtract using (sccGraph)
-open import LTL.1-Lib.CertShape
 
 ------------------------------------------------------------------------
 -- The states of a countermodel
@@ -92,10 +89,3 @@ cmTrace Q c A = cmFrom Q c A zero
 
 cmShape : (Q : Formula) -> LassoCountermodel Q -> Nat × Nat
 cmShape Q c = length (cmRest Q c) , length (cmCycle Q c)
-
-------------------------------------------------------------------------
--- The certificate decide Q derives Q from, as the kinds of its steps in
--- removal order (LTL.1-Lib.CertShape); empty when Q has a countermodel.
-
-sccShape : (Q : Formula) -> List CertStep
-sccShape Q = [ (λ fair -> []) , certShape ] (sccGraph (¬ Q))

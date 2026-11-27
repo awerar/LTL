@@ -200,9 +200,7 @@ module name). Folder names never equal a module name.
    `cRemove` removes a `TerminalIn` with its `Reason`, `sink` or `unfair`;
    `decideTerminal`, one step of the search, gives a `FairIn` or a `Reason`;
    the search `fairOrCert`, its form from one vertex `fairGraph`, and
-   `certAll`; largest module). Off the proof path, `CertShape` (`certShape`: a certificate's
-   steps, of type `List CertStep`; unparameterised, so the type does not
-   depend on the graph) is read only by the tests and `Inspect`'s `sccShape`.
+   `certAll`; largest module).
    The P-module `Walk` applies both at `G = step` and re-exports them, so
    inside the P-modules their names read `Reaches ws`, `Cert fs ws`, and
    outside they take P first, `Cert (¬ Q) fs ws`.
@@ -252,7 +250,7 @@ module name). Folder names never equal a module name.
    (`LassoCountermodel`, `isProof` with `proofFrom` and `countermodelFrom`:
    only what `decideCorrect` uses); `Inspect` (off the proof path, for
    `Pretty`, tests and benchmarks: `cmRest`, `cmCycle`, `cmTrace`, `cmShape`,
-   `derivCounts`, `sccShape`);
+   `derivCounts`);
    `Decide` (parameterised by the input Q: `provableSCC`, closed with (PC),
    and `decide`, Thm 6.1); `Everything` (re-exports
    all of the above unapplied, for importers); `Correct` (imports
@@ -266,6 +264,8 @@ module name). Folder names never equal a module name.
 9. **Examples and benchmarks** — in `9-Tests/` (fast): `Checks` (the core
    modules' `refl` checks and example formulas: `benAri`, `◇P`, `bnb`, `c5`,
    …); `GraphExamples` (`Graph`'s and `FairGraph`'s computational checks, at `Node = Nat`);
+   `CertShape` (`certShape`, `sccShape`: a certificate's steps in removal
+   order, off the proof path, read by the tests and `Examples`);
    `Figure11` (the 46 formulas of Schmitt & Goubault-Larrecq Fig. 11, definitions
    only, opened by `tools/show-proof`). In
    `9-Benchmarks/` (slow): `Examples` (`decide` on the `Figure11` formulas); `Lecture` (`F a ∧ F b → F(a∧b)`).

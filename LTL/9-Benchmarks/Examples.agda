@@ -20,6 +20,7 @@ module LTL.9-Benchmarks.Examples where
 
 open import LTL.8-Procedures.Everything public
 open import LTL.9-Tests.Figure11 public
+open import LTL.9-Tests.CertShape
 
 ------------------------------------------------------------------------
 -- The results

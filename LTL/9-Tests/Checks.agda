@@ -12,6 +12,7 @@ module LTL.9-Tests.Checks where
 open import LTL.Pretty    public
 open import LTL.8-Procedures.Everything public
 open import LTL.8-Procedures.Correct public
+open import LTL.9-Tests.CertShape
 import LTL.Statement as S
 
 ------------------------------------------------------------------------
